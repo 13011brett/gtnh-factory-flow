@@ -1,5 +1,7 @@
 import type { FactoryNode, Recipe, ResourceAmount, ResourceKind } from "./types";
 import { isOreDictionaryResource } from "./resources";
+import { applyVatInputs, isVatRecipe } from "@/lib/machines/bacterial-vat";
+import { getOverclockedRecipeStats } from "@/lib/solver/overclock";
 
 /**
  * The recipe's input amount, restated in the units of the substitute actually
@@ -27,10 +29,23 @@ export function inputOverrideAmount(
   return hasRatio && alternative?.kind === targetKind ? input.amount * perUnit : input.amount;
 }
 
+/**
+ * The recipe's inputs as this node takes them: the wired substitutes, then the machine's own scaling (the
+ * Bacterial Vat's fill multiplier on its fluid, its radio hatch's burn).
+ */
 export function applyRecipeInputOverrides(
   recipe: Recipe,
-  node: Pick<FactoryNode, "recipeInputOverrides">,
+  node: Pick<FactoryNode, "recipeInputOverrides"> & Partial<FactoryNode>,
 ): Recipe {
+  const overridden = applyWiredOverrides(recipe, node);
+  if (isVatRecipe(recipe)) {
+    const stats = getOverclockedRecipeStats(recipe, node as FactoryNode);
+    return applyVatInputs(overridden, node.machineConfigTiers, stats.durationTicks / 20);
+  }
+  return overridden;
+}
+
+function applyWiredOverrides(recipe: Recipe, node: Pick<FactoryNode, "recipeInputOverrides">): Recipe {
   if (!node.recipeInputOverrides) {
     return recipe;
   }

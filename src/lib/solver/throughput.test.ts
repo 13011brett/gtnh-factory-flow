@@ -1037,7 +1037,7 @@ describe("calculateThroughput", () => {
         {
           id: "tree-growth-recipe",
           name: "Tree Growth",
-          machineType: "Tree Growth Simulator",
+          machineType: "Example Grower",
           minimumTier: "LV",
           durationTicks: 20,
           eut: 0,
@@ -1104,14 +1104,13 @@ describe("calculateThroughput", () => {
 
     const result = solveClosed(project);
 
-    // The fed dead-end drawer is a PRODUCT drawer: it pulls the simulator
-    // flat out. The consumer takes its 2 logs off the direct wire and the
-    // drawer banks the rest of the simulator's boosted output (18/s at this
-    // tier, so 16).
+    // The fed dead-end drawer is a PRODUCT drawer: it pulls the grower flat
+    // out. The consumer takes its 2 logs off the direct wire and the drawer
+    // banks the rest of the grower's 10/s, so 8.
     expect(result.nodes["tree-growth"].utilization).toBeCloseTo(1);
     expect(result.edges["tree-to-consumer"].transferredPerSecond).toBeCloseTo(2);
-    expect(result.edges["tree-to-drawer"].transferredPerSecond).toBeCloseTo(16);
-    expect(result.storages["log-drawer"].netPerSecond).toBeCloseTo(16);
+    expect(result.edges["tree-to-drawer"].transferredPerSecond).toBeCloseTo(8);
+    expect(result.storages["log-drawer"].netPerSecond).toBeCloseTo(8);
   });
 
   it("still owes the plan target when its output is routed to a drain", () => {
@@ -1530,258 +1529,75 @@ describe("calculateThroughput", () => {
     expect(result.totalEuT).toBe(120);
   });
 
-  it("applies Tree Growth Simulator tier and tool output formulas without changing work time", () => {
-    const project: FactoryProject = {
-      schemaVersion: PROJECT_SCHEMA_VERSION,
-      id: "tgs-project",
-      name: "TGS formula test",
-      recipes: [
-        {
-          id: "tgs-oak",
-          name: "Tree Growth Simulator: Oak Log",
-          machineType: "Tree Growth Simulator",
-          minimumTier: "UNKNOWN",
-          durationTicks: 100,
-          eut: 0,
-          inputs: [{ kind: "item", id: "minecraft:sapling", amount: 1, consumed: false }],
-          outputs: [
-            {
-              kind: "item",
-              id: "minecraft:log",
-              amount: 5,
-              neiSlot: { x: 108, y: 36 },
-            },
-            {
-              kind: "item",
-              id: "minecraft:sapling",
-              amount: 5,
-              neiSlot: { x: 126, y: 36 },
-            },
-          ],
-          machineConfigControls: [
-            {
-              id: "tgsToolSlot1",
-              label: "Tool Slot 1",
-              minimumKey: "none",
-              defaultKey: "none",
-              tiers: [
-                {
-                  key: "none",
-                  label: "-",
-                  resource: { kind: "item", id: "empty", amount: 1 },
-                },
-                {
-                  key: "log:saw",
-                  label: "Saw",
-                  outputMultiplier: 1,
-                  resource: { kind: "item", id: "saw", amount: 1 },
-                },
-                {
-                  key: "log:chainsaw",
-                  label: "Chainsaw",
-                  outputMultiplier: 4,
-                  resource: { kind: "item", id: "chainsaw", amount: 1 },
-                },
-              ],
-            },
-            {
-              id: "tgsToolSlot2",
-              label: "Tool Slot 2",
-              minimumKey: "none",
-              defaultKey: "none",
-              tiers: [
-                {
-                  key: "none",
-                  label: "-",
-                  resource: { kind: "item", id: "empty", amount: 1 },
-                },
-                {
-                  key: "sapling:branch_cutter",
-                  label: "Branch Cutter",
-                  outputMultiplier: 1,
-                  resource: { kind: "item", id: "branch_cutter", amount: 1 },
-                },
-              ],
-            },
-          ],
-          source: { recipeMap: "Tree Growth Simulator" },
-        },
-      ],
-      nodes: [
-        {
-          id: "node",
-          recipeId: "tgs-oak",
-          machineCount: 1,
-          parallel: 1,
-          overclockTier: "LV",
-          machineConfigTiers: { tgsToolSlot1: "log:chainsaw" },
-          enabled: true,
-          position: { x: 0, y: 0 },
-        },
-      ],
-      edges: [],
-      fuelProfiles: [],
-    };
-
-    const result = solveClosed(project);
-
-    expect(result.nodes.node.operationRatePerSecond).toBeCloseTo(0.2);
-    expect(result.nodes.node.outputs["item:minecraft:log"].amountPerSecond).toBeCloseTo(7.2);
-    expect(result.nodes.node.outputs["item:minecraft:sapling"].amountPerSecond).toBe(0);
-    expect(result.nodes.node.euT).toBe(0);
+  // MTETreeFarm (GT5U 5.09.54.205): 100 ticks at any voltage, VP[t] EU/t, out = NEI x (2t^2-2t+5) x tool.
+  const oakProject = (overclockTier: "LV" | "IV", machineConfigTiers: Record<string, string>): FactoryProject => ({
+    schemaVersion: PROJECT_SCHEMA_VERSION,
+    id: "tgs-project",
+    name: "TGS test",
+    recipes: [
+      {
+        id: "tgs-oak",
+        name: "Tree Growth Simulator: Oak Log",
+        machineType: "Tree Growth Simulator",
+        minimumTier: "ULV",
+        durationTicks: 100,
+        eut: 0,
+        inputs: [],
+        outputs: [
+          { kind: "item", id: "minecraft:log", amount: 5 },
+          { kind: "item", id: "minecraft:sapling", amount: 5 },
+          { kind: "item", id: "minecraft:leaves", amount: 2 },
+          { kind: "item", id: "minecraft:apple", amount: 1 },
+        ],
+        source: { recipeMap: "Tree Growth Simulator" },
+      },
+    ],
+    nodes: [
+      {
+        id: "node",
+        recipeId: "tgs-oak",
+        machineCount: 1,
+        parallel: 1,
+        overclockTier,
+        machineConfigTiers,
+        enabled: true,
+        position: { x: 0, y: 0 },
+      },
+    ],
+    edges: [],
+    fuelProfiles: [],
   });
 
-  it("uses the first matching Tree Growth Simulator tool per output mode", () => {
-    const project: FactoryProject = {
-      schemaVersion: PROJECT_SCHEMA_VERSION,
-      id: "tgs-tool-order-project",
-      name: "TGS tool order test",
-      recipes: [
-        {
-          id: "tgs-oak",
-          name: "Tree Growth Simulator: Oak Log",
-          machineType: "Tree Growth Simulator",
-          minimumTier: "UNKNOWN",
-          durationTicks: 100,
-          eut: 0,
-          inputs: [{ kind: "item", id: "minecraft:sapling", amount: 1, consumed: false }],
-          outputs: [
-            {
-              kind: "item",
-              id: "minecraft:log",
-              amount: 5,
-              neiSlot: { x: 108, y: 36 },
-            },
-          ],
-          machineConfigControls: [
-            {
-              id: "tgsToolSlot1",
-              label: "Tool Slot 1",
-              minimumKey: "none",
-              defaultKey: "none",
-              tiers: [
-                {
-                  key: "none",
-                  label: "-",
-                  resource: { kind: "item", id: "empty", amount: 1 },
-                },
-                {
-                  key: "log:saw",
-                  label: "Saw",
-                  outputMultiplier: 1,
-                  resource: { kind: "item", id: "saw", amount: 1 },
-                },
-              ],
-            },
-            {
-              id: "tgsToolSlot2",
-              label: "Tool Slot 2",
-              minimumKey: "none",
-              defaultKey: "none",
-              tiers: [
-                {
-                  key: "none",
-                  label: "-",
-                  resource: { kind: "item", id: "empty", amount: 1 },
-                },
-                {
-                  key: "log:chainsaw",
-                  label: "Chainsaw",
-                  outputMultiplier: 4,
-                  resource: { kind: "item", id: "chainsaw", amount: 1 },
-                },
-              ],
-            },
-          ],
-          source: { recipeMap: "Tree Growth Simulator" },
-        },
-      ],
-      nodes: [
-        {
-          id: "node",
-          recipeId: "tgs-oak",
-          machineCount: 1,
-          parallel: 1,
-          overclockTier: "LV",
-          machineConfigTiers: { tgsToolSlot1: "log:saw", tgsToolSlot2: "log:chainsaw" },
-          enabled: true,
-          position: { x: 0, y: 0 },
-        },
-      ],
-      edges: [],
-      fuelProfiles: [],
-    };
+  it("runs a Tree Growth Simulator as the game does: 100 ticks at VP[t], tier and tool multipliers", () => {
+    // LV, the basic tools: 5 logs, 5 saplings, 2 leaves and 1 apple a second at 30 EU/t.
+    const lv = solveClosed(oakProject("LV", {})).nodes.node;
+    expect(lv.operationRatePerSecond).toBeCloseTo(0.2);
+    expect(lv.outputs["item:minecraft:log"].amountPerSecond).toBeCloseTo(5);
+    expect(lv.outputs["item:minecraft:sapling"].amountPerSecond).toBeCloseTo(5);
+    expect(lv.outputs["item:minecraft:leaves"].amountPerSecond).toBeCloseTo(2);
+    expect(lv.outputs["item:minecraft:apple"].amountPerSecond).toBeCloseTo(1);
+    expect(lv.euT).toBe(30);
 
-    const result = solveClosed(project);
-
-    expect(result.nodes.node.outputs["item:minecraft:log"].amountPerSecond).toBeCloseTo(1.8);
+    // IV with a chainsaw, a grafter and electric wire cutters: 180, 180, 72 and 9 a second at 7680 EU/t.
+    const iv = solveClosed(
+      oakProject("IV", {
+        tgsLogTool: "log:chainsaw",
+        tgsSaplingTool: "sapling:grafter",
+        tgsLeavesTool: "leaves:automatic_snips",
+      }),
+    ).nodes.node;
+    expect(iv.operationRatePerSecond).toBeCloseTo(0.2);
+    expect(iv.outputs["item:minecraft:log"].amountPerSecond).toBeCloseTo(180);
+    expect(iv.outputs["item:minecraft:sapling"].amountPerSecond).toBeCloseTo(180);
+    expect(iv.outputs["item:minecraft:leaves"].amountPerSecond).toBeCloseTo(72);
+    expect(iv.outputs["item:minecraft:apple"].amountPerSecond).toBeCloseTo(9);
+    expect(iv.euT).toBe(7680);
   });
 
-  it("does not produce Tree Growth Simulator outputs when the required tool slot is empty", () => {
-    const project: FactoryProject = {
-      schemaVersion: PROJECT_SCHEMA_VERSION,
-      id: "tgs-no-tool-project",
-      name: "TGS no tool test",
-      recipes: [
-        {
-          id: "tgs-oak",
-          name: "Tree Growth Simulator: Oak Log",
-          machineType: "Tree Growth Simulator",
-          minimumTier: "UNKNOWN",
-          durationTicks: 100,
-          eut: 0,
-          inputs: [{ kind: "item", id: "minecraft:sapling", amount: 1, consumed: false }],
-          outputs: [
-            {
-              kind: "item",
-              id: "minecraft:log",
-              amount: 5,
-              neiSlot: { x: 108, y: 36 },
-            },
-          ],
-          machineConfigControls: [
-            {
-              id: "tgsToolSlot1",
-              label: "Tool Slot 1",
-              minimumKey: "none",
-              defaultKey: "none",
-              tiers: [
-                {
-                  key: "none",
-                  label: "-",
-                  resource: { kind: "item", id: "empty", amount: 1 },
-                },
-                {
-                  key: "log:saw",
-                  label: "Saw",
-                  outputMultiplier: 1,
-                  resource: { kind: "item", id: "saw", amount: 1 },
-                },
-              ],
-            },
-          ],
-          source: { recipeMap: "Tree Growth Simulator" },
-        },
-      ],
-      nodes: [
-        {
-          id: "node",
-          recipeId: "tgs-oak",
-          machineCount: 1,
-          parallel: 1,
-          overclockTier: "LV",
-          machineConfigTiers: { tgsToolSlot1: "none" },
-          enabled: true,
-          position: { x: 0, y: 0 },
-        },
-      ],
-      edges: [],
-      fuelProfiles: [],
-    };
-
-    const result = solveClosed(project);
-
-    expect(result.nodes.node.outputs["item:minecraft:log"].amountPerSecond).toBe(0);
+  it("makes nothing of a Tree Growth Simulator mode with no tool", () => {
+    const node = solveClosed(oakProject("LV", { tgsLogTool: "none" })).nodes.node;
+    expect(node.outputs["item:minecraft:log"].amountPerSecond).toBe(0);
+    expect(node.outputs["item:minecraft:sapling"].amountPerSecond).toBeCloseTo(5);
   });
 
   it("reports a starved consumer as supply-capped against its nameplate demand", () => {

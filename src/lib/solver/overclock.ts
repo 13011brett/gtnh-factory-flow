@@ -1,7 +1,9 @@
 import { hasAmperageOverclock } from "./power-input-rules";
 import { getFusionStats } from "@/lib/machines/fusion";
 import { getEecMetadata, getEecSettings, getEecStats } from "@/lib/machines/extreme-entity-crusher";
+import { getTgsStats, isTgsRecipe } from "@/lib/machines/tree-growth-simulator";
 import {
+  GT_VOLTAGE_TIERS,
   getRecipeMinimumVoltageTier,
   getVoltageTierIndex,
   getVoltageTierMaxEuT,
@@ -137,6 +139,19 @@ export function getOverclockedRecipeStats(
       eut: stats.eut,
     };
   }
+  if (isTgsRecipe(effectiveRecipe)) {
+    // MTETreeFarm: 100 ticks at any voltage, VP[t] EU/t, t the tier of the hatches' V x A rounded up. The tier
+    // reported is t, which the output multiplier reads.
+    const tgs = getTgsStats(getVoltageTierMaxEuT(tier) * getNodePowerAmps(effectiveRecipe, node));
+    return {
+      tier: GT_VOLTAGE_TIERS[tgs.t]?.tier ?? tier,
+      minimumTier,
+      overclockSteps: 0,
+      ...PLAIN_OVERCLOCK_STEPS,
+      durationTicks: tgs.durationTicks,
+      eut: tgs.eut,
+    };
+  }
   const overclockSteps = Math.max(0, getVoltageTierIndex(tier) - getVoltageTierIndex(minimumTier));
   const runtimeVariant = selectRuntimeCalculationVariant(effectiveRecipe, node);
   if (runtimeVariant) {
@@ -148,16 +163,6 @@ export function getOverclockedRecipeStats(
       ...PLAIN_OVERCLOCK_STEPS,
       durationTicks: runtimeVariant.durationTicks,
       eut: runtimeVariant.eut,
-    };
-  }
-  if (isFixedTimeTierDrivenOutputRecipe(effectiveRecipe)) {
-    return {
-      tier,
-      minimumTier,
-      overclockSteps,
-      ...PLAIN_OVERCLOCK_STEPS,
-      durationTicks: effectiveRecipe.durationTicks,
-      eut: effectiveRecipe.eut,
     };
   }
   if (getCropsNhStats(effectiveRecipe)) {
@@ -392,23 +397,3 @@ function resolveOverclockRule(
   return recipe.machineProfile?.perfectOverclock ? OVERCLOCK.perfect() : OVERCLOCK.normal();
 }
 
-function isFixedTimeTierDrivenOutputRecipe(
-  recipe: Pick<Recipe, "source"> & { machineType?: string },
-) {
-  if (!recipe.machineType) {
-    return false;
-  }
-  const recipeMap = recipe.source?.recipeMap ?? recipe.machineType;
-  return normalizeRecipeMapName(recipeMap) === "tree growth simulator";
-}
-
-function normalizeRecipeMapName(recipeMap: string): string {
-  return recipeMap
-    .trim()
-    .toLowerCase()
-    .replace(/\brecipes?\b/g, "")
-    .replace(/\brecipe\s+map\b/g, "")
-    .replace(/[^a-z0-9]+/g, " ")
-    .replace(/\s+/g, " ")
-    .trim();
-}

@@ -1,5 +1,6 @@
 import { CROP_FARM_PLACEHOLDER_RECIPE_ID, createCropFarmPlaceholderRecipe } from "./passive-production";
 import { getFusionMachine, getFusionRecipeMark, isFusionRecipe, normalizeFusionHandler } from "@/lib/machines/fusion";
+import { TGS_MACHINE_TYPE, tgsEuPerTick } from "@/lib/machines/tree-growth-simulator";
 import type {
   FactoryNode,
   MachineConfigControl,
@@ -212,12 +213,15 @@ export function applyMachineHandlerToRecipe(
   // so without this they would inherit the electric recipe's EU draw and the
   // planner would bill phantom power for them. The litres they do burn are
   // billed by getNodeSteamReport in power-report.ts.
-  const eut = isSteamMachineHandler(handler) ? 0 : (handlerEut ?? recipe.eut);
+  // The Tree Growth Simulator's NEI page says 0 EU/t, but the machine draws VP[t] and needs LV at least
+  // (tree-growth-simulator.ts): its card offers voltage and power like any electric machine.
+  const tgs = handler.machineType === TGS_MACHINE_TYPE;
+  const eut = tgs ? tgsEuPerTick(1) : isSteamMachineHandler(handler) ? 0 : (handlerEut ?? recipe.eut);
   return {
     ...recipe,
     runtimeCalculation,
     machineType: handler.machineType,
-    minimumTier,
+    minimumTier: tgs ? "LV" : minimumTier,
     maximumTier: handler.maximumTier,
     availableTiers: handler.availableTiers,
     durationTicks: handlerDurationTicks ?? recipe.durationTicks,
@@ -265,7 +269,7 @@ export function getRecipeMachineConfigTierControls(
   const controls = dropHiddenControls(
     mergeMachineConfigControls(
       recipe.machineConfigControls ?? [],
-      getMachineTableControls(recipe.machineType),
+      getMachineTableControls(recipe.machineType, recipe as Partial<Recipe>),
     ),
     recipe.machineType,
   );

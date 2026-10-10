@@ -41,20 +41,24 @@ afterEach(() => { cleanup(); vi.unstubAllGlobals(); useFactoryStore.setState({ d
 
 describe("Pool specialized machines", () => {
   it("applies Tree Growth Simulator tool choices to its output", () => {
-    const recipe: Recipe = { id: "tgs", name: "Oak", machineType: "Tree Growth Simulator", minimumTier: "LV", durationTicks: 100, eut: 8,
-      inputs: [{ kind: "item", id: "sapling", amount: 1, consumed: false }],
-      outputs: [{ kind: "item", id: "log", amount: 5, neiSlot: { x: 108, y: 36 } }],
-      machineConfigControls: [{ id: "tgsToolSlot1", label: "Tool Slot 1", minimumKey: "none", defaultKey: "none", tiers: [
-        { key: "none", label: "Empty", resource: { kind: "item", id: "empty", amount: 1 } },
-        { key: "log:saw", label: "Saw", outputMultiplier: 1, resource: { kind: "item", id: "saw", amount: 1 } },
-      ] }], source: { recipeMap: "Tree Growth Simulator" } };
+    // Oak at LV with a saw: 5 logs a run x5 every 5 s, so 5/s; a buzzsaw doubles it (MTETreeFarm).
+    const recipe: Recipe = { id: "tgs", name: "Oak", machineType: "Tree Growth Simulator", minimumTier: "LV", durationTicks: 100, eut: 0,
+      inputs: [],
+      outputs: [
+        { kind: "item", id: "minecraft:log", amount: 5 },
+        { kind: "item", id: "minecraft:sapling", amount: 5 },
+        { kind: "item", id: "minecraft:leaves", amount: 2 },
+        { kind: "item", id: "minecraft:apple", amount: 1 },
+      ],
+      source: { recipeMap: "Tree Growth Simulator" } };
     useFactoryStore.getState().setProject(plan(recipe));
     render(<PoolWorksheet />);
-    expect(useFactoryStore.getState().lastResult!.nodes.machine.outputs["item:log"].amountPerSecond).toBe(0);
+    const logs = () => useFactoryStore.getState().lastResult!.nodes.machine.outputs["item:minecraft:log"].amountPerSecond;
+    expect(logs()).toBeCloseTo(5);
     fireEvent.click(screen.getByRole("button", { name: "Settings for Tree Growth Simulator" }));
-    fireEvent.click(screen.getByRole("button", { name: "Next Tool Slot 1" }));
-    expect(useFactoryStore.getState().project.nodes[0].machineConfigTiers?.tgsToolSlot1).toBe("log:saw");
-    expect(useFactoryStore.getState().lastResult!.nodes.machine.outputs["item:log"].amountPerSecond).toBeGreaterThan(0);
+    fireEvent.click(screen.getByRole("button", { name: "Next Logs tool" }));
+    expect(useFactoryStore.getState().project.nodes[0].machineConfigTiers?.tgsLogTool).toBe("log:buzzsaw");
+    expect(logs()).toBeCloseTo(10);
   });
   it("keeps generator-specific controls available in the compact settings panel", () => {
     const recipe = buildPowerRecipe("large-gas-turbine", { rotor: "Carbon", size: "Normal", fitting: "tight", flowMode: "optimal", fuel: "Benzene" }, "power")!;

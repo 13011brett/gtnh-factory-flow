@@ -1,3 +1,4 @@
+import { TGS_MACHINE_TYPE } from "@/lib/machines/tree-growth-simulator";
 import type {
   FactoryNode,
   MachineConfigControl,
@@ -738,6 +739,11 @@ const ic2DropMultiplierCache = new Map<string, number>();
 const ic2GrowthCycleCache = new Map<string, number>();
 
 export function enrichPassiveProductionRecipe(recipe: Recipe): Recipe {
+  // The Tree Growth Simulator's NEI page says ULV and 0 EU/t; the machine needs LV at least (it draws VP[t]), so
+  // a new card starts there (tree-growth-simulator.ts).
+  if (recipe.machineType === TGS_MACHINE_TYPE && recipe.minimumTier === "ULV") {
+    return { ...recipe, minimumTier: "LV" };
+  }
   if (isCropProductionRecipe(recipe)) {
     return enrichCropProductionRecipe(recipe);
   }

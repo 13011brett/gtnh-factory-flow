@@ -86,8 +86,23 @@ computes in float: replicate it.
   zero on steam cards; litres are billed instead, never both.
 - Crafting maps run on GT++'s Auto Workbench (synthesized in `recipe-rules.ts`, flat 2048 EU
   per craft) with instant hand-craft as the second handler.
-- TGS: output depends on tier and tools chosen per empty input slot (real item icons); no
-  relevant tool for an output means zero.
+- Tree Growth Simulator (`tree-growth-simulator.ts`, MTETreeFarm): a fixed 100-tick run at
+  VP[t] whatever the voltage (`getOverclockedRecipeStats` replays it; the reported tier is the
+  game's t, V x A rounded up); out = NEI amount x (2t^2 - 2t + 5) x the mode's tool; no tool, no
+  output. Forestry saplings scale by height/girth, fertility and yield in Java float maths. The
+  dataset has no sapling, modes or genes: `data/tgs-trees.json` (matched by outputs, then ids).
+  Tool controls keep the old dataset's ids (`tgsLogTool`...). Its NEI page says ULV and 0 EU/t;
+  the card treats it as LV and VP[1] (`applyMachineHandlerToRecipe`, `enrichPassiveProductionRecipe`).
+- Bacterial Vat (`bacterial-vat.ts`, MTEBioVat): normal overclocks; the first fluid in and out
+  x M from the output hatch's fill (2..1001, 1 empty or ME), applied to inputs in
+  `applyRecipeInputOverrides` and to outputs in `getMachineOutputMultiplier`; a run must fit
+  (void protection holds it). Glass and sieverts gate via `recipeGate` (`MachineContext.recipe`);
+  the radio hatch's material is an input at its decay rate. The dataset has no GLASS/SIEVERT:
+  `data/bio-vat.json` and `data/radio-hatch.json`.
+- Both come from the in-game mod's export (`call 'machinedata?dir=...'` in the full pack, then
+  `tools/audits/import-machine-side-data.mjs`); never hand-edit them. Their cards show their
+  working (`formula-lines.ts`, `MachineFormulas`); the in-game mod shows the same lines.
+  Per-recipe knobs come from `controlsFor` in the machine table.
 
 ## Config controls
 

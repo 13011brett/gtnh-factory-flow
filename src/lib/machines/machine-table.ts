@@ -28,7 +28,9 @@
  * evaluated over a grid of tiers and choices); that test says how to
  * regenerate it.
  */
-import type { MachineConfigControl } from "@/lib/model/types";
+import type { MachineConfigControl, Recipe } from "@/lib/model/types";
+import { TGS_TICKS, getTgsControls } from "./tree-growth-simulator";
+import { getVatControls, getVatGateReason } from "./bacterial-vat";
 import { EEC_CONTROLS, EEC_MODE } from "./extreme-entity-crusher";
 import { neutronActivatorSpeed, quantiseNeutronActivatorDuration } from "./neutron-activator";
 import { HILE_SOURCE_CONTROL, hileSourceAt, normalizeHileSettings } from "./hile";
@@ -129,6 +131,10 @@ export interface MachineContext {
   recipeSpecialValue?: number;
   /** Original recipe map, retained when a handler replaces the machine name. */
   recipeMap?: string;
+  /** The recipe itself, for machines whose rules read more than its numbers (the Bacterial Vat's glass). */
+  recipe?: Partial<Recipe>;
+  /** The node's raw settings, by control id. */
+  settings?: Record<string, string>;
 }
 
 type Coefficient = number | ((ctx: MachineContext) => number);
@@ -190,6 +196,11 @@ export interface MachineBehaviour {
    * with no changes, and merged over any control of the same id.
    */
   controls?: MachineConfigControl[];
+  /**
+   * Knobs that depend on the recipe (a tree's tool per output it has, radiation only where a vat recipe needs
+   * it). Used instead of `controls` when a recipe is at hand.
+   */
+  controlsFor?: (recipe: Partial<Recipe>) => MachineConfigControl[];
   /** Resolve legacy choices before both the UI and the solver read controls. */
   normalizeConfig?: (settings: Record<string, string>) => Record<string, string>;
   /** Structural recipe gate independent of how much power the hatches supply. */
@@ -1100,9 +1111,24 @@ const MACHINES: Record<string, MachineBehaviour> = {
     note: "Assumes it is not overheated.",
   },
   "Neutronium Compressor": { overclock: OVERCLOCK.normal(), parallels: 8 },
+  /**
+   * bartworks' Bacterial Vat (bacterial-vat.ts): normal overclocks; its fluids scale with the output hatch's
+   * fill, which getMachineOutputMultiplier and applyRecipeInputOverrides apply; glass and radiation gate it.
+   */
   "Bacterial Vat": {
     overclock: OVERCLOCK.normal(),
-    note: "Assumes a perfect fill rate.",
+    controlsFor: (recipe) => getVatControls(recipe),
+    recipeGate: (c) => (c.recipe ? getVatGateReason(c.recipe, c.settings) : undefined),
+  },
+  /**
+   * MTETreeFarm (tree-growth-simulator.ts): a fixed 100-tick run at VP[t] whatever the voltage, which
+   * getOverclockedRecipeStats replays; outputs scale by t, each mode's tool and a Forestry sapling's genes.
+   */
+  "Tree Growth Simulator": {
+    overclock: OVERCLOCK.none(),
+    cycleTicks: TGS_TICKS,
+    parallels: 1,
+    controlsFor: (recipe) => getTgsControls(recipe),
   },
   "Research Station": { overclock: OVERCLOCK.normal(), aliases: ["Research station"] },
 
@@ -1367,8 +1393,13 @@ export function machineTableSeedsFromBase(machineType: string | undefined): bool
 }
 
 /** Config knobs this machine contributes on top of whatever the dataset carries. */
-export function getMachineTableControls(machineType: string | undefined): MachineConfigControl[] {
-  return getMachineBehaviour(machineType)?.controls ?? [];
+export function getMachineTableControls(
+  machineType: string | undefined,
+  recipe?: Partial<Recipe>,
+): MachineConfigControl[] {
+  const behaviour = getMachineBehaviour(machineType);
+  if (behaviour?.controlsFor && recipe) return behaviour.controlsFor(recipe);
+  return behaviour?.controls ?? [];
 }
 
 /** Dataset control ids this machine does not actually have. */

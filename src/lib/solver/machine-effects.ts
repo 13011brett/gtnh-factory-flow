@@ -4,6 +4,8 @@ import {
   getEecSettings,
   isEecRecipe,
 } from "@/lib/machines/extreme-entity-crusher";
+import { getTgsOutputMultiplier, isTgsRecipe } from "@/lib/machines/tree-growth-simulator";
+import { getVatOutputMultiplier, isVatRecipe } from "@/lib/machines/bacterial-vat";
 import {
   getRecipeCoilTierControl,
   getRecipeMachineConfigTierControls,
@@ -41,8 +43,6 @@ import {
 import type { FactoryNode, MachineTier, Recipe, RecipeOutput } from "@/lib/model/types";
 
 type VoltageTier = Exclude<MachineTier, "DEMO">;
-
-const TGS_BASE_OUTPUT_MULTIPLIER = 5;
 
 /** What the machine table needs to read off a recipe. */
 type MachineEffectRecipe = Pick<
@@ -127,6 +127,8 @@ export function buildMachineContext(
     recipeVoltageTier: getVoltageTierIndex(getVoltageTierForEuT(Math.abs(recipe.eut ?? 0))),
     recipeSpecialValue: getRecipeSpecialValue(recipe),
     recipeMap: recipe.source?.recipeMap ?? recipe.machineType,
+    recipe: recipe as Partial<Recipe>,
+    settings: node.machineConfigTiers,
   };
 }
 
@@ -142,6 +144,14 @@ export function getMachineOutputMultiplier(
       output,
       getEecSettings(node.machineConfigTiers),
     );
+  }
+  if (isTgsRecipe(recipe)) {
+    // MTETreeFarm: the tier multiplier, each mode's tool, a Forestry sapling's genes.
+    return getTgsOutputMultiplier(recipe as Partial<Recipe>, output, node.machineConfigTiers, getVoltageTierIndex(tier));
+  }
+  if (isVatRecipe(recipe)) {
+    // MTEBioVat: the first fluid out times the output hatch's fill multiplier.
+    return getVatOutputMultiplier(recipe as Partial<Recipe>, output, node.machineConfigTiers);
   }
   const cropStats = getCropsNhStats(recipe);
   if (cropStats) {
@@ -179,10 +189,7 @@ export function getMachineOutputMultiplier(
   }
 
   const configMultiplier = getRecipeMachineConfigTierControls(recipe, node)
-    .filter(
-      (control) =>
-        !isTreeGrowthSimulatorToolControl(control.id) && !isBeeFrameSlotControlId(control.id),
-    )
+    .filter((control) => !isBeeFrameSlotControlId(control.id))
     .reduce((multiplier, control) => multiplier * (control.current.outputMultiplier ?? 1), 1);
 
   if (isBeeProductionRecipe(recipe)) {
@@ -194,14 +201,7 @@ export function getMachineOutputMultiplier(
     );
   }
 
-  if (!isTreeGrowthSimulatorRecipe(recipe)) {
-    return configMultiplier;
-  }
-
-  const tierOrdinal = getVoltageTierIndex(tier) + 1;
-  const tierMultiplier = (2 * tierOrdinal ** 2 - 2 * tierOrdinal + 5) / TGS_BASE_OUTPUT_MULTIPLIER;
-  const toolMultiplier = getTreeGrowthSimulatorToolMultiplier(recipe, node, output);
-  return configMultiplier * tierMultiplier * toolMultiplier;
+  return configMultiplier;
 }
 
 function getBeeClimateOutputMultiplier(
@@ -306,31 +306,6 @@ export function applyMachineOutputMultipliers(
   return outputs.some((output, index) => output !== recipe.outputs[index])
     ? { ...recipe, outputs }
     : recipe;
-}
-
-function getTreeGrowthSimulatorToolMultiplier(
-  recipe: Pick<Recipe, "machineType" | "source" | "nei" | "machineConfigControls">,
-  node: Pick<FactoryNode, "machineConfigTiers">,
-  output: RecipeOutput,
-) {
-  const category = getTreeGrowthSimulatorOutputCategory(output);
-  if (!category) {
-    return 1;
-  }
-
-  const normalizedCategory = category.toLowerCase();
-  const controls = getRecipeMachineConfigTierControls(recipe, node);
-  const slotControl = controls
-    .filter((entry) => /^tgsToolSlot\d+$/.test(entry.id))
-    .filter((entry) => getTreeGrowthSimulatorSlotCategory(entry.id) === normalizedCategory)
-    .find((entry) => getTreeGrowthSimulatorToolCategory(entry.current.key) === normalizedCategory);
-  const categoryControl = controls.find((entry) => entry.id === `tgs${category}Tool`);
-
-  if (controls.some((entry) => /^tgsToolSlot\d+$/.test(entry.id))) {
-    return slotControl?.current.outputMultiplier ?? 0;
-  }
-
-  return slotControl?.current.outputMultiplier ?? categoryControl?.current.outputMultiplier ?? 1;
 }
 
 export function getMachineParallelMultiplier(
@@ -479,65 +454,6 @@ export function getMachineEutMultiplier(
     return multiplier * (control.current.eutMultiplier ?? 1);
   }, 1);
   return coilMultiplier * configMultiplier;
-}
-
-function getTreeGrowthSimulatorOutputCategory(output: RecipeOutput) {
-  const slot = output.neiSlot;
-  if (slot?.x === 108 && slot.y === 36) {
-    return "Log";
-  }
-  if (slot?.x === 126 && slot.y === 36) {
-    return "Sapling";
-  }
-  if (slot?.x === 108 && slot.y === 54) {
-    return "Leaves";
-  }
-  if (slot?.x === 126 && slot.y === 54) {
-    return "Fruit";
-  }
-
-  const label = `${output.displayName ?? ""} ${output.id}`.toLowerCase();
-  if (label.includes("sapling")) {
-    return "Sapling";
-  }
-  if (label.includes("leaves") || label.includes("leaf")) {
-    return "Leaves";
-  }
-  if (label.includes("log") || label.includes("wood")) {
-    return "Log";
-  }
-  return "Fruit";
-}
-
-function getTreeGrowthSimulatorToolCategory(key: string): string | undefined {
-  const [category] = key.split(":");
-  return category && category !== "none" ? category : undefined;
-}
-
-function isTreeGrowthSimulatorToolControl(controlId: string): boolean {
-  return (
-    /^tgsToolSlot\d+$/.test(controlId) || /^tgs(?:Log|Sapling|Leaves|Fruit)Tool$/.test(controlId)
-  );
-}
-
-function getTreeGrowthSimulatorSlotCategory(controlId: string): string | undefined {
-  switch (controlId) {
-    case "tgsToolSlot1":
-      return "log";
-    case "tgsToolSlot2":
-      return "sapling";
-    case "tgsToolSlot3":
-      return "leaves";
-    case "tgsToolSlot4":
-      return "fruit";
-    default:
-      return undefined;
-  }
-}
-
-function isTreeGrowthSimulatorRecipe(recipe: Pick<Recipe, "machineType" | "source">): boolean {
-  const recipeMap = recipe.source?.recipeMap ?? recipe.machineType;
-  return normalizeRecipeMapName(recipeMap) === "tree growth simulator";
 }
 
 function normalizeRecipeMapName(recipeMap: string): string {

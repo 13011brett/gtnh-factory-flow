@@ -3,6 +3,11 @@
 import { stripBeeFrameSlotInputs } from "@/lib/model/bee-display";
 
 import { isTreeGrowthSimulatorToolControl, applyTreeGrowthSimulatorToolInputs, getTreeGrowthSimulatorSlotResource, getTreeGrowthSimulatorSlotTiers } from "@/lib/model/recipe-tool-slots";
+import { MachineFormulas } from "./MachineFormulas";
+import { getTgsFormulas, isTgsRecipe } from "@/lib/machines/tree-growth-simulator";
+import { getVatFormulas, isVatRecipe } from "@/lib/machines/bacterial-vat";
+import type { FormulaLine } from "@/lib/machines/formula-lines";
+import { getNodePowerAmps as getMachineFormulaAmps, getNodeRunTier as getMachineFormulaTier } from "@/lib/solver/power";
 import { industrialFarmCapacity } from "@/lib/model/full-farms";
 
 import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
@@ -496,7 +501,20 @@ function RecipeNodeComponent({ data, selected, controlsOnly = false, renderEdito
         control.id === CROP_MANAGER_TIER_CONTROL_ID ||
         control.id === CROP_SEED_BED_TIER_CONTROL_ID,
     );
+    // The worked formulas of a modelled machine, from the recipe as written (the effective one already carries
+    // the vat's scaled fluid) and the card's own settings and power.
+    const machineFormulaLines: FormulaLine[] = isTgsRecipe(effectiveRecipe)
+      ? getTgsFormulas(
+        recipe,
+        projectNode.machineConfigTiers,
+        getVoltageTierMaxEuT(getMachineFormulaTier(effectiveRecipe, projectNode)),
+        getMachineFormulaAmps(effectiveRecipe, projectNode),
+      )
+      : isVatRecipe(effectiveRecipe)
+        ? getVatFormulas(recipe, projectNode.machineConfigTiers, overclockedStats)
+        : [];
     return {
+      machineFormulaLines,
       machineHandlers,
       selectedMachineHandler,
       nodeRecipe,
@@ -581,6 +599,7 @@ function RecipeNodeComponent({ data, selected, controlsOnly = false, renderEdito
     showHatchControl,
     energyHatchType,
     powerInfo,
+    machineFormulaLines,
   } = derived;
   // SHARED MACHINE (shared-machine.ts): a card running several recipes.
   // The machine list is what runs EVERY recipe on it; each extra recipe is
@@ -1292,6 +1311,7 @@ function RecipeNodeComponent({ data, selected, controlsOnly = false, renderEdito
       <fieldset disabled={editorLocked} className="pool-machine-settings min-w-0 border-0 p-0 text-[var(--mc-ink)]">
         {powerInfo ? <PowerConfigPanel nodeId={projectNode.id} sourceId={powerInfo.sourceId} values={projectNode.machineConfigTiers} stats={powerInfo.stats} warnings={powerInfo.warnings} /> : null}
         {machineConfigPanel}
+        {machineFormulaLines.length > 0 ? <MachineFormulas lines={machineFormulaLines} /> : null}
         {passiveProductionPanel}
         {isCustomRateNode && customRateDial ? <CustomRatePanel nodeId={projectNode.id} mode={customRateDial.mode} kind={customRateSlot?.resource.kind ?? "item"} perSecond={customRateDial.perSecond} /> : null}
       </fieldset>
@@ -2036,6 +2056,11 @@ function RecipeNodeComponent({ data, selected, controlsOnly = false, renderEdito
                 />
               ) : null}
               {calmMode ? null : machineConfigPanel}
+              {calmMode || machineFormulaLines.length === 0 ? null : (
+                <GridBlock className="" minCells={1}>
+                  <MachineFormulas lines={machineFormulaLines} />
+                </GridBlock>
+              )}
               {calmMode ? null : passiveProductionPanel}
               <div
                 // No background of its own: this strip is card face, so the

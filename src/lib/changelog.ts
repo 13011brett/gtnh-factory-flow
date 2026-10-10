@@ -40,6 +40,18 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.10.0",
+    date: "2026-10-10",
+    headline: "Tree Growth Simulator and Bacterial Vat, as the game runs them",
+    notes: [
+      "Tree Growth Simulator cards run the game's 5-second cycle at its real power, with a tool for each output, the tier multiplier and a Forestry sapling's genes.",
+      "Bacterial Vat cards scale their fluids by how full the output hatch is kept (up to 1,001x), check glass and radiation, and burn the radio hatch's material.",
+      "Both cards show their working under Formulas, with your own settings plugged in.",
+    ],
+    warning:
+      "Tree Growth Simulator cards showed too few items and no power before. Saved plans with one now show the game's numbers.",
+  },
+  {
     version: "3.9.6",
     date: "2026-09-30",
     headline: "Power numbers checked against the game",

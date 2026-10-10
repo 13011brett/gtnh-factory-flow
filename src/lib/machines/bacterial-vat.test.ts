@@ -152,6 +152,13 @@ describe("Bacterial Vat", () => {
     expect(node.inputs["fluid:biomass"].amountPerSecond).toBeCloseTo(100_100 / (37 / 20), 1);
   });
 
+  it("builds a recipe's settings once, however often the solver copies the recipe", () => {
+    // A card's every power check reads them, on a fresh copy of the recipe each time: rebuilding the radio hatch's
+    // hundred materials per check froze the page when the power panel walked every budget.
+    expect(getVatControls({ ...exact })).toBe(getVatControls({ ...exact, inputs: [...exact.inputs] }));
+    expect(getVatControls({ ...biomass })).not.toBe(getVatControls({ ...exact }));
+  });
+
   it("shows its working", () => {
     const lines = getVatFormulas(biomass, { bioVatOutputHatch: "iv" }, { durationTicks: 37, eut: 32, overclockSteps: 2 });
     const text = Object.fromEntries(lines.map((line) => [line.label, `${formulaText(line.math)} = ${line.result}`]));

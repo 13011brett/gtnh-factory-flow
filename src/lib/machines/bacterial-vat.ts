@@ -102,12 +102,24 @@ export function isVatRecipe(recipe: Partial<Pick<Recipe, "machineType">>): boole
   return recipe.machineType === VAT_MACHINE_TYPE;
 }
 
-const requirementCache = new WeakMap<object, VatRequirements>();
+/**
+ * What a vat recipe's card reads off it, as one string: its identity (vatKey) and its culture. The solver hands over a
+ * freshly derived recipe object on every call (a handler applied, inputs overridden), so caches keyed by the object
+ * never hit; keyed by this they do, and a card's every power check stops rebuilding the same answers.
+ */
+function recipeKey(recipe: Partial<Pick<Recipe, "inputs" | "outputs" | "durationTicks" | "eut">>): string {
+  const fluidIn = recipe.inputs?.find((input) => input.kind === "fluid");
+  const fluidOut = recipe.outputs?.find((output) => output.kind === "fluid");
+  return `${vatKey(fluidIn, fluidOut, recipe.durationTicks, recipe.eut)}|${cultureOf(recipe)}`;
+}
+
+const requirementCache = new Map<string, VatRequirements>();
 
 export function getVatRequirements(
   recipe: Partial<Pick<Recipe, "inputs" | "outputs" | "durationTicks" | "eut" | "machineType">>,
 ): VatRequirements {
-  const cached = requirementCache.get(recipe);
+  const key = recipeKey(recipe);
+  const cached = requirementCache.get(key);
   if (cached) return cached;
   const fluidIn = recipe.inputs?.find((input) => input.kind === "fluid");
   const fluidOut = recipe.outputs?.find((output) => output.kind === "fluid");
@@ -124,7 +136,7 @@ export function getVatRequirements(
       known: true,
     }
     : { glass: 3, sievert: 0, exact: false, cleanroom: false, culture, known: false };
-  requirementCache.set(recipe, result);
+  requirementCache.set(key, result);
   return result;
 }
 
@@ -337,8 +349,21 @@ function option(id: string, key: string, label: string, detail: string, itemId?:
   };
 }
 
-/** The knobs a vat recipe's card offers; radiation only on recipes that need it. */
+const controlsCache = new Map<string, MachineConfigControl[]>();
+
+/** The knobs a vat recipe's card offers; radiation only on recipes that need it. Built once per recipe. */
 export function getVatControls(
+  recipe: Partial<Pick<Recipe, "inputs" | "outputs" | "durationTicks" | "eut" | "machineType">>,
+): MachineConfigControl[] {
+  const key = recipeKey(recipe);
+  const cached = controlsCache.get(key);
+  if (cached) return cached;
+  const controls = buildVatControls(recipe);
+  controlsCache.set(key, controls);
+  return controls;
+}
+
+function buildVatControls(
   recipe: Partial<Pick<Recipe, "inputs" | "outputs" | "durationTicks" | "eut" | "machineType">>,
 ): MachineConfigControl[] {
   const need = getVatRequirements(recipe);

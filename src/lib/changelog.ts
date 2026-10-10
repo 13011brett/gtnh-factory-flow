@@ -40,6 +40,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.10.1",
+    date: "2026-10-10",
+    headline: "Bacterial Vat cards no longer freeze the page",
+    notes: [
+      "Changing a Bacterial Vat's settings, or opening its power panel, could freeze the tab for many seconds. It now answers at once.",
+    ],
+  },
+  {
     version: "3.10.0",
     date: "2026-10-10",
     headline: "Tree Growth Simulator and Bacterial Vat, as the game runs them",

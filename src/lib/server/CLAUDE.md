@@ -32,3 +32,11 @@ The instance is small and has gone down under load. Rules:
 - Read community plan jsonb about 10 rows per statement, or it hits the statement timeout.
 - The dashboard (restarts, disk IO, memory) needs the repo owner; there is no management
   token here.
+
+## Feedback from the game (feedback.ts, app/api/feedback)
+
+- The in-game planner's Feedback box posts to `/api/feedback`; each report becomes an issue on
+  `jackwrichards/gtnh-planner-mod` through `GITHUB_FEEDBACK_TOKEN` (in `/opt/shared/env.local`; without it the route
+  answers 503). Five reports per actor an hour.
+- Plans and the picture go to the private `feedback-files` bucket, served by `/api/feedback/files/<id>/<file>`. The
+  mod strips names, paths and addresses from logs and crash reports before sending.

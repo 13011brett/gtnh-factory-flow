@@ -40,6 +40,21 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.11.0",
+    date: "2026-10-11",
+    headline: "GTNH Planner is now in the game!",
+    notes: [
+      "*GTNH Planner is a mod for GTNH 2.9*: plan your factories right from NEI, just like the site.",
+      "A one-time popup shows the trailer; close it and it stays closed.",
+    ],
+    actions: [
+      {
+        label: "Get the mod",
+        href: "https://github.com/jackwrichards/gtnh-planner-mod/releases/latest",
+      },
+    ],
+  },
+  {
     version: "3.10.1",
     date: "2026-10-10",
     headline: "Bacterial Vat cards no longer freeze the page",
@@ -74,9 +89,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "3.9.5",
     date: "2026-09-30",
     headline: "Behind-the-scenes cleanup",
-    notes: [
-      "Unused code was removed. Plans, results and controls work exactly as before.",
-    ],
+    notes: ["Unused code was removed. Plans, results and controls work exactly as before."],
   },
   {
     version: "3.9.4",
@@ -111,7 +124,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     date: "2026-09-25",
     headline: "No more runaway conflict copies",
     notes: [
-      "Editing a big plan quickly no longer makes a new \"(conflict copy)\" design every few saves.",
+      'Editing a big plan quickly no longer makes a new "(conflict copy)" design every few saves.',
       "A copy of a conflict copy is numbered instead of repeating the words, and its name fits your account.",
       "Copies already made are ordinary designs: delete the ones you don't need.",
       "A heat exchanger on the board no longer breaks the Machines list.",
@@ -305,10 +318,12 @@ export const CHANGELOG: ChangelogEntry[] = [
       "*Machine list:* one row per card, accurate fractional Solve/Pool counts, and corrected peak/average power for shared recipes.",
       "*Visual corrections:* fixed machine structure pictures and consistent input/output colors across drawers, targets and totals.",
     ],
-    actions: [{
-      label: "Full engineering notes",
-      href: "https://github.com/jackwrichards/gtnh-factory-flow/blob/main/docs/releases/3.1.4.md",
-    }],
+    actions: [
+      {
+        label: "Full engineering notes",
+        href: "https://github.com/jackwrichards/gtnh-factory-flow/blob/main/docs/releases/3.1.4.md",
+      },
+    ],
   },
   {
     version: "3.1.2",
@@ -657,9 +672,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "2.41.3",
     date: "2026-08-31",
     headline: "Copied generators keep their own settings",
-    notes: [
-      "Changing a setting on a copied generator no longer changes the original too.",
-    ],
+    notes: ["Changing a setting on a copied generator no longer changes the original too."],
   },
   {
     version: "2.41.2",
@@ -1128,9 +1141,7 @@ export const CHANGELOG: ChangelogEntry[] = [
     version: "2.14.1",
     date: "2026-08-14",
     headline: "The site introduces itself to AI assistants",
-    notes: [
-      "Asking an AI assistant about GTNH planning has a better chance of pointing here.",
-    ],
+    notes: ["Asking an AI assistant about GTNH planning has a better chance of pointing here."],
   },
   {
     version: "2.14.0",

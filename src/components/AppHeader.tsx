@@ -6,12 +6,9 @@ import { Settings } from "lucide-react";
 import { useEffect, useState, useSyncExternalStore } from "react";
 import { OPEN_SHARE_DIALOG_EVENT } from "@/lib/setups-tab";
 import { useIsCompactViewport } from "@/lib/compact-view";
-import {
-  markNotesReadAndNotify,
-  subscribeToNotesRead,
-  unseenEntries,
-} from "@/lib/whats-new";
+import { markNotesReadAndNotify, subscribeToNotesRead, unseenEntries } from "@/lib/whats-new";
 import { ChangelogDialog } from "./ChangelogDialog";
+import { ModAnnouncement } from "./ModAnnouncement";
 import { APP_VERSION } from "@/lib/version";
 import { AccountMenu } from "./community/AccountMenu";
 import { SharePlanDialog } from "./community/SharePlanDialog";
@@ -124,6 +121,8 @@ export function AppHeader({ onLoadDatasetVersion }: AppHeaderProps) {
       {isChangelogOpen ? (
         <ChangelogDialog unseenVersions={unseenVersions} onClose={() => setChangelogOpen(false)} />
       ) : null}
+      {/* The one popup that opens by itself, once per browser. */}
+      <ModAnnouncement />
       {isDevMenuOpen ? <DevMenu onClose={() => setDevMenuOpen(false)} /> : null}
       {isShareOpen ? <SharePlanDialog onClose={() => setShareOpen(false)} /> : null}
       {isExportOpen ? <ExportImageDialog onClose={() => setExportOpen(false)} /> : null}

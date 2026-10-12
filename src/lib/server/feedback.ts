@@ -137,9 +137,11 @@ export function issueBody(report: FeedbackReport, links: FeedbackLinks): { body:
   const foot = [
     "",
     "---",
-    [v.mod && `GTNH Planner ${v.mod}`, v.pack && `GTNH ${v.pack}`, v.java && `Java ${v.java}`, v.os]
-      .filter(Boolean)
-      .join(" · "),
+    quiet(
+      [v.mod && `GTNH Planner ${v.mod}`, v.pack && `GTNH ${v.pack}`, v.java && `Java ${v.java}`, v.os]
+        .filter(Boolean)
+        .join(" · "),
+    ),
   ];
   const whole = [...head, ...plans, ...picture, ...folded, ...foot].join("\n");
   if (whole.length <= BODY_MAX) {
@@ -166,9 +168,15 @@ function plansSection(links: FeedbackLinks): string[] {
   return lines;
 }
 
-/** Text from the player that cannot ping anyone or link an issue: mentions and references are broken up. */
+/**
+ * Text from the player that cannot ping anyone, link an issue, or show a picture, a link or HTML: mentions and
+ * references are broken up, and brackets and tags escaped. Bare addresses still autolink, as text.
+ */
 function quiet(text: string): string {
-  return text.replace(/@(?=[\w-])/g, "@​").replace(/#(?=\d)/g, "#​");
+  return text
+    .replace(/@(?=[\w-])/g, "@​")
+    .replace(/#(?=\d)/g, "#​")
+    .replace(/[\\[\]<>]/g, (c) => ({ "\\": "\\\\", "[": "\\[", "]": "\\]", "<": "&lt;", ">": "&gt;" })[c]!);
 }
 
 /** Folded text in a fence nothing inside can close. */

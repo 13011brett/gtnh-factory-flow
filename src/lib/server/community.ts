@@ -61,17 +61,34 @@ export function getCommunityDb(): SupabaseClient {
 }
 
 /**
+ * The address a request came from. The site sits behind Cloudflare and then Caddy, so the TCP peer is a Cloudflare
+ * edge and X-Forwarded-For names that edge (Caddy trusts no incoming one). Caddy puts the client's own address in
+ * X-Client-Ip, overwriting anything the client sent (its `client_ip` from Cloudflare's CF-Connecting-IP, trusted only
+ * from Cloudflare's ranges); without that, CF-Connecting-IP, which Cloudflare always sets itself.
+ */
+export function clientAddress(request: Request): string {
+  const forwarded = request.headers.get("x-forwarded-for");
+  return (
+    request.headers.get("x-client-ip")?.trim() ||
+    request.headers.get("cf-connecting-ip")?.trim() ||
+    forwarded?.split(",")[0]?.trim() ||
+    request.headers.get("x-real-ip")?.trim() ||
+    "local"
+  );
+}
+
+/** A salted hash, so keys never hold raw addresses or ids. */
+export function saltedKey(text: string): string {
+  const salt = process.env.COMMUNITY_HASH_SALT ?? "gtnh-factory-hub";
+  return createHash("sha256").update(`${salt}:${text}`).digest("hex").slice(0, 32);
+}
+
+/**
  * Anonymous identity: a salted hash of client IP + device id. Good enough to
  * rate-limit without storing raw IPs (votes use `makeVoterKey`).
  */
 export function makeActorKey(request: Request, deviceId?: string): string {
-  const forwarded = request.headers.get("x-forwarded-for");
-  const ip = forwarded?.split(",")[0]?.trim() || request.headers.get("x-real-ip") || "local";
-  const salt = process.env.COMMUNITY_HASH_SALT ?? "gtnh-factory-hub";
-  return createHash("sha256")
-    .update(`${salt}:${ip}:${deviceId ?? ""}`)
-    .digest("hex")
-    .slice(0, 32);
+  return saltedKey(`${clientAddress(request)}:${deviceId ?? ""}`);
 }
 
 /**
@@ -175,31 +192,36 @@ export async function checkRateLimit(
   maxPerWindow: number,
   windowSeconds: number,
 ): Promise<boolean> {
-  const db = getCommunityDb();
+  if ((await countEvents(actorKey, action, windowSeconds)) >= maxPerWindow) {
+    return false;
+  }
+  await recordEvents([{ actorKey, action }]);
+  return true;
+}
+
+/** How many times the actor did the action in the last `windowSeconds`. */
+export async function countEvents(actorKey: string, action: string, windowSeconds: number): Promise<number> {
   const windowStart = new Date(Date.now() - windowSeconds * 1000).toISOString();
-  const { count, error } = await db
+  const { count, error } = await getCommunityDb()
     .from("community_events")
     .select("id", { count: "exact", head: true })
     .eq("actor_key", actorKey)
     .eq("action", action)
     .gte("created_at", windowStart);
-
   if (error) {
     throw new Error(`Rate limit check failed: ${error.message}`);
   }
+  return count ?? 0;
+}
 
-  if ((count ?? 0) >= maxPerWindow) {
-    return false;
-  }
-
-  const { error: insertError } = await db
+/** Records actions for `countEvents`, in one request. */
+export async function recordEvents(events: { actorKey: string; action: string }[]): Promise<void> {
+  const { error } = await getCommunityDb()
     .from("community_events")
-    .insert({ actor_key: actorKey, action });
-  if (insertError) {
-    throw new Error(`Rate limit record failed: ${insertError.message}`);
+    .insert(events.map((e) => ({ actor_key: e.actorKey, action: e.action })));
+  if (error) {
+    throw new Error(`Rate limit record failed: ${error.message}`);
   }
-
-  return true;
 }
 
 /**

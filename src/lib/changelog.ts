@@ -40,6 +40,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.11.1",
+    date: "2026-10-12",
+    headline: "Reports from the mod are checked",
+    notes: [
+      "Bug reports sent from the in-game planner are now limited and checked for spam before they are posted.",
+    ],
+  },
+  {
     version: "3.11.0",
     date: "2026-10-11",
     headline: "GTNH Planner is now in the game!",

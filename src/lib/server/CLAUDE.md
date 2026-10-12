@@ -37,6 +37,15 @@ The instance is small and has gone down under load. Rules:
 
 - The in-game planner's Feedback box posts to `/api/feedback`; each report becomes an issue on
   `jackwrichards/gtnh-planner-mod` through `GITHUB_FEEDBACK_TOKEN` (in `/opt/shared/env.local`; without it the route
-  answers 503). Five reports per actor an hour.
-- Plans and the picture go to the private `feedback-files` bucket, served by `/api/feedback/files/<id>/<file>`. The
-  mod strips names, paths and addresses from logs and crash reports before sending.
+  answers 503).
+- It was flooded on 2026-10-12 (450 spam issues from about 5,000 residential addresses, the mod's user agent, made-up
+  versions), so `feedback-guard.ts` stands in front: the mod's shapes (device id, versions), an in-memory gate (30
+  a minute; 60 refusals in 10 minutes pause reports for 6 hours), 3 an hour and 10 a day per address and per device,
+  the same words once a month, and at most 10 issues an hour and 40 a day for the whole site. Player text is escaped
+  (no pictures, links or HTML in the issue).
+- The client address is Caddy's `X-Client-Ip` (Cloudflare's CF-Connecting-IP, trusted only from Cloudflare's
+  ranges), then CF-Connecting-IP; X-Forwarded-For names a Cloudflare edge (`clientAddress` in community.ts).
+- Emergency stop without a deploy: a Caddy rule answering 503 to `POST /api/feedback` (`/etc/caddy/Caddyfile`, then
+  `systemctl reload caddy`).
+- Plans and the picture go to the private `feedback-files` bucket, served by `/api/feedback/files/<id>/<file>`, only
+  once every check has passed. The mod strips names, paths and addresses from logs and crash reports before sending.

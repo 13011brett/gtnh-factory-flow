@@ -3,9 +3,11 @@ import { PROJECT_SCHEMA_VERSION } from "@/lib/model/types";
 
 vi.mock("@/lib/server/community", () => ({
   isCommunityConfigured: () => true,
-  makeActorKey: () => "actor",
-  checkRateLimit: vi.fn(async () => true),
 }));
+vi.mock("@/lib/server/feedback-guard", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/lib/server/feedback-guard")>();
+  return { ...actual, claimIssue: vi.fn(async () => undefined) };
+});
 vi.mock("@/lib/server/feedback-files", () => ({
   storeFeedbackFile: vi.fn(
     async (origin: string, id: string, file: string) => `${origin}/api/feedback/files/${id}/${file}`,
@@ -19,8 +21,8 @@ vi.mock("@/lib/server/feedback", async (importOriginal) => {
   };
 });
 
-import { checkRateLimit } from "@/lib/server/community";
 import { openIssue } from "@/lib/server/feedback";
+import { claimIssue } from "@/lib/server/feedback-guard";
 import { POST } from "./route";
 
 const plan = {
@@ -43,7 +45,8 @@ const report = {
   mood: "happy",
   title: "Copy a card",
   description: "Let me copy a card",
-  deviceId: "device",
+  deviceId: "gtnhplanner-0b6c1c7e-8f0a-4c43-9a51-6f2d0c1e2b3a",
+  versions: { mod: "0.2.0-alpha.5", pack: "2.9.84", java: "25.0.1", os: "Windows 11 10.0" },
   plans: [{ name: "Steel line", plan }],
 };
 
@@ -79,8 +82,20 @@ describe("the feedback route", () => {
   it("refuses a bad report and a busy player", async () => {
     vi.stubEnv("GITHUB_FEEDBACK_TOKEN", "token");
     expect((await send({ ...report, title: "" })).status).toBe(400);
-    vi.mocked(checkRateLimit).mockResolvedValueOnce(false);
+    vi.mocked(claimIssue).mockResolvedValueOnce({ status: 429, error: "That's a lot of reports. Try again in an hour." });
     const busy = await send(report);
     expect(busy.status).toBe(429);
+    expect(await busy.json()).toEqual({ error: "That's a lot of reports. Try again in an hour." });
+  });
+
+  it("opens nothing for a report the game did not send, before any count", async () => {
+    vi.stubEnv("GITHUB_FEEDBACK_TOKEN", "token");
+    vi.mocked(openIssue).mockClear();
+    vi.mocked(claimIssue).mockClear();
+    const forged = await send({ ...report, versions: { mod: "1", pack: "1", java: "1", os: "Windows 10" } });
+    expect(forged.status).toBe(400);
+    expect(await send({ ...report, deviceId: "device" })).toHaveProperty("status", 400);
+    expect(claimIssue).not.toHaveBeenCalled();
+    expect(openIssue).not.toHaveBeenCalled();
   });
 });

@@ -88,6 +88,19 @@ describe("feedback reports from the game", () => {
     expect(body).toContain("GTNH Planner 0.2.0-alpha.2 · GTNH 2.9.0-RC-2 · Java 21 · Windows 11");
   });
 
+  it("shows the player's words as text: no pictures, links or HTML", () => {
+    const r = parsed({
+      description: "look ![x](https://evil.example/a.png) [click](https://evil.example) <img src=x> a\\b",
+    });
+    const { body } = issueBody(r, { plans: [{ name: "[Plan](https://evil.example)", cards: 1 }] });
+    expect(body).not.toMatch(/!\[x\]\(/);
+    expect(body).toContain("!\\[x\\](https://evil.example/a.png)");
+    expect(body).toContain("\\[click\\](https://evil.example)");
+    expect(body).toContain("&lt;img src=x&gt;");
+    expect(body).toContain("a\\\\b");
+    expect(body).toContain("**\\[Plan\\](https://evil.example)** (1 card)");
+  });
+
   it("moves the plans to a comment when the body would be too long", () => {
     const r = parsed({ crash: "x".repeat(59_000) });
     const { body, plansComment } = issueBody(r, {

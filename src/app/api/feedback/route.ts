@@ -1,7 +1,7 @@
 import { randomUUID } from "node:crypto";
 import { NextResponse } from "next/server";
 import { encodePlanCode, planCodeLink } from "@/lib/import-export/plan-code";
-import { checkRateLimit, isCommunityConfigured, makeActorKey } from "@/lib/server/community";
+import { isCommunityConfigured } from "@/lib/server/community";
 import {
   FEEDBACK_MAX_BYTES,
   FEEDBACK_REPO,
@@ -15,41 +15,60 @@ import {
   planFile,
 } from "@/lib/server/feedback";
 import { storeFeedbackFile } from "@/lib/server/feedback-files";
+import { claimIssue, feedbackGate, looksSentByTheGame } from "@/lib/server/feedback-guard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
 
 /** Where the issues are opened, and the site the links point at. */
 const SITE = "https://gtnhplanner.com";
-/** Reports per player (device and address) in an hour. */
-const REPORTS_PER_HOUR = 5;
+
+/** A refusal, counted towards the gate's flood pause. */
+function refuse(status: number, error: string): NextResponse {
+  feedbackGate.refused();
+  return NextResponse.json({ error }, { status });
+}
 
 /**
  * A report from the in-game Feedback box, opened as a GitHub issue on the planner's repo. Answers the issue's
- * number and page, which the game shows.
+ * number and page, which the game shows. `feedback-guard.ts` has what a report must get past first.
  */
 export async function POST(request: Request) {
   const token = process.env.GITHUB_FEEDBACK_TOKEN;
   if (!token || !isCommunityConfigured()) {
     return NextResponse.json({ error: "Reports can't be sent yet." }, { status: 503 });
   }
+  const gate = feedbackGate.admit();
+  if (gate === "paused") {
+    return NextResponse.json({ error: "Reports are paused for a while. Try again later." }, { status: 503 });
+  }
+  if (gate === "busy") {
+    return NextResponse.json({ error: "Lots of reports are coming in. Try again in a few minutes." }, { status: 429 });
+  }
   try {
+    if (Number(request.headers.get("content-length") ?? 0) > FEEDBACK_MAX_BYTES) {
+      return refuse(413, "The report is too big. Send fewer plans.");
+    }
     const raw = await request.text();
     if (raw.length > FEEDBACK_MAX_BYTES) {
-      return NextResponse.json({ error: "The report is too big. Send fewer plans." }, { status: 413 });
+      return refuse(413, "The report is too big. Send fewer plans.");
     }
     let json: unknown;
     try {
       json = JSON.parse(raw);
     } catch {
-      return NextResponse.json({ error: "That report could not be read." }, { status: 400 });
+      return refuse(400, "That report could not be read.");
     }
     const report = parseFeedback(json);
     if ("error" in report) {
-      return NextResponse.json({ error: report.error }, { status: 400 });
+      return refuse(400, report.error);
     }
-    if (!(await checkRateLimit(makeActorKey(request, report.deviceId), "feedback", REPORTS_PER_HOUR, 60 * 60))) {
-      return NextResponse.json({ error: "That's a lot of reports. Try again in an hour." }, { status: 429 });
+    if (!looksSentByTheGame(report)) {
+      return refuse(400, "That report could not be read.");
+    }
+    const refusal = await claimIssue(request, report);
+    if (refusal) {
+      return refuse(refusal.status, refusal.error);
     }
 
     const id = randomUUID();

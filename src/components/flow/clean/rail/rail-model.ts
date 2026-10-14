@@ -251,12 +251,15 @@ export function buildRailModel(
     const projectNode = nodesById.get(cardId);
     const recipe = recipes.get(node.recipeId);
     if (!projectNode || isCustomRateRecipe(recipe)) continue;
+    // A machine the answer leaves idle (nothing set feeds or needs it) keeps its nameplate rates in the books for its
+    // port rows, but runs at none of them: it adds nothing here, as the mod counts each card's solved ports.
+    const running = Math.min(1, Math.max(0, node.utilization ?? 1));
     for (const side of ["output", "input"] as const) {
       const flows = side === "output" ? node.outputs : node.inputs;
       for (const flow of Object.values(flows)) {
         const key = canonicalOf(aliases, flow.key);
         const bucket = side === "output" ? made : used;
-        bucket.set(key, (bucket.get(key) ?? 0) + flow.amountPerSecond);
+        bucket.set(key, (bucket.get(key) ?? 0) + flow.amountPerSecond * running);
         if (!looks.has(key) || (side === "output" && flow.key === key)) {
           looks.set(key, {
             kind: flow.kind,
@@ -283,7 +286,7 @@ export function buildRailModel(
           nodeId: cardId,
           handle,
           output,
-          perSecond: flow.amountPerSecond,
+          perSecond: flow.amountPerSecond * running,
           machine: nameOf(cardId),
         });
       }

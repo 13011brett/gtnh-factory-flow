@@ -1,0 +1,13 @@
+import { chromium } from "playwright-core";
+const browser = await chromium.launch({ headless: true });
+const page = await (await browser.newContext({ viewport: { width: 1600, height: 1000 } })).newPage();
+page.on("pageerror", (e) => console.log("[pageerror]", String(e).slice(0, 300)));
+await page.goto("http://localhost:3221/dev/clean-card", { waitUntil: "networkidle", timeout: 180000 });
+await page.waitForFunction(() => window.__ccStore?.getState().dataset, null, { timeout: 180000 });
+await page.waitForTimeout(1500);
+const body = await page.evaluate(() => document.body.innerText.slice(0, 800));
+console.log(body);
+const st = await page.evaluate(() => { const p = window.__ccStore.getState().project; return { planMode: p.planMode, solveMode: p.solveMode, nodes: p.nodes.length, name: p.name }; });
+console.log(st);
+await page.screenshot({ path: "tools/parity/s1/fresh.png" });
+await browser.close();

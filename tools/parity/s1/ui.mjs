@@ -1,0 +1,14 @@
+import { chromium } from "playwright-core";
+const browser = await chromium.launch({ headless: true });
+const page = await (await browser.newContext({ viewport: { width: 1600, height: 1000 } })).newPage();
+page.on("pageerror", (e) => console.log("[pageerror]", String(e).slice(0, 300)));
+await page.goto("http://localhost:3221/", { waitUntil: "networkidle", timeout: 180000 });
+await page.waitForTimeout(3000);
+await page.getByText("Dismiss").click().catch(() => {});
+await page.getByText("New design").first().click();
+await page.waitForTimeout(1500);
+await page.getByText("Not now").click().catch(() => {});
+await page.mouse.click(1375, 175);
+await page.waitForTimeout(2500);
+await page.waitForTimeout(4000); await page.screenshot({ path: "tools/parity/s1/ui2.png" }); await page.mouse.click(1243, 244); await page.waitForTimeout(3000); await page.screenshot({ path: "tools/parity/s1/ui3.png" }); console.log(await page.evaluate(() => document.querySelector(".react-flow__node")?.innerText));
+await browser.close();

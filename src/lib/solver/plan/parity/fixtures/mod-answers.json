@@ -1,0 +1,5014 @@
+{
+  "single-unpinned": {
+    "input": {
+      "mode": "AUTO",
+      "machines": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "A",
+          "durationTicks": 56.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 5.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 0,
+              "name": "x",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        }
+      ],
+      "edges": [],
+      "pools": [],
+      "drawers": [],
+      "extentPins": {},
+      "spares": {}
+    },
+    "answer": {
+      "kind": "failed",
+      "failure": "NO_PIN",
+      "notes": []
+    },
+    "board": {
+      "nothingToSolveFor": true,
+      "cards": {
+        "00000000-0000-0000-0000-000000000001": {
+          "count": 0.0,
+          "pinned": false,
+          "unset": true,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "x",
+              "perSecond": 0.0,
+              "extra": 0.0,
+              "shown": 0.0,
+              "wired": false
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "perSecond": 0.0,
+              "extra": 0.0,
+              "shown": 0.0,
+              "wired": false
+            }
+          ]
+        }
+      },
+      "drawers": {},
+      "totals": {
+        "inputs": {},
+        "outputs": {}
+      }
+    }
+  },
+  "single-pinned": {
+    "input": {
+      "mode": "AUTO",
+      "machines": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "A",
+          "durationTicks": 56.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 5.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 0,
+              "name": "x",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "countFixed": true,
+          "machineCount": 2,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        }
+      ],
+      "edges": [],
+      "pools": [],
+      "drawers": [],
+      "extentPins": {},
+      "spares": {}
+    },
+    "answer": {
+      "kind": "solved",
+      "machineCounts": {
+        "00000000-0000-0000-0000-000000000001": 2.0
+      },
+      "edgeFlows": {},
+      "gatedSources": [],
+      "gatedSinks": [],
+      "terminalInputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 0,
+          "input": true,
+          "rate": 3.5714285714285716
+        }
+      ],
+      "terminalOutputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 0,
+          "input": false,
+          "rate": 0.7142857142857143
+        }
+      ],
+      "unneeded": [],
+      "notes": [],
+      "drawerRates": {},
+      "unmet": [],
+      "spares": [],
+      "options": 0
+    },
+    "board": {
+      "nothingToSolveFor": false,
+      "cards": {
+        "00000000-0000-0000-0000-000000000001": {
+          "count": 2.0,
+          "pinned": true,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "x",
+              "perSecond": 3.5714285714285716,
+              "extra": 0.0,
+              "shown": 3.5714285714285716,
+              "wired": false
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "perSecond": 0.7142857142857143,
+              "extra": 0.0,
+              "shown": 0.7142857142857143,
+              "wired": false
+            }
+          ]
+        }
+      },
+      "drawers": {},
+      "totals": {
+        "inputs": {
+          "x": 3.5714285714285716
+        },
+        "outputs": {
+          "y": 0.7142857142857143
+        }
+      }
+    }
+  },
+  "chain-pin-end": {
+    "input": {
+      "mode": "AUTO",
+      "machines": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "A",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 0,
+              "name": "x",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "name": "B",
+          "durationTicks": 40.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 2.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "z",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000003",
+          "name": "C",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "z",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 3,
+              "name": "w",
+              "free": false
+            }
+          ],
+          "countFixed": true,
+          "machineCount": 3,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        }
+      ],
+      "edges": [
+        {
+          "id": "00000000-0000-0000-0000-000000000065",
+          "source": "00000000-0000-0000-0000-000000000001",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000002",
+          "targetInput": 0
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000066",
+          "source": "00000000-0000-0000-0000-000000000002",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000003",
+          "targetInput": 0
+        }
+      ],
+      "pools": [],
+      "drawers": [],
+      "extentPins": {},
+      "spares": {}
+    },
+    "answer": {
+      "kind": "solved",
+      "machineCounts": {
+        "00000000-0000-0000-0000-000000000001": 6.0,
+        "00000000-0000-0000-0000-000000000002": 6.0,
+        "00000000-0000-0000-0000-000000000003": 3.0
+      },
+      "edgeFlows": {
+        "00000000-0000-0000-0000-000000000065": 6.0,
+        "00000000-0000-0000-0000-000000000066": 3.0
+      },
+      "gatedSources": [],
+      "gatedSinks": [],
+      "terminalInputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 0,
+          "input": true,
+          "rate": 6.0
+        }
+      ],
+      "terminalOutputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000003",
+          "port": 0,
+          "input": false,
+          "rate": 3.0
+        }
+      ],
+      "unneeded": [],
+      "notes": [],
+      "drawerRates": {},
+      "unmet": [],
+      "spares": [],
+      "options": 0
+    },
+    "board": {
+      "nothingToSolveFor": false,
+      "cards": {
+        "00000000-0000-0000-0000-000000000001": {
+          "count": 6.0,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "x",
+              "perSecond": 6.0,
+              "extra": 0.0,
+              "shown": 6.0,
+              "wired": false
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "perSecond": 6.0,
+              "extra": 0.0,
+              "shown": 6.0,
+              "wired": true
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000002": {
+          "count": 6.0,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "y",
+              "perSecond": 6.0,
+              "extra": 0.0,
+              "shown": 6.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "z",
+              "perSecond": 3.0,
+              "extra": 0.0,
+              "shown": 3.0,
+              "wired": true
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000003": {
+          "count": 3.0,
+          "pinned": true,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "z",
+              "perSecond": 3.0,
+              "extra": 0.0,
+              "shown": 3.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "w",
+              "perSecond": 3.0,
+              "extra": 0.0,
+              "shown": 3.0,
+              "wired": false
+            }
+          ]
+        }
+      },
+      "drawers": {},
+      "totals": {
+        "inputs": {
+          "x": 6.0
+        },
+        "outputs": {
+          "w": 3.0
+        }
+      }
+    }
+  },
+  "chain-pin-middle": {
+    "input": {
+      "mode": "AUTO",
+      "machines": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "A",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 0,
+              "name": "x",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "name": "B",
+          "durationTicks": 40.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 2.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "z",
+              "free": false
+            }
+          ],
+          "countFixed": true,
+          "machineCount": 3,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000003",
+          "name": "C",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "z",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 3,
+              "name": "w",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        }
+      ],
+      "edges": [
+        {
+          "id": "00000000-0000-0000-0000-000000000065",
+          "source": "00000000-0000-0000-0000-000000000001",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000002",
+          "targetInput": 0
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000066",
+          "source": "00000000-0000-0000-0000-000000000002",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000003",
+          "targetInput": 0
+        }
+      ],
+      "pools": [],
+      "drawers": [],
+      "extentPins": {},
+      "spares": {}
+    },
+    "answer": {
+      "kind": "solved",
+      "machineCounts": {
+        "00000000-0000-0000-0000-000000000001": 3.0,
+        "00000000-0000-0000-0000-000000000002": 3.0,
+        "00000000-0000-0000-0000-000000000003": 1.5
+      },
+      "edgeFlows": {
+        "00000000-0000-0000-0000-000000000065": 3.0,
+        "00000000-0000-0000-0000-000000000066": 1.5
+      },
+      "gatedSources": [],
+      "gatedSinks": [],
+      "terminalInputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 0,
+          "input": true,
+          "rate": 3.0
+        }
+      ],
+      "terminalOutputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000003",
+          "port": 0,
+          "input": false,
+          "rate": 1.5
+        }
+      ],
+      "unneeded": [],
+      "notes": [],
+      "drawerRates": {},
+      "unmet": [],
+      "spares": [],
+      "options": 0
+    },
+    "board": {
+      "nothingToSolveFor": false,
+      "cards": {
+        "00000000-0000-0000-0000-000000000001": {
+          "count": 3.0,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "x",
+              "perSecond": 3.0,
+              "extra": 0.0,
+              "shown": 3.0,
+              "wired": false
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "perSecond": 3.0,
+              "extra": 0.0,
+              "shown": 3.0,
+              "wired": true
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000002": {
+          "count": 3.0,
+          "pinned": true,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "y",
+              "perSecond": 3.0,
+              "extra": 0.0,
+              "shown": 3.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "z",
+              "perSecond": 1.5,
+              "extra": 0.0,
+              "shown": 1.5,
+              "wired": true
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000003": {
+          "count": 1.5,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "z",
+              "perSecond": 1.5,
+              "extra": 0.0,
+              "shown": 1.5,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "w",
+              "perSecond": 1.5,
+              "extra": 0.0,
+              "shown": 1.5,
+              "wired": false
+            }
+          ]
+        }
+      },
+      "drawers": {},
+      "totals": {
+        "inputs": {
+          "x": 3.0
+        },
+        "outputs": {
+          "w": 1.5
+        }
+      }
+    }
+  },
+  "drawer-product-at-least": {
+    "input": {
+      "mode": "AUTO",
+      "machines": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "A",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 0,
+              "name": "x",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "name": "B",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 2.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "z",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        }
+      ],
+      "edges": [
+        {
+          "id": "00000000-0000-0000-0000-000000000065",
+          "source": "00000000-0000-0000-0000-000000000001",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000002",
+          "targetInput": 0
+        }
+      ],
+      "pools": [],
+      "drawers": [
+        {
+          "id": "00000000-0000-0000-0000-0000000000c9",
+          "label": "test:z",
+          "kind": "PRODUCT",
+          "rule": "AT_LEAST",
+          "rate": 4.0,
+          "links": [
+            {
+              "node": "00000000-0000-0000-0000-000000000002",
+              "port": 0
+            }
+          ]
+        }
+      ],
+      "extentPins": {},
+      "spares": {}
+    },
+    "answer": {
+      "kind": "solved",
+      "machineCounts": {
+        "00000000-0000-0000-0000-000000000001": 8.0,
+        "00000000-0000-0000-0000-000000000002": 4.0
+      },
+      "edgeFlows": {
+        "00000000-0000-0000-0000-000000000065": 8.0
+      },
+      "gatedSources": [],
+      "gatedSinks": [],
+      "terminalInputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 0,
+          "input": true,
+          "rate": 8.0
+        }
+      ],
+      "terminalOutputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000002",
+          "port": 0,
+          "input": false,
+          "rate": 4.0
+        }
+      ],
+      "unneeded": [],
+      "notes": [],
+      "drawerRates": {
+        "00000000-0000-0000-0000-0000000000c9": 4.0
+      },
+      "unmet": [],
+      "spares": [],
+      "options": 0
+    },
+    "board": {
+      "nothingToSolveFor": false,
+      "cards": {
+        "00000000-0000-0000-0000-000000000001": {
+          "count": 8.0,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "x",
+              "perSecond": 8.0,
+              "extra": 0.0,
+              "shown": 8.0,
+              "wired": false
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "perSecond": 8.0,
+              "extra": 0.0,
+              "shown": 8.0,
+              "wired": true
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000002": {
+          "count": 4.0,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "y",
+              "perSecond": 8.0,
+              "extra": 0.0,
+              "shown": 8.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "z",
+              "perSecond": 4.0,
+              "extra": 0.0,
+              "shown": 4.0,
+              "wired": true
+            }
+          ]
+        }
+      },
+      "drawers": {
+        "00000000-0000-0000-0000-0000000000c9": {
+          "rate": 4.0,
+          "unset": false
+        }
+      },
+      "totals": {
+        "inputs": {
+          "x": 8.0
+        },
+        "outputs": {
+          "z": 4.0
+        }
+      }
+    }
+  },
+  "drawer-product-any": {
+    "input": {
+      "mode": "AUTO",
+      "machines": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "A",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 0,
+              "name": "x",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "name": "B",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 2.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "z",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        }
+      ],
+      "edges": [
+        {
+          "id": "00000000-0000-0000-0000-000000000065",
+          "source": "00000000-0000-0000-0000-000000000001",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000002",
+          "targetInput": 0
+        }
+      ],
+      "pools": [],
+      "drawers": [
+        {
+          "id": "00000000-0000-0000-0000-0000000000c9",
+          "label": "test:z",
+          "kind": "PRODUCT",
+          "rule": "ANY",
+          "rate": 0.0,
+          "links": [
+            {
+              "node": "00000000-0000-0000-0000-000000000002",
+              "port": 0
+            }
+          ]
+        }
+      ],
+      "extentPins": {},
+      "spares": {}
+    },
+    "answer": {
+      "kind": "failed",
+      "failure": "NO_PIN",
+      "notes": []
+    },
+    "board": {
+      "nothingToSolveFor": true,
+      "cards": {
+        "00000000-0000-0000-0000-000000000001": {
+          "count": 0.0,
+          "pinned": false,
+          "unset": true,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "x",
+              "perSecond": 0.0,
+              "extra": 0.0,
+              "shown": 0.0,
+              "wired": false
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "perSecond": 0.0,
+              "extra": 0.0,
+              "shown": 0.0,
+              "wired": true
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000002": {
+          "count": 0.0,
+          "pinned": false,
+          "unset": true,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "y",
+              "perSecond": 0.0,
+              "extra": 0.0,
+              "shown": 0.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "z",
+              "perSecond": 0.0,
+              "extra": 0.0,
+              "shown": 0.0,
+              "wired": true
+            }
+          ]
+        }
+      },
+      "drawers": {
+        "00000000-0000-0000-0000-0000000000c9": {
+          "rate": 0.0,
+          "unset": true
+        }
+      },
+      "totals": {
+        "inputs": {},
+        "outputs": {}
+      }
+    }
+  },
+  "drawer-source-at-least": {
+    "input": {
+      "mode": "AUTO",
+      "machines": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "A",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 2.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 0,
+              "name": "x",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "name": "B",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "z",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        }
+      ],
+      "edges": [
+        {
+          "id": "00000000-0000-0000-0000-000000000065",
+          "source": "00000000-0000-0000-0000-000000000001",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000002",
+          "targetInput": 0
+        }
+      ],
+      "pools": [],
+      "drawers": [
+        {
+          "id": "00000000-0000-0000-0000-0000000000c9",
+          "label": "test:x",
+          "kind": "SOURCE",
+          "rule": "AT_LEAST",
+          "rate": 6.0,
+          "links": [
+            {
+              "node": "00000000-0000-0000-0000-000000000001",
+              "port": 0
+            }
+          ]
+        }
+      ],
+      "extentPins": {},
+      "spares": {}
+    },
+    "answer": {
+      "kind": "solved",
+      "machineCounts": {
+        "00000000-0000-0000-0000-000000000001": 3.0,
+        "00000000-0000-0000-0000-000000000002": 3.0
+      },
+      "edgeFlows": {
+        "00000000-0000-0000-0000-000000000065": 3.0
+      },
+      "gatedSources": [],
+      "gatedSinks": [],
+      "terminalInputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 0,
+          "input": true,
+          "rate": 6.0
+        }
+      ],
+      "terminalOutputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000002",
+          "port": 0,
+          "input": false,
+          "rate": 3.0
+        }
+      ],
+      "unneeded": [],
+      "notes": [],
+      "drawerRates": {
+        "00000000-0000-0000-0000-0000000000c9": 6.0
+      },
+      "unmet": [],
+      "spares": [],
+      "options": 0
+    },
+    "board": {
+      "nothingToSolveFor": false,
+      "cards": {
+        "00000000-0000-0000-0000-000000000001": {
+          "count": 3.0,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "x",
+              "perSecond": 6.0,
+              "extra": 0.0,
+              "shown": 6.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "perSecond": 3.0,
+              "extra": 0.0,
+              "shown": 3.0,
+              "wired": true
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000002": {
+          "count": 3.0,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "y",
+              "perSecond": 3.0,
+              "extra": 0.0,
+              "shown": 3.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "z",
+              "perSecond": 3.0,
+              "extra": 0.0,
+              "shown": 3.0,
+              "wired": false
+            }
+          ]
+        }
+      },
+      "drawers": {
+        "00000000-0000-0000-0000-0000000000c9": {
+          "rate": 6.0,
+          "unset": false
+        }
+      },
+      "totals": {
+        "inputs": {
+          "x": 6.0
+        },
+        "outputs": {
+          "z": 3.0
+        }
+      }
+    }
+  },
+  "drawer-source-exactly": {
+    "input": {
+      "mode": "AUTO",
+      "machines": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "A",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 2.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 0,
+              "name": "x",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "name": "B",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "z",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        }
+      ],
+      "edges": [
+        {
+          "id": "00000000-0000-0000-0000-000000000065",
+          "source": "00000000-0000-0000-0000-000000000001",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000002",
+          "targetInput": 0
+        }
+      ],
+      "pools": [],
+      "drawers": [
+        {
+          "id": "00000000-0000-0000-0000-0000000000c9",
+          "label": "test:x",
+          "kind": "SOURCE",
+          "rule": "EXACTLY",
+          "rate": 6.0,
+          "links": [
+            {
+              "node": "00000000-0000-0000-0000-000000000001",
+              "port": 0
+            }
+          ]
+        }
+      ],
+      "extentPins": {},
+      "spares": {}
+    },
+    "answer": {
+      "kind": "solved",
+      "machineCounts": {
+        "00000000-0000-0000-0000-000000000001": 3.0,
+        "00000000-0000-0000-0000-000000000002": 3.0
+      },
+      "edgeFlows": {
+        "00000000-0000-0000-0000-000000000065": 3.0
+      },
+      "gatedSources": [],
+      "gatedSinks": [],
+      "terminalInputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 0,
+          "input": true,
+          "rate": 6.0
+        }
+      ],
+      "terminalOutputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000002",
+          "port": 0,
+          "input": false,
+          "rate": 3.0
+        }
+      ],
+      "unneeded": [],
+      "notes": [],
+      "drawerRates": {
+        "00000000-0000-0000-0000-0000000000c9": 6.0
+      },
+      "unmet": [],
+      "spares": [],
+      "options": 0
+    },
+    "board": {
+      "nothingToSolveFor": false,
+      "cards": {
+        "00000000-0000-0000-0000-000000000001": {
+          "count": 3.0,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "x",
+              "perSecond": 6.0,
+              "extra": 0.0,
+              "shown": 6.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "perSecond": 3.0,
+              "extra": 0.0,
+              "shown": 3.0,
+              "wired": true
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000002": {
+          "count": 3.0,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "y",
+              "perSecond": 3.0,
+              "extra": 0.0,
+              "shown": 3.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "z",
+              "perSecond": 3.0,
+              "extra": 0.0,
+              "shown": 3.0,
+              "wired": false
+            }
+          ]
+        }
+      },
+      "drawers": {
+        "00000000-0000-0000-0000-0000000000c9": {
+          "rate": 6.0,
+          "unset": false
+        }
+      },
+      "totals": {
+        "inputs": {
+          "x": 6.0
+        },
+        "outputs": {
+          "z": 3.0
+        }
+      }
+    }
+  },
+  "drawer-source-at-most-alone": {
+    "input": {
+      "mode": "AUTO",
+      "machines": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "A",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 2.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 0,
+              "name": "x",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "name": "B",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "z",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        }
+      ],
+      "edges": [
+        {
+          "id": "00000000-0000-0000-0000-000000000065",
+          "source": "00000000-0000-0000-0000-000000000001",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000002",
+          "targetInput": 0
+        }
+      ],
+      "pools": [],
+      "drawers": [
+        {
+          "id": "00000000-0000-0000-0000-0000000000c9",
+          "label": "test:x",
+          "kind": "SOURCE",
+          "rule": "AT_MOST",
+          "rate": 6.0,
+          "links": [
+            {
+              "node": "00000000-0000-0000-0000-000000000001",
+              "port": 0
+            }
+          ]
+        }
+      ],
+      "extentPins": {},
+      "spares": {}
+    },
+    "answer": {
+      "kind": "failed",
+      "failure": "NO_PIN",
+      "notes": [
+        "DRAWER_ONLY_UPPER_BOUNDS"
+      ]
+    },
+    "board": {
+      "nothingToSolveFor": true,
+      "cards": {
+        "00000000-0000-0000-0000-000000000001": {
+          "count": 0.0,
+          "pinned": false,
+          "unset": true,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "x",
+              "perSecond": 0.0,
+              "extra": 0.0,
+              "shown": 0.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "perSecond": 0.0,
+              "extra": 0.0,
+              "shown": 0.0,
+              "wired": true
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000002": {
+          "count": 0.0,
+          "pinned": false,
+          "unset": true,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "y",
+              "perSecond": 0.0,
+              "extra": 0.0,
+              "shown": 0.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "z",
+              "perSecond": 0.0,
+              "extra": 0.0,
+              "shown": 0.0,
+              "wired": false
+            }
+          ]
+        }
+      },
+      "drawers": {
+        "00000000-0000-0000-0000-0000000000c9": {
+          "rate": 0.0,
+          "unset": true
+        }
+      },
+      "totals": {
+        "inputs": {},
+        "outputs": {}
+      }
+    }
+  },
+  "drawer-source-at-most-short": {
+    "input": {
+      "mode": "AUTO",
+      "machines": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "A",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 2.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 0,
+              "name": "x",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "name": "B",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "z",
+              "free": false
+            }
+          ],
+          "countFixed": true,
+          "machineCount": 3,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        }
+      ],
+      "edges": [
+        {
+          "id": "00000000-0000-0000-0000-000000000065",
+          "source": "00000000-0000-0000-0000-000000000001",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000002",
+          "targetInput": 0
+        }
+      ],
+      "pools": [],
+      "drawers": [
+        {
+          "id": "00000000-0000-0000-0000-0000000000c9",
+          "label": "test:x",
+          "kind": "SOURCE",
+          "rule": "AT_MOST",
+          "rate": 2.0,
+          "links": [
+            {
+              "node": "00000000-0000-0000-0000-000000000001",
+              "port": 0
+            }
+          ]
+        }
+      ],
+      "extentPins": {},
+      "spares": {}
+    },
+    "answer": {
+      "kind": "solved",
+      "machineCounts": {
+        "00000000-0000-0000-0000-000000000001": 1.0,
+        "00000000-0000-0000-0000-000000000002": 3.0
+      },
+      "edgeFlows": {
+        "00000000-0000-0000-0000-000000000065": 1.0
+      },
+      "gatedSources": [
+        {
+          "node": "00000000-0000-0000-0000-000000000002",
+          "port": 0,
+          "input": true,
+          "rate": 2.0
+        }
+      ],
+      "gatedSinks": [],
+      "terminalInputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 0,
+          "input": true,
+          "rate": 2.0
+        }
+      ],
+      "terminalOutputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000002",
+          "port": 0,
+          "input": false,
+          "rate": 3.0
+        }
+      ],
+      "unneeded": [],
+      "notes": [],
+      "drawerRates": {
+        "00000000-0000-0000-0000-0000000000c9": 2.0
+      },
+      "unmet": [],
+      "spares": [
+        {
+          "key": "00000000-0000-0000-0000-000000000002:i:0",
+          "importing": true,
+          "bearers": [
+            {
+              "anchor": "00000000-0000-0000-0000-000000000002:i:0",
+              "max": 2.0,
+              "share": 1.0,
+              "solverPick": true
+            }
+          ]
+        }
+      ],
+      "options": 1
+    },
+    "board": {
+      "nothingToSolveFor": false,
+      "cards": {
+        "00000000-0000-0000-0000-000000000001": {
+          "count": 1.0,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "x",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "perSecond": 1.0,
+              "extra": 0.0,
+              "shown": 1.0,
+              "wired": true
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000002": {
+          "count": 3.0,
+          "pinned": true,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "y",
+              "perSecond": 3.0,
+              "extra": 2.0,
+              "shown": 1.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "z",
+              "perSecond": 3.0,
+              "extra": 0.0,
+              "shown": 3.0,
+              "wired": false
+            }
+          ]
+        }
+      },
+      "drawers": {
+        "00000000-0000-0000-0000-0000000000c9": {
+          "rate": 2.0,
+          "unset": false
+        }
+      },
+      "totals": {
+        "inputs": {
+          "x": 2.0,
+          "y": 2.0
+        },
+        "outputs": {
+          "z": 3.0
+        }
+      }
+    }
+  },
+  "port-rate-output": {
+    "input": {
+      "mode": "AUTO",
+      "machines": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "A",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 0,
+              "name": "x",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "name": "B",
+          "durationTicks": 40.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 2.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "z",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {
+            "0": 4.0
+          },
+          "targetInputRates": {}
+        }
+      ],
+      "edges": [
+        {
+          "id": "00000000-0000-0000-0000-000000000065",
+          "source": "00000000-0000-0000-0000-000000000001",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000002",
+          "targetInput": 0
+        }
+      ],
+      "pools": [],
+      "drawers": [],
+      "extentPins": {},
+      "spares": {}
+    },
+    "answer": {
+      "kind": "solved",
+      "machineCounts": {
+        "00000000-0000-0000-0000-000000000001": 8.0,
+        "00000000-0000-0000-0000-000000000002": 8.0
+      },
+      "edgeFlows": {
+        "00000000-0000-0000-0000-000000000065": 8.0
+      },
+      "gatedSources": [],
+      "gatedSinks": [],
+      "terminalInputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 0,
+          "input": true,
+          "rate": 8.0
+        }
+      ],
+      "terminalOutputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000002",
+          "port": 0,
+          "input": false,
+          "rate": 4.0
+        }
+      ],
+      "unneeded": [],
+      "notes": [],
+      "drawerRates": {},
+      "unmet": [],
+      "spares": [],
+      "options": 0
+    },
+    "board": {
+      "nothingToSolveFor": false,
+      "cards": {
+        "00000000-0000-0000-0000-000000000001": {
+          "count": 8.0,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "x",
+              "perSecond": 8.0,
+              "extra": 0.0,
+              "shown": 8.0,
+              "wired": false
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "perSecond": 8.0,
+              "extra": 0.0,
+              "shown": 8.0,
+              "wired": true
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000002": {
+          "count": 8.0,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "y",
+              "perSecond": 8.0,
+              "extra": 0.0,
+              "shown": 8.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "z",
+              "perSecond": 4.0,
+              "extra": 0.0,
+              "shown": 4.0,
+              "wired": false
+            }
+          ]
+        }
+      },
+      "drawers": {},
+      "totals": {
+        "inputs": {
+          "x": 8.0
+        },
+        "outputs": {
+          "z": 4.0
+        }
+      }
+    }
+  },
+  "port-rate-input": {
+    "input": {
+      "mode": "AUTO",
+      "machines": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "A",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 3.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 0,
+              "name": "x",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {
+            "0": 9.0
+          }
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "name": "B",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "z",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        }
+      ],
+      "edges": [
+        {
+          "id": "00000000-0000-0000-0000-000000000065",
+          "source": "00000000-0000-0000-0000-000000000001",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000002",
+          "targetInput": 0
+        }
+      ],
+      "pools": [],
+      "drawers": [],
+      "extentPins": {},
+      "spares": {}
+    },
+    "answer": {
+      "kind": "solved",
+      "machineCounts": {
+        "00000000-0000-0000-0000-000000000001": 3.0,
+        "00000000-0000-0000-0000-000000000002": 3.0
+      },
+      "edgeFlows": {
+        "00000000-0000-0000-0000-000000000065": 3.0
+      },
+      "gatedSources": [],
+      "gatedSinks": [],
+      "terminalInputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 0,
+          "input": true,
+          "rate": 9.0
+        }
+      ],
+      "terminalOutputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000002",
+          "port": 0,
+          "input": false,
+          "rate": 3.0
+        }
+      ],
+      "unneeded": [],
+      "notes": [],
+      "drawerRates": {},
+      "unmet": [],
+      "spares": [],
+      "options": 0
+    },
+    "board": {
+      "nothingToSolveFor": false,
+      "cards": {
+        "00000000-0000-0000-0000-000000000001": {
+          "count": 3.0,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "x",
+              "perSecond": 9.0,
+              "extra": 0.0,
+              "shown": 9.0,
+              "wired": false
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "perSecond": 3.0,
+              "extra": 0.0,
+              "shown": 3.0,
+              "wired": true
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000002": {
+          "count": 3.0,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "y",
+              "perSecond": 3.0,
+              "extra": 0.0,
+              "shown": 3.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "z",
+              "perSecond": 3.0,
+              "extra": 0.0,
+              "shown": 3.0,
+              "wired": false
+            }
+          ]
+        }
+      },
+      "drawers": {},
+      "totals": {
+        "inputs": {
+          "x": 9.0
+        },
+        "outputs": {
+          "z": 3.0
+        }
+      }
+    }
+  },
+  "two-pins-surplus": {
+    "input": {
+      "mode": "AUTO",
+      "machines": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "A",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 0,
+              "name": "x",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "countFixed": true,
+          "machineCount": 3,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "name": "B",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "z",
+              "free": false
+            }
+          ],
+          "countFixed": true,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        }
+      ],
+      "edges": [
+        {
+          "id": "00000000-0000-0000-0000-000000000065",
+          "source": "00000000-0000-0000-0000-000000000001",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000002",
+          "targetInput": 0
+        }
+      ],
+      "pools": [],
+      "drawers": [],
+      "extentPins": {},
+      "spares": {}
+    },
+    "answer": {
+      "kind": "solved",
+      "machineCounts": {
+        "00000000-0000-0000-0000-000000000001": 3.0,
+        "00000000-0000-0000-0000-000000000002": 1.0
+      },
+      "edgeFlows": {
+        "00000000-0000-0000-0000-000000000065": 1.0
+      },
+      "gatedSources": [],
+      "gatedSinks": [
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 0,
+          "input": false,
+          "rate": 2.0
+        }
+      ],
+      "terminalInputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 0,
+          "input": true,
+          "rate": 3.0
+        }
+      ],
+      "terminalOutputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000002",
+          "port": 0,
+          "input": false,
+          "rate": 1.0
+        }
+      ],
+      "unneeded": [],
+      "notes": [],
+      "drawerRates": {},
+      "unmet": [],
+      "spares": [
+        {
+          "key": "00000000-0000-0000-0000-000000000001:o:0",
+          "importing": false,
+          "bearers": [
+            {
+              "anchor": "00000000-0000-0000-0000-000000000001:o:0",
+              "max": 2.0,
+              "share": 1.0,
+              "solverPick": true
+            }
+          ]
+        }
+      ],
+      "options": 1
+    },
+    "board": {
+      "nothingToSolveFor": false,
+      "cards": {
+        "00000000-0000-0000-0000-000000000001": {
+          "count": 3.0,
+          "pinned": true,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "x",
+              "perSecond": 3.0,
+              "extra": 0.0,
+              "shown": 3.0,
+              "wired": false
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "perSecond": 3.0,
+              "extra": 2.0,
+              "shown": 1.0,
+              "wired": true
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000002": {
+          "count": 1.0,
+          "pinned": true,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "y",
+              "perSecond": 1.0,
+              "extra": 0.0,
+              "shown": 1.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "z",
+              "perSecond": 1.0,
+              "extra": 0.0,
+              "shown": 1.0,
+              "wired": false
+            }
+          ]
+        }
+      },
+      "drawers": {},
+      "totals": {
+        "inputs": {
+          "x": 3.0
+        },
+        "outputs": {
+          "y": 2.0,
+          "z": 1.0
+        }
+      }
+    }
+  },
+  "missing-input-forced-in": {
+    "input": {
+      "mode": "AUTO",
+      "machines": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "A",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 0,
+              "name": "x",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "countFixed": true,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "name": "B",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 2.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "z",
+              "free": false
+            }
+          ],
+          "countFixed": true,
+          "machineCount": 2,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        }
+      ],
+      "edges": [
+        {
+          "id": "00000000-0000-0000-0000-000000000065",
+          "source": "00000000-0000-0000-0000-000000000001",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000002",
+          "targetInput": 0
+        }
+      ],
+      "pools": [],
+      "drawers": [],
+      "extentPins": {},
+      "spares": {}
+    },
+    "answer": {
+      "kind": "solved",
+      "machineCounts": {
+        "00000000-0000-0000-0000-000000000001": 1.0,
+        "00000000-0000-0000-0000-000000000002": 2.0
+      },
+      "edgeFlows": {
+        "00000000-0000-0000-0000-000000000065": 1.0
+      },
+      "gatedSources": [
+        {
+          "node": "00000000-0000-0000-0000-000000000002",
+          "port": 0,
+          "input": true,
+          "rate": 3.0
+        }
+      ],
+      "gatedSinks": [],
+      "terminalInputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 0,
+          "input": true,
+          "rate": 1.0
+        }
+      ],
+      "terminalOutputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000002",
+          "port": 0,
+          "input": false,
+          "rate": 2.0
+        }
+      ],
+      "unneeded": [],
+      "notes": [],
+      "drawerRates": {},
+      "unmet": [],
+      "spares": [
+        {
+          "key": "00000000-0000-0000-0000-000000000002:i:0",
+          "importing": true,
+          "bearers": [
+            {
+              "anchor": "00000000-0000-0000-0000-000000000002:i:0",
+              "max": 3.0,
+              "share": 1.0,
+              "solverPick": true
+            }
+          ]
+        }
+      ],
+      "options": 1
+    },
+    "board": {
+      "nothingToSolveFor": false,
+      "cards": {
+        "00000000-0000-0000-0000-000000000001": {
+          "count": 1.0,
+          "pinned": true,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "x",
+              "perSecond": 1.0,
+              "extra": 0.0,
+              "shown": 1.0,
+              "wired": false
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "perSecond": 1.0,
+              "extra": 0.0,
+              "shown": 1.0,
+              "wired": true
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000002": {
+          "count": 2.0,
+          "pinned": true,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "y",
+              "perSecond": 4.0,
+              "extra": 3.0,
+              "shown": 1.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "z",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": false
+            }
+          ]
+        }
+      },
+      "drawers": {},
+      "totals": {
+        "inputs": {
+          "x": 1.0,
+          "y": 3.0
+        },
+        "outputs": {
+          "z": 2.0
+        }
+      }
+    }
+  },
+  "loop-recycle": {
+    "input": {
+      "mode": "AUTO",
+      "machines": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "A",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 0,
+              "name": "x",
+              "free": false
+            },
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "c",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "y",
+              "free": false
+            },
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 3,
+              "name": "d",
+              "free": false
+            }
+          ],
+          "countFixed": true,
+          "machineCount": 2,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "name": "B",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 3,
+              "name": "d",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "c",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        }
+      ],
+      "edges": [
+        {
+          "id": "00000000-0000-0000-0000-000000000065",
+          "source": "00000000-0000-0000-0000-000000000001",
+          "sourceOutput": 1,
+          "target": "00000000-0000-0000-0000-000000000002",
+          "targetInput": 0
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000066",
+          "source": "00000000-0000-0000-0000-000000000002",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000001",
+          "targetInput": 1
+        }
+      ],
+      "pools": [],
+      "drawers": [],
+      "extentPins": {},
+      "spares": {}
+    },
+    "answer": {
+      "kind": "solved",
+      "machineCounts": {
+        "00000000-0000-0000-0000-000000000001": 2.0,
+        "00000000-0000-0000-0000-000000000002": 2.0
+      },
+      "edgeFlows": {
+        "00000000-0000-0000-0000-000000000065": 2.0,
+        "00000000-0000-0000-0000-000000000066": 2.0
+      },
+      "gatedSources": [],
+      "gatedSinks": [],
+      "terminalInputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 0,
+          "input": true,
+          "rate": 2.0
+        }
+      ],
+      "terminalOutputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 0,
+          "input": false,
+          "rate": 2.0
+        }
+      ],
+      "unneeded": [],
+      "notes": [],
+      "drawerRates": {},
+      "unmet": [],
+      "spares": [],
+      "options": 0
+    },
+    "board": {
+      "nothingToSolveFor": false,
+      "cards": {
+        "00000000-0000-0000-0000-000000000001": {
+          "count": 2.0,
+          "pinned": true,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "x",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": false
+            },
+            {
+              "name": "c",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": false
+            },
+            {
+              "name": "d",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": true
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000002": {
+          "count": 2.0,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "d",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "c",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": true
+            }
+          ]
+        }
+      },
+      "drawers": {},
+      "totals": {
+        "inputs": {
+          "x": 2.0
+        },
+        "outputs": {
+          "y": 2.0
+        }
+      }
+    }
+  },
+  "byproduct-forced-out": {
+    "input": {
+      "mode": "AUTO",
+      "machines": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "A",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 0,
+              "name": "x",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            },
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "b",
+              "free": false
+            }
+          ],
+          "countFixed": true,
+          "machineCount": 2,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "name": "B",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 3,
+              "name": "z",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000003",
+          "name": "C",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "b",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 4,
+              "name": "q",
+              "free": false
+            }
+          ],
+          "countFixed": true,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        }
+      ],
+      "edges": [
+        {
+          "id": "00000000-0000-0000-0000-000000000065",
+          "source": "00000000-0000-0000-0000-000000000001",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000002",
+          "targetInput": 0
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000066",
+          "source": "00000000-0000-0000-0000-000000000001",
+          "sourceOutput": 1,
+          "target": "00000000-0000-0000-0000-000000000003",
+          "targetInput": 0
+        }
+      ],
+      "pools": [],
+      "drawers": [],
+      "extentPins": {},
+      "spares": {}
+    },
+    "answer": {
+      "kind": "solved",
+      "machineCounts": {
+        "00000000-0000-0000-0000-000000000001": 2.0,
+        "00000000-0000-0000-0000-000000000002": 2.0,
+        "00000000-0000-0000-0000-000000000003": 1.0
+      },
+      "edgeFlows": {
+        "00000000-0000-0000-0000-000000000065": 2.0,
+        "00000000-0000-0000-0000-000000000066": 1.0
+      },
+      "gatedSources": [],
+      "gatedSinks": [
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 1,
+          "input": false,
+          "rate": 1.0
+        }
+      ],
+      "terminalInputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 0,
+          "input": true,
+          "rate": 2.0
+        }
+      ],
+      "terminalOutputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000002",
+          "port": 0,
+          "input": false,
+          "rate": 2.0
+        },
+        {
+          "node": "00000000-0000-0000-0000-000000000003",
+          "port": 0,
+          "input": false,
+          "rate": 1.0
+        }
+      ],
+      "unneeded": [],
+      "notes": [],
+      "drawerRates": {},
+      "unmet": [],
+      "spares": [
+        {
+          "key": "00000000-0000-0000-0000-000000000001:o:1",
+          "importing": false,
+          "bearers": [
+            {
+              "anchor": "00000000-0000-0000-0000-000000000001:o:1",
+              "max": 1.0,
+              "share": 1.0,
+              "solverPick": true
+            }
+          ]
+        }
+      ],
+      "options": 1
+    },
+    "board": {
+      "nothingToSolveFor": false,
+      "cards": {
+        "00000000-0000-0000-0000-000000000001": {
+          "count": 2.0,
+          "pinned": true,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "x",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": false
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": true
+            },
+            {
+              "name": "b",
+              "perSecond": 2.0,
+              "extra": 1.0,
+              "shown": 1.0,
+              "wired": true
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000002": {
+          "count": 2.0,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "y",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "z",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": false
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000003": {
+          "count": 1.0,
+          "pinned": true,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "b",
+              "perSecond": 1.0,
+              "extra": 0.0,
+              "shown": 1.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "q",
+              "perSecond": 1.0,
+              "extra": 0.0,
+              "shown": 1.0,
+              "wired": false
+            }
+          ]
+        }
+      },
+      "drawers": {},
+      "totals": {
+        "inputs": {
+          "x": 2.0
+        },
+        "outputs": {
+          "b": 1.0,
+          "q": 1.0,
+          "z": 2.0
+        }
+      }
+    }
+  },
+  "byproduct-goes-downstream": {
+    "input": {
+      "mode": "AUTO",
+      "machines": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "A",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 0,
+              "name": "x",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            },
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "b",
+              "free": false
+            }
+          ],
+          "countFixed": true,
+          "machineCount": 2,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "name": "B",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 3,
+              "name": "z",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000003",
+          "name": "C",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "b",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 4,
+              "name": "q",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        }
+      ],
+      "edges": [
+        {
+          "id": "00000000-0000-0000-0000-000000000065",
+          "source": "00000000-0000-0000-0000-000000000001",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000002",
+          "targetInput": 0
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000066",
+          "source": "00000000-0000-0000-0000-000000000001",
+          "sourceOutput": 1,
+          "target": "00000000-0000-0000-0000-000000000003",
+          "targetInput": 0
+        }
+      ],
+      "pools": [],
+      "drawers": [],
+      "extentPins": {},
+      "spares": {}
+    },
+    "answer": {
+      "kind": "solved",
+      "machineCounts": {
+        "00000000-0000-0000-0000-000000000001": 2.0,
+        "00000000-0000-0000-0000-000000000002": 2.0,
+        "00000000-0000-0000-0000-000000000003": 2.0
+      },
+      "edgeFlows": {
+        "00000000-0000-0000-0000-000000000065": 2.0,
+        "00000000-0000-0000-0000-000000000066": 2.0
+      },
+      "gatedSources": [],
+      "gatedSinks": [],
+      "terminalInputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 0,
+          "input": true,
+          "rate": 2.0
+        }
+      ],
+      "terminalOutputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000002",
+          "port": 0,
+          "input": false,
+          "rate": 2.0
+        },
+        {
+          "node": "00000000-0000-0000-0000-000000000003",
+          "port": 0,
+          "input": false,
+          "rate": 2.0
+        }
+      ],
+      "unneeded": [],
+      "notes": [],
+      "drawerRates": {},
+      "unmet": [],
+      "spares": [],
+      "options": 0
+    },
+    "board": {
+      "nothingToSolveFor": false,
+      "cards": {
+        "00000000-0000-0000-0000-000000000001": {
+          "count": 2.0,
+          "pinned": true,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "x",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": false
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": true
+            },
+            {
+              "name": "b",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": true
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000002": {
+          "count": 2.0,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "y",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "z",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": false
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000003": {
+          "count": 2.0,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "b",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "q",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": false
+            }
+          ]
+        }
+      },
+      "drawers": {},
+      "totals": {
+        "inputs": {
+          "x": 2.0
+        },
+        "outputs": {
+          "q": 2.0,
+          "z": 2.0
+        }
+      }
+    }
+  },
+  "leftover-two-places": {
+    "input": {
+      "mode": "AUTO",
+      "machines": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "A",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 0,
+              "name": "x",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "countFixed": true,
+          "machineCount": 2,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "name": "B",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "z",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000003",
+          "name": "C",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "z",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 3,
+              "name": "w",
+              "free": false
+            }
+          ],
+          "countFixed": true,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        }
+      ],
+      "edges": [
+        {
+          "id": "00000000-0000-0000-0000-000000000065",
+          "source": "00000000-0000-0000-0000-000000000001",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000002",
+          "targetInput": 0
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000066",
+          "source": "00000000-0000-0000-0000-000000000002",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000003",
+          "targetInput": 0
+        }
+      ],
+      "pools": [],
+      "drawers": [],
+      "extentPins": {},
+      "spares": {}
+    },
+    "answer": {
+      "kind": "solved",
+      "machineCounts": {
+        "00000000-0000-0000-0000-000000000001": 2.0,
+        "00000000-0000-0000-0000-000000000002": 2.0,
+        "00000000-0000-0000-0000-000000000003": 1.0
+      },
+      "edgeFlows": {
+        "00000000-0000-0000-0000-000000000065": 2.0,
+        "00000000-0000-0000-0000-000000000066": 1.0
+      },
+      "gatedSources": [],
+      "gatedSinks": [
+        {
+          "node": "00000000-0000-0000-0000-000000000002",
+          "port": 0,
+          "input": false,
+          "rate": 1.0
+        }
+      ],
+      "terminalInputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 0,
+          "input": true,
+          "rate": 2.0
+        }
+      ],
+      "terminalOutputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000003",
+          "port": 0,
+          "input": false,
+          "rate": 1.0
+        }
+      ],
+      "unneeded": [],
+      "notes": [],
+      "drawerRates": {},
+      "unmet": [],
+      "spares": [
+        {
+          "key": "00000000-0000-0000-0000-000000000001:o:0|00000000-0000-0000-0000-000000000002:o:0",
+          "importing": false,
+          "bearers": [
+            {
+              "anchor": "00000000-0000-0000-0000-000000000002:o:0",
+              "max": 1.0,
+              "share": 1.0,
+              "solverPick": true
+            },
+            {
+              "anchor": "00000000-0000-0000-0000-000000000001:o:0",
+              "max": 1.0,
+              "share": 0.0,
+              "solverPick": false
+            }
+          ]
+        }
+      ],
+      "options": 2
+    },
+    "board": {
+      "nothingToSolveFor": false,
+      "cards": {
+        "00000000-0000-0000-0000-000000000001": {
+          "count": 2.0,
+          "pinned": true,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "x",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": false
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": true
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000002": {
+          "count": 2.0,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "y",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "z",
+              "perSecond": 2.0,
+              "extra": 1.0,
+              "shown": 1.0,
+              "wired": true
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000003": {
+          "count": 1.0,
+          "pinned": true,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "z",
+              "perSecond": 1.0,
+              "extra": 0.0,
+              "shown": 1.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "w",
+              "perSecond": 1.0,
+              "extra": 0.0,
+              "shown": 1.0,
+              "wired": false
+            }
+          ]
+        }
+      },
+      "drawers": {},
+      "totals": {
+        "inputs": {
+          "x": 2.0
+        },
+        "outputs": {
+          "w": 1.0,
+          "z": 1.0
+        }
+      }
+    }
+  },
+  "shared-machine-pinned": {
+    "input": {
+      "mode": "AUTO",
+      "machines": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "A",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 0,
+              "name": "x",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "name": "A",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 2.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "z",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        }
+      ],
+      "edges": [
+        {
+          "id": "00000000-0000-0000-0000-000000000065",
+          "source": "00000000-0000-0000-0000-000000000001",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000002",
+          "targetInput": 0
+        }
+      ],
+      "pools": [
+        {
+          "machines": [
+            "00000000-0000-0000-0000-000000000001",
+            "00000000-0000-0000-0000-000000000002"
+          ],
+          "capacity": 3,
+          "exact": true
+        }
+      ],
+      "drawers": [],
+      "extentPins": {},
+      "spares": {}
+    },
+    "answer": {
+      "kind": "solved",
+      "machineCounts": {
+        "00000000-0000-0000-0000-000000000001": 2.0,
+        "00000000-0000-0000-0000-000000000002": 1.0
+      },
+      "edgeFlows": {
+        "00000000-0000-0000-0000-000000000065": 2.0
+      },
+      "gatedSources": [],
+      "gatedSinks": [],
+      "terminalInputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 0,
+          "input": true,
+          "rate": 2.0
+        }
+      ],
+      "terminalOutputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000002",
+          "port": 0,
+          "input": false,
+          "rate": 1.0
+        }
+      ],
+      "unneeded": [],
+      "notes": [],
+      "drawerRates": {},
+      "unmet": [],
+      "spares": [],
+      "options": 0
+    },
+    "board": {
+      "nothingToSolveFor": false,
+      "cards": {
+        "00000000-0000-0000-0000-000000000001": {
+          "count": 2.0,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "x",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": false
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": true
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000002": {
+          "count": 1.0,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "y",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "z",
+              "perSecond": 1.0,
+              "extra": 0.0,
+              "shown": 1.0,
+              "wired": false
+            }
+          ]
+        }
+      },
+      "drawers": {},
+      "totals": {
+        "inputs": {
+          "x": 2.0
+        },
+        "outputs": {
+          "z": 1.0
+        }
+      }
+    }
+  },
+  "unwired-ports": {
+    "input": {
+      "mode": "AUTO",
+      "machines": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "A",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 0,
+              "name": "x",
+              "free": false
+            },
+            {
+              "amount": 2.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "s",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "y",
+              "free": false
+            },
+            {
+              "amount": 3.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 3,
+              "name": "b",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "name": "B",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 4,
+              "name": "z",
+              "free": false
+            }
+          ],
+          "countFixed": true,
+          "machineCount": 2,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        }
+      ],
+      "edges": [
+        {
+          "id": "00000000-0000-0000-0000-000000000065",
+          "source": "00000000-0000-0000-0000-000000000001",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000002",
+          "targetInput": 0
+        }
+      ],
+      "pools": [],
+      "drawers": [],
+      "extentPins": {},
+      "spares": {}
+    },
+    "answer": {
+      "kind": "solved",
+      "machineCounts": {
+        "00000000-0000-0000-0000-000000000001": 2.0,
+        "00000000-0000-0000-0000-000000000002": 2.0
+      },
+      "edgeFlows": {
+        "00000000-0000-0000-0000-000000000065": 2.0
+      },
+      "gatedSources": [],
+      "gatedSinks": [],
+      "terminalInputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 0,
+          "input": true,
+          "rate": 2.0
+        },
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 1,
+          "input": true,
+          "rate": 4.0
+        }
+      ],
+      "terminalOutputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 1,
+          "input": false,
+          "rate": 6.0
+        },
+        {
+          "node": "00000000-0000-0000-0000-000000000002",
+          "port": 0,
+          "input": false,
+          "rate": 2.0
+        }
+      ],
+      "unneeded": [],
+      "notes": [],
+      "drawerRates": {},
+      "unmet": [],
+      "spares": [],
+      "options": 0
+    },
+    "board": {
+      "nothingToSolveFor": false,
+      "cards": {
+        "00000000-0000-0000-0000-000000000001": {
+          "count": 2.0,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "x",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": false
+            },
+            {
+              "name": "s",
+              "perSecond": 4.0,
+              "extra": 0.0,
+              "shown": 4.0,
+              "wired": false
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": true
+            },
+            {
+              "name": "b",
+              "perSecond": 6.0,
+              "extra": 0.0,
+              "shown": 6.0,
+              "wired": false
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000002": {
+          "count": 2.0,
+          "pinned": true,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "y",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "z",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": false
+            }
+          ]
+        }
+      },
+      "drawers": {},
+      "totals": {
+        "inputs": {
+          "s": 4.0,
+          "x": 2.0
+        },
+        "outputs": {
+          "b": 6.0,
+          "z": 2.0
+        }
+      }
+    }
+  },
+  "islands-one-set": {
+    "input": {
+      "mode": "AUTO",
+      "machines": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "A",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 5.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 0,
+              "name": "x",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 5.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "countFixed": true,
+          "machineCount": 2,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "name": "B",
+          "durationTicks": 56.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 5.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "q",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 3,
+              "name": "w",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        }
+      ],
+      "edges": [],
+      "pools": [],
+      "drawers": [],
+      "extentPins": {},
+      "spares": {}
+    },
+    "answer": {
+      "kind": "solved",
+      "machineCounts": {
+        "00000000-0000-0000-0000-000000000001": 2.0,
+        "00000000-0000-0000-0000-000000000002": 0.0
+      },
+      "edgeFlows": {},
+      "gatedSources": [],
+      "gatedSinks": [],
+      "terminalInputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 0,
+          "input": true,
+          "rate": 10.0
+        }
+      ],
+      "terminalOutputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 0,
+          "input": false,
+          "rate": 10.0
+        }
+      ],
+      "unneeded": [
+        "00000000-0000-0000-0000-000000000002"
+      ],
+      "notes": [],
+      "drawerRates": {},
+      "unmet": [],
+      "spares": [],
+      "options": 0
+    },
+    "board": {
+      "nothingToSolveFor": false,
+      "cards": {
+        "00000000-0000-0000-0000-000000000001": {
+          "count": 2.0,
+          "pinned": true,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "x",
+              "perSecond": 10.0,
+              "extra": 0.0,
+              "shown": 10.0,
+              "wired": false
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "perSecond": 10.0,
+              "extra": 0.0,
+              "shown": 10.0,
+              "wired": false
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000002": {
+          "count": 0.0,
+          "pinned": false,
+          "unset": true,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "q",
+              "perSecond": 0.0,
+              "extra": 0.0,
+              "shown": 0.0,
+              "wired": false
+            }
+          ],
+          "outputs": [
+            {
+              "name": "w",
+              "perSecond": 0.0,
+              "extra": 0.0,
+              "shown": 0.0,
+              "wired": false
+            }
+          ]
+        }
+      },
+      "drawers": {},
+      "totals": {
+        "inputs": {
+          "x": 10.0
+        },
+        "outputs": {
+          "y": 10.0
+        }
+      }
+    }
+  },
+  "unneeded-branch": {
+    "input": {
+      "mode": "AUTO",
+      "machines": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "A",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 0,
+              "name": "x",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "name": "B",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "z",
+              "free": false
+            }
+          ],
+          "countFixed": true,
+          "machineCount": 2,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000003",
+          "name": "C",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 3,
+              "name": "v",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        }
+      ],
+      "edges": [
+        {
+          "id": "00000000-0000-0000-0000-000000000065",
+          "source": "00000000-0000-0000-0000-000000000001",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000002",
+          "targetInput": 0
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000066",
+          "source": "00000000-0000-0000-0000-000000000003",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000002",
+          "targetInput": 0
+        }
+      ],
+      "pools": [],
+      "drawers": [],
+      "extentPins": {},
+      "spares": {}
+    },
+    "answer": {
+      "kind": "solved",
+      "machineCounts": {
+        "00000000-0000-0000-0000-000000000001": 0.0,
+        "00000000-0000-0000-0000-000000000002": 2.0,
+        "00000000-0000-0000-0000-000000000003": 2.0
+      },
+      "edgeFlows": {
+        "00000000-0000-0000-0000-000000000065": 0.0,
+        "00000000-0000-0000-0000-000000000066": 2.0
+      },
+      "gatedSources": [],
+      "gatedSinks": [],
+      "terminalInputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000003",
+          "port": 0,
+          "input": true,
+          "rate": 2.0
+        }
+      ],
+      "terminalOutputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000002",
+          "port": 0,
+          "input": false,
+          "rate": 2.0
+        }
+      ],
+      "unneeded": [
+        "00000000-0000-0000-0000-000000000001"
+      ],
+      "notes": [],
+      "drawerRates": {},
+      "unmet": [],
+      "spares": [],
+      "options": 0
+    },
+    "board": {
+      "nothingToSolveFor": false,
+      "cards": {
+        "00000000-0000-0000-0000-000000000001": {
+          "count": 0.0,
+          "pinned": false,
+          "unset": true,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "x",
+              "perSecond": 0.0,
+              "extra": 0.0,
+              "shown": 0.0,
+              "wired": false
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "perSecond": 0.0,
+              "extra": 0.0,
+              "shown": 0.0,
+              "wired": true
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000002": {
+          "count": 2.0,
+          "pinned": true,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "y",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "z",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": false
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000003": {
+          "count": 2.0,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "v",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": false
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": true
+            }
+          ]
+        }
+      },
+      "drawers": {},
+      "totals": {
+        "inputs": {
+          "v": 2.0
+        },
+        "outputs": {
+          "z": 2.0
+        }
+      }
+    }
+  },
+  "custom-supply": {
+    "input": {
+      "mode": "AUTO",
+      "machines": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "Custom Rate",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [],
+          "outputs": [
+            {
+              "amount": 4.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 0,
+              "name": "x",
+              "free": false
+            }
+          ],
+          "countFixed": true,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "name": "A",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 0,
+              "name": "x",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        }
+      ],
+      "edges": [
+        {
+          "id": "00000000-0000-0000-0000-000000000065",
+          "source": "00000000-0000-0000-0000-000000000001",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000002",
+          "targetInput": 0
+        }
+      ],
+      "pools": [],
+      "drawers": [],
+      "extentPins": {},
+      "spares": {}
+    },
+    "answer": {
+      "kind": "solved",
+      "machineCounts": {
+        "00000000-0000-0000-0000-000000000001": 1.0,
+        "00000000-0000-0000-0000-000000000002": 4.0
+      },
+      "edgeFlows": {
+        "00000000-0000-0000-0000-000000000065": 4.0
+      },
+      "gatedSources": [],
+      "gatedSinks": [],
+      "terminalInputs": [],
+      "terminalOutputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000002",
+          "port": 0,
+          "input": false,
+          "rate": 4.0
+        }
+      ],
+      "unneeded": [],
+      "notes": [],
+      "drawerRates": {},
+      "unmet": [],
+      "spares": [],
+      "options": 0
+    },
+    "board": {
+      "nothingToSolveFor": false,
+      "cards": {
+        "00000000-0000-0000-0000-000000000001": {
+          "count": 1.0,
+          "pinned": true,
+          "unset": false,
+          "countless": false,
+          "inputs": [],
+          "outputs": [
+            {
+              "name": "x",
+              "perSecond": 4.0,
+              "extra": 0.0,
+              "shown": 4.0,
+              "wired": true
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000002": {
+          "count": 4.0,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "x",
+              "perSecond": 4.0,
+              "extra": 0.0,
+              "shown": 4.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "perSecond": 4.0,
+              "extra": 0.0,
+              "shown": 4.0,
+              "wired": false
+            }
+          ]
+        }
+      },
+      "drawers": {},
+      "totals": {
+        "inputs": {
+          "x": 4.0
+        },
+        "outputs": {
+          "y": 4.0
+        }
+      }
+    }
+  },
+  "custom-request": {
+    "input": {
+      "mode": "AUTO",
+      "machines": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "A",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 0,
+              "name": "x",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 2.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "name": "Custom Rate",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 3.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "y",
+              "free": false
+            }
+          ],
+          "outputs": [],
+          "countFixed": true,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        }
+      ],
+      "edges": [
+        {
+          "id": "00000000-0000-0000-0000-000000000065",
+          "source": "00000000-0000-0000-0000-000000000001",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000002",
+          "targetInput": 0
+        }
+      ],
+      "pools": [],
+      "drawers": [],
+      "extentPins": {},
+      "spares": {}
+    },
+    "answer": {
+      "kind": "solved",
+      "machineCounts": {
+        "00000000-0000-0000-0000-000000000001": 1.5,
+        "00000000-0000-0000-0000-000000000002": 1.0
+      },
+      "edgeFlows": {
+        "00000000-0000-0000-0000-000000000065": 3.0
+      },
+      "gatedSources": [],
+      "gatedSinks": [],
+      "terminalInputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 0,
+          "input": true,
+          "rate": 1.5
+        }
+      ],
+      "terminalOutputs": [],
+      "unneeded": [],
+      "notes": [],
+      "drawerRates": {},
+      "unmet": [],
+      "spares": [],
+      "options": 0
+    },
+    "board": {
+      "nothingToSolveFor": false,
+      "cards": {
+        "00000000-0000-0000-0000-000000000001": {
+          "count": 1.5,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "x",
+              "perSecond": 1.5,
+              "extra": 0.0,
+              "shown": 1.5,
+              "wired": false
+            }
+          ],
+          "outputs": [
+            {
+              "name": "y",
+              "perSecond": 3.0,
+              "extra": 0.0,
+              "shown": 3.0,
+              "wired": true
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000002": {
+          "count": 1.0,
+          "pinned": true,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "y",
+              "perSecond": 3.0,
+              "extra": 0.0,
+              "shown": 3.0,
+              "wired": true
+            }
+          ],
+          "outputs": []
+        }
+      },
+      "drawers": {},
+      "totals": {
+        "inputs": {
+          "x": 1.5
+        },
+        "outputs": {
+          "y": 3.0
+        }
+      }
+    }
+  },
+  "fluid-tank-empties-cells": {
+    "input": {
+      "mode": "AUTO",
+      "machines": [
+        {
+          "id": "00000000-0000-0000-0000-000000000001",
+          "name": "A",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 0,
+              "name": "x",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 2.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "cell_water",
+              "free": false
+            }
+          ],
+          "countFixed": true,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000002",
+          "name": "Fluid Tank",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 1,
+              "name": "cell_water",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1000.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "f:water",
+              "free": false
+            },
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 3,
+              "name": "cell_empty",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000003",
+          "name": "B",
+          "durationTicks": 20.0,
+          "energyPerTick": 0.0,
+          "throughputFactor": 1,
+          "inputs": [
+            {
+              "amount": 500.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 2,
+              "name": "f:water",
+              "free": false
+            }
+          ],
+          "outputs": [
+            {
+              "amount": 1.0,
+              "chance": 1.0,
+              "multiplier": 1.0,
+              "resource": 4,
+              "name": "z",
+              "free": false
+            }
+          ],
+          "countFixed": false,
+          "machineCount": 1,
+          "targetOutputRates": {},
+          "targetInputRates": {}
+        }
+      ],
+      "edges": [
+        {
+          "id": "00000000-0000-0000-0000-000000000065",
+          "source": "00000000-0000-0000-0000-000000000001",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000002",
+          "targetInput": 0
+        },
+        {
+          "id": "00000000-0000-0000-0000-000000000066",
+          "source": "00000000-0000-0000-0000-000000000002",
+          "sourceOutput": 0,
+          "target": "00000000-0000-0000-0000-000000000003",
+          "targetInput": 0
+        }
+      ],
+      "pools": [],
+      "drawers": [],
+      "extentPins": {},
+      "spares": {}
+    },
+    "answer": {
+      "kind": "solved",
+      "machineCounts": {
+        "00000000-0000-0000-0000-000000000001": 1.0,
+        "00000000-0000-0000-0000-000000000002": 2.0,
+        "00000000-0000-0000-0000-000000000003": 4.0
+      },
+      "edgeFlows": {
+        "00000000-0000-0000-0000-000000000065": 2.0,
+        "00000000-0000-0000-0000-000000000066": 1999.999999999999
+      },
+      "gatedSources": [],
+      "gatedSinks": [],
+      "terminalInputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000001",
+          "port": 0,
+          "input": true,
+          "rate": 1.0
+        }
+      ],
+      "terminalOutputs": [
+        {
+          "node": "00000000-0000-0000-0000-000000000002",
+          "port": 1,
+          "input": false,
+          "rate": 2.0
+        },
+        {
+          "node": "00000000-0000-0000-0000-000000000003",
+          "port": 0,
+          "input": false,
+          "rate": 4.0
+        }
+      ],
+      "unneeded": [],
+      "notes": [],
+      "drawerRates": {},
+      "unmet": [],
+      "spares": [],
+      "options": 0
+    },
+    "board": {
+      "nothingToSolveFor": false,
+      "cards": {
+        "00000000-0000-0000-0000-000000000001": {
+          "count": 1.0,
+          "pinned": true,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "x",
+              "perSecond": 1.0,
+              "extra": 0.0,
+              "shown": 1.0,
+              "wired": false
+            }
+          ],
+          "outputs": [
+            {
+              "name": "cell_water",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": true
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000002": {
+          "count": 2.0,
+          "pinned": false,
+          "unset": false,
+          "countless": true,
+          "inputs": [
+            {
+              "name": "cell_water",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "f:water",
+              "perSecond": 2000.0,
+              "extra": 0.0,
+              "shown": 2000.0,
+              "wired": true
+            },
+            {
+              "name": "cell_empty",
+              "perSecond": 2.0,
+              "extra": 0.0,
+              "shown": 2.0,
+              "wired": false
+            }
+          ]
+        },
+        "00000000-0000-0000-0000-000000000003": {
+          "count": 4.0,
+          "pinned": false,
+          "unset": false,
+          "countless": false,
+          "inputs": [
+            {
+              "name": "f:water",
+              "perSecond": 2000.0,
+              "extra": 0.0,
+              "shown": 2000.0,
+              "wired": true
+            }
+          ],
+          "outputs": [
+            {
+              "name": "z",
+              "perSecond": 4.0,
+              "extra": 0.0,
+              "shown": 4.0,
+              "wired": false
+            }
+          ]
+        }
+      },
+      "drawers": {},
+      "totals": {
+        "inputs": {
+          "x": 1.0
+        },
+        "outputs": {
+          "cell_empty": 2.0,
+          "z": 4.0
+        }
+      }
+    }
+  }
+}

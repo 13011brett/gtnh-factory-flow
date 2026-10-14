@@ -257,12 +257,27 @@ export function circuitInputPort(resource: RecipeInput, existing: readonly RailP
   };
 }
 
+/**
+ * The number on a port's row: what its wires carry. What the solve forces out of the plan at an output is the forced
+ * row under it, not part of the row (the mod's `PortView.wiredPerSecond`); an input's reading is its wires' already.
+ */
+export function portRowPerSecond(
+  port: Pick<RailPort, "side" | "currentPerSecond">,
+  forcedPerSecond: number | undefined,
+): number {
+  return port.side === "output" && forcedPerSecond !== undefined && forcedPerSecond > 0
+    ? Math.max(0, port.currentPerSecond - forcedPerSecond)
+    : port.currentPerSecond;
+}
+
 export function buildPortView(
   nodeId: string,
   port: RailPort,
   node: Pick<FactoryNode, "portRates">,
   forcedAt: ReadonlyMap<string, number> | undefined,
 ): CleanPortView {
+  const forcedRate = forcedAt?.get(makePortKey(nodeId, port.side === "input" ? "i" : "o", port.handleId));
+  const shown = portRowPerSecond(port, forcedRate);
   let number: string;
   let unit: string;
   if (portReadsEnergy(port)) {
@@ -270,12 +285,11 @@ export function buildPortView(
     number = parts.value;
     unit = parts.unit;
   } else {
-    number = formatSlotRateBare(port.currentPerSecond, port.kind);
+    number = formatSlotRateBare(shown, port.kind);
     unit = rateSuffixForKind(port.kind).trim();
   }
   const chance = (port.resource as { chance?: number } | undefined)?.chance;
   const chanceText = chance !== undefined && chance < 1 ? `${Math.round(chance * 10000) / 100}%` : undefined;
-  const forcedRate = forcedAt?.get(makePortKey(nodeId, port.side === "input" ? "i" : "o", port.handleId));
   return {
     key: port.key,
     nodeId,
@@ -286,7 +300,7 @@ export function buildPortView(
     unit,
     name: port.displayName,
     title: chanceText ? `${port.displayName} (${chanceText} chance)` : port.displayName,
-    zero: !(port.currentPerSecond > 0),
+    zero: !(shown > 0),
     gold: node.portRates?.[port.handleId] !== undefined,
     rate: node.portRates?.[port.handleId],
     numberSmall: measureClean(number, 13) + 2 + measureClean(unit, 8) > WORDS,

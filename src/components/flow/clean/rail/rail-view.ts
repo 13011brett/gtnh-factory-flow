@@ -16,7 +16,9 @@ export interface RailView {
 
 export const RAIL_VIEW_STORAGE_KEY = "gtnh-factory-flow-overview-rail";
 
-export const DEFAULT_RAIL_VIEW: RailView = { open: true, folded: [] };
+/** The mod opens with INTERNAL folded: what a plan makes and uses itself is the section least looked at. */
+export const DEFAULT_FOLDED = ["INTERNAL"];
+export const DEFAULT_RAIL_VIEW: RailView = { open: true, folded: DEFAULT_FOLDED };
 
 let current: RailView | undefined;
 const listeners = new Set<() => void>();
@@ -29,7 +31,7 @@ function parse(raw: string | null): RailView {
       open: value.open !== false,
       folded: Array.isArray(value.folded)
         ? value.folded.filter((x): x is string => typeof x === "string")
-        : [],
+        : DEFAULT_FOLDED,
     };
   } catch {
     return DEFAULT_RAIL_VIEW;

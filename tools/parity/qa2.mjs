@@ -25,10 +25,13 @@ const shot = (name, clip) => page.screenshot({ path: path.join(OUT, name + ".png
 const nodeSel = (id) => `.react-flow__node[data-id="${id}"]`;
 const focus = async (id, x = 700, y = 300) => panTo(page, id, x, y);
 const idle = () => page.mouse.move(1000, 1040);
+// The mod's Hyb.mix in float32 (Math.round on floats: 92*0.07f + 42*0.93f is 45.5 there, 45.4999 in doubles).
 const mix = (a, b, t) => {
+  const f = Math.fround;
   const p = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
   const A = p(a), B = p(b);
-  return "#" + A.map((v, i) => Math.round(v * t + B[i] * (1 - t)).toString(16).padStart(2, "0")).join("").toUpperCase();
+  const s = f(t);
+  return "#" + A.map((v, i) => Math.floor(f(f(v * s) + f(B[i] * f(1 - s))) + 0.5).toString(16).padStart(2, "0")).join("").toUpperCase();
 };
 const sections = {};
 const section = (name, fn) => (sections[name] = fn);
@@ -61,9 +64,15 @@ section("drawers", async () => {
     await shot(`drawer-${kind}`, { x: r.x - 20, y: r.y - 20, width: r.w + 40, height: r.h + 40 });
     const png = readPng(path.join(OUT, `drawer-${kind}.png`));
     const s = png.width / (r.w + 40);
-    const body = hex(px(png, Math.round(26 * s), Math.round(90 * s)));
-    let dist = 0;
-    for (let i = 0; i < 3; i++) dist += Math.abs(parseInt(body.slice(1 + 2 * i, 3 + 2 * i), 16) - parseInt(want.body.slice(1 + 2 * i, 3 + 2 * i), 16));
+    // A plain spot of the body (drawer-local 8,22: under the grab bar, left of the number and the picture), which
+    // the stripes cross: it is the body or the stripe colour.
+    const body = hex(px(png, Math.round(28 * s), Math.round(42 * s)));
+    let dist = 1e9;
+    for (const ref of [want.body, v.stripe.toUpperCase()]) {
+      let d = 0;
+      for (let i = 0; i < 3; i++) d += Math.abs(parseInt(body.slice(1 + 2 * i, 3 + 2 * i), 16) - parseInt(ref.slice(1 + 2 * i, 3 + 2 * i), 16));
+      dist = Math.min(dist, d);
+    }
     rec("drawers", `${kind} rendered body pixel`, dist <= 24 ? "PASS" : "FAIL", `${body} vs mod fill ${want.body} (sum abs diff ${dist})`);
   }
   const bar = await page.evaluate((s) => document.querySelector(s + " .cd-bar").getBoundingClientRect().height, nodeSel(ids.aniline));

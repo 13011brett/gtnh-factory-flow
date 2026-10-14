@@ -229,16 +229,18 @@ function applyArrangeDials(dials: RouterTuning | undefined): void {
 
 function applyTaste(taste: ArrangeTaste | undefined): void {
   const spacing = taste?.spacing ?? "normal";
-  // Compact matches hand-drawn boards: rows a cell apart, columns two,
-  // drawers touching.
+  // Compact matches hand-drawn boards: rows a cell apart, columns two.
+  // Drawers keep two cells from their machine and a cell from each other
+  // in every spacing: closer and the wire between them, its arrowhead and
+  // the drawer's own keys are hidden (the mod keeps the same air).
   ROW_GAP = cells(spacing === "compact" ? 1 : spacing === "roomy" ? 3 : 2);
   SECTION_GAP = cells(spacing === "compact" ? 2 : spacing === "roomy" ? 6 : 4);
   COLUMN_GAP_MIN = cells(spacing === "compact" ? 2 : spacing === "roomy" ? 5 : 3);
   // Wide enough that two islands' grounds plus both their two-cell no-go
   // collars fit between any pair with room left over.
   ISLAND_GAP = cells(spacing === "compact" ? 10 : spacing === "roomy" ? 16 : 12);
-  SATELLITE_PAD = cells(spacing === "compact" ? 1 : 2);
-  SATELLITE_STACK_GAP = cells(spacing === "compact" ? 0 : 1);
+  SATELLITE_PAD = cells(2);
+  SATELLITE_STACK_GAP = cells(1);
 }
 
 /**
@@ -337,7 +339,10 @@ interface Block {
  * and the better polished board wins. Without a judge the proxy score
  * picks among the three.
  */
-export function arrangeBoard(rawInput: ArrangeInput): ArrangeResult {
+function prepareArrange(rawInput: ArrangeInput): {
+  input: ArrangeInput;
+  airOf: (positions: ReadonlyMap<string, { x: number; y: number }>) => number;
+} {
   // The stranger air (board-arrange-air.ts) is added to the judge's points
   // here so every stage (search proxy, finalists, polish, final choice)
   // optimises the same objective and the judge never undoes the search.
@@ -354,6 +359,78 @@ export function arrangeBoard(rawInput: ArrangeInput): ArrangeResult {
         },
       }
     : rawInput;
+  return { input, airOf };
+}
+
+/** The candidates the final choice is made among. */
+export interface ArrangeCandidates {
+  plain: ArrangeResult;
+  challenger: ArrangeResult;
+  free: ArrangeResult;
+}
+
+/**
+ * The three candidates routed by the judge, best first. The best two are
+ * polished (below); every stage that needs the ranking recomputes it from
+ * the same candidates, so the parallel stages agree with the serial one.
+ */
+function rankCandidates(input: ArrangeInput, candidates: ArrangeCandidates) {
+  const verdict = (result: ArrangeResult) =>
+    input.judge!(new Map(result.moves.map((move) => [move.id, move.position])));
+  const named = [
+    { name: "plain", result: candidates.plain },
+    { name: "challenger", result: candidates.challenger },
+    { name: "free", result: candidates.free },
+  ];
+  const ranked = named
+    .map(({ name, result }) => ({ name, result, verdict: verdict(result) }))
+    .sort((a, b) => a.verdict.points - b.verdict.points);
+  return { ranked, verdict };
+}
+
+/**
+ * The arrange in three parallel-friendly stages, for hosts with more than
+ * one thread: the column candidates (plain pass and challenger), the free
+ * placement, and one of the two polishes. Run serially they are exactly
+ * `arrangeBoard`; the host picks the polished board with fewer points.
+ */
+export function arrangeColumnStage(rawInput: ArrangeInput): { plain: ArrangeResult; challenger: ArrangeResult } {
+  const { input } = prepareArrange(rawInput);
+  input.onProgress?.({ step: 0, stage: "Laying the board out", done: 0, total: 1 });
+  const plain = arrangeBoardOnce(input, false);
+  if (input.cards.length < 2) {
+    return { plain, challenger: plain };
+  }
+  input.onProgress?.({ step: 1, stage: "Searching for a better layout", done: 0, total: 1 });
+  ARRANGE_SEARCH_PROGRESS = (done, total) =>
+    input.onProgress?.({ step: 1, stage: "Searching for a better layout", done, total });
+  const challenger = arrangeBoardOnce(input, true);
+  ARRANGE_SEARCH_PROGRESS = undefined;
+  return { plain, challenger };
+}
+
+export function arrangeFreeStage(rawInput: ArrangeInput): ArrangeResult {
+  const { input } = prepareArrange(rawInput);
+  // The column pass sets the spacing the free placement reads.
+  applyTaste(input.taste);
+  applyArrangeDials(ARRANGE_PRICES);
+  return arrangeFreeCandidate(input);
+}
+
+/** Polishes the `which`-th best candidate (0 or 1); its finished score rides along. */
+export function arrangePolishStage(
+  rawInput: ArrangeInput,
+  candidates: ArrangeCandidates,
+  which: 0 | 1,
+): { result: ArrangeResult; points: number } {
+  const { input } = prepareArrange(rawInput);
+  const { ranked, verdict } = rankCandidates(input, candidates);
+  const polished = polishWithJudge(input, ranked[which].result, ranked[which].verdict, which === 0 ? "first" : "second");
+  return { result: polished, points: verdict(polished).points };
+}
+
+export function arrangeBoard(rawInput: ArrangeInput): ArrangeResult {
+  const { input, airOf } = prepareArrange(rawInput);
   input.onProgress?.({ step: 0, stage: "Laying the board out", done: 0, total: 1 });
   const plain = arrangeBoardOnce(input, false);
   if (input.cards.length < 2) {
@@ -383,19 +460,10 @@ export function arrangeBoard(rawInput: ArrangeInput): ArrangeResult {
   // The third candidate: no columns at all (board-arrange-free.ts).
   const free = arrangeFreeCandidate(input);
   input.onProgress?.({ step: 2, stage: "Routing the candidates", done: 0, total: 1 });
-  const verdict = (result: ArrangeResult) =>
-    input.judge!(new Map(result.moves.map((move) => [move.id, move.position])));
   // The two best by the router's verdict are polished - they start from
   // different structures and the polish is greedy, so each can reach a
   // place the other cannot - and the better finished board wins.
-  const named = [
-    { name: "plain", result: plain },
-    { name: "challenger", result: challenger },
-    { name: "free", result: free },
-  ];
-  const ranked = named
-    .map(({ name, result }) => ({ name, result, verdict: verdict(result) }))
-    .sort((a, b) => a.verdict.points - b.verdict.points);
+  const { ranked, verdict } = rankCandidates(input, { plain, challenger, free });
   // For the offline harnesses: which candidate the router preferred, and by how much.
   (globalThis as { __arrangeCandidates?: unknown }).__arrangeCandidates = ranked.map((entry) => ({
     name: entry.name,

@@ -317,10 +317,10 @@ function columnLattice(cards: readonly FreeCard[]): Lattice {
     [...widths.entries()].sort((a, b) => b[1] - a[1] || b[0] - a[0])[0]?.[0] ?? cells(22);
   const drawers = cards.filter((card) => card.width < 0.6 * machineWidth);
   // The corridor: a drawer, standing BESIDE_CELLS from the machine it is
-  // wired to and GAP_CELLS from the next column.
+  // wired to on either side (closer and the wire between them is hidden).
   const corridor =
     drawers.length > 0
-      ? Math.max(...drawers.map((card) => card.width)) + cells(BESIDE_CELLS) + cells(GAP_CELLS)
+      ? Math.max(...drawers.map((card) => card.width)) + 2 * cells(BESIDE_CELLS)
       : cells(BESIDE_CELLS);
   const pitch = snap(machineWidth + corridor);
   // Column cards are the wide ones, by size rather than by role: a small
@@ -499,11 +499,12 @@ function derivePatterns(
     // Right: beside the machine. Left: at the far side of the corridor, the
     // same x the previous column's right line uses, so two lines in one
     // corridor can only clash in y.
-    const x = side === "right" ? r.right + cells(BESIDE_CELLS) : r.left - width - cells(GAP_CELLS);
+    const x = side === "right" ? r.right + cells(BESIDE_CELLS) : r.left - width - cells(BESIDE_CELLS);
     let y = y0;
     for (const { d } of members) {
       out.set(d, { x: snap(x), y });
-      y += cards[d].height;
+      // Drawers in one line keep a cell of air: touching, their keys and the wires between are hidden.
+      y += cards[d].height + cells(GAP_CELLS);
     }
   }
   for (const [key, members] of rows) {
@@ -515,11 +516,11 @@ function derivePatterns(
     const left = Math.max(upper.left, lower.left);
     const right = Math.min(upper.right, lower.right);
     const x0 = snap(right > left ? Math.min(Math.max((left + right) / 2 - width / 2, left), Math.max(left, right - width)) : left);
-    const y = snap(upper.bottom + cells(GAP_CELLS));
+    const y = snap(upper.bottom + cells(BESIDE_CELLS));
     let x = x0;
     for (const { d } of members) {
       out.set(d, { x, y });
-      x += cards[d].width;
+      x += cards[d].width + cells(GAP_CELLS);
     }
   }
   return out;
@@ -552,7 +553,7 @@ function settleWithPatterns(cards: readonly FreeCard[], positions: Point[], patt
       let floor = -Infinity;
       for (const d of list) {
         if (out[d].y < floor) out[d] = { x: out[d].x, y: floor };
-        floor = out[d].y + cards[d].height;
+        floor = out[d].y + cards[d].height + gap;
       }
     }
   }

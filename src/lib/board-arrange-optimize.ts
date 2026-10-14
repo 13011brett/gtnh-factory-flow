@@ -302,16 +302,18 @@ export function pathCrossings(p: Path, q: Path): number {
   return count;
 }
 
-/** Does the segment enter the open rectangle? (Liang-Barsky.) */
-function segmentEnters(a: Point, b: Point, rect: Rect): boolean {
-  const dx = b.x - a.x;
-  const dy = b.y - a.y;
+/** Does the segment enter the open rectangle? (Liang-Barsky, inlined: it runs millions of times a search.) */
+function segmentEnters(ax: number, ay: number, bx: number, by: number, left: number, top: number, right: number, bottom: number): boolean {
+  const dx = bx - ax;
+  const dy = by - ay;
   let t0 = 0;
   let t1 = 1;
-  const clip = (p: number, q: number): boolean => {
-    if (Math.abs(p) < 1e-9) {
-      return q > 0;
-    }
+  // clip(-dx, ax - left)
+  let p = -dx;
+  let q = ax - left;
+  if (Math.abs(p) < 1e-9) {
+    if (!(q > 0)) return false;
+  } else {
     const r = q / p;
     if (p < 0) {
       if (r > t1) return false;
@@ -320,15 +322,50 @@ function segmentEnters(a: Point, b: Point, rect: Rect): boolean {
       if (r < t0) return false;
       if (r < t1) t1 = r;
     }
-    return true;
-  };
-  return (
-    clip(-dx, a.x - rect.left) &&
-    clip(dx, rect.right - a.x) &&
-    clip(-dy, a.y - rect.top) &&
-    clip(dy, rect.bottom - a.y) &&
-    t1 - t0 > 1e-6
-  );
+  }
+  p = dx;
+  q = right - ax;
+  if (Math.abs(p) < 1e-9) {
+    if (!(q > 0)) return false;
+  } else {
+    const r = q / p;
+    if (p < 0) {
+      if (r > t1) return false;
+      if (r > t0) t0 = r;
+    } else {
+      if (r < t0) return false;
+      if (r < t1) t1 = r;
+    }
+  }
+  p = -dy;
+  q = ay - top;
+  if (Math.abs(p) < 1e-9) {
+    if (!(q > 0)) return false;
+  } else {
+    const r = q / p;
+    if (p < 0) {
+      if (r > t1) return false;
+      if (r > t0) t0 = r;
+    } else {
+      if (r < t0) return false;
+      if (r < t1) t1 = r;
+    }
+  }
+  p = dy;
+  q = bottom - ay;
+  if (Math.abs(p) < 1e-9) {
+    if (!(q > 0)) return false;
+  } else {
+    const r = q / p;
+    if (p < 0) {
+      if (r > t1) return false;
+      if (r > t0) t0 = r;
+    } else {
+      if (r < t0) return false;
+      if (r < t1) t1 = r;
+    }
+  }
+  return t1 - t0 > 1e-6;
 }
 
 /**
@@ -338,17 +375,30 @@ function segmentEnters(a: Point, b: Point, rect: Rect): boolean {
  */
 export function pathBlocked(path: Path, rects: Rect[], skipA: number, skipB: number, prices: RouterTuning): number {
   let cost = 0;
+  // The path's own box: a card whose inflated box misses it cannot be run through.
+  let minX = Infinity;
+  let maxX = -Infinity;
+  let minY = Infinity;
+  let maxY = -Infinity;
+  for (let i = 0; i < path.length; i += 1) {
+    const pt = path[i];
+    if (pt.x < minX) minX = pt.x;
+    if (pt.x > maxX) maxX = pt.x;
+    if (pt.y < minY) minY = pt.y;
+    if (pt.y > maxY) maxY = pt.y;
+  }
   for (let r = 0; r < rects.length; r += 1) {
     if (r === skipA || r === skipB) continue;
     const rect = rects[r];
-    const inflated = {
-      left: rect.left - BOARD_GRID,
-      top: rect.top - BOARD_GRID,
-      right: rect.right + BOARD_GRID,
-      bottom: rect.bottom + BOARD_GRID,
-    };
+    const left = rect.left - BOARD_GRID;
+    const top = rect.top - BOARD_GRID;
+    const right = rect.right + BOARD_GRID;
+    const bottom = rect.bottom + BOARD_GRID;
+    if (maxX <= left || minX >= right || maxY <= top || minY >= bottom) continue;
     for (let i = 1; i < path.length; i += 1) {
-      if (segmentEnters(path[i - 1], path[i], inflated)) {
+      const a = path[i - 1];
+      const b = path[i];
+      if (segmentEnters(a.x, a.y, b.x, b.y, left, top, right, bottom)) {
         const shorter = Math.min(rect.right - rect.left, rect.bottom - rect.top);
         cost += 2 * prices.turn90 + shorter / 2 + 2 * BOARD_GRID;
         break;

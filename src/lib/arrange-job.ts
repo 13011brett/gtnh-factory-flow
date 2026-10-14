@@ -11,7 +11,15 @@
  * the job builds the judge here (`makeRouteJudge`).
  */
 
-import { arrangeBoard, type ArrangeInput, type ArrangeResult } from "./board-arrange";
+import {
+  arrangeBoard,
+  arrangeColumnStage,
+  arrangeFreeStage,
+  arrangePolishStage,
+  type ArrangeCandidates,
+  type ArrangeInput,
+  type ArrangeResult,
+} from "./board-arrange";
 import { makeRouteJudge } from "./route-judge";
 import type { GridObstacle, GridRouteRequest } from "@/components/flow/grid-edge-router";
 import type { RouterTuning } from "@/components/flow/router-tuning";
@@ -30,6 +38,15 @@ export interface ArrangeJob {
   taste?: ArrangeInput["taste"];
   origin?: ArrangeInput["origin"];
   judgeInput?: ArrangeJudgeInput;
+  /**
+   * Which part of the arrange this job is, when the host runs the parts on
+   * several threads at once: the column candidates, the free placement, or
+   * one polish of the ranked candidates. Absent: the whole arrange.
+   */
+  stage?: "columns" | "free" | "polish";
+  /** For the polish stage: the three candidates, and which of the best two to polish. */
+  candidates?: ArrangeCandidates;
+  which?: 0 | 1;
 }
 
 /**
@@ -60,6 +77,9 @@ export interface ArrangeJobResult {
   seq: number;
   result: ArrangeResult;
   arrangeMs: number;
+  /** A stage job's own answer (the `result` above is then its main board). */
+  columns?: { plain: ArrangeResult; challenger: ArrangeResult };
+  polishedPoints?: number;
 }
 
 /** Runs the job right here; the worker and the fallback both call this. */
@@ -71,7 +91,7 @@ export function runArrangeJob(
   const judge = job.judgeInput
     ? makeRouteJudge(job.judgeInput.obstacles, job.judgeInput.requests, job.judgeInput.tuning)
     : undefined;
-  const result = arrangeBoard({
+  const input: ArrangeInput = {
     cards: job.cards,
     wires: job.wires,
     taste: job.taste,
@@ -81,6 +101,19 @@ export function runArrangeJob(
     onProgress: onProgress
       ? (progress) => onProgress({ seq: job.seq, ...progress })
       : undefined,
-  });
+  };
+  if (job.stage === "columns") {
+    const columns = arrangeColumnStage(input);
+    return { seq: job.seq, result: columns.plain, columns, arrangeMs: performance.now() - started };
+  }
+  if (job.stage === "free") {
+    const result = arrangeFreeStage(input);
+    return { seq: job.seq, result, arrangeMs: performance.now() - started };
+  }
+  if (job.stage === "polish" && job.candidates) {
+    const polished = arrangePolishStage(input, job.candidates, job.which ?? 0);
+    return { seq: job.seq, result: polished.result, polishedPoints: polished.points, arrangeMs: performance.now() - started };
+  }
+  const result = arrangeBoard(input);
   return { seq: job.seq, result, arrangeMs: performance.now() - started };
 }

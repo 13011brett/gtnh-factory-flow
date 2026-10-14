@@ -83,7 +83,9 @@ export function useBoardSoundEffects(): void {
     };
 
     const unsubscribe = useFactoryStore.subscribe((state, prevState) => {
-      if (state.lastResult !== prevState.lastResult || state.project.id !== runningOf) {
+      // Stale books (a solve still out) say nothing either way: the plan keeps running until an answer says not.
+      const settled = !state.lastResult?.stale && !state.lastResult?.held;
+      if (settled && (state.lastResult !== prevState.lastResult || state.project.id !== runningOf)) {
         const now = isRunning(state.lastResult);
         const fresh = state.project.id === runningOf && performance.now() >= quietUntil;
         // Not on a tab switch or an undo: those plans were running before.

@@ -121,28 +121,6 @@ function RuleMenu({
   );
 }
 
-/** The drawer's picture: the resource's art, or for EU (which has none) the bolt in its dark amber box, as on a card's row. */
-function DrawerIcon({
-  storage,
-  alternatives,
-}: {
-  storage: FactoryStorage;
-  alternatives: ResourceAmount["alternatives"];
-}) {
-  if (storage.kind === "power") return <span className="cd-icon cd-eu" aria-hidden />;
-  return (
-    <ResourceIcon
-      resource={{ ...storage, id: storage.resourceId, amount: 1, alternatives }}
-      showAmount={false}
-      bare
-      tooltip={false}
-      showConsumedState={false}
-      iconPixelSize={iconPixelSize(ICON_PX, storage)}
-      className="cd-icon"
-    />
-  );
-}
-
 export function CleanDrawer({
   data,
   selected,

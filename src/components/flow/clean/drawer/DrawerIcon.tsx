@@ -46,6 +46,7 @@ export function DrawerIcon({
     hasArt(storage) ? undefined : recipeArt(state.project.recipes, storage.kind, storage.resourceId),
   );
   const art = { ...storage, ...(borrowed ?? {}) };
+  if (storage.kind === "power") return <span className="cd-icon cd-eu" aria-hidden />;
   if (storage.kind === "fluid") {
     const color =
       art.dominantColor ?? art.iconAtlas?.dominantColor ?? getFallbackFluidColor(storage.resourceId);

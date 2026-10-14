@@ -1,3 +1,5 @@
+import type { PlanSolveExtras } from "@/lib/solver/plan/types";
+
 export const PROJECT_SCHEMA_VERSION = 1;
 export const TICKS_PER_SECOND = 20;
 
@@ -395,6 +397,13 @@ export interface FactoryNode {
    * count is the solver's to choose. Ignored in Build mode.
    */
   solvePin?: number;
+  /**
+   * Plan mode's port-rate pins, units per second by canonical handle id
+   * (`output:item:foo`, `r2:input:fluid:bar` for a shared machine's section).
+   * A rate pins the card's extent exactly. Absent or empty means no pin;
+   * nothing reads it outside plan mode.
+   */
+  portRates?: Record<string, number>;
   targetOutput?: TargetRate;
   enabled: boolean;
   /** The board (pocket) this card lives in; absent = the root board. */
@@ -751,6 +760,19 @@ export interface FactoryProject {
    */
   poolMode?: boolean;
   /**
+   * PLAN MODE: the merged board. Pins, port rates and drawer rules in;
+   * counts and forced flows out. Always written together with
+   * `solveMode: true`, so a build that does not know the key opens the plan
+   * in Solve mode.
+   */
+  planMode?: boolean;
+  /**
+   * Plan mode's stored leftover splits: leftover key -> bearer key -> share
+   * (0..1, summing to 1 per leftover). Unitless, so a split survives the plan
+   * changing size.
+   */
+  spareShares?: Record<string, Record<string, number>>;
+  /**
    * Pool mode's cell-to-fluid bridges: litres one filled cell holds, keyed
    * by the cell item id, read from the Canner's own recipes (never
    * guessed) and fetched for every cell/fluid pair the plan's slots name.
@@ -977,6 +999,8 @@ export interface ThroughputResult {
    * computes it beside the books and `findClogLocks` serves it from here.
    */
   clogLocks?: ClogLockIndex;
+  /** Plan mode only: forced flows, leftovers, unneeded and unanchored parts. */
+  plan?: PlanSolveExtras;
 }
 
 export interface ClogLockVent {

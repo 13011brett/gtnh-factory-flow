@@ -1,0 +1,525 @@
+import {
+  PROJECT_SCHEMA_VERSION,
+  type EdgeThroughput,
+  type FactoryEdge,
+  type FactoryNode,
+  type FactoryProject,
+  type FactoryStorage,
+  type NodeThroughputResult,
+  type Recipe,
+  type ResourceBalance,
+  type ResourceFlow,
+  type ResourceKey,
+  type StorageThroughputResult,
+  type ThroughputResult,
+} from "../../../model/types";
+import { makePortKey } from "../port-key";
+import type { PlanLeftover, PlanSolveExtras } from "../types";
+
+/**
+ * Three hand-built plan-mode results for the UI packages, shaped exactly as the
+ * adapter will return them (`ThroughputResult` with `plan`), so cards, drawers
+ * and the overview can be built before the solver is wired. The numbers are
+ * consistent (every wire's flow balances at its ports, forced rows are the
+ * gaps) but they are NOT solver output: do not use them as goldens.
+ *
+ * Every recipe runs one craft per second per machine (20 ticks), so a node's
+ * solved count is its craft rate and amounts read as rates. Items only.
+ *
+ *   mockForced      pinned crusher and smelter; dust leaves at a port with no
+ *                   drawer (forced output), coal comes in at another (forced
+ *                   input); a product drawer is met exactly.
+ *   mockLeftovers   a shortfall that two input places could bear (stored 25/75
+ *                   split, `spareShares`) and a surplus with two possible
+ *                   places (the solver's pick, no stored split).
+ *   mockUnneeded    a machine nothing pinned feeds or needs at zero, a separate
+ *                   island nothing sets (unanchored recipe and drawer), and a
+ *                   drawer whose rate cannot be reached (note + unmet).
+ */
+
+export interface MockPlan {
+  name: string;
+  description: string;
+  project: FactoryProject;
+  result: ThroughputResult;
+}
+
+type Slot = [item: string, amount: number];
+
+interface MockRecipe {
+  id: string;
+  inputs: Slot[];
+  outputs: Slot[];
+}
+
+interface MockNode {
+  id: string;
+  recipe: string;
+  /** The solved count (= crafts per second). */
+  count: number;
+  /** A pin (`solvePin`) the player set. */
+  pin?: number;
+  portRates?: Record<string, number>;
+  x: number;
+  y: number;
+}
+
+interface MockDrawer {
+  id: string;
+  item: string;
+  kind: "source" | "product";
+  rate?: number;
+  mode?: "at-least" | "at-most" | "exact";
+  x: number;
+  y: number;
+}
+
+/** A wire and the rate it carries. */
+interface MockWire {
+  id: string;
+  from: string;
+  to: string;
+  item: string;
+  perSecond: number;
+}
+
+interface MockSpec {
+  id: string;
+  name: string;
+  description: string;
+  recipes: MockRecipe[];
+  nodes: MockNode[];
+  drawers: MockDrawer[];
+  wires: MockWire[];
+  spareShares?: FactoryProject["spareShares"];
+  extras: PlanSolveExtras;
+}
+
+const key = (item: string): ResourceKey => `item:${item}` as ResourceKey;
+const flow = (item: string, amountPerSecond: number): ResourceFlow => ({
+  key: key(item),
+  kind: "item",
+  resourceId: item,
+  displayName: item,
+  amountPerSecond,
+});
+
+const handle = (side: "input" | "output", item: string) => `${side}:item:${encodeURIComponent(item)}`;
+
+function build(spec: MockSpec): MockPlan {
+  const recipes: Recipe[] = spec.recipes.map((r) => ({
+    id: r.id,
+    name: r.id,
+    machineType: "Mock Machine",
+    minimumTier: "LV",
+    durationTicks: 20,
+    eut: 30,
+    inputs: r.inputs.map(([id, amount]) => ({ kind: "item", id, amount, displayName: id })),
+    outputs: r.outputs.map(([id, amount]) => ({ kind: "item", id, amount, displayName: id })),
+  }));
+  const recipeById = new Map(spec.recipes.map((r) => [r.id, r]));
+
+  const nodes: FactoryNode[] = spec.nodes.map((n) => ({
+    id: n.id,
+    recipeId: n.recipe,
+    machineCount: 1,
+    parallel: 1,
+    overclockTier: "LV",
+    enabled: true,
+    position: { x: n.x, y: n.y },
+    ...(n.pin !== undefined ? { solvePin: n.pin } : {}),
+    ...(n.portRates ? { portRates: n.portRates } : {}),
+  }));
+  const storages: FactoryStorage[] = spec.drawers.map((d) => ({
+    id: d.id,
+    kind: "item",
+    resourceId: d.item,
+    displayName: d.item,
+    position: { x: d.x, y: d.y },
+    ...(d.rate !== undefined ? { targetPerSecond: d.rate, targetMode: d.mode ?? "at-least" } : {}),
+  }));
+  const isDrawer = new Set(spec.drawers.map((d) => d.id));
+  const edges: FactoryEdge[] = spec.wires.map((w) => ({
+    id: w.id,
+    source: w.from,
+    target: w.to,
+    sourceHandle: isDrawer.has(w.from) ? undefined : handle("output", w.item),
+    targetHandle: isDrawer.has(w.to) ? undefined : handle("input", w.item),
+    resourceKind: "item",
+    resourceId: w.item,
+  }));
+
+  const project: FactoryProject = {
+    schemaVersion: PROJECT_SCHEMA_VERSION,
+    id: spec.id,
+    name: spec.name,
+    description: spec.description,
+    solveMode: true,
+    planMode: true,
+    recipes,
+    nodes,
+    storages,
+    edges,
+    ...(spec.spareShares ? { spareShares: spec.spareShares } : {}),
+    fuelProfiles: [],
+  } as FactoryProject;
+
+  const nodeResults: Record<string, NodeThroughputResult> = {};
+  let totalEuT = 0;
+  for (const n of spec.nodes) {
+    const r = recipeById.get(n.recipe)!;
+    const inputs: Record<ResourceKey, ResourceFlow> = {};
+    const outputs: Record<ResourceKey, ResourceFlow> = {};
+    // A machine at zero keeps its nameplate flows (one machine) so ports and
+    // handles are still built from them.
+    const scale = n.count > 0 ? n.count : 1;
+    for (const [item, amount] of r.inputs) inputs[key(item)] = flow(item, amount * scale);
+    for (const [item, amount] of r.outputs) outputs[key(item)] = flow(item, amount * scale);
+    const euT = 30 * n.count;
+    totalEuT += euT;
+    nodeResults[n.id] = {
+      nodeId: n.id,
+      recipeId: n.recipe,
+      recipeName: r.id,
+      enabled: true,
+      operationRatePerSecond: scale,
+      inputs,
+      outputs,
+      euT,
+      requiredRatePerSecond: 0,
+      maxRatePerSecond: 0,
+      utilization: n.count > 0 ? 1 : 0,
+      theoreticalMachinesRequired: n.count,
+      status: n.count > 0 ? "balanced" : "underutilized",
+      warnings: [],
+    };
+  }
+
+  const edgeResults: Record<string, EdgeThroughput> = {};
+  for (const w of spec.wires) {
+    edgeResults[w.id] = {
+      edgeId: w.id,
+      resource: flow(w.item, w.perSecond),
+      demandPerSecond: w.perSecond,
+      transferredPerSecond: w.perSecond,
+      isLimited: false,
+      nameplateDemandPerSecond: w.perSecond,
+      sourceCapacityPerSecond: w.perSecond,
+      constraint: "full",
+    };
+  }
+
+  const storageResults: Record<string, StorageThroughputResult> = {};
+  for (const d of spec.drawers) {
+    const produced = spec.wires.filter((w) => w.from === d.id).reduce((a, w) => a + w.perSecond, 0);
+    const consumed = spec.wires.filter((w) => w.to === d.id).reduce((a, w) => a + w.perSecond, 0);
+    storageResults[d.id] = {
+      storageId: d.id,
+      kind: "item",
+      resourceId: d.item,
+      displayName: d.item,
+      storedAmount: 0,
+      capacity: 0,
+      producedPerSecond: produced,
+      consumedPerSecond: consumed,
+      netPerSecond: produced - consumed,
+      status: "balanced",
+      ...(d.rate !== undefined ? { targetPerSecond: d.rate } : {}),
+      ...(d.rate !== undefined && d.kind === "product" && consumed < d.rate - 1e-9
+        ? { targetUnreachable: true }
+        : {}),
+    };
+  }
+
+  const resources: Record<ResourceKey, ResourceBalance> = {};
+  const items = new Set<string>();
+  for (const r of spec.recipes) {
+    for (const [item] of [...r.inputs, ...r.outputs]) items.add(item);
+  }
+  for (const item of items) {
+    let produced = 0;
+    let consumed = 0;
+    for (const n of spec.nodes) {
+      const r = recipeById.get(n.recipe)!;
+      const scale = n.count;
+      produced += (r.outputs.find(([i]) => i === item)?.[1] ?? 0) * scale;
+      consumed += (r.inputs.find(([i]) => i === item)?.[1] ?? 0) * scale;
+    }
+    const imported = spec.drawers
+      .filter((d) => d.kind === "source" && d.item === item)
+      .reduce((a, d) => a + storageResults[d.id]!.producedPerSecond, 0);
+    const product = spec.drawers
+      .filter((d) => d.kind === "product" && d.item === item)
+      .reduce((a, d) => a + storageResults[d.id]!.consumedPerSecond, 0);
+    const net = produced + imported - consumed - product;
+    resources[key(item)] = {
+      key: key(item),
+      kind: "item",
+      resourceId: item,
+      displayName: item,
+      producedPerSecond: produced,
+      consumedPerSecond: consumed,
+      netPerSecond: produced - consumed,
+      surplusPerSecond: Math.max(0, net),
+      deficitPerSecond: Math.max(0, -net),
+      importedPerSecond: imported,
+      productPerSecond: product,
+      byproductPerSecond: 0,
+      bufferFillPerSecond: 0,
+    };
+  }
+
+  return {
+    name: spec.name,
+    description: spec.description,
+    project,
+    result: {
+      nodes: nodeResults,
+      storages: storageResults,
+      resources,
+      edges: edgeResults,
+      totalEuT,
+      totalEuPerSecond: totalEuT * 20,
+      bottlenecks: [],
+      externalInputs: [],
+      unconsumedOutputs: [],
+      generatedAt: "mock",
+      plan: spec.extras,
+    },
+  };
+}
+
+const out = (nodeId: string, item: string) => makePortKey(nodeId, "o", handle("output", item));
+const inn = (nodeId: string, item: string) => makePortKey(nodeId, "i", handle("input", item));
+
+// ---------------------------------------------------------------------------
+// 1. Forced inputs and outputs at ports
+// ---------------------------------------------------------------------------
+
+export const mockForced: MockPlan = build({
+  id: "mock-forced",
+  name: "Forced flows",
+  description: "Dust leaves a port with no drawer; coal enters another; the product drawer is met.",
+  recipes: [
+    { id: "Macerator", inputs: [["Iron Ore", 1]], outputs: [["Crushed Iron", 2]] },
+    { id: "Furnace", inputs: [["Crushed Iron", 3], ["Coal", 1]], outputs: [["Iron Ingot", 2], ["Slag", 1]] },
+    { id: "Slag Washer", inputs: [["Slag", 2]], outputs: [["Clay", 1]] },
+    { id: "Coal Maker", inputs: [["Wood", 1]], outputs: [["Coal", 1]] },
+  ],
+  nodes: [
+    { id: "mac", recipe: "Macerator", count: 3, pin: 3, x: 0, y: 0 },
+    { id: "furn", recipe: "Furnace", count: 1, x: 480, y: 0 },
+    { id: "wash", recipe: "Slag Washer", count: 0.5, x: 960, y: 120 },
+    { id: "coal", recipe: "Coal Maker", count: 0.5, pin: 0.5, x: 0, y: 300 },
+  ],
+  drawers: [
+    { id: "ore", item: "Iron Ore", kind: "source", x: -240, y: 0 },
+    { id: "wood", item: "Wood", kind: "source", x: -240, y: 300 },
+    { id: "ingots", item: "Iron Ingot", kind: "product", rate: 2, mode: "at-least", x: 960, y: 0 },
+  ],
+  wires: [
+    { id: "w-ore", from: "ore", to: "mac", item: "Iron Ore", perSecond: 3 },
+    { id: "w-wood", from: "wood", to: "coal", item: "Wood", perSecond: 0.5 },
+    { id: "w-dust", from: "mac", to: "furn", item: "Crushed Iron", perSecond: 3 },
+    { id: "w-coal", from: "coal", to: "furn", item: "Coal", perSecond: 0.5 },
+    { id: "w-ingot", from: "furn", to: "ingots", item: "Iron Ingot", perSecond: 2 },
+    { id: "w-slag", from: "furn", to: "wash", item: "Slag", perSecond: 1 },
+  ],
+  extras: {
+    forced: [
+      // The macerator makes 6 dust a second and the furnace takes 3.
+      {
+        nodeId: "mac",
+        portKey: out("mac", "Crushed Iron"),
+        side: "out",
+        resourceKey: "item:Crushed Iron",
+        perSecond: 3,
+      },
+      // The furnace wants a coal a second and the coal maker makes half of that.
+      {
+        nodeId: "furn",
+        portKey: inn("furn", "Coal"),
+        side: "in",
+        resourceKey: "item:Coal",
+        perSecond: 0.5,
+      },
+    ],
+    leftovers: [],
+    unneeded: [],
+    unanchored: [],
+    terminals: [],
+    notes: [],
+    openGates: 2,
+  },
+});
+
+// ---------------------------------------------------------------------------
+// 2. Leftovers and spares
+// ---------------------------------------------------------------------------
+
+const shortfallBearers = [inn("alloy", "Copper Dust"), inn("alloy2", "Copper Dust")];
+const shortfallKey = [...shortfallBearers].sort().join("|");
+const surplusBearers = [out("crush", "Tin Dust"), out("crush2", "Tin Dust")];
+const surplusKey = [...surplusBearers].sort().join("|");
+
+const leftoversA: PlanLeftover = {
+  key: shortfallKey,
+  importing: true,
+  custom: true,
+  bearers: [
+    {
+      portKey: shortfallBearers[0]!,
+      maxPerSecond: 4,
+      share: 0.25,
+      solverPick: true,
+      flows: [{ portKey: shortfallBearers[0]!, perSecond: 1 }],
+    },
+    {
+      portKey: shortfallBearers[1]!,
+      maxPerSecond: 4,
+      share: 0.75,
+      solverPick: false,
+      flows: [{ portKey: shortfallBearers[1]!, perSecond: 3 }],
+    },
+  ],
+};
+
+const leftoversB: PlanLeftover = {
+  key: surplusKey,
+  importing: false,
+  custom: false,
+  bearers: [
+    {
+      portKey: surplusBearers[0]!,
+      maxPerSecond: 2,
+      share: 1,
+      solverPick: true,
+      flows: [{ portKey: surplusBearers[0]!, perSecond: 2 }],
+    },
+    {
+      portKey: surplusBearers[1]!,
+      maxPerSecond: 2,
+      share: 0,
+      solverPick: false,
+      flows: [],
+    },
+  ],
+};
+
+export const mockLeftovers: MockPlan = build({
+  id: "mock-leftovers",
+  name: "Leftovers and spares",
+  description: "A shortfall two inputs could bear (stored 25/75) and a surplus with two places to go.",
+  recipes: [
+    { id: "Alloy Smelter", inputs: [["Copper Dust", 4]], outputs: [["Bronze Ingot", 1]] },
+    { id: "Crusher", inputs: [["Tin Ore", 1]], outputs: [["Tin Dust", 2]] },
+  ],
+  nodes: [
+    { id: "alloy", recipe: "Alloy Smelter", count: 1, pin: 1, x: 480, y: 0 },
+    { id: "alloy2", recipe: "Alloy Smelter", count: 1, pin: 1, x: 480, y: 300 },
+    { id: "crush", recipe: "Crusher", count: 1, pin: 1, x: 0, y: 600 },
+    { id: "crush2", recipe: "Crusher", count: 1, pin: 1, x: 480, y: 600 },
+  ],
+  drawers: [
+    { id: "bronze", item: "Bronze Ingot", kind: "product", x: 960, y: 150 },
+    { id: "tin-ore", item: "Tin Ore", kind: "source", x: -240, y: 600 },
+  ],
+  wires: [
+    { id: "w-b1", from: "alloy", to: "bronze", item: "Bronze Ingot", perSecond: 1 },
+    { id: "w-b2", from: "alloy2", to: "bronze", item: "Bronze Ingot", perSecond: 1 },
+    { id: "w-t1", from: "tin-ore", to: "crush", item: "Tin Ore", perSecond: 1 },
+    { id: "w-t2", from: "tin-ore", to: "crush2", item: "Tin Ore", perSecond: 1 },
+  ],
+  // The stored split is keyed by the leftover's key, then each bearer's key.
+  spareShares: {
+    [shortfallKey]: { [shortfallBearers[0]!]: 0.25, [shortfallBearers[1]!]: 0.75 },
+  },
+  extras: {
+    forced: [
+      {
+        nodeId: "alloy",
+        portKey: shortfallBearers[0]!,
+        side: "in",
+        resourceKey: "item:Copper Dust",
+        perSecond: 1,
+      },
+      {
+        nodeId: "alloy2",
+        portKey: shortfallBearers[1]!,
+        side: "in",
+        resourceKey: "item:Copper Dust",
+        perSecond: 3,
+      },
+      {
+        nodeId: "crush",
+        portKey: surplusBearers[0]!,
+        side: "out",
+        resourceKey: "item:Tin Dust",
+        perSecond: 2,
+      },
+    ],
+    leftovers: [leftoversA, leftoversB],
+    unneeded: [],
+    unanchored: [],
+    terminals: [],
+    notes: [],
+    openGates: 3,
+  },
+});
+
+// ---------------------------------------------------------------------------
+// 3. Unneeded machines and unanchored parts
+// ---------------------------------------------------------------------------
+
+export const mockUnneeded: MockPlan = build({
+  id: "mock-unneeded",
+  name: "Unneeded and unanchored",
+  description:
+    "A machine nothing feeds or needs sits at zero; a separate sawmill line has no number anywhere; the steel drawer asks for more than the line can make.",
+  recipes: [
+    { id: "Compressor", inputs: [["Iron Ingot", 2]], outputs: [["Steel Plate", 1]] },
+    { id: "Spare Cutter", inputs: [["Steel Plate", 1]], outputs: [["Steel Rod", 2]] },
+    { id: "Sawmill", inputs: [["Log", 1]], outputs: [["Plank", 4]] },
+  ],
+  nodes: [
+    { id: "comp", recipe: "Compressor", count: 6, pin: 6, x: 0, y: 0 },
+    { id: "cutter", recipe: "Spare Cutter", count: 0, x: 480, y: 0 },
+    { id: "saw", recipe: "Sawmill", count: 0, x: 0, y: 450 },
+  ],
+  drawers: [
+    { id: "iron", item: "Iron Ingot", kind: "source", rate: 12, mode: "at-most", x: -240, y: 0 },
+    { id: "steel", item: "Steel Plate", kind: "product", rate: 10, mode: "at-least", x: 960, y: 0 },
+    { id: "rods", item: "Steel Rod", kind: "product", x: 960, y: 200 },
+    { id: "logs", item: "Log", kind: "source", x: -240, y: 450 },
+    { id: "planks", item: "Plank", kind: "product", x: 480, y: 450 },
+  ],
+  wires: [
+    { id: "w-iron", from: "iron", to: "comp", item: "Iron Ingot", perSecond: 12 },
+    { id: "w-steel", from: "comp", to: "steel", item: "Steel Plate", perSecond: 6 },
+    { id: "w-cut-in", from: "comp", to: "cutter", item: "Steel Plate", perSecond: 0 },
+    { id: "w-rods", from: "cutter", to: "rods", item: "Steel Rod", perSecond: 0 },
+    { id: "w-log", from: "logs", to: "saw", item: "Log", perSecond: 0 },
+    { id: "w-plank", from: "saw", to: "planks", item: "Plank", perSecond: 0 },
+  ],
+  extras: {
+    forced: [],
+    leftovers: [],
+    unneeded: ["cutter"],
+    unanchored: ["saw", "logs", "planks"],
+    terminals: [],
+    notes: [
+      {
+        message: "DRAWER_UNMET",
+        args: ["Steel Plate", { message: "RULE_AT_LEAST", args: [] }, 10, 6],
+      },
+      {
+        message: "DRAWER_LIMITED_BY",
+        args: ["Steel Plate", { message: "LIMIT_DRAWER", args: ["Iron Ingot"] }],
+      },
+    ],
+    openGates: 0,
+    unmetDrawers: ["steel"],
+  },
+});
+
+export const mockPlans: MockPlan[] = [mockForced, mockLeftovers, mockUnneeded];

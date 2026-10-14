@@ -54,6 +54,7 @@ import { expandPool, getPoolProject } from "./pool-mode";
 import { getSetupRules } from "../model/setup-rules";
 import { solveEquationsCore } from "./equations-core";
 import { solveSolveMode } from "./solve-mode";
+import { planSolve } from "./plan";
 
 const EPSILON = 0.000001;
 
@@ -234,6 +235,22 @@ export function calculateThroughput(
         runtimeCalculationWarning(effectiveRecipe, node),
       ].filter((warning): warning is string => Boolean(warning)),
     };
+  }
+
+  // PLAN MODE (solver/plan): the merged board. Dispatched before the solve
+  // branch because a plan-mode project always carries solveMode too (so an
+  // older build opens it as Solve); with planMode off this line is inert and
+  // the old books are returned unchanged.
+  if (project.planMode) {
+    return planSolve({
+      project,
+      nodes,
+      storages,
+      projectStorages,
+      bottlenecks,
+      crossForm,
+      options,
+    });
   }
 
   // SOLVE MODE: the product drawers' typed amounts are the question and the

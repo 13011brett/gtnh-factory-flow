@@ -36,7 +36,7 @@ export function normalizeLoadedProject(project: FactoryProject): FactoryProject 
                     // slot and lose its fuel wire to the cross-form drop.
                     resynthesizePowerRecipes(
                       normalizeProjectFuelProfiles(
-                        normalizeFullFarms(renameOpvTier(adoptSetupRules(requireSolveForPool(project)))),
+                        normalizeFullFarms(renameOpvTier(adoptSetupRules(requirePlanForSolve(requireSolveForPool(project))))),
                       ),
                     ),
                   ),
@@ -408,6 +408,19 @@ function snapProjectToGrid(project: FactoryProject): FactoryProject {
 function requireSolveForPool(project: FactoryProject): FactoryProject {
   if (project.poolMode && !project.solveMode) {
     return { ...project, solveMode: true };
+  }
+  return project;
+}
+
+/**
+ * Plan mode implies solve mode and excludes pool mode: a plan that says plan
+ * without solve (hand-edited, or written by a build that dropped a key) opens
+ * with solve mode on, and a pool flag beside it is dropped. Always writing
+ * both flags is also what lets an older build open a plan-mode design as Solve.
+ */
+export function requirePlanForSolve(project: FactoryProject): FactoryProject {
+  if (project.planMode && (!project.solveMode || project.poolMode)) {
+    return { ...project, solveMode: true, poolMode: undefined };
   }
   return project;
 }

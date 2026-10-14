@@ -2,6 +2,7 @@
 
 import { create } from "zustand";
 import { createEmptyProject } from "@/examples";
+import { withNewBoardDefault } from "@/lib/new-board";
 import {
   UNTITLED_DESIGN_NAME,
   conflictCopyName,
@@ -552,7 +553,7 @@ export const useDesignStore = create<DesignStore>((set, get) => ({
     const { activeDesignId, designs } = get();
     await flushCanvasInto(designs.find((design) => design.id === activeDesignId));
 
-    const record = createDesignRecord(createEmptyProject(), UNTITLED_DESIGN_NAME);
+    const record = createDesignRecord(withNewBoardDefault(createEmptyProject()), UNTITLED_DESIGN_NAME);
     await writeDesign(record);
     landOnDesign(set, record);
     leaveLibrary();
@@ -703,7 +704,7 @@ export const useDesignStore = create<DesignStore>((set, get) => ({
     if (library.designs.length === 0) {
       // A library with nothing in it is seeded rather than shown empty: the
       // canvas has to belong to some record for autosave to have a home.
-      const seeded = createDesignRecord(createEmptyProject(), UNTITLED_DESIGN_NAME);
+      const seeded = createDesignRecord(withNewBoardDefault(createEmptyProject()), UNTITLED_DESIGN_NAME);
       await writeDesign(seeded);
       library = { ...library, designs: [seeded] };
       landOnDesign(set, seeded, library);

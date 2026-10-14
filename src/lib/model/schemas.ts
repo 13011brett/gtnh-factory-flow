@@ -371,6 +371,11 @@ export const factoryNodeSchema = z.object({
     .optional(),
   // Solve mode's pin: run exactly this many machines; absent = solver's choice.
   solvePin: z.number().nonnegative().optional(),
+  // Plan mode's port-rate pins by canonical handle id, units per second.
+  portRates: z
+    .record(z.string().min(1).max(512), z.number().positive().finite())
+    .refine((rates) => Object.keys(rates).length <= 256, "Too many port rates.")
+    .optional(),
   targetOutput: targetRateSchema.optional(),
   enabled: z.boolean(),
   pocketId: z.string().min(1).optional(),
@@ -563,6 +568,18 @@ export const factoryProjectSchema = z.object({
   solveMode: z.boolean().optional(),
   // Pool mode: every resource is shared, no wires needed.
   poolMode: z.boolean().optional(),
+  // Plan mode: the merged board (implies solveMode).
+  planMode: z.boolean().optional(),
+  // Plan mode's stored leftover splits: leftover key -> bearer key -> share.
+  spareShares: z
+    .record(
+      z.string().min(1).max(4096),
+      z
+        .record(z.string().min(1).max(512), z.number().min(0).max(1))
+        .refine((shares) => Object.keys(shares).length <= 64, "Too many bearers."),
+    )
+    .refine((leftovers) => Object.keys(leftovers).length <= 1024, "Too many leftovers.")
+    .optional(),
   // Pool mode's cell-to-fluid ratios, litres per filled cell by cell id.
   poolCellRatios: z.record(z.string(), z.number().positive()).optional(),
   recipes: z.array(recipeSchema),

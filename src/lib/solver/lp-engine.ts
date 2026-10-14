@@ -15,7 +15,10 @@ import { solveLp, type LinearProgram, type LpSolution } from "./simplex";
  */
 
 interface HighsInstance {
-  solve: (lpText: string) => {
+  solve: (
+    lpText: string,
+    options?: Record<string, number | string | boolean>,
+  ) => {
     Status: string;
     Columns: Record<string, { Primal: number }>;
   };
@@ -72,19 +75,55 @@ export function activeLpEngine(): "highs" | "simplex" {
   return highs ? "highs" : "simplex";
 }
 
-export function solveLpAuto(lp: LinearProgram): LpSolution {
+/**
+ * Limits for a solve that has integer columns. A branch-and-bound budget is a
+ * count of nodes, never a clock, so the same program gives the same answer on
+ * a fast and a slow machine.
+ */
+export interface LpSolveOptions {
+  maxMipNodes?: number;
+}
+
+export function hasIntegerColumns(lp: LinearProgram): boolean {
+  return (lp.integers?.length ?? 0) > 0 || (lp.binaries?.length ?? 0) > 0;
+}
+
+export function solveLpAuto(lp: LinearProgram, options: LpSolveOptions = {}): LpSolution {
   if (highs) {
     try {
-      return solveWithHighs(highs, lp);
+      return solveWithHighs(highs, lp, options);
     } catch (error) {
+      if (hasIntegerColumns(lp)) {
+        // No honest fallback: the homegrown simplex cannot branch.
+        throw new Error(
+          `HiGHS failed on a program with integer variables: ${
+            error instanceof Error ? error.message : String(error)
+          }`,
+          { cause: error },
+        );
+      }
       console.error("HiGHS solve failed; falling back to the homegrown simplex.", error);
     }
   }
+  // Throws IntegerVariablesUnsupportedError when the program has integer
+  // columns and HiGHS is not loaded.
   return solveLp(lp);
 }
 
-function solveWithHighs(instance: HighsInstance, lp: LinearProgram): LpSolution {
+function solveWithHighs(
+  instance: HighsInstance,
+  lp: LinearProgram,
+  solveOptions: LpSolveOptions = {},
+): LpSolution {
   const n = lp.maximize.length;
+  const integerColumns = new Set(lp.integers ?? []);
+  const binaryColumns = new Set(lp.binaries ?? []);
+  for (const c of [...integerColumns, ...binaryColumns]) {
+    if (!Number.isInteger(c) || c < 0 || c >= n) {
+      throw new Error(`Integer column ${c} is not a column of the program.`);
+    }
+  }
+  const isWhole = (c: number) => integerColumns.has(c) || binaryColumns.has(c);
   // Port rows divide by throughput, so late-game flows can have coefficients
   // below HiGHS' small-matrix cutoff. Change variable units before handing
   // those rows to it: x = columnScale * y. This preserves the same equations
@@ -92,7 +131,9 @@ function solveWithHighs(instance: HighsInstance, lp: LinearProgram): LpSolution 
   const columnScale = new Array<number>(n).fill(1);
   for (const row of [...lp.equalities, ...lp.upperBounds]) {
     for (const [c, value] of row.coefficients) {
-      if (value !== 0 && Math.abs(value) < 1e-8) {
+      // A whole-number column keeps its units: rescaling it would change what
+      // "integer" means.
+      if (value !== 0 && Math.abs(value) < 1e-8 && !isWhole(c)) {
         columnScale[c] = Math.max(columnScale[c]!, 1 / Math.abs(value));
       }
     }
@@ -101,7 +142,13 @@ function solveWithHighs(instance: HighsInstance, lp: LinearProgram): LpSolution 
   const objectiveScale = Math.max(1, ...scaledObjective.map(Math.abs));
   const scaledRow = (row: LinearProgram["equalities"][number]) => {
     const coefficients = new Map([...row.coefficients].map(([c, value]) => [c, value * columnScale[c]!]));
-    const scale = Math.max(1, ...[...coefficients.values()].map(Math.abs));
+    const largest = Math.max(0, ...[...coefficients.values()].map(Math.abs));
+    // A row that touches a whole-number column cannot move its tiny entries
+    // into column units, so it is scaled UP instead: the solver's feasibility
+    // tolerance is absolute, and an unscaled 1e-9 x <= 3e-9 would let x run to
+    // dozens.
+    const touchesWhole = [...row.coefficients.keys()].some(isWhole);
+    const scale = touchesWhole && largest > 0 ? largest : Math.max(1, largest);
     return { coefficients: new Map([...coefficients].map(([c, value]) => [c, value / scale])), rhs: row.rhs / scale };
   };
 
@@ -146,16 +193,57 @@ function solveWithHighs(instance: HighsInstance, lp: LinearProgram): LpSolution 
     lines.push(` u${rowIndex}: ${terms.join(" ")} <= ${format(row.rhs)}`);
     rowIndex += 1;
   }
+  // A column that no row or objective term names is not in the program HiGHS
+  // reads, so it cannot be declared whole either; it solves to 0.
+  const named = new Set<number>();
+  for (const row of [...lp.equalities, ...lp.upperBounds]) {
+    for (const [c, v] of row.coefficients) {
+      if (v !== 0) {
+        named.add(c);
+      }
+    }
+  }
+  lp.maximize.forEach((v, c) => {
+    if (v !== 0) {
+      named.add(c);
+    }
+  });
+  const declared = (columns: Set<number>) =>
+    [...columns].filter((c) => named.has(c)).sort((a, b) => a - b);
+  const generals = declared(integerColumns).filter((c) => !binaryColumns.has(c));
+  const binaries = declared(binaryColumns);
+  if (generals.length > 0) {
+    lines.push("General", ` ${generals.map((c) => `x${c}`).join(" ")}`);
+  }
+  if (binaries.length > 0) {
+    lines.push("Binary", ` ${binaries.map((c) => `x${c}`).join(" ")}`);
+  }
   lines.push("End");
 
-  const solved = instance.solve(lines.join("\n"));
+  const mip = generals.length > 0 || binaries.length > 0;
+  const highsOptions: Record<string, number | string | boolean> = {};
+  if (mip && solveOptions.maxMipNodes !== undefined) {
+    highsOptions.mip_max_nodes = solveOptions.maxMipNodes;
+  }
+  const solved = instance.solve(
+    lines.join("\n"),
+    Object.keys(highsOptions).length > 0 ? highsOptions : undefined,
+  );
   if (solved.Status !== "Optimal") {
+    if (mip && !["Infeasible", "Unbounded", "Unbounded or Infeasible"].includes(solved.Status)) {
+      // Node budget spent, time limit, model error: there is no answer to
+      // trust, and it is not "infeasible".
+      throw new Error(`HiGHS stopped with status "${solved.Status}".`);
+    }
     const status = solved.Status === "Infeasible" ? ("infeasible" as const) : ("unbounded" as const);
     return { status, x: [], objective: Number.NaN };
   }
   const x = new Array<number>(n).fill(0);
   for (let c = 0; c < n; c += 1) {
-    x[c] = (solved.Columns[`x${c}`]?.Primal ?? 0) * columnScale[c]!;
+    const value = (solved.Columns[`x${c}`]?.Primal ?? 0) * columnScale[c]!;
+    // The solver keeps integers within its feasibility tolerance; hand back
+    // the whole number it meant.
+    x[c] = isWhole(c) && Math.abs(value - Math.round(value)) < 1e-6 ? Math.round(value) + 0 : value;
   }
   let objective = 0;
   for (let c = 0; c < n; c += 1) {

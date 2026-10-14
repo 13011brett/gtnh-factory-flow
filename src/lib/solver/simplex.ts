@@ -13,6 +13,23 @@ export interface LinearProgram {
   equalities: Array<{ coefficients: Map<number, number>; rhs: number }>;
   /** Inequality rows: coefficients.x <= rhs. */
   upperBounds: Array<{ coefficients: Map<number, number>; rhs: number }>;
+  /**
+   * Columns that must take whole values (x >= 0). Only the HiGHS engine can
+   * solve these; the homegrown simplex throws `IntegerVariablesUnsupportedError`.
+   */
+  integers?: number[];
+  /** Columns restricted to 0 or 1. Same engine rule as `integers`. */
+  binaries?: number[];
+}
+
+/** Thrown by the homegrown simplex when handed integer columns it cannot honour. */
+export class IntegerVariablesUnsupportedError extends Error {
+  constructor() {
+    super(
+      "This linear program has integer variables, which need the HiGHS engine; the homegrown simplex cannot solve them. Load HiGHS with initLpEngine() first.",
+    );
+    this.name = "IntegerVariablesUnsupportedError";
+  }
 }
 
 export interface LpSolution {
@@ -24,6 +41,9 @@ export interface LpSolution {
 const EPS = 1e-9;
 
 export function solveLp(lp: LinearProgram): LpSolution {
+  if ((lp.integers?.length ?? 0) > 0 || (lp.binaries?.length ?? 0) > 0) {
+    throw new IntegerVariablesUnsupportedError();
+  }
   // A tableau walk through tiny pivots can leave float wreckage large enough
   // to hand back an "optimal" point that violates the model's own equalities.
   // Every answer is therefore verified against the ORIGINAL rows; a corrupt

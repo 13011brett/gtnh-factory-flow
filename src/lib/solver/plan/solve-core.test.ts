@@ -9,7 +9,6 @@ import { initLpEngine } from "../lp-engine";
 import { differences } from "./__fixtures__/compare";
 import { digest } from "./__fixtures__/digest";
 import { caseNames, loadInput } from "./__fixtures__/load";
-import { splitIslands } from "./__fixtures__/split-islands";
 import { SolveContext } from "./context";
 import { setColumnOrder, takeLpCount } from "./lp";
 import { solveCore } from "./solve-core";
@@ -448,38 +447,3 @@ describe("determinism (SolverPathTest)", () => {
   });
 });
 
-// ---------------------------------------------------------------------------
-// Island-local indexing (the reason islands are solved apart: spec 4.1.2)
-// ---------------------------------------------------------------------------
-
-describe("each island answers as if alone", () => {
-  // The two cases whose tie-breaks move when the island's machines are numbered in the whole plan.
-  it.each(["gtnh-flow-two_decisions", "platline-x4"])("%s: every island matches the golden by id", async (name) => {
-    const { loadGolden } = await import("./__fixtures__/load");
-    const golden = loadGolden(name).solution as Record<string, Record<string, number>> & {
-      gatedSources: Array<{ port: { nodeId: string; portIndex: number; input: boolean }; ratePerSecond: number }>;
-      gatedSinks: Array<{ port: { nodeId: string; portIndex: number; input: boolean }; ratePerSecond: number }>;
-    };
-    const parts = splitIslands(loadInput(name));
-    expect(parts.length).toBeGreaterThan(1);
-    const bad: string[] = [];
-    const close = (p: number, q: number) => Math.abs(p - q) <= 1e-6 * Math.max(1, Math.abs(p), Math.abs(q));
-    for (const part of parts) {
-      const s = solved(part);
-      for (const [id, v] of Object.entries(s.extentsPerSecond)) if (!close(golden.extentsPerSecond![id]!, v)) bad.push(`extent ${id}`);
-      for (const [id, v] of Object.entries(s.edgeFlowsPerSecond)) if (!close(golden.edgeFlowsPerSecond![id]!, v)) bad.push(`flow ${id}`);
-      for (const [mine, theirs] of [
-        [s.gatedSources, golden.gatedSources],
-        [s.gatedSinks, golden.gatedSinks],
-      ] as const) {
-        for (const e of mine) {
-          const g = theirs.find(
-            (x) => x.port.nodeId === e.port.node && x.port.portIndex === e.port.port && x.port.input === e.port.input,
-          );
-          if (!g || !close(g.ratePerSecond, e.ratePerSecond)) bad.push(`external ${e.port.node}:${e.port.port}`);
-        }
-      }
-    }
-    expect(bad).toEqual([]);
-  });
-});

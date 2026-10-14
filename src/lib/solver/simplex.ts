@@ -36,6 +36,12 @@ export interface LpSolution {
   status: "optimal" | "infeasible" | "unbounded";
   x: number[];
   objective: number;
+  /**
+   * HiGHS only, when asked for (`LpSolveOptions.rowDuals`): the dual of each row of the program as given, equalities
+   * then upper bounds, 0 for a row the engine did not write. Sign and scale are the engine's own (rows are
+   * equilibrated): only whether a dual is zero is meant to be read.
+   */
+  rowDuals?: number[];
 }
 
 const EPS = 1e-9;

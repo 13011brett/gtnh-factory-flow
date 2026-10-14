@@ -1,7 +1,8 @@
 "use client";
 
 import { Check, Link2, LoaderCircle, Share2, X } from "lucide-react";
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useDialogA11y } from "@/lib/hooks/use-dialog-a11y";
 import { normalizeBlueprintTags } from "@/lib/blueprints/types";
 import {
   listCommunityPlans,
@@ -29,6 +30,8 @@ import { AuthForm, useCommunityUser } from "./auth";
  * description, tags. Updating a linked post keeps its votes and downloads.
  */
 export function SharePlanDialog({ onClose }: { onClose: () => void }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogA11y(dialogRef, { onClose });
   const project = useFactoryStore((state) => state.project);
   const result = useFactoryStore((state) => state.lastResult);
   const manifest = useFactoryStore((state) => state.datasetManifest);
@@ -177,7 +180,12 @@ export function SharePlanDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fixed inset-0 z-[100] grid place-items-center bg-neutral-950/50 p-4">
-      <div className="flex max-h-[calc(90*var(--ui-vh))] w-full max-w-3xl flex-col overflow-y-auto rounded border border-line-strong bg-surface p-4 shadow-xl">
+      <div
+        ref={dialogRef}
+        role="dialog"
+        aria-modal="true"
+        aria-label="Share your setup"
+        className="flex max-h-[calc(90*var(--ui-vh))] w-full max-w-3xl flex-col overflow-y-auto rounded border border-line-strong bg-surface p-4 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-base font-semibold">
             <Share2 className="h-4 w-4" /> Share your setup

@@ -1,7 +1,8 @@
 "use client";
 
 import { ClipboardPaste, LoaderCircle, X } from "lucide-react";
-import { useState } from "react";
+import { useRef, useState } from "react";
+import { useDialogA11y } from "@/lib/hooks/use-dialog-a11y";
 import { openPlanCode } from "@/lib/open-plan-code";
 
 /**
@@ -9,6 +10,8 @@ import { openPlanCode } from "@/lib/open-plan-code";
  * new tab. The other half of that button.
  */
 export function PastePlanDialog({ onClose }: { onClose: () => void }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogA11y(dialogRef, { onClose, initialFocus: "textarea" });
   const [text, setText] = useState("");
   const [error, setError] = useState<string>();
   const [isOpening, setOpening] = useState(false);
@@ -39,7 +42,9 @@ export function PastePlanDialog({ onClose }: { onClose: () => void }) {
       }}
     >
       <div
+        ref={dialogRef}
         role="dialog"
+        aria-modal="true"
         aria-label="Paste a copied plan"
         className="flex w-full max-w-lg flex-col gap-3 rounded border border-line-strong bg-surface p-4 shadow-xl"
       >

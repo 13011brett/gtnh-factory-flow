@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useSyncExternalStore } from "react";
 import { createPortal } from "react-dom";
 import { OPEN_TOUR_EVENT } from "@/components/chrome/chrome-events";
 import { Callout } from "./Callout";
@@ -30,8 +30,15 @@ export function TourHost() {
   const note = useTourNote();
   const layerRef = useRef<HTMLDivElement | null>(null);
   const active = tour.phase !== "idle";
+  // The server renders nothing and the first client render must match it; the portal comes after mount.
+  const mounted = useSyncExternalStore(
+    () => () => undefined,
+    () => true,
+    () => false,
+  );
 
   useEffect(() => {
+    if (!mounted) return;
     attachTourLayer(layerRef.current ?? undefined);
     // A handle for walking the tour by hand in development.
     if (process.env.NODE_ENV !== "production") {
@@ -46,7 +53,7 @@ export function TourHost() {
       };
     }
     return () => attachTourLayer(undefined);
-  }, []);
+  }, [mounted]);
 
   useEffect(() => {
     // Help > Take the tour (and the settings' Take it) knock on this door.
@@ -86,7 +93,7 @@ export function TourHost() {
     return () => window.removeEventListener("keydown", onKey, true);
   }, [active]);
 
-  if (typeof document === "undefined") return null;
+  if (!mounted) return null;
   return createPortal(
     <div ref={layerRef} className="tour-layer" data-tour="layer" data-active={active ? "" : undefined}>
       {tour.phase === "playing" ? (

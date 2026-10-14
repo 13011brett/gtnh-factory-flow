@@ -1,7 +1,8 @@
 "use client";
 
 import { X } from "lucide-react";
-import { useEffect } from "react";
+import { useEffect, useRef } from "react";
+import { useDialogA11y } from "@/lib/hooks/use-dialog-a11y";
 import { MachineShoppingList } from "./MachineShoppingList";
 import { useFactoryStore } from "@/store/factory-store";
 
@@ -11,6 +12,8 @@ import { useFactoryStore } from "@/store/factory-store";
  * Opened from the settings sheet and the compact menu; owned by AppHeader.
  */
 export function MachineListDialog({ onClose }: { onClose: () => void }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogA11y(dialogRef, { onClose, escape: false });
   const hasMachines = useFactoryStore((state) => state.project.nodes.length > 0);
   useEffect(() => {
     const onKeyDown = (event: KeyboardEvent) => {
@@ -27,6 +30,7 @@ export function MachineListDialog({ onClose }: { onClose: () => void }) {
       onClick={onClose}
     >
       <div
+        ref={dialogRef}
         role="dialog"
         aria-modal="true"
         aria-label="Machine list"

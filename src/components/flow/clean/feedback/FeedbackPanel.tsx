@@ -3,6 +3,8 @@
 import { Bug, Lightbulb, CircleHelp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
 import { OPEN_FEEDBACK_EVENT } from "@/components/chrome/chrome-events";
+import { activateOnKey } from "@/lib/hooks/button-keys";
+import { useDialogA11y } from "@/lib/hooks/use-dialog-a11y";
 import { withoutRuntimeTables } from "@/lib/import-export/plan-code";
 import { useFactoryStore } from "@/store/factory-store";
 import { latestMinimapScene } from "../minimap/scene-store";
@@ -60,6 +62,8 @@ export function FeedbackPanel({ onClose }: { onClose: () => void }) {
   const [sent, setSent] = useState<Sent | undefined>(undefined);
   const [hotFace, setHotFace] = useState(-1);
   const areaRef = useRef<HTMLTextAreaElement | null>(null);
+  const dialogRef = useRef<HTMLDivElement | null>(null);
+  useDialogA11y(dialogRef, { onClose, initialFocus: "textarea" });
   const hasPlan = useFactoryStore((s) => s.project.nodes.length > 0);
   const planName = useFactoryStore((s) => s.project.name);
   const scene = latestMinimapScene();
@@ -109,10 +113,10 @@ export function FeedbackPanel({ onClose }: { onClose: () => void }) {
 
   return (
     <div className="fb-backdrop" data-feedback-backdrop="">
-      <div className="fb" role="dialog" aria-modal="true" aria-label="Send feedback">
+      <div ref={dialogRef} className="fb" role="dialog" aria-modal="true" aria-label="Send feedback">
         <div className="fb-title">
           <span>Send feedback</span>
-          <div role="button" aria-label="Close" className="fb-x" onClick={onClose} />
+          <div role="button" tabIndex={0} aria-label="Close" className="fb-x" onClick={onClose} onKeyDown={activateOnKey} />
         </div>
         {sent ? (
           <div className="fb-sent">
@@ -120,17 +124,19 @@ export function FeedbackPanel({ onClose }: { onClose: () => void }) {
             <div className="fb-sent-line">Thanks! It&apos;s sent.</div>
             <div className="fb-sent-sub">Issue #{sent.number} on GitHub</div>
             <div className="fb-keys">
-              <div role="button" className="fb-key fb-key-primary" onClick={() => window.open(sent.url, "_blank", "noopener")}>
+              <div role="button" tabIndex={0} onKeyDown={activateOnKey} className="fb-key fb-key-primary" onClick={() => window.open(sent.url, "_blank", "noopener")}>
                 Open it
               </div>
               <div
                 role="button"
+                tabIndex={0}
+                onKeyDown={activateOnKey}
                 className="fb-key"
                 onClick={() => void navigator.clipboard?.writeText(sent.url).catch(() => undefined)}
               >
                 Copy link
               </div>
-              <div role="button" className="fb-key" onClick={onClose}>
+              <div role="button" tabIndex={0} onKeyDown={activateOnKey} className="fb-key" onClick={onClose}>
                 Done
               </div>
             </div>
@@ -144,6 +150,8 @@ export function FeedbackPanel({ onClose }: { onClose: () => void }) {
                   role="button"
                   aria-label={m === "happy" ? "Happy" : m === "okay" ? "Okay" : "Unhappy"}
                   aria-pressed={mood === m}
+                  tabIndex={0}
+                  onKeyDown={activateOnKey}
                   className="fb-face"
                   onMouseEnter={() => setHotFace(i)}
                   onMouseLeave={() => setHotFace(-1)}
@@ -162,6 +170,7 @@ export function FeedbackPanel({ onClose }: { onClose: () => void }) {
                     role="radio"
                     aria-checked={kind === k.id}
                     tabIndex={0}
+                    onKeyDown={activateOnKey}
                     className="fb-kind"
                     data-on={kind === k.id ? "" : undefined}
                     style={{ ["--kc" as string]: k.colour }}
@@ -198,6 +207,8 @@ export function FeedbackPanel({ onClose }: { onClose: () => void }) {
               <div
                 role="button"
                 aria-disabled={sending}
+                tabIndex={0}
+                onKeyDown={activateOnKey}
                 className="fb-send"
                 data-sending={sending ? "" : undefined}
                 onClick={() => !sending && void send()}

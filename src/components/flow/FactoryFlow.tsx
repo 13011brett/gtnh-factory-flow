@@ -2319,7 +2319,7 @@ export function FactoryFlow() {
   const isCompact = useIsCompactViewport();
   // The mod's top bar (src/components/chrome) carries the keys the board's own toolbars used to: plan boards on a
   // desktop screen leave them out.
-  const modBar = project.planMode === true && !isCompact;
+  const modBar = project.planMode === true;
   // The board's zoom ceiling carries the interface size (ui-scale.ts); the
   // prop must follow the setting live, so it is a hook rather than a getter.
   const uiScale = useUiScale();

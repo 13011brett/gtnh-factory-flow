@@ -5,6 +5,7 @@ import "./chrome.css";
 import { useEffect, useRef, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useDropdownDismiss } from "@/lib/hooks/use-dropdown-dismiss";
+import { activateOnKey } from "@/lib/hooks/button-keys";
 import { getUiScale } from "@/lib/ui-scale";
 import { playBoardSound } from "@/lib/board-sounds";
 
@@ -68,6 +69,20 @@ export function ChromeMenu({
   useEffect(() => {
     playBoardSound("pageOpen");
   }, []);
+  // Keyboard: focus moves into the menu (the first row), and goes back to the key that opened it on close.
+  useEffect(() => {
+    const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;
+    const menu = ref.current;
+    const rows = menu?.querySelectorAll<HTMLElement>('[role="menuitem"]:not([aria-disabled])');
+    (rows?.[0] ?? menu)?.focus({ preventScroll: true });
+    return () => {
+      const active = document.activeElement;
+      // Only take focus back when it was in the menu (a row picked that opened something else keeps its own).
+      if (previous?.isConnected && (!active || active === document.body || menu?.contains(active))) {
+        previous.focus({ preventScroll: true });
+      }
+    };
+  }, []);
   const scale = getUiScale();
   const shell = (px: number) => px / scale;
   const vw = shell(window.innerWidth);
@@ -94,6 +109,22 @@ export function ChromeMenu({
       onPointerDown={(event) => event.stopPropagation()}
       onWheel={(event) => event.stopPropagation()}
       onContextMenu={(event) => event.preventDefault()}
+      tabIndex={-1}
+      onKeyDown={(event) => {
+        const rows = [...(ref.current?.querySelectorAll<HTMLElement>('[role="menuitem"]:not([aria-disabled])') ?? [])];
+        const at = rows.indexOf(document.activeElement as HTMLElement);
+        const step = event.key === "ArrowDown" ? 1 : event.key === "ArrowUp" ? -1 : 0;
+        if (step) {
+          event.preventDefault();
+          rows[at < 0 ? (step > 0 ? 0 : rows.length - 1) : (at + step + rows.length) % rows.length]?.focus();
+        } else if (event.key === "Home" || event.key === "End") {
+          event.preventDefault();
+          rows[event.key === "Home" ? 0 : rows.length - 1]?.focus();
+        } else if (event.key === "Tab") {
+          event.preventDefault();
+          onClose();
+        }
+      }}
     >
       {title ? <div className="mm-title">{title}</div> : null}
       <div className="mm-scroll">
@@ -113,6 +144,8 @@ function MenuRow({ entry, onClose }: { entry: MenuEntry; onClose: () => void }):
       <div
         role="menuitem"
         className="mm-row"
+        tabIndex={-1}
+        onKeyDown={activateOnKey}
         data-tone={entry.tone}
         data-current={entry.current ? "" : undefined}
         data-off={entry.disabled ? "" : undefined}

@@ -225,3 +225,16 @@
 .fb-topkey:hover {
   background: #2d2f35;
 }
+
+/* Keyboard focus: the same gold ring as the top bar's keys. */
+.fb-x:focus-visible,
+.fb-key:focus-visible,
+.fb-face:focus-visible,
+.fb-kind:focus-visible,
+.fb-send:focus-visible {
+  outline: 2px solid #ffd257;
+  outline-offset: 1px;
+}
+.fb:focus {
+  outline: none;
+}

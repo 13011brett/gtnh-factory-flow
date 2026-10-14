@@ -1,0 +1,12 @@
+import { chromium } from "playwright-core";
+const b = await chromium.launch(); const ctx = await b.newContext({ viewport:{width:1600,height:900}}); const page = await ctx.newPage();
+await page.addInitScript(()=>{try{localStorage.setItem("gtnh-factory-flow.mod-announcement-dismissed.v1","x")}catch{}});
+await page.goto("http://localhost:3134/", {waitUntil:"networkidle", timeout:180000});
+await page.waitForTimeout(2500);
+await page.getByText("Untitled design").first().click(); await page.waitForTimeout(1500);
+console.log("minimap", await page.locator(".react-flow__minimap").count());
+console.log("feedback-ish", await page.evaluate(()=>[...document.querySelectorAll("button,a")].map(e=>(e.getAttribute("aria-label")||e.title||e.textContent||"").trim()).filter(t=>/feedback|bug|report|idea/i.test(t))));
+await page.locator('[aria-label="Help and links"]').first().click({force:true}); await page.waitForTimeout(700);
+console.log("help", await page.evaluate(()=>[...document.querySelectorAll("[role=menu] *, [role=menuitem]")].filter(e=>e.children.length===0).map(e=>e.textContent.trim()).filter(Boolean).slice(0,30)));
+await page.screenshot({path:"tools/parity/out/qa2/help.png"});
+await b.close();

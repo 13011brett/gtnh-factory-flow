@@ -1,6 +1,9 @@
 import type { DatasetVersion } from "./types";
 import type { Recipe } from "@/lib/model/types";
 import { isPowerRecipe } from "@/lib/power/power-recipe";
+import { isCustomRateRecipe } from "@/lib/model/custom-rate";
+import { FLUID_TANK_EMPTY_MAP } from "@/lib/model/fluid-tank";
+import { CROP_FARM_PLACEHOLDER_RECIPE_ID } from "@/lib/model/passive-production";
 import { recipeContentRef } from "@/lib/import-export/recipe-ref-match";
 import { getRecipeDatasetRecipe, resolveRecipeDatasetRecipes } from "./browser-loader";
 import { noteRestorableRecipes } from "./restorable-recipes";
@@ -73,7 +76,15 @@ export async function resolveProjectRecipes(
   recipes: Recipe[],
 ): Promise<{ refreshed: Recipe[]; migration: Record<string, string> }> {
   // A demo recipe is the plan's own data: the dataset never has it, so asking only fills the console with 404s.
-  const asked = recipes.filter((recipe) => !recipe.isDemo && !isPowerRecipe(recipe));
+  // Custom rate cards, empty fluid tanks and the empty crop farm are the plan's own cards too.
+  const asked = recipes.filter(
+    (recipe) =>
+      !recipe.isDemo &&
+      !isPowerRecipe(recipe) &&
+      !isCustomRateRecipe(recipe) &&
+      recipe.source?.recipeMap !== FLUID_TANK_EMPTY_MAP &&
+      recipe.id !== CROP_FARM_PLACEHOLDER_RECIPE_ID,
+  );
   const byId = await Promise.allSettled(
     asked.map((recipe) => getRecipeDatasetRecipe(manifestUrl, version, recipe.id)),
   );

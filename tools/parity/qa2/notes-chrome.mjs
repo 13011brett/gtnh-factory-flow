@@ -104,7 +104,7 @@ export default function ({ page, wait, rec, check, shot, idle, section, loadPlan
     await loadPlan(page, refChain);
     await wait(500);
     await page.screenshot({ path: new URL("../out/qa2/chrome-top.png", import.meta.url).pathname.replace(/^\/([A-Z]:)/, "$1"), clip: { x: 0, y: 0, width: 1920, height: 130 } });
-    const bar = await page.evaluate(() => [...document.querySelectorAll("header button, header a, [role=tab], button")].filter((b) => b.getBoundingClientRect().y < 130).map((b) => (b.getAttribute("aria-label") || b.title || b.textContent).trim().slice(0, 30)).filter(Boolean));
+    const bar = await page.evaluate(() => [...document.querySelectorAll("header button, header a, [role=tab], button, .mb-key")].filter((b) => b.getBoundingClientRect().y < 130).map((b) => (b.getAttribute("aria-label") || b.title || b.textContent).trim().slice(0, 30)).filter(Boolean));
     rec("chrome", "top bar keys", "INFO", JSON.stringify(bar) + "  (mod: Arrange, Fit, /s, EU/t, Avg, Library, Share, feedback bug, gear, ?; plus +, undo, redo, Non-recipe)");
     // the features the mod has: do they exist?
     const text = () => page.evaluate(() => document.body.innerText);
@@ -112,18 +112,18 @@ export default function ({ page, wait, rec, check, shot, idle, section, loadPlan
       const t = await finder();
       rec("missing", label, t ? "PASS" : "FAIL", String(t));
     };
-    await probe("Arrange key on the top bar", async () => (await page.locator('button[aria-label*="rrange" i], button[title*="rrange" i]').count()) || /Arrange/.test(await text()));
-    await probe("Fit key", async () => (await page.locator('button[aria-label*="Fit" i], button[title*="Fit" i]').count()) > 0);
+    await probe("Arrange key on the top bar", async () => (await page.locator('[aria-label*="rrange" i], [title*="rrange" i]').count()) || /Arrange/.test(await text()));
+    await probe("Fit key", async () => (await page.locator('[aria-label="Fit"], [title="Fit"]').count()) > 0);
     await probe("Avg/Peak key", async () => /\bAvg\b|\bPeak\b/.test(await text()));
     // settings
-    const gear = page.locator('button[aria-label*="Settings" i], button[title*="Settings" i]').first();
+    const gear = page.locator('[aria-label="Settings"], button[title*="Settings" i]').first();
     if (await gear.count()) {
       await gear.click();
       await wait(700);
       await shot("settings-open");
       const secs = await page.evaluate(() => [...document.querySelectorAll("[role=dialog] h2, [role=dialog] h3, [role=dialog] legend, [role=dialog] label")].map((e) => e.textContent.trim()).filter(Boolean).slice(0, 60));
       rec("chrome", "settings contents", "INFO", JSON.stringify(secs));
-      const need = ["See-through", "Size", "Sounds", "Minimap", "Pin list", "Keys", "Board"];
+      const need = ["See-through", "Size", "Sound", "Minimap", "Controls", "Board"]; // the mod's Pin list is a world feature, not on the website
       const body = await text();
       for (const n of need) rec("missing", `settings: ${n} (mod section)`, new RegExp(n, "i").test(body) ? "PASS" : "FAIL", "");
       await page.keyboard.press("Escape");
@@ -135,6 +135,8 @@ export default function ({ page, wait, rec, check, shot, idle, section, loadPlan
     await shot("library-open");
     const lib = await text();
     rec("chrome", "library has My plans and public shelf", /My plans|My designs/i.test(lib) && /Public|Community/i.test(lib) ? "PASS" : "INFO", lib.slice(0, 200).replace(/\n/g, " | "));
+    await page.locator('.mb-key:text-is("Board")').first().click().catch(() => {});
+    await wait(500);
     // screenshot panel
   });
 }

@@ -101,7 +101,7 @@ const scenarios = {
   },
   async "power-lv-gen"(page) {
     await loadPlan(page, EMPTY);
-    await store(page, () => window.__ccStore.getState().addPowerSourceNode("steam-turbine-lv"));
+    await store(page, () => window.__ccStore.getState().addPowerSourceNode("combustion-generator"));
     await wait(page, 1200);
     return lastNode(page);
   },

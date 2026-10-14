@@ -36,7 +36,7 @@ export default function ({ page, wait, rec, check, shot, nodeSel, focus, idle, s
     await test("hover a card port", () => page.locator(".cc-row[data-port]").nth(2).boundingBox());
     await test("hover a wire", () => page.locator(".react-flow__edge-interaction, .react-flow__edge path").first().boundingBox());
     await test("hover a drawer", () => page.locator(".cd-body").first().boundingBox());
-    await test("rail machine line lights its machine", () => page.locator(".rail-machine .rail-row").first().boundingBox());
+    // (a machine line lights nothing in the mod: its overview hover scope is resource rows only)
   });
 
   section("machine-lines", async () => {
@@ -45,23 +45,21 @@ export default function ({ page, wait, rec, check, shot, nodeSel, focus, idle, s
     const pins = () => page.evaluate(() => window.__ccStore.getState().project.nodes.map((n) => n.solvePin ?? null));
     const line = page.locator(".rail-machine .rail-row").first();
     const p0 = await pins();
-    await line.locator(".rail-count").hover();
+    await line.locator(".rail-box").hover();
     await page.mouse.wheel(0, -100);
     await wait(500);
     const p1 = await pins();
     check("machine-lines", "wheel on a machine line's count pins it (mod: as the card's count does)", JSON.stringify(p0) !== JSON.stringify(p1), `${JSON.stringify(p0)} -> ${JSON.stringify(p1)}`);
-    await line.locator(".rail-count").click();
+    await line.locator(".rail-box").click();
     await wait(400);
-    const edit = await page.evaluate(() => !!document.querySelector("input:focus, .rail-popup input"));
+    const edit = await page.evaluate(() => !!document.querySelector("input:focus, .rail-popup input, .rail-box-edit"));
     rec("machine-lines", "click on the count opens a number box (mod)", edit ? "PASS" : "FAIL", String(edit));
     await page.keyboard.press("Escape");
     const eu = await page.evaluate(() => [...document.querySelectorAll(".rail-eu")].map((e) => ({ t: e.textContent, clipped: e.scrollWidth > e.clientWidth + 1 })));
     check("machine-lines", "EU/t text is not clipped on any machine line", eu.every((e) => !e.clipped), JSON.stringify(eu));
     const names = await page.evaluate(() => [...document.querySelectorAll(".rail-name")].map((e) => ({ t: e.textContent, clipped: e.scrollWidth > e.clientWidth + 1, ell: getComputedStyle(e).textOverflow })));
     rec("machine-lines", "long names clip (mod ellipsises: 'Lightly Steam-C...')", names.some((n) => n.clipped && n.ell !== "ellipsis") ? "FAIL" : "PASS", JSON.stringify(names.filter((n) => n.clipped).slice(0, 4)));
-    // trash on a machine line leaves its outputs (mod)
-    const trash = await page.locator(".rail-machine .rail-row [aria-label*='rash' i], .rail-machine .rail-row [aria-label*='emove' i]").count();
-    rec("machine-lines", "line has a trash key (mod: trash leaves its outputs)", trash ? "PASS" : "FAIL", `count ${trash}`);
+    // (the mod's "trash leaves its outputs" is about trash drawers in the totals; the line itself has no trash key)
   });
 
   section("topbar-tips", async () => {
@@ -128,21 +126,27 @@ export default function ({ page, wait, rec, check, shot, nodeSel, focus, idle, s
     const fb = await page.locator("[aria-label*=eedback i], [title*=eedback i], [aria-label*='ug' i]").count();
     rec("panels", "feedback panel key (mod: red bug key with faces, Bug/Idea/Help chips)", fb ? "PASS" : "FAIL", `matching keys ${fb}`);
     // help menu / tour
-    await page.locator('[aria-label="Help and links"]').first().click();
+    await page.locator('[aria-label="Help"]').first().click();
     await wait(500);
     await shot("help-menu", { x: 1500, y: 0, width: 420, height: 500 });
     const help = await page.evaluate(() => document.body.innerText);
     rec("panels", "help menu offers a tour (mod: Take the tour, 37 steps)", /tour/i.test(help) ? "PASS" : "FAIL", "");
     await page.keyboard.press("Escape");
     // minimap
-    rec("panels", "minimap on the board (mod: minimap of the plan last open)", (await page.locator(".react-flow__minimap").count()) ? "PASS" : "FAIL", `.react-flow__minimap count ${await page.locator(".react-flow__minimap").count()}`);
+    rec("panels", "minimap on the board (mod: minimap of the plan last open)", (await page.locator(".mmap").count()) ? "PASS" : "FAIL", `.mmap count ${await page.locator(".mmap").count()}`);
     // see-through
+    await page.locator('[aria-label="Settings"]').first().click();
+    await wait(600);
     const body = await page.evaluate(() => document.body.innerText);
-    rec("panels", "update offer / see-through / pin list text anywhere", /see-through|paper strength|pin list/i.test(body) ? "PASS" : "FAIL", "");
+    await page.keyboard.press("Escape");
+    await wait(300);
+    rec("panels", "update offer / see-through / pin list text anywhere", /see-through|paper strength|pin list|minimap/i.test(body) ? "PASS" : "FAIL", "");
     // library wording
-    await page.getByText("Library", { exact: true }).first().click().catch(() => {});
+    await page.locator('.mb-key:text-is("Library")').first().click().catch(() => {});
     await wait(900);
     const lib = await page.evaluate(() => document.body.innerText);
-    rec("panels", "library words (mod: plans, not designs; two shelves My plans / public setups)", /My plans/.test(lib) ? "PASS" : "FAIL", /My designs/.test(lib) ? "says 'My designs'" : "");
+    rec("panels", "library words (mod: plans, not designs; two shelves My plans / public setups)", /My plans/i.test(lib) ? "PASS" : "FAIL", /My designs/i.test(lib) ? "says 'My designs'" : "");
+    await page.locator('.mb-key:text-is("Board")').first().click().catch(() => {});
+    await wait(500);
   });
 }

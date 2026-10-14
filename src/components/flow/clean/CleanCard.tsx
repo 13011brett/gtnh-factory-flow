@@ -3,7 +3,7 @@
 import "./clean.css";
 
 import { Handle, Position } from "@xyflow/react";
-import { useEffect, useRef, useState, type CSSProperties, type MouseEvent, type WheelEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type WheelEvent } from "react";
 import { Copy, Plus, RefreshCw, Trash2 } from "lucide-react";
 import type { FactoryNode, Recipe } from "@/lib/model/types";
 import { fluidArtPixels, getFallbackFluidColor, isSwatchFluid, ResourceIcon } from "@/components/nei/ResourceIcon";
@@ -12,28 +12,23 @@ import { useFactoryStore } from "@/store/factory-store";
 import { buildPortFlowScope } from "../flow-scope";
 import { usePortRowBrowse } from "../use-port-row-browse";
 import { isWiringConnection } from "../connection-drag";
-import { useMachineHandlerIcons, useRecipeMapIcons } from "../machine-icons";
-import { MachineMenu } from "../MachinePicker";
 import { MenuShell } from "../EnergyHatchMenu";
 import { checklistLocked } from "../RecipeNode";
 import type { CleanCardActions, CleanCardContext, CleanCardView, CleanChipView, CleanPortView } from "./clean-model";
 import { tierChipColors } from "./tokens";
 import { ensureInteractionHost, useClickSlop, tipAttrs, type TipSpec } from "./interaction";
 import { PortRateControls } from "./interaction/PortRateControls";
-import {
-  countTip,
-  forcedTip,
-  gearTip,
-  menuTip,
-  nameTip,
-  portTip,
-  powerPanelTip,
-  powerTip,
-  stripChipTip,
-  tierTip,
-} from "./interaction/tips";
+import { forcedTip, menuTip, portTip, powerPanelTip } from "./interaction/tips";
+import { gearTip } from "./menus/card-tips";
 import { openSparePopupForPort } from "./rail/SparePopup";
 import { makePortKey } from "@/lib/solver/plan/port-key";
+// FX2 registration: the compact menus, the gear sheet and the richer tips live in ./menus (portal, no card DOM).
+import { MachineListMenu } from "./menus/MachineListMenu";
+import { OptionListMenu } from "./menus/OptionListMenu";
+import { SettingsSheet } from "./menus/SettingsSheet";
+import { anchorOf, type MenuAnchor } from "./menus/MenuPortal";
+import { countRowsTip, machineNameTip, powerRowTip, stripTip, tierChipTip, useCardTipFacts } from "./menus/card-tips";
+import { recipeHeatNeed, settingControls, settingPatch, steppedOption, type SettingControl } from "./menus/settings-model";
 
 function glyph(event: { stopPropagation: () => void }) {
   event.stopPropagation();
@@ -434,12 +429,19 @@ function AmpsChip({
 function StripChip({
   chip,
   nodeId,
+  control,
+  needK,
   onStep,
+  onOpen,
   wasClick,
 }: {
   chip: CleanChipView;
   nodeId: string;
+  control?: SettingControl;
+  needK?: number;
   onStep: (id: string, direction: -1 | 1) => void;
+  /** The chip's list (Filter box, icons), under the chip. */
+  onOpen: (id: string, anchor: MenuAnchor) => void;
   wasClick: (event: MouseEvent) => boolean;
 }) {
   return (
@@ -450,7 +452,8 @@ function StripChip({
       data-label={chip.label}
       data-warn={chip.warn ? "" : undefined}
       data-reading={chip.reading ? "" : undefined}
-      {...tipAttrs(stripChipTip(nodeId, chip))}
+      data-menu-anchor=""
+      {...tipAttrs(stripTip(nodeId, chip, control, needK))}
       style={{
         left: chip.x,
         top: chip.y,
@@ -459,7 +462,10 @@ function StripChip({
       }}
       onClick={(event) => {
         glyph(event);
-        if (!chip.reading && wasClick(event)) onStep(chip.id, 1);
+        if (!chip.reading && wasClick(event)) {
+          if (control && control.options.length > 1) onOpen(chip.id, anchorOf(event.currentTarget));
+          else onStep(chip.id, 1);
+        }
       }}
       onContextMenu={(event) => {
         event.preventDefault();
@@ -498,13 +504,34 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
       if ((animation as CSSAnimation).animationName === "cc-prompt") animation.startTime = 0;
     }
   }, [view.unset]);
-  const machineIcons = useMachineHandlerIcons();
-  const mapIcons = useRecipeMapIcons();
   const deleteNode = useFactoryStore((state) => state.deleteNode);
   const duplicateNode = useFactoryStore((state) => state.duplicateNode);
   const beginRecipeRefactor = useFactoryStore((state) => state.beginRecipeRefactor);
   const browseMachineRecipes = useFactoryStore((state) => state.browseMachineRecipes);
   const [listOpen, setListOpen] = useState(false);
+  const [listAnchor, setListAnchor] = useState<MenuAnchor>();
+  const [sheetAnchor, setSheetAnchor] = useState<MenuAnchor>();
+  const [chipList, setChipList] = useState<{ id: string; anchor: MenuAnchor }>();
+  const updateNode = useFactoryStore((state) => state.updateNode);
+  const tipFacts = useCardTipFacts(recipe, node);
+  const controls = useMemo(() => settingControls(recipe, node), [recipe, node]);
+  const heatNeed = useMemo(() => recipeHeatNeed(recipe, node), [recipe, node]);
+  const stepChip = (id: string, direction: -1 | 1) => {
+    const control = controls.find((entry) => entry.id === id);
+    const next = control ? steppedOption(control, direction) : undefined;
+    if (control && next) updateNode(node.id, settingPatch(recipe, node, control.id, next.key));
+  };
+  const openSheet = (event: MouseEvent<HTMLElement>) => {
+    event.stopPropagation();
+    if (!wasClick(event)) return;
+    if (sheetAnchor) {
+      setSheetAnchor(undefined);
+      return;
+    }
+    const gear = anchorOf(event.currentTarget);
+    const head = event.currentTarget.closest(".cc-head");
+    setSheetAnchor({ left: gear.left, top: gear.top, bottom: head ? head.getBoundingClientRect().bottom : gear.bottom });
+  };
   const [menu, setMenu] = useState<{ kind: "actions" | "settings"; x: number; top: number; bottom: number; hangsFrom?: Element }>();
 
   const openMenu = (kind: "actions" | "settings") => (event: MouseEvent<HTMLElement>) => {
@@ -548,9 +575,10 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
           data-warn={undefined}
           aria-label="Machine settings"
           aria-haspopup="menu"
-          aria-expanded={menu?.kind === "settings"}
-          {...tipAttrs(gearTip(view.nodeId))}
-          onClick={openMenu("settings")}
+          data-menu-anchor=""
+          aria-expanded={sheetAnchor !== undefined}
+          {...tipAttrs(gearTip(view.nodeId, controls.some((entry) => entry.warn)))}
+          onClick={openSheet}
         />
         <div
           role={view.hasPicker ? "button" : undefined}
@@ -561,12 +589,17 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
           data-open={listOpen ? "" : undefined}
           data-machine-menu-toggle={view.hasPicker ? "" : undefined}
           data-wheel-steps={view.hasPicker ? "" : undefined}
-          {...tipAttrs(nameTip(view))}
+          data-menu-anchor=""
+          {...tipAttrs(machineNameTip(view, tipFacts))}
           onClick={
             view.hasPicker
               ? (event) => {
                   glyph(event);
-                  if (wasClick(event)) setListOpen((open) => !open);
+                  if (!wasClick(event)) return;
+                  const name = anchorOf(event.currentTarget);
+                  const head = event.currentTarget.closest(".cc-head");
+                  setListAnchor({ left: name.left, top: name.top, bottom: head ? head.getBoundingClientRect().bottom : name.bottom });
+                  setListOpen((open) => !open);
                 }
               : undefined
           }
@@ -581,21 +614,17 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
           }
         >
           {view.name}
-          {listOpen ? (
-            <MachineMenu
-              recipe={recipe}
-              node={node}
+          {listOpen && listAnchor ? (
+            <MachineListMenu
+              anchor={listAnchor}
               handlers={context.machineHandlers}
               selectedId={context.selectedMachineHandler.id}
-              iconsById={machineIcons}
-              onHover={() => undefined}
+              recipeMap={recipe.source?.recipeMap ?? recipe.machineType}
               onUse={(id) => {
                 actions.switchMachine(id);
                 setListOpen(false);
               }}
               onClose={() => setListOpen(false)}
-              mapIcons={mapIcons}
-              figures
             />
           ) : null}
         </div>
@@ -611,7 +640,7 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
         {view.tier ? (
           <TierChip
             label={view.tier.label}
-            tip={view.amps ? powerPanelTip(view, "tier") : tierTip(view)}
+            tip={view.amps ? powerPanelTip(view, "tier") : tierChipTip(view, tipFacts)}
             fixed={view.tier.fixed}
             onStep={actions.stepTier}
             wasClick={wasClick}
@@ -629,7 +658,7 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
             data-power=""
             data-side="input"
             data-stalled={view.power.stalled ? "" : undefined}
-            {...tipAttrs(view.amps ? powerPanelTip(view, "power") : powerTip(view))}
+            {...tipAttrs(view.amps ? powerPanelTip(view, "power") : powerRowTip(view, tipFacts))}
           >
             <span className="cc-bolt" />
             <span className="cc-num" data-unit={view.power.unit}>
@@ -676,7 +705,7 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
             />
           ) : null
         ) : null}
-        <CountBox view={view.count} tip={countTip(view)} onSet={actions.setCount} wasClick={wasClick} />
+        <CountBox view={view.count} tip={countRowsTip(view, tipFacts.shared)} onSet={actions.setCount} wasClick={wasClick} />
       </div>
 
       <div className="cc-rail" data-side="output">
@@ -688,7 +717,16 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
       {view.chips.length > 0 ? (
         <div className="cc-strip" style={{ height: view.stripHeight }}>
           {view.chips.map((chip) => (
-            <StripChip key={chip.id} chip={chip} nodeId={view.nodeId} onStep={actions.stepSetting} wasClick={wasClick} />
+            <StripChip
+              key={chip.id}
+              chip={chip}
+              nodeId={view.nodeId}
+              control={controls.find((entry) => entry.id === chip.id)}
+              needK={heatNeed}
+              onStep={stepChip}
+              onOpen={(id, anchor) => setChipList({ id, anchor })}
+              wasClick={wasClick}
+            />
           ))}
         </div>
       ) : null}
@@ -701,7 +739,19 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
         style={view.glanceArt ? { backgroundImage: `url(${view.glanceArt})` } : undefined}
       />
 
-      {menu ? (
+      {sheetAnchor ? <SettingsSheet nodeId={node.id} anchor={sheetAnchor} onClose={() => setSheetAnchor(undefined)} /> : null}
+      {chipList && controls.find((entry) => entry.id === chipList.id) ? (
+        <OptionListMenu
+          anchor={chipList.anchor}
+          control={controls.find((entry) => entry.id === chipList.id)!}
+          onPick={(key) => {
+            updateNode(node.id, settingPatch(recipe, node, chipList.id, key));
+            setChipList(undefined);
+          }}
+          onClose={() => setChipList(undefined)}
+        />
+      ) : null}
+      {menu?.kind === "actions" ? (
         <MenuShell anchor={menu} align="left" width={224} maxHeight={280} onClose={() => setMenu(undefined)}>
           <div role="menu" aria-label={menu.kind === "actions" ? "Card actions" : "Machine settings"} className="text-[13px] leading-[18px]">
             {(menu.kind === "actions"

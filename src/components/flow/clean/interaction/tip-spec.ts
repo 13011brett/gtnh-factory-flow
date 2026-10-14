@@ -18,7 +18,7 @@ export interface TipSpec {
   notes?: Array<{ text: string; tone?: TipTone }>;
   actions?: Array<{ input: TipInput; label: string }>;
   /** A panel the host renders from the store instead of rows (the power input panel). */
-  panel?: { kind: "power"; nodeId: string };
+  panel?: { kind: "power"; nodeId: string; part?: "amps" | "tier" | "power" };
 }
 
 export interface TipAttrs {

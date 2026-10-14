@@ -1,0 +1,415 @@
+/*
+ * The clean card's menus (the mod's machine list, gear sheet, strip-chip list, power input panel). Plain unlayered
+ * CSS on classes and data attributes, in the tooltip skin. Everything renders in a body portal: nothing here is in
+ * the card's DOM. Tokens come from clean.css (:root).
+ */
+
+.cm {
+  position: fixed;
+  z-index: 9999;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: #26282d;
+  color: #f5f5f5;
+  font-family: var(--app-font, ui-sans-serif, system-ui, sans-serif);
+  font-size: 11px;
+  line-height: 14px;
+  box-shadow:
+    0 0 0 1px #111317,
+    inset 1px 1px 0 #4a4c54,
+    inset -1px -1px 0 #17191d,
+    2px 3px 6px rgba(0, 0, 0, 0.35);
+}
+.cm-head {
+  flex: none;
+  padding: 6px 10px 4px;
+  color: #8a8d96;
+  font-size: 10px;
+  line-height: 12px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  background: #2c2e34;
+}
+.cm-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #4a4c54 transparent;
+}
+.cm-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  box-sizing: border-box;
+  height: 24px;
+  padding: 0 8px;
+  cursor: pointer;
+  user-select: none;
+  white-space: nowrap;
+}
+.cm-row:hover,
+.cm-row[data-hot] {
+  background: #33363c;
+}
+.cm-icon {
+  flex: none;
+  width: 20px;
+  height: 20px;
+}
+.cm-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cm-note {
+  flex: none;
+  color: #8a8d96;
+  font-size: 10px;
+}
+.cm-empty {
+  padding: 8px 10px;
+  color: #8a8d96;
+}
+.cm-filter {
+  flex: none;
+  box-sizing: border-box;
+  width: calc(100% - 8px);
+  height: 24px;
+  margin: 4px;
+  padding: 0 6px;
+  border: 0;
+  outline: 0;
+  background: #000;
+  color: #f5f5f5;
+  font: inherit;
+  font-size: 12px;
+  box-shadow: 0 0 0 1px #111317;
+}
+.cm-filter::placeholder {
+  color: #6f737c;
+}
+
+/* ---- The gear sheet ---------------------------------------------------- */
+
+.cs {
+  flex-direction: row;
+  align-items: stretch;
+}
+.cs-col {
+  box-sizing: border-box;
+  padding: 6px 0 4px;
+}
+.cs-col + .cs-col {
+  border-left: 1px solid #2c2e34;
+}
+.cs-title {
+  padding: 2px 10px 4px;
+  color: #8a8d96;
+  font-size: 12px;
+  line-height: 16px;
+}
+.cs-none {
+  padding: 4px 10px;
+  color: #8a8d96;
+  font-size: 12px;
+  white-space: nowrap;
+}
+.cs-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 24px;
+  padding: 0 10px 0 6px;
+  user-select: none;
+}
+.cs-row[data-warn] .cs-value {
+  color: var(--cc-red);
+}
+.cs-pin {
+  flex: none;
+  box-sizing: border-box;
+  width: 16px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: #44474f;
+  cursor: pointer;
+}
+.cs-pin svg {
+  display: block;
+  margin: 0 auto;
+  fill: currentColor;
+}
+.cs-row:hover .cs-pin {
+  color: #a3a3a3;
+}
+.cs-pin:hover {
+  color: #f5f5f5 !important;
+}
+.cs-pin[data-on] {
+  color: #ffd257 !important;
+}
+.cs-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.cs-well {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  box-sizing: border-box;
+  min-width: 96px;
+  max-width: 170px;
+  height: 22px;
+  padding: 0 6px;
+  background: #1b1d21;
+  box-shadow: 0 0 0 1px #34363c;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cs-well:hover {
+  background: #2e3036;
+}
+.cs-value {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cs-chev {
+  flex: none;
+  width: 0;
+  height: 0;
+  border: 4px solid transparent;
+  border-top-color: #9a9ca4;
+  border-bottom-width: 0;
+}
+.cs-foot {
+  margin: 2px 0 0;
+  padding: 5px 10px 0;
+  border-top: 1px solid #2c2e34;
+  color: #6e7179;
+  font-size: 12px;
+  line-height: 16px;
+}
+.cs-f {
+  display: grid;
+  grid-template-columns: 64px minmax(0, 1fr) auto;
+  column-gap: 6px;
+  align-items: baseline;
+  padding: 0 10px;
+  min-height: 16px;
+  font-size: 11px;
+  line-height: 16px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.cs-f:nth-child(even) {
+  background: rgba(255, 255, 255, 0.03);
+}
+.cs-f-label {
+  color: #6e7179;
+}
+.cs-f-math {
+  min-width: 0;
+  overflow: hidden;
+  text-align: right;
+  color: #8a8d96;
+}
+.cs-f-math sup {
+  font-size: 9px;
+  line-height: 0;
+}
+.cs-f-result {
+  color: #f5f5f5;
+}
+.cs-f-result[data-tone="good"] {
+  color: #7fd94a;
+}
+.cs-f-result[data-tone="bad"] {
+  color: #e06060;
+}
+
+/* ---- The power row's wash (the mod lights the row the power panel is about) --- */
+
+.cc-row[data-power]:hover {
+  background: rgba(255, 255, 255, 0.07);
+}
+
+/* ---- The power input panel (the mod's PowerPanel) ----------------------- */
+
+.pw-wrap {
+  position: fixed;
+  z-index: 9999;
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  pointer-events: none;
+  font-family: var(--app-font, ui-sans-serif, system-ui, sans-serif);
+}
+.pw {
+  box-sizing: border-box;
+  width: 320px;
+  padding: 8px 10px;
+  background: #26282d;
+  color: #f5f5f5;
+  font-size: 11px;
+  line-height: 14px;
+  font-variant-numeric: tabular-nums;
+  box-shadow:
+    0 0 0 1px #111317,
+    inset 1px 1px 0 #4a4c54,
+    inset -1px -1px 0 #17191d,
+    2px 3px 6px rgba(0, 0, 0, 0.35);
+}
+.pw-guide {
+  width: 200px;
+}
+.pw-title {
+  color: #f5f5f5;
+  font-size: 13px;
+  line-height: 18px;
+}
+.pw-line {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  white-space: nowrap;
+}
+.pw-line > span {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+.pw-subtle {
+  color: #a3a3a3;
+}
+.pw-rule {
+  height: 1px;
+  margin: 5px 0;
+  background: #3a3b40;
+}
+.pw-tag {
+  display: inline-block;
+  padding: 0 4px;
+  line-height: 14px;
+  border: 1px solid var(--tag-border);
+  background: var(--tag-bg);
+  color: var(--tag-ink);
+}
+.pw-stats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  column-gap: 14px;
+}
+.pw-stat {
+  display: flex;
+  justify-content: space-between;
+  gap: 6px;
+  white-space: nowrap;
+}
+.pw-stat > :first-child {
+  color: #a3a3a3;
+}
+.pw-boxes {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 4px;
+  margin-top: 3px;
+}
+.pw-box {
+  box-sizing: border-box;
+  padding: 3px 2px;
+  text-align: center;
+  background: #1b1d21;
+  box-shadow: 0 0 0 1px #3a3b40;
+}
+.pw-box > span {
+  display: block;
+  color: #a3a3a3;
+  white-space: nowrap;
+}
+.pw-box > span small {
+  color: #6f737c;
+  font-size: 11px;
+}
+.pw-box > b {
+  display: block;
+  font-weight: 400;
+  white-space: nowrap;
+}
+.pw-scale {
+  position: relative;
+  height: 62px;
+  margin-top: 4px;
+}
+.pw-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 30px;
+  height: 7px;
+  background: #1b1d21;
+  box-shadow: 0 0 0 1px #111317;
+}
+.pw-fill {
+  position: absolute;
+  left: 1px;
+  top: 1px;
+  bottom: 1px;
+  background: #9a9ca4;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.pw-tick {
+  position: absolute;
+  width: 4px;
+  margin-left: -2px;
+  background: #111317;
+}
+.pw-tick::after {
+  content: "";
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  top: 1px;
+  bottom: 1px;
+  background: #e8e9ee;
+}
+.pw-mark {
+  position: absolute;
+  white-space: nowrap;
+  color: #f5f5f5;
+}
+.pw-guide-sec {
+  position: relative;
+  padding-left: 6px;
+  margin-bottom: 6px;
+}
+.pw-guide-sec[data-on]::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 2px;
+  bottom: 2px;
+  width: 1px;
+  background: #a3a3a3;
+}
+.pw-guide-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 8px;
+  white-space: nowrap;
+}
+.pw-guide-row > :first-child {
+  color: #a3a3a3;
+}

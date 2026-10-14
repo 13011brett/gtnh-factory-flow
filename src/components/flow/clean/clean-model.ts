@@ -47,6 +47,7 @@ import {
 import { orderMachineHandlers } from "../MachinePicker";
 import type { RecipeNodeData } from "../RecipeNode";
 import { CC_GEOMETRY } from "./tokens";
+import { isPinned, pinMachineKey, settingControls } from "./menus/settings-model";
 import { measureClean } from "./text-measure";
 
 type VoltageTier = Parameters<typeof getVoltageTierIndex>[0];
@@ -312,6 +313,8 @@ export function useCleanCardModel(
   const updateNode = useFactoryStore((state) => state.updateNode);
   const averageDraw = useWorkspaceView().averageMachineDraw;
   useRateDisplayUnits();
+  // Pins live on the project, not the node: re-render when they move.
+  useFactoryStore((state) => state.project.settingPins);
   const machineIcons = useMachineHandlerIconEntries();
   const mapIcons = useRecipeMapIcons();
   // The solve is read lazily like the classic card does: this component
@@ -355,6 +358,7 @@ export function useCleanCardModel(
     };
   }, [recipe, projectNode]);
 
+  const pinControls = useMemo(() => settingControls(recipe, projectNode), [recipe, projectNode]);
   const verdict = deriveNodeVerdict(liveProject, lastResult, projectNode.id);
   const rails = buildRailPorts(liveProject, lastResult, projectNode.id, derived.overclockedRecipe, verdict);
   const plan = lastResult?.plan;
@@ -433,31 +437,20 @@ export function useCleanCardModel(
       : "How many of this machine the plan needs. Click to pin a count.",
   };
 
-  // Settings strip: the coil on a heat recipe, parallels over one, and every setting changed from default.
+  // Settings strip (the mod's pins): the settings pinned to this machine's cards, the coil by default on a heat recipe.
   const settings: CleanCardContext["settings"] = [];
   const rawChips: Array<Omit<CleanChipView, "x" | "y" | "width">> = [];
-  if (derived.coilControl) {
-    const value = derived.coilControl.current.label;
-    settings.push({ id: "heatingCoil", label: derived.coilControl.label, value, steps: derived.coilControl.tiers.length > 1 });
-    rawChips.push({
-      id: "heatingCoil",
-      label: derived.coilControl.label,
-      value,
-      icon: derived.coilControl.current.resource?.iconPath,
-      title: `${derived.coilControl.label}: ${value}`,
-    });
-  }
-  for (const control of derived.controls) {
-    if (control.id === "heatingCoil" || /^(machineParallel|voltageParallel)/.test(control.id)) continue;
-    if (control.tiers.length <= 1) continue;
-    settings.push({ id: control.id, label: control.label, value: control.current.label, steps: true });
-    if (control.current.key === control.minimum.key) continue;
+  const pinKey = pinMachineKey(recipe, projectNode);
+  for (const control of pinControls) {
+    settings.push({ id: control.id, label: control.label, value: control.value, steps: control.options.length > 1 });
+    if (!isPinned(liveProject, pinKey, control)) continue;
     rawChips.push({
       id: control.id,
       label: control.label,
-      value: control.current.label,
-      icon: control.current.resource?.iconPath,
-      title: `${control.label}: ${control.current.label}`,
+      value: control.value,
+      icon: control.icon,
+      warn: control.warn || undefined,
+      title: `${control.label}: ${control.value}`,
     });
   }
   const parallels = powerReport?.parallels ?? steamReport?.parallels ?? derived.parallel;

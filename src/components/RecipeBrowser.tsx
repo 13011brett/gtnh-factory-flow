@@ -813,8 +813,9 @@ export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
           searchFlashing={isSearchFlashing}
           activeResource={activeResource}
           onBrowse={browseResource}
-          // NEI's field sits at the bottom middle of the screen; on a phone, at the drawer's foot.
-          searchAt={isCompact ? "bottom" : boardCovered || activeResource ? "none" : "dock"}
+          // NEI's field sits at the bottom middle of the screen. On a phone, under a page covering the board and under
+          // the recipe search (whose own keys sit there) it is at the column's foot.
+          searchAt={isCompact || boardCovered || activeResource ? "bottom" : "dock"}
           leading={
             /* Folds this column away (the overview's fold key, facing the board); on a phone it closes the drawer. */
             <RailKey

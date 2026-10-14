@@ -1094,8 +1094,18 @@ function NeiSlots({
   hint?: string;
 }) {
   const rowBrowse = useResourceBrowseMenu(onBrowse);
-  const [hover, setHover] = useState<{ resource: IndexedResource; x: number; y: number }>();
+  // The hovered slot by its place and item: a page that changes under a still
+  // pointer (typing, paging with the wheel) leaves no tooltip, and no R or U,
+  // for an item no longer there.
+  const [hover, setHover] = useState<{ index: number; key: string; x: number; y: number }>();
+  const hovered =
+    hover && resources[hover.index] && slotKey(resources[hover.index]) === hover.key
+      ? resources[hover.index]
+      : undefined;
   const hoverRef = useRef<IndexedResource | undefined>(undefined);
+  useEffect(() => {
+    hoverRef.current = hovered;
+  }, [hovered]);
   const dragging = useRef(false);
 
   // R and U over a slot: the two questions its clicks ask.
@@ -1118,20 +1128,20 @@ function NeiSlots({
     setHover(undefined);
   };
   const tipLines = useMemo(() => {
-    if (!hover) return undefined;
-    const lines = resourceTooltipLines(hover.resource);
+    if (!hovered) return undefined;
+    const lines = resourceTooltipLines(hovered);
     if (hint) lines.splice(1, 0, { text: hint, tone: "hint" });
     return lines;
-  }, [hover, hint]);
+  }, [hovered, hint]);
 
   return (
     <>
-      {resources.map((resource) => {
+      {resources.map((resource, index) => {
         const active = activeResource?.kind === resource.kind && activeResource.id === resource.id;
         const press = rowBrowse.pressProps(resource);
         return (
           <button
-            key={`${resource.kind}:${resource.id}`}
+            key={slotKey(resource)}
             type="button"
             className="nei-slot"
             onClick={(event) => {
@@ -1150,7 +1160,7 @@ function NeiSlots({
             onMouseMove={(event) => {
               if (dragging.current || event.buttons !== 0) return;
               hoverRef.current = resource;
-              setHover({ resource, x: event.clientX, y: event.clientY });
+              setHover({ index, key: slotKey(resource), x: event.clientX, y: event.clientY });
             }}
             onMouseLeave={leave}
             {...press}
@@ -1199,6 +1209,8 @@ function NeiSlots({
 }
 
 const noopSubscribe = () => () => {};
+
+const slotKey = (resource: { kind: string; id: string }) => `${resource.kind}:${resource.id}`;
 
 /** The most one resource query answers; a taller page asks for its slots in several. */
 const RESOURCE_QUERY_MAX = 120;

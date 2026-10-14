@@ -1,0 +1,158 @@
+/*
+ * The sticky note, as the mod draws it (NoteCard): coloured paper with the bottom-right corner folded, a glued strip
+ * along the top where the keys sit, the text wrapped on it. State hangs on data attributes (React rewrites className
+ * on the board). Keys keep their size on screen when zoomed out: --u is the note units a screen pixel takes.
+ */
+.sn {
+  --u: max(1, calc(1 / var(--board-zoom, 1)));
+  position: relative;
+  box-sizing: border-box;
+  color: var(--sn-ink);
+  font-family: var(--app-font, ui-sans-serif, system-ui, sans-serif);
+  /* Follows the folded outline. */
+  filter: drop-shadow(2px 3px 3px rgba(0, 0, 0, 0.32));
+  user-select: none;
+}
+.sn::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background:
+    linear-gradient(var(--sn-band) 0 calc(var(--u) * 13px), transparent calc(var(--u) * 13px)),
+    var(--sn-paper);
+  clip-path: polygon(
+    0 0,
+    100% 0,
+    100% calc(100% - var(--sn-fold)),
+    calc(100% - var(--sn-fold)) 100%,
+    0 100%
+  );
+  box-shadow:
+    inset 0 -1px 0 var(--sn-edge),
+    inset -1px 0 0 var(--sn-edge);
+}
+/* The folded flap: the upper-left half of the corner square, darker. */
+.sn::after {
+  content: "";
+  position: absolute;
+  right: 0;
+  bottom: 0;
+  width: var(--sn-fold);
+  height: var(--sn-fold);
+  background: var(--sn-fold-color);
+  clip-path: polygon(0 0, 100% 0, 0 100%);
+}
+/* The grip: short strokes along the fold's edge, on hover. */
+.sn:hover::after {
+  background:
+    repeating-linear-gradient(
+      135deg,
+      transparent 0 2.4px,
+      color-mix(in srgb, var(--sn-ink) 40%, var(--sn-fold-color)) 2.4px 3.4px
+    ),
+    var(--sn-fold-color);
+}
+.sn[data-multi] {
+  outline: max(2px, calc(1.5px / var(--board-zoom, 1))) solid var(--cc-select, #22d3ee);
+}
+
+.sn-text {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  top: 18px;
+  bottom: 8px;
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-size: var(--sn-glyph);
+  line-height: var(--sn-line);
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  resize: none;
+  outline: none;
+  cursor: inherit;
+  z-index: 1;
+}
+.sn-text[data-empty] {
+  opacity: 0.56;
+}
+.sn-area {
+  user-select: text;
+  caret-color: var(--sn-ink);
+}
+.sn-area::selection {
+  background: color-mix(in srgb, var(--sn-ink) 25%, transparent);
+}
+
+/* The keys: delete in the strip's left end, text size in its right end; shown on hover or while writing. */
+.sn-key {
+  position: absolute;
+  top: calc(var(--u) * 1px);
+  width: calc(var(--u) * 11px);
+  height: calc(var(--u) * 11px);
+  background: rgba(48, 50, 56, 0.69);
+  color: #f2f3f7;
+  opacity: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+.sn:hover .sn-key,
+.sn[data-editing] .sn-key {
+  opacity: 1;
+}
+.sn-key[data-key="delete"] {
+  left: calc(var(--u) * 4px);
+}
+.sn-key[data-key="smaller"] {
+  right: calc(var(--u) * 17px);
+}
+.sn-key[data-key="bigger"] {
+  right: calc(var(--u) * 4px);
+}
+.sn[data-part="delete"] .sn-key[data-key="delete"],
+.sn[data-part="smaller"] .sn-key[data-key="smaller"],
+.sn[data-part="bigger"] .sn-key[data-key="bigger"] {
+  background: rgba(48, 50, 56, 0.88);
+}
+.sn[data-smaller-off] .sn-key[data-key="smaller"],
+.sn[data-bigger-off] .sn-key[data-key="bigger"] {
+  color: rgba(242, 243, 247, 0.5);
+}
+/* Glyphs, one or two bars each, centred: a cross, a minus, a plus. */
+.sn-key::before,
+.sn-key::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  background: currentColor;
+}
+.sn-key[data-key="delete"]::before,
+.sn-key[data-key="delete"]::after {
+  width: calc(var(--u) * 9px);
+  height: calc(var(--u) * 1px);
+  margin: calc(var(--u) * -0.5px) 0 0 calc(var(--u) * -4.5px);
+  transform: rotate(45deg);
+}
+.sn-key[data-key="delete"]::after {
+  transform: rotate(-45deg);
+}
+.sn-key[data-key="smaller"]::before,
+.sn-key[data-key="bigger"]::before {
+  width: calc(var(--u) * 7px);
+  height: calc(var(--u) * 1px);
+  margin: calc(var(--u) * -0.5px) 0 0 calc(var(--u) * -3.5px);
+}
+.sn-key[data-key="smaller"]::after {
+  display: none;
+}
+.sn-key[data-key="bigger"]::after {
+  width: calc(var(--u) * 1px);
+  height: calc(var(--u) * 7px);
+  margin: calc(var(--u) * -3.5px) 0 0 calc(var(--u) * -0.5px);
+}

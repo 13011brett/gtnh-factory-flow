@@ -397,9 +397,10 @@ import {
 } from "./pocket-summary";
 import {
   ANNOTATION_DRAG_HANDLE_CLASS,
-  AnnotationNode,
   type AnnotationFlowNode,
 } from "./AnnotationNode";
+import { AnnotationSwitch } from "./clean/note/AnnotationSwitch";
+import { visibleAnnotations } from "./clean/note/note-model";
 import { settleZonePoints } from "@/lib/model/zone-points";
 import { BOARD_PAPER_IDS } from "@/lib/model/board-paper";
 import { getSetupRules } from "@/lib/model/setup-rules";
@@ -414,7 +415,7 @@ const nodeTypes = {
   recipeNode: RecipeNodeSwitch,
   storageNode: StorageNodeSwitch,
   trashNode: TrashNode,
-  annotationNode: AnnotationNode,
+  annotationNode: AnnotationSwitch,
   pocketNode: PocketNode,
   boardNode: BoardNode,
 } satisfies NodeTypes;
@@ -498,6 +499,9 @@ const PRO_OPTIONS = { hideAttribution: true };
  * the wires, backdrop annotations (-5) below them.
  */
 const CARD_Z_INDEX = 20;
+
+/** A plan board's sticky notes: over the wires (10), under the cards, as the mod stacks them. */
+const STICKY_NOTE_Z_INDEX = 15;
 
 /**
  * React Flow's dark colorMode paints its wrapper #141414, which would cover
@@ -2150,7 +2154,7 @@ export function FactoryFlow() {
             }),
           }) satisfies StorageFlowNode,
       ),
-      ...(project.annotations ?? [])
+      ...visibleAnnotations(project.annotations ?? [], project.planMode === true)
         .filter((annotation) => pocketView.isLevelShown(annotation.pocketId))
         .map(
         (annotation) =>
@@ -2170,7 +2174,9 @@ export function FactoryFlow() {
               annotation.kind === "zone" ||
               annotation.kind === "image"
                 ? -5
-                : 1000,
+                : project.planMode === true
+                  ? STICKY_NOTE_Z_INDEX
+                  : 1000,
             className:
               annotation.kind === "box" ||
               annotation.kind === "zone" ||
@@ -2206,6 +2212,7 @@ export function FactoryFlow() {
     pocketSummaries,
     pocketView,
     project.annotations,
+    project.planMode,
     project.nodes,
     project.pockets,
     project.storages,
@@ -5895,6 +5902,10 @@ export function FactoryFlow() {
    */
   const placeImageFile = useCallback(
     async (file: File | Blob, dropPoint?: { x: number; y: number }) => {
+      // A plan board has no picture annotations (it shows sticky notes only).
+      if (useFactoryStore.getState().project.planMode === true) {
+        return;
+      }
       try {
         const [imageUrl, natural] = await Promise.all([
           uploadBoardImage(file),
@@ -8581,6 +8592,8 @@ const PaintToolbar = memo(function PaintToolbar({
   shiftedDown: boolean;
 }) {
   const activeColor = GT_NODE_COLORS[activeColorTag];
+  // A plan board's markup is the sticky note (right-click the board): no box, zone, arrow, text or image tools.
+  const planMode = useFactoryStore((state) => state.project.planMode === true);
   // Every fold-out on this row opens on CLICK (see useFoldoutDismiss). The
   // draw tools live under ONE slot: the menu holds them all with their names;
   // the face opens it, or cancels when a tool is armed.
@@ -8652,7 +8665,7 @@ const PaintToolbar = memo(function PaintToolbar({
                   : "pointer-events-none -translate-y-1 opacity-0",
               ].join(" ")}
             >
-              {ANNOTATION_TOOLS.map(({ kind, label, Icon }) => (
+              {ANNOTATION_TOOLS.filter(({ kind }) => !planMode || kind === "board").map(({ kind, label, Icon }) => (
                 <button
                   key={kind}
                   type="button"
@@ -8743,13 +8756,17 @@ const PaintToolbar = memo(function PaintToolbar({
                   />
                 ))}
               </div>
-              <div className="my-0.5 border-t-2 border-[var(--mc-15)]" />
-              <AddImageButton
-                onPlaceImage={async (file) => {
-                  setDrawMenuOpen(false);
-                  await onPlaceImage(file);
-                }}
-              />
+              {planMode ? null : (
+                <>
+                  <div className="my-0.5 border-t-2 border-[var(--mc-15)]" />
+                  <AddImageButton
+                    onPlaceImage={async (file) => {
+                      setDrawMenuOpen(false);
+                      await onPlaceImage(file);
+                    }}
+                  />
+                </>
+              )}
             </div>
             <button
               type="button"

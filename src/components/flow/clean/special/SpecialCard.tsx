@@ -4,14 +4,7 @@ import "../clean.css";
 import "./special.css";
 
 import { Handle, Position } from "@xyflow/react";
-import {
-  useEffect,
-  useMemo,
-  useRef,
-  useState,
-  type CSSProperties,
-  type MouseEvent,
-} from "react";
+import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
 import { Copy, Plus, RefreshCw, Trash2 } from "lucide-react";
 import type { FactoryNode, Recipe } from "@/lib/model/types";
 import { ResourceIcon } from "@/components/nei/ResourceIcon";
@@ -423,7 +416,9 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
     const card = event.currentTarget.closest("[data-node-glance-root]") ?? undefined;
     const r = (card ?? event.currentTarget).getBoundingClientRect();
     setMenu(
-      menu ? undefined : { kind: "actions", x: r.left, top: r.top, bottom: r.bottom, hangsFrom: card },
+      menu
+        ? undefined
+        : { kind: "actions", x: r.left, top: r.top, bottom: r.bottom, hangsFrom: card },
     );
   };
   const openSheet = (event: MouseEvent<HTMLElement>) => {
@@ -503,7 +498,12 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
           aria-haspopup="menu"
           data-menu-anchor=""
           aria-expanded={sheetAnchor !== undefined}
-          {...tipAttrs(gearTip(view.nodeId, controls.some((entry) => entry.warn)))}
+          {...tipAttrs(
+            gearTip(
+              view.nodeId,
+              controls.some((entry) => entry.warn),
+            ),
+          )}
           onClick={openSheet}
         />
         {view.cropKey ? (
@@ -738,7 +738,11 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
       ) : null}
       {sheetAnchor ? (
         context.sheet.kind === "machine" ? (
-          <SettingsSheet nodeId={node.id} anchor={sheetAnchor} onClose={() => setSheetAnchor(undefined)} />
+          <SettingsSheet
+            nodeId={node.id}
+            anchor={sheetAnchor}
+            onClose={() => setSheetAnchor(undefined)}
+          />
         ) : (
           <SpecialSheet
             anchor={sheetAnchor}
@@ -885,7 +889,15 @@ function Picture({ view, context }: { view: SpecialView; context: SpecialContext
 }
 
 function specialNameTip(view: SpecialView, tipView: CleanCardView, facts: CardTipFacts): TipSpec {
-  if (view.kind === "shared" || view.kind === "crop") return machineNameTip(tipView, facts);
+  if ((view.kind === "shared" || view.kind === "crop") && view.count)
+    return machineNameTip(tipView, facts);
+  if (view.kind === "crop") {
+    return {
+      id: `${view.nodeId}|name`,
+      title: view.name,
+      notes: [{ text: "Pick a crop to start producing.", tone: "muted" }],
+    };
+  }
   if (view.kind === "custom-rate") {
     return {
       id: `${view.nodeId}|name`,

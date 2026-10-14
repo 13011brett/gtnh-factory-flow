@@ -262,26 +262,21 @@ export function useSharedCardModel(data: RecipeNodeData, selected: boolean): Spe
     };
   }
 
-  // The card's one power row, as the mod bills it: each recipe's draw a machine at its own solved machines (whole
-  // machines when the board shows peaks).
+  // The card's one power row.
   const own = sectionPower(recipe, projectNode);
   const parts = [own, ...extras];
-  // Average: each recipe's draw at its own solved machines. Peak: the card's whole machines, each at the hungriest
-  // recipe that runs (the recipes time-share one machine, so whole machines are the card's, not each recipe's).
+  // As the plain card bills it: each recipe's draw at the machines the solve gives it, by its use (all of it in peak
+  // mode while it runs at all).
+  const scaleOf = (i: number) =>
+    averageDraw ? (usageBySection[i] ?? 0) : (usageBySection[i] ?? 0) > 0 ? 1 : 0;
   const drawOf = (i: number) => parts[i]?.powerReport?.drawEuT ?? 0;
-  const wholeMachines = Math.ceil(machinesBySection.reduce((sum, n) => sum + n, 0) - 1e-9);
-  const hungriest = Math.max(0, ...machinesBySection.map((n, i) => (n > 0 ? drawOf(i) : 0)));
-  const euT = averageDraw
-    ? machinesBySection.reduce((sum, n, i) => sum + drawOf(i) * n, 0)
-    : hungriest * wholeMachines;
+  const euT = machinesBySection.reduce((sum, n, i) => sum + drawOf(i) * n * scaleOf(i), 0);
   const stalled = parts.some(
     (part) => part.powerReport !== undefined && part.powerReport.state !== "ok",
   );
   const litresOf = (i: number) =>
     parts[i]?.steamReport ? parts[i]!.steamReport!.drawSteamPerTick * 20 : 0;
-  const litres = averageDraw
-    ? machinesBySection.reduce((sum, n, i) => sum + litresOf(i) * n, 0)
-    : Math.max(0, ...machinesBySection.map((n, i) => (n > 0 ? litresOf(i) : 0))) * wholeMachines;
+  const litres = machinesBySection.reduce((sum, n, i) => sum + litresOf(i) * n * scaleOf(i), 0);
   const anyEu = parts.some((part) => part.powerReport);
   const anySteam = !anyEu && parts.some((part) => part.steamReport);
   const power: SpecialView["power"] = anyEu
@@ -292,7 +287,7 @@ export function useSharedCardModel(data: RecipeNodeData, selected: boolean): Spe
         stalled,
         title: stalled
           ? "A recipe on this machine is above its tier."
-          : "What the machine draws: the hungriest recipe at its peak, every recipe by its share on average.",
+          : "What the card's machines draw, every recipe at the machines it needs.",
       }
     : anySteam
       ? {

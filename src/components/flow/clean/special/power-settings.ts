@@ -109,7 +109,10 @@ export function powerSettingRows(
 }
 
 /** The strip's chips: the settings pinned to the card and in play, the tier (a header chip) left out. */
-export function powerStripRows(rows: PowerSettingRow[], pins: readonly string[]): PowerSettingRow[] {
+export function powerStripRows(
+  rows: PowerSettingRow[],
+  pins: readonly string[],
+): PowerSettingRow[] {
   return rows.filter((row) => row.enabled && pins.includes(row.id) && !isTierSelect(row.setting));
 }
 

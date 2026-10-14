@@ -1,0 +1,20 @@
+import fs from "node:fs";
+import { fresh, importText, toCode, OUT } from "./lib.mjs";
+const FX = "C:/Users/jack/gtnh-planner-mod/.claude/worktrees/website-mod-backport-research-c84135/src/test/resources/";
+const { browser, page, logs } = await fresh();
+await importText(page, toCode(fs.readFileSync(FX + "factory-flow/high-amperage-reactor.json", "utf8")));
+await page.waitForTimeout(6000);
+await page.getByRole("button", { name: "Not now" }).click().catch(()=>{});
+// pin count to 3 via the card count
+await page.locator(".react-flow__node .cc-count").first().click();
+await page.keyboard.type("3"); await page.keyboard.press("Enter"); await page.waitForTimeout(2000);
+await page.mouse.click(800, 250, { button: "right" }); await page.getByText("Add a sticky note").click(); await page.keyboard.type("persist me"); await page.mouse.click(1000, 900);
+await page.waitForTimeout(1500);
+const state = () => page.evaluate(() => ({ tabs: [...document.querySelectorAll("[role=tab], [data-tab]")].length, nodes: document.querySelectorAll(".react-flow__node").length, notes: [...document.querySelectorAll(".react-flow__node")].filter(n => n.innerText.includes("persist me")).length, rail: document.querySelector(".rail-root")?.innerText.replace(/\n/g, " ").slice(0, 200), vp: document.querySelector(".react-flow__viewport")?.style.transform, title: [...document.querySelectorAll("button")].map(b => b.textContent).filter(t => /Benzene|Untitled/.test(t)).join("/") }));
+console.log("before", JSON.stringify(await state()));
+await page.waitForTimeout(2500);
+await page.reload({ waitUntil: "networkidle" }); await page.waitForTimeout(5000);
+console.log("after reload", JSON.stringify(await state()));
+await page.screenshot({ path: OUT + "reloaded.png" });
+console.log(logs.filter(l => !/503|trailer|Hydration|script tag|404|ERR_ABORTED/.test(l)).join("\n"));
+await browser.close();

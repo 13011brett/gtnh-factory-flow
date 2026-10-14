@@ -8,14 +8,10 @@ import { useSyncExternalStore } from "react";
  * through `writeDeviceSettings`; storage that is blocked costs the reload its
  * values, nothing more.
  *
- * `boardSeeThrough` is the gear's See-through slider, 0 to 100 in steps of 5
- * (the mod's `board.seeThrough`, default 30): the board's dots, the overview
- * and the grid fade down to nothing while cards and text stay solid. The
- * setting is stored here; whatever draws the effect reads this key.
+ * The See-through slider is not here: it has one home, `useSeeThrough` / `setSeeThrough`
+ * (`components/flow/clean/seethrough/see-through.ts`), which the board and the settings both use.
  */
 export interface DeviceSettings {
-  /** The gear's See-through slider, percent, steps of 5. */
-  boardSeeThrough: number;
   /** "Names when zoomed out": the glance cards carry their names. */
   zoomedOutNames: boolean;
   /** "Circuit as an input": a programmed circuit counts as an input of its card. */
@@ -24,11 +20,7 @@ export interface DeviceSettings {
   settingsSection: string;
 }
 
-export const SEE_THROUGH_STEP = 5;
-export const DEFAULT_SEE_THROUGH = 30;
-
 export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
-  boardSeeThrough: DEFAULT_SEE_THROUGH,
   zoomedOutNames: true,
   circuitAsInput: false,
   settingsSection: "Board",
@@ -40,21 +32,12 @@ let state: DeviceSettings = DEFAULT_DEVICE_SETTINGS;
 let loaded = false;
 const listeners = new Set<() => void>();
 
-export function clampSeeThrough(value: number): number {
-  if (!Number.isFinite(value)) return DEFAULT_SEE_THROUGH;
-  return Math.max(0, Math.min(100, Math.round(value / SEE_THROUGH_STEP) * SEE_THROUGH_STEP));
-}
-
 /** An absent key falls back to its default; only an explicit false means off. */
 export function parseDeviceSettings(raw: string | null): DeviceSettings {
   if (!raw) return DEFAULT_DEVICE_SETTINGS;
   try {
     const parsed = JSON.parse(raw) as Partial<Record<keyof DeviceSettings, unknown>>;
     return {
-      boardSeeThrough:
-        typeof parsed.boardSeeThrough === "number"
-          ? clampSeeThrough(parsed.boardSeeThrough)
-          : DEFAULT_DEVICE_SETTINGS.boardSeeThrough,
       zoomedOutNames:
         typeof parsed.zoomedOutNames === "boolean"
           ? parsed.zoomedOutNames
@@ -106,20 +89,12 @@ export function readDeviceSettings(): DeviceSettings {
 
 export function writeDeviceSettings(patch: Partial<DeviceSettings>): void {
   const next = { ...getSnapshot(), ...patch };
-  next.boardSeeThrough = clampSeeThrough(next.boardSeeThrough);
   if (JSON.stringify(next) === JSON.stringify(state)) return;
   state = next;
   try {
     window.localStorage.setItem(STORAGE_KEY, JSON.stringify(state));
   } catch {
     // Blocked storage: the setting holds until the page closes.
-  }
-  // The see-through value is also a CSS variable, so styles can read it
-  // without a hook (0 = solid board, 1 = nothing of the board's backdrop).
-  try {
-    document.documentElement.style.setProperty("--board-see-through", String(state.boardSeeThrough / 100));
-  } catch {
-    // No document (tests): nothing to stamp.
   }
   for (const listener of listeners) listener();
 }

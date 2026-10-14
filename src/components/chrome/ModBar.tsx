@@ -6,7 +6,6 @@ import { useCallback, useEffect, useState, type MouseEvent, type ReactNode } fro
 import { copyToClipboard } from "@/lib/clipboard";
 import { encodePlanCode, planCodeLink } from "@/lib/import-export/plan-code";
 import { leaveLibrary, openLibrary, useLibraryTab } from "@/lib/library/library-tab";
-import { GT_VOLTAGE_TIERS } from "@/lib/model";
 import { isPowerDisplayUnit, type RateUnit } from "@/lib/model/rate-unit";
 import { playBoardSound } from "@/lib/board-sounds";
 import { useWorkspaceView, writeWorkspaceView } from "@/lib/workspace-view";
@@ -28,25 +27,6 @@ import { HelpLinks } from "./help-links";
 /** The rate unit key's four clocks, in the mod's order. */
 const RATE_ORDER: RateUnit[] = ["tick", "second", "minute", "hour"];
 const RATE_LABEL: Record<string, string> = { tick: "/t", second: "/s", minute: "/min", hour: "/hr", eu: "/s" };
-
-/** The tier most of the plan's machines run at: what the Amps key counts in. */
-export function dominantTier(overclockTiers: string[]): string | undefined {
-  const known = new Set<string>(GT_VOLTAGE_TIERS.map((entry) => entry.tier));
-  const counts = new Map<string, number>();
-  for (const tier of overclockTiers) {
-    if (!known.has(tier) || tier === "DEMO") continue;
-    counts.set(tier, (counts.get(tier) ?? 0) + 1);
-  }
-  let best: string | undefined;
-  let most = 0;
-  for (const [tier, count] of counts) {
-    if (count > most) {
-      best = tier;
-      most = count;
-    }
-  }
-  return best;
-}
 
 function useHistoryShortcuts() {
   const undo = useFactoryStore((state) => state.undo);
@@ -202,7 +182,8 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
   useEffect(() => {
     try {
       const saved = localStorage.getItem("gtnh-factory-flow.power-display-unit.v1");
-      if (isPowerDisplayUnit(saved)) setPowerDisplayUnit(saved);
+      // A tier saved by the older global unit becomes the mod's per-machine Amps.
+      if (isPowerDisplayUnit(saved)) setPowerDisplayUnit(saved === "eu" ? "eu" : "amps");
     } catch {
       /* EU/t when storage is unavailable. */
     }
@@ -230,8 +211,8 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
     if (isAmps) {
       setPowerDisplayUnit("eu");
     } else {
-      const tiers = useFactoryStore.getState().project.nodes.map((node) => String(node.overclockTier));
-      setPowerDisplayUnit((dominantTier(tiers) ?? "LV") as never);
+      // The mod's Amps: every card counts in its own machine's tier.
+      setPowerDisplayUnit("amps");
     }
     playBoardSound("dialPower");
   };

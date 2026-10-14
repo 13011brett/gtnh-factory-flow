@@ -2,6 +2,7 @@
 
 import { Bug, Lightbulb, CircleHelp } from "lucide-react";
 import { useEffect, useRef, useState } from "react";
+import { OPEN_FEEDBACK_EVENT } from "@/components/chrome/chrome-events";
 import { withoutRuntimeTables } from "@/lib/import-export/plan-code";
 import { useFactoryStore } from "@/store/factory-store";
 import { latestMinimapScene } from "../minimap/scene-store";
@@ -214,6 +215,15 @@ export function FeedbackPanel({ onClose }: { onClose: () => void }) {
 /** Mount once near the app root: shows the box while openFeedback() has been called. */
 export function FeedbackHost() {
   const open = useFeedbackOpen();
+  useEffect(() => {
+    // The top bar's red key knocks on this door; taking the knock keeps its GitHub fallback unused.
+    const onKnock = (event: Event) => {
+      event.preventDefault();
+      openFeedback();
+    };
+    window.addEventListener(OPEN_FEEDBACK_EVENT, onKnock);
+    return () => window.removeEventListener(OPEN_FEEDBACK_EVENT, onKnock);
+  }, []);
   useEffect(() => {
     // A handle for checking the box by hand in development.
     if (process.env.NODE_ENV !== "production") (window as unknown as { __openFeedback?: () => void }).__openFeedback = openFeedback;

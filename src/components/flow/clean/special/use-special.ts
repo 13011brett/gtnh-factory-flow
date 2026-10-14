@@ -279,10 +279,13 @@ export function useSharedCardModel(data: RecipeNodeData, selected: boolean): Spe
   const litres = machinesBySection.reduce((sum, n, i) => sum + litresOf(i) * n * scaleOf(i), 0);
   const anyEu = parts.some((part) => part.powerReport);
   const anySteam = !anyEu && parts.some((part) => part.steamReport);
+  // Amps count in the sections' tier when they all run at one.
+  const sectionTiers = new Set(parts.filter((part) => part.powerReport).map((part) => part.powerReport!.tier));
+  const ownTier = sectionTiers.size === 1 ? [...sectionTiers][0] : undefined;
   const power: SpecialView["power"] = anyEu
     ? {
-        number: stalled ? "TIER!" : formatPowerValue(powerDisplayFromEuT(euT)),
-        unit: stalled ? "" : powerDisplaySuffix(),
+        number: stalled ? "TIER!" : formatPowerValue(powerDisplayFromEuT(euT, ownTier)),
+        unit: stalled ? "" : powerDisplaySuffix(ownTier),
         name: "Power",
         stalled,
         title: stalled

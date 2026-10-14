@@ -21,12 +21,17 @@ import {
   claimIssue,
   FeedbackGate,
   FLOOD_REFUSALS,
+  looksGenuine,
   looksSentByTheGame,
+  looksSentByTheWeb,
   PAUSE_MS,
   PER_SENDER_DAY,
   PER_SENDER_HOUR,
   SITE_PER_DAY,
   SITE_PER_HOUR,
+  WEB_PER_SENDER_DAY,
+  WEB_PER_SENDER_HOUR,
+  WEB_SITE_PER_HOUR,
   wordsOf,
 } from "./feedback-guard";
 
@@ -106,6 +111,40 @@ describe("what a report from the game looks like", () => {
   });
 });
 
+const WEB_DEVICE = "web-0b6c1c7e-8f0a-4c43-9a51-6f2d0c1e2b3a";
+
+function webReport(overrides: Partial<FeedbackReport> = {}): FeedbackReport {
+  return report({
+    origin: "web",
+    deviceId: WEB_DEVICE,
+    versions: { mod: "3.12.0", pack: "", java: "", os: "Win32" },
+    ...overrides,
+  });
+}
+
+describe("what a report from the web planner looks like", () => {
+  it("is its own origin with its own shapes, not a game's", () => {
+    expect(looksSentByTheWeb(webReport())).toBe(true);
+    expect(looksGenuine(webReport())).toBe(true);
+    expect(looksSentByTheGame(webReport())).toBe(false);
+  });
+
+  it("is refused with the game's shapes, a Java, a log or a missing origin", () => {
+    expect(looksSentByTheWeb(webReport({ origin: undefined }))).toBe(false);
+    expect(looksSentByTheWeb(webReport({ deviceId: DEVICE }))).toBe(false);
+    expect(looksSentByTheWeb(webReport({ versions: { mod: "3.12.0", pack: "2.9.0", java: "", os: "Win32" } }))).toBe(false);
+    expect(looksSentByTheWeb(webReport({ versions: { mod: "3.12.0", pack: "", java: "25.0.1", os: "Win32" } }))).toBe(false);
+    expect(looksSentByTheWeb(webReport({ log: "lines" }))).toBe(false);
+    expect(looksSentByTheWeb(webReport({ crash: "trace" }))).toBe(false);
+    expect(looksGenuine(webReport({ deviceId: "anything" }))).toBe(false);
+  });
+
+  it("does not let a game-shaped report claim to be the web's, nor the web's pass as the game's", () => {
+    expect(looksGenuine(report())).toBe(true);
+    expect(looksGenuine(report({ origin: "web" }))).toBe(false);
+  });
+});
+
 describe("the gate", () => {
   it("takes a minute's share, then is busy until the minute is past", () => {
     let now = 0;
@@ -132,6 +171,44 @@ describe("the gate", () => {
     expect(gate.admit()).toBe("paused");
     now = PAUSE_MS;
     expect(gate.admit()).toBe("open");
+  });
+});
+
+describe("claiming an issue from the web planner", () => {
+  it("allows fewer a sender than the game does", async () => {
+    expect(WEB_PER_SENDER_HOUR).toBeLessThan(PER_SENDER_HOUR);
+    expect(WEB_PER_SENDER_DAY).toBeLessThan(PER_SENDER_DAY);
+    for (let i = 0; i < WEB_PER_SENDER_HOUR; i++) {
+      expect(await claimIssue(from("5.5.5.5"), webReport({ title: `web report ${i}` }))).toBeUndefined();
+    }
+    expect((await claimIssue(from("5.5.5.5"), webReport({ title: "one too many" })))?.status).toBe(429);
+    // The same address still has a game's share left: three an hour, two taken.
+    expect(await claimIssue(from("5.5.5.5"), report({ title: "from the game" }))).toBeUndefined();
+  });
+
+  it("records the web's own site count, and caps the web's share of the site", async () => {
+    await claimIssue(from("6.6.6.6"), webReport({ title: "first" }));
+    expect(events.some((e) => e.actorKey === "feedback:site:web")).toBe(true);
+    const hex = (i: number) => i.toString(16).padStart(12, "0");
+    let refused = 0;
+    for (let i = 0; i < WEB_SITE_PER_HOUR + 3; i++) {
+      const r = await claimIssue(
+        from(`11.0.0.${i}`),
+        webReport({ title: `web ${i}`, deviceId: `web-00000000-0000-4000-8000-${hex(i)}` }),
+      );
+      if (r) {
+        expect(r.status).toBe(503);
+        refused++;
+      }
+    }
+    // One was taken above; the cap is on the web's, not the game's.
+    expect(refused).toBe(4);
+    expect(await claimIssue(from("12.0.0.1"), report({ title: "a game report still opens" }))).toBeUndefined();
+  });
+
+  it("does not count a game's report against the web's share", async () => {
+    await claimIssue(from("7.7.7.7"), report({ title: "game" }));
+    expect(events.some((e) => e.actorKey === "feedback:site:web")).toBe(false);
   });
 });
 

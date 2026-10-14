@@ -7343,10 +7343,10 @@ const SourceToolbar = memo(function SourceToolbar({
               powerDisplayUnit === "eu"
                 ? undefined
                 : {
-                    background: GT_TIER_COLORS[powerDisplayUnit].background,
-                    borderColor: GT_TIER_COLORS[powerDisplayUnit].border,
-                    color: GT_TIER_COLORS[powerDisplayUnit].text,
-                    textShadow: `1px 1px 0 ${GT_TIER_COLORS[powerDisplayUnit].shadow}`,
+                    background: GT_TIER_COLORS[powerDisplayUnit as keyof typeof GT_TIER_COLORS].background,
+                    borderColor: GT_TIER_COLORS[powerDisplayUnit as keyof typeof GT_TIER_COLORS].border,
+                    color: GT_TIER_COLORS[powerDisplayUnit as keyof typeof GT_TIER_COLORS].text,
+                    textShadow: `1px 1px 0 ${GT_TIER_COLORS[powerDisplayUnit as keyof typeof GT_TIER_COLORS].shadow}`,
                   }
             }
           >
@@ -7361,7 +7361,7 @@ const SourceToolbar = memo(function SourceToolbar({
                 A{" "}
                 <span
                   style={{
-                    textDecoration: GT_TIER_COLORS[powerDisplayUnit].underline
+                    textDecoration: GT_TIER_COLORS[powerDisplayUnit as keyof typeof GT_TIER_COLORS].underline
                       ? "underline"
                       : undefined,
                   }}

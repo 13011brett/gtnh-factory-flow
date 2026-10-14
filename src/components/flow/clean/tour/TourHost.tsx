@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { OPEN_TOUR_EVENT } from "@/components/chrome/chrome-events";
 import { Callout } from "./Callout";
 import * as input from "./input";
 import {
@@ -45,6 +46,16 @@ export function TourHost() {
       };
     }
     return () => attachTourLayer(undefined);
+  }, []);
+
+  useEffect(() => {
+    // Help > Take the tour (and the settings' Take it) knock on this door.
+    const onKnock = (event: Event) => {
+      event.preventDefault();
+      void startTour();
+    };
+    window.addEventListener(OPEN_TOUR_EVENT, onKnock);
+    return () => window.removeEventListener(OPEN_TOUR_EVENT, onKnock);
   }, []);
 
   useEffect(() => {

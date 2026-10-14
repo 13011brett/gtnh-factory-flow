@@ -79,6 +79,26 @@ describe("the feedback route", () => {
     expect(issue.body).toMatch(/\[plan file\]\(https:\/\/gtnhplanner\.com\/api\/feedback\/files\/[0-9a-f-]{36}\/plan-1\.json\)/);
   });
 
+  it("opens a web planner's report under the web label, and refuses its shape dressed as the game's", async () => {
+    vi.stubEnv("GITHUB_FEEDBACK_TOKEN", "token");
+    vi.mocked(openIssue).mockClear();
+    const web = {
+      ...report,
+      origin: "web",
+      deviceId: "web-0b6c1c7e-8f0a-4c43-9a51-6f2d0c1e2b3a",
+      versions: { mod: "3.12.0", pack: "", java: "", os: "Win32" },
+    };
+    const sent = await send(web);
+    expect(sent.status).toBe(201);
+    expect(vi.mocked(openIssue).mock.calls[0]![2].labels).toEqual(["from web", "enhancement"]);
+    vi.mocked(openIssue).mockClear();
+    // The web's origin with the game's device id and a Java, and the game's shape claiming the web's origin.
+    expect((await send({ ...web, deviceId: report.deviceId })).status).toBe(400);
+    expect((await send({ ...web, versions: { ...web.versions, java: "25.0.1" } })).status).toBe(400);
+    expect((await send({ ...report, origin: "web" })).status).toBe(400);
+    expect(openIssue).not.toHaveBeenCalled();
+  });
+
   it("refuses a bad report and a busy player", async () => {
     vi.stubEnv("GITHUB_FEEDBACK_TOKEN", "token");
     expect((await send({ ...report, title: "" })).status).toBe(400);

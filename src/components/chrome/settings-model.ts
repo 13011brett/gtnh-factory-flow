@@ -3,7 +3,7 @@ import {
   UI_SCALE_MAX_PERCENT,
   UI_SCALE_MIN_PERCENT,
 } from "@/lib/ui-scale-boot";
-import { SEE_THROUGH_STEP } from "@/lib/device-settings";
+import { SEE_THROUGH_STEP } from "@/components/flow/clean/seethrough/see-through";
 
 /** The mod's Board "Size" choices (Tiny, Small, Normal, Large) as the interface size's percent. */
 export const SIZE_NAMES = ["Tiny", "Small", "Normal", "Large"] as const;

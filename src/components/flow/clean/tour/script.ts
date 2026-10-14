@@ -15,7 +15,9 @@ import {
   cardPart,
   drawerOf,
   drawerPart,
+  feedbackKey,
   fitKey,
+  libraryKey,
   itemTile,
   itemsSearch,
   menuRow,
@@ -87,7 +89,7 @@ const openPlateRecipes: Action[] = [
   A.click(itemTile("Iron Plate"), { label: "Iron Plate" }),
   A.until(() => recipeOverlay() !== null, "recipe search"),
   A.wait(300),
-  A.until(() => addRecipe(BENDER)() !== null, "the bender's recipe"),
+  A.until(() => addRecipe(BENDER)() !== null, "the bender's recipe", 20000),
   A.show(addRecipe(BENDER)),
   A.wait(250),
 ];
@@ -411,7 +413,7 @@ const addBender: Action[] = [
   A.until(() => itemTile("Iron Plate")() !== null, "Iron Plate in the list"),
   A.click(itemTile("Iron Plate"), { label: "Iron Plate" }),
   A.until(() => recipeOverlay() !== null, "recipe search"),
-  A.until(() => addRecipe(BENDER)() !== null, "the bender's recipe"),
+  A.until(() => addRecipe(BENDER)() !== null, "the bender's recipe", 20000),
   A.show(addRecipe(BENDER)),
   A.click(addRecipe(BENDER), { label: "add the bender's recipe" }),
   A.until(() => nodeCount() === 1, "the card"),
@@ -426,8 +428,8 @@ const forcedAdd: Step = {
     A.until(() => nodeCount() === 0, "the clean board"),
     ...addBender,
     A.click(within(portRow(0, "Input", "Iron Ingot"), ".cc-icon"), { label: "the ingots input" }),
-    A.until(() => recipeOverlay() !== null, "what makes ingots"),
-    A.until(() => addRecipe(/./)() !== null, "a recipe that makes ingots"),
+    A.until(() => recipeOverlay() !== null, "what makes ingots", 20000),
+    A.until(() => addRecipe(/./)() !== null, "a recipe that makes ingots", 20000),
     A.show(addRecipe(/./)),
     A.click(addRecipe(/./), { label: "add the maker" }),
     A.until(() => nodeCount() === 2, "the second card"),
@@ -560,7 +562,7 @@ const stickyNote: Step = {
   },
 };
 
-const libraryTab: Target = textOf("button, a, [role=tab]", /^Library$/);
+const libraryTab: Target = libraryKey;
 
 const libraryStep: Step = {
   id: "library",
@@ -576,7 +578,7 @@ const newPlan: Step = {
   ],
   note: {
     text: "Here's how you make a *new plan*.",
-    at: topKey(/^New design$/),
+    at: css(".mt-plus"),
   },
 };
 
@@ -586,7 +588,7 @@ const feedback: Step = {
   note: {
     text:
       "That's everything! Found a bug, or have an idea? *Feedback* sends it from here. Questions about your own setup do well in GTNH Planner's thread on the *GT New Horizons Discord*.",
-    at: topKey(/send feedback|^feedback/i),
+    at: feedbackKey,
   },
 };
 

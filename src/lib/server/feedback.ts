@@ -25,6 +25,7 @@ const BODY_MAX = 60_000;
 /** Where reports go and how each kind is labelled there. */
 export const FEEDBACK_REPO = "jackwrichards/gtnh-planner-mod";
 export const FROM_GAME_LABEL = "from game";
+export const FROM_WEB_LABEL = "from web";
 const KIND_LABELS = { bug: "bug", idea: "enhancement", help: "question" } as const;
 const KIND_TITLES = { bug: "Bug", idea: "Idea", help: "Help" } as const;
 const MOODS = { happy: "Happy", okay: "Okay", sad: "Unhappy" } as const;
@@ -32,6 +33,8 @@ const MOODS = { happy: "Happy", okay: "Okay", sad: "Unhappy" } as const;
 const versionText = z.string().max(VERSION_MAX).default("");
 
 const reportSchema = z.object({
+  /** Where it was sent from. The game sends nothing here; the web planner says `web`. */
+  origin: z.enum(["game", "web"]).default("game"),
   kind: z.enum(["bug", "idea", "help"]),
   mood: z.enum(["happy", "okay", "sad"]).optional(),
   title: z.string().trim().min(1, "Give it a title.").max(TITLE_MAX, `Keep the title under ${TITLE_MAX} characters.`),
@@ -53,6 +56,8 @@ export type FeedbackKind = keyof typeof KIND_LABELS;
 
 /** A report as checked: plans parsed as projects, the picture as PNG bytes. */
 export interface FeedbackReport {
+  /** `game` when absent. */
+  origin?: "game" | "web";
   kind: FeedbackKind;
   mood?: keyof typeof MOODS;
   title: string;
@@ -74,6 +79,9 @@ export function parseFeedback(body: unknown): FeedbackReport | { error: string }
     return { error: parsed.error.issues[0]?.message ?? "That report could not be read." };
   }
   const r = parsed.data;
+  if (r.origin === "web" && (r.log !== undefined || r.crash !== undefined)) {
+    return { error: "That report could not be read." };
+  }
   const plans: FeedbackReport["plans"] = [];
   for (const entry of r.plans) {
     const plan = factoryProjectSchema.safeParse(entry.plan);
@@ -90,6 +98,7 @@ export function parseFeedback(body: unknown): FeedbackReport | { error: string }
     }
   }
   return {
+    origin: r.origin,
     kind: r.kind,
     mood: r.mood,
     title: r.title,
@@ -114,7 +123,7 @@ export function issueTitle(report: FeedbackReport): string {
 }
 
 export function issueLabels(report: FeedbackReport): string[] {
-  return [FROM_GAME_LABEL, KIND_LABELS[report.kind]];
+  return [report.origin === "web" ? FROM_WEB_LABEL : FROM_GAME_LABEL, KIND_LABELS[report.kind]];
 }
 
 /**
@@ -123,7 +132,7 @@ export function issueLabels(report: FeedbackReport): string[] {
  */
 export function issueBody(report: FeedbackReport, links: FeedbackLinks): { body: string; plansComment?: string } {
   const head = [
-    `**${KIND_TITLES[report.kind]}** sent from the game${report.mood ? `, feeling: ${MOODS[report.mood]}` : ""}`,
+    `**${KIND_TITLES[report.kind]}** sent from ${report.origin === "web" ? "the web planner" : "the game"}${report.mood ? `, feeling: ${MOODS[report.mood]}` : ""}`,
     "",
     report.description ? quiet(report.description) : "_No description._",
   ];
@@ -138,7 +147,7 @@ export function issueBody(report: FeedbackReport, links: FeedbackLinks): { body:
     "",
     "---",
     quiet(
-      [v.mod && `GTNH Planner ${v.mod}`, v.pack && `GTNH ${v.pack}`, v.java && `Java ${v.java}`, v.os]
+      [v.mod && `GTNH Planner ${report.origin === "web" ? "web " : ""}${v.mod}`, v.pack && `GTNH ${v.pack}`, v.java && `Java ${v.java}`, v.os]
         .filter(Boolean)
         .join(" · "),
     ),

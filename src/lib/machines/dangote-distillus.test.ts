@@ -40,7 +40,10 @@ describe("Dangote Distillus source-verified modes", () => {
     const effective = applyMachineHandlerToRecipe(recipe(map), node);
     expect(isMultiblockRecipe(effective)).toBe(true);
     expect(prefersCuratedMachineMath(effective)).toBe(true);
-    expect(getRecipeMachineConfigTierControls(effective, node)).toEqual([]);
+    // Distillery mode offers its height; tower mode runs 12 parallels at any height and offers nothing.
+    expect(getRecipeMachineConfigTierControls(effective, node).map((control) => control.id)).toEqual(
+      map === "Distillery" ? ["distillusHeight"] : [],
+    );
     expect(effective.eut).toBe(120);
     expect(effective.durationTicks).toBe(600);
     expect(effective.minimumTier).toBe("MV");
@@ -57,6 +60,22 @@ describe("Dangote Distillus source-verified modes", () => {
       expect(getMachineStructuralParallels(tower, configured)).toBe(12);
       expect(getMachineDurationMultiplier(tower, configured)).toBe(1 / 3);
       expect(getMachineEutMultiplier(tower, configured)).toBe(1);
+    },
+  );
+
+  it.each([[3, 1], [4, 1], [5, 1], [6, 2], [8, 2], [9, 3], [11, 3], [12, 4]])(
+    "a %i-layer distillery gets 2 parallels per voltage tier for every 3 layers (%i x 2 x tier)",
+    (height, thirds) => {
+      const configured = {
+        ...node,
+        hatchVoltageTier: "EV" as FactoryNode["hatchVoltageTier"],
+        machineConfigTiers: { distillusHeight: String(height) },
+      };
+      const effective = applyMachineHandlerToRecipe(recipe("Distillery"), configured);
+      // EV is voltage ordinal 4.
+      expect(getMachineStructuralParallels(effective, configured)).toBe(thirds * 2 * 4);
+      const tower = applyMachineHandlerToRecipe(recipe("Distillation Tower"), configured);
+      expect(getMachineStructuralParallels(tower, configured)).toBe(12);
     },
   );
 

@@ -478,6 +478,17 @@ const WIDTH_EXPANSION = "widthExpansion";
 const WIDTH_EXPANSION_CONTROL = countControl(WIDTH_EXPANSION, "Width Expansion", [
   0, 1, 2, 3, 4, 5, 6,
 ]);
+/**
+ * The Dangote Distillus's height in layers, 3 through 12 (the STRUCTURE_HEIGHT channel's range). Only distillery
+ * mode reads it; the full 12 is the default, which is what the table assumed before it was a setting.
+ */
+const DISTILLUS_HEIGHT = "distillusHeight";
+const DISTILLUS_HEIGHT_CONTROL = countControl(
+  DISTILLUS_HEIGHT,
+  "Height",
+  [3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
+  9,
+);
 const LATEX_SINGULARITY = "latexSingularity";
 const LATEX_SINGULARITY_CONTROL = choiceControl(LATEX_SINGULARITY, "Controller Slot", [
   "Empty",
@@ -1344,10 +1355,18 @@ const MACHINES: Record<string, MachineBehaviour> = {
     overclock: OVERCLOCK.normal(),
     speed: (c) => c.recipeMap?.toLowerCase() === "distillery" ? 2 : 3,
     power: (c) => c.recipeMap?.toLowerCase() === "distillery" ? 0.15 : 1,
-    parallels: (c) => c.recipeMap?.toLowerCase() === "distillery" ? 8 * c.voltageTier : 12,
+    // getMaxParallelRecipes: 2 * floor((mHeight + 1) / 3f) * getTier(voltage), mHeight + 1 the layers.
+    parallels: (c) =>
+      c.recipeMap?.toLowerCase() === "distillery"
+        ? 2 * Math.floor(c.value(DISTILLUS_HEIGHT) / 3) * c.voltageTier
+        : 12,
     recipeTierFromBase: true,
     hidesControls: ["machineParallel", "voltageParallel"],
-    note: "Distillery mode assumes 12 layers: 8 parallels per voltage tier. Tower mode has 12 parallels. Power comes from ordinary energy hatches; multi-amp and laser hatches are not supported.",
+    controlsFor: (recipe) =>
+      (recipe.source?.recipeMap ?? recipe.machineType ?? "").toLowerCase() === "distillery"
+        ? [DISTILLUS_HEIGHT_CONTROL]
+        : [],
+    note: "Distillery mode: 2 parallels per voltage tier for every 3 layers of height (8 at the full 12). Tower mode has 12 parallels whatever the height. Power comes from ordinary energy hatches; multi-amp and laser hatches are not supported.",
   },
   /**
    * goodgenerator's MTEExtremeHeatExchanger. Its recipes carry no duration

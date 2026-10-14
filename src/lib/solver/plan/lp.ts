@@ -1,0 +1,324 @@
+/**
+ * The LP layer of the plan solver (spec-solver 3.3): a small model builder (columns with bounds and a cost, rows with
+ * bounds), the base model every stage starts from, and the one place a model runs. A point is believed only after the
+ * independent conservation check; an infeasible or non-conserving answer is retried under other HiGHS settings before
+ * it is believed (spec 7.3).
+ */
+import { solveLpAuto } from "../lp-engine";
+import type { LinearProgram } from "../simplex";
+import { note, type SolveContext, type StageOutcome } from "./context";
+import { TICKS_PER_SECOND } from "./model";
+import type { Note } from "./types";
+
+export interface LpRow {
+  cols: number[];
+  vals: number[];
+  lo: number;
+  hi: number;
+}
+
+/** Columns: extents (M), flows (E), externals (P), then any extras (drawer slacks). */
+export class ModelLp {
+  readonly lo: number[] = [];
+  readonly hi: number[] = [];
+  readonly cost: number[] = [];
+  readonly rows: LpRow[] = [];
+  readonly nMachines: number;
+  readonly nEdges: number;
+  readonly nPorts: number;
+  /** Per drawer, the relaxation's slack columns (-1 when none). */
+  drawerUnder: number[] = [];
+  drawerOver: number[] = [];
+
+  constructor(ctx: SolveContext) {
+    this.nMachines = ctx.model.machines.length;
+    this.nEdges = ctx.model.edges.length;
+    this.nPorts = ctx.model.connectedPorts.length;
+    for (let m = 0; m < this.nMachines; m++) {
+      const pinned = ctx.pinnedExtent[m]!;
+      if (Number.isNaN(pinned)) this.addColumn(0, Infinity, 0);
+      else this.addColumn(pinned, pinned, 0);
+    }
+    for (let e = 0; e < this.nEdges; e++) this.addColumn(0, Infinity, 0);
+    for (let p = 0; p < this.nPorts; p++) this.addColumn(0, Infinity, 0);
+  }
+
+  extentCol(m: number): number {
+    return m;
+  }
+  flowCol(e: number): number {
+    return this.nMachines + e;
+  }
+  extCol(p: number): number {
+    return this.nMachines + this.nEdges + p;
+  }
+
+  addColumn(lo: number, hi: number, cost: number): number {
+    this.lo.push(lo);
+    this.hi.push(hi);
+    this.cost.push(cost);
+    return this.lo.length - 1;
+  }
+
+  addRow(cols: number[], vals: number[], lo: number, hi: number): LpRow {
+    const row = { cols, vals, lo, hi };
+    this.rows.push(row);
+    return row;
+  }
+
+  /** Closes external `p`: it can carry nothing. */
+  closeExt(p: number): void {
+    this.hi[this.extCol(p)] = 0;
+  }
+
+  setExtCost(p: number, cost: number): void {
+    this.cost[this.extCol(p)] = cost;
+  }
+
+  setFlowCost(e: number, cost: number): void {
+    this.cost[this.flowCol(e)] = cost;
+  }
+}
+
+/** Pool rows: the machines of a shared machine spend at most (or exactly) its capacity in machine time. */
+function addPools(ctx: SolveContext, lp: ModelLp): void {
+  ctx.model.pools.forEach((pool, p) => {
+    if (ctx.droppedPools.has(p)) return;
+    const cols = pool.machines.map((m) => lp.extentCol(m));
+    const vals = pool.machines.map((m) => ctx.model.machines[m]!.durTicks / TICKS_PER_SECOND);
+    lp.addRow(cols, vals, pool.exact ? pool.capacity : -Infinity, pool.capacity);
+  });
+}
+
+/** Per connected port: drawn flows plus the boundary crossing equal what the machine makes or takes there. */
+function addConservation(ctx: SolveContext, lp: ModelLp): void {
+  ctx.model.connectedPorts.forEach((port, p) => {
+    const scale = 1 / Math.max(1, port.qtyPerCraft);
+    const cols: number[] = [];
+    const vals: number[] = [];
+    for (const e of port.edges) {
+      cols.push(lp.flowCol(e));
+      vals.push(scale);
+    }
+    cols.push(lp.extCol(p));
+    vals.push(scale);
+    cols.push(lp.extentCol(port.machine));
+    vals.push(-port.qtyPerCraft * scale);
+    lp.addRow(cols, vals, 0, 0);
+  });
+}
+
+/** Drawer rows; `relaxed` gives each bound a nonnegative slack, priced 1/max(1, bound) (the relaxation LP). */
+export function addDrawerRows(ctx: SolveContext, lp: ModelLp, relaxed: boolean): void {
+  const model = ctx.model;
+  lp.drawerUnder = new Array<number>(model.drawers.length).fill(-1);
+  lp.drawerOver = new Array<number>(model.drawers.length).fill(-1);
+  model.drawers.forEach((drawer, d) => {
+    const lower = ctx.drawerLower[d]!;
+    const upper = ctx.drawerUpper[d]!;
+    if (Number.isNaN(lower) && Number.isNaN(upper)) return;
+    const bound = Math.max(Number.isNaN(lower) ? 0 : lower, Number.isNaN(upper) ? 0 : upper);
+    const scale = 1 / Math.max(1, bound);
+    const cols: number[] = [];
+    const vals: number[] = [];
+    drawer.extentMachines.forEach((m, i) => {
+      cols.push(lp.extentCol(m));
+      vals.push(drawer.extentQty[i]! * scale);
+    });
+    for (const p of drawer.externalPorts) {
+      cols.push(lp.extCol(p));
+      vals.push(scale);
+    }
+    if (relaxed) {
+      const weight = 1 / Math.max(1, bound);
+      if (!Number.isNaN(lower)) {
+        lp.drawerUnder[d] = lp.addColumn(0, Infinity, weight);
+        cols.push(lp.drawerUnder[d]!);
+        vals.push(scale);
+      }
+      if (!Number.isNaN(upper)) {
+        lp.drawerOver[d] = lp.addColumn(0, Infinity, weight);
+        cols.push(lp.drawerOver[d]!);
+        vals.push(-scale);
+      }
+    }
+    lp.addRow(cols, vals, Number.isNaN(lower) ? -Infinity : lower * scale, Number.isNaN(upper) ? Infinity : upper * scale);
+  });
+}
+
+/** extents + pools + flows + externals + conservation + drawers, every cost zero. */
+export function baseModel(ctx: SolveContext): ModelLp {
+  const lp = new ModelLp(ctx);
+  addPools(ctx, lp);
+  addConservation(ctx, lp);
+  addDrawerRows(ctx, lp, false);
+  return lp;
+}
+
+/** The relaxation LP: the base model without drawers, then drawers with slacks. */
+export function relaxedModel(ctx: SolveContext): ModelLp {
+  const lp = new ModelLp(ctx);
+  addPools(ctx, lp);
+  addConservation(ctx, lp);
+  addDrawerRows(ctx, lp, true);
+  return lp;
+}
+
+export function closeGatesOutside(ctx: SolveContext, lp: ModelLp, open: ReadonlySet<number>): void {
+  for (let p = 0; p < lp.nPorts; p++) if (!open.has(ctx.model.portGate[p]!)) lp.closeExt(p);
+}
+
+// ---------------------------------------------------------------------------
+// Running a model
+// ---------------------------------------------------------------------------
+
+export type SolveResult =
+  | { ok: true; point: StageOutcome; x: number[] }
+  | { ok: false; rejection: Note };
+
+/** HiGHS settings tried in turn; the first conserving answer wins, "no solution" needs every one to say so. */
+const OPINIONS: Array<Record<string, number | string | boolean>> = [
+  {},
+  { presolve: "off" },
+  {
+    presolve: "off",
+    solver: "simplex",
+    simplex_strategy: 4,
+    primal_feasibility_tolerance: 1e-9,
+    dual_feasibility_tolerance: 1e-9,
+  },
+];
+
+let columnOrder: "forward" | "reverse" = "forward";
+let lpCount = 0;
+let lpHook: ((label: string) => void) | null = null;
+
+/** Tests only: models add their columns in reverse order, a different path to the same optima. */
+export function setColumnOrder(order: "forward" | "reverse"): void {
+  columnOrder = order;
+}
+
+/** Counted work (never a clock): how many LPs have run since the counter was last read and cleared. */
+export function takeLpCount(): number {
+  const n = lpCount;
+  lpCount = 0;
+  return n;
+}
+
+/** Tests: a callback before every LP (a stop signal that throws makes the next LP never run). */
+export function setLpHook(hook: ((label: string) => void) | null): void {
+  lpHook = hook;
+}
+
+const EMPTY_TOL = 1e-7;
+
+interface Lowered {
+  program: LinearProgram;
+  /** For each model column, its program column or -1 when fixed. */
+  colOf: number[];
+  fixed: number[];
+  infeasible: boolean;
+}
+
+export function lower(lp: ModelLp): Lowered {
+  const n = lp.lo.length;
+  const colOf = new Array<number>(n).fill(-1);
+  const fixed = new Array<number>(n).fill(0);
+  const free: number[] = [];
+  for (let c = 0; c < n; c++) {
+    if (lp.lo[c] === lp.hi[c]) fixed[c] = lp.lo[c]!;
+    else free.push(c);
+  }
+  if (columnOrder === "reverse") free.reverse();
+  free.forEach((c, k) => {
+    colOf[c] = k;
+    if (lp.lo[c] !== 0) throw new Error("plan LP: a non-fixed column must start at 0");
+  });
+  const program: LinearProgram = {
+    maximize: free.map((c) => -lp.cost[c]!),
+    equalities: [],
+    upperBounds: [],
+  };
+  let infeasible = false;
+  // finite upper bounds on free columns become rows
+  free.forEach((c, k) => {
+    const hi = lp.hi[c]!;
+    if (Number.isFinite(hi)) program.upperBounds.push({ coefficients: new Map([[k, 1]]), rhs: hi });
+  });
+  for (const row of lp.rows) {
+    const coefficients = new Map<number, number>();
+    let constant = 0;
+    for (let i = 0; i < row.cols.length; i++) {
+      const c = row.cols[i]!;
+      const v = row.vals[i]!;
+      if (v === 0) continue;
+      const k = colOf[c]!;
+      if (k < 0) constant += v * fixed[c]!;
+      else coefficients.set(k, (coefficients.get(k) ?? 0) + v);
+    }
+    const lo = row.lo - constant;
+    const hi = row.hi - constant;
+    if (coefficients.size === 0) {
+      const finite = [row.lo, row.hi, constant].filter(Number.isFinite).map(Math.abs);
+      const tol = EMPTY_TOL * Math.max(1, ...finite);
+      if (lo > tol || hi < -tol) infeasible = true;
+      continue;
+    }
+    if (row.lo === row.hi) {
+      program.equalities.push({ coefficients, rhs: lo });
+      continue;
+    }
+    if (Number.isFinite(hi)) program.upperBounds.push({ coefficients, rhs: hi });
+    if (Number.isFinite(lo)) {
+      program.upperBounds.push({
+        coefficients: new Map([...coefficients].map(([k, v]) => [k, -v] as [number, number])),
+        rhs: -lo,
+      });
+    }
+  }
+  return { program, colOf, fixed, infeasible };
+}
+
+/**
+ * Runs a model under each HiGHS setting until one returns a point that passes the independent check. `label` names
+ * the stage in the rejection.
+ */
+export function runModel(ctx: SolveContext, lp: ModelLp, label: string): SolveResult {
+  lpHook?.(label);
+  lpCount++;
+  const lowered = lower(lp);
+  if (lowered.infeasible) {
+    ctx.rejection = note("SOLVER_UNSATISFIABLE", "infeasible");
+    return { ok: false, rejection: ctx.rejection };
+  }
+  let last: Note = note("SOLVER_UNSATISFIABLE", "infeasible");
+  for (const opinion of OPINIONS) {
+    let solution;
+    try {
+      solution = solveLpAuto(lowered.program, { highsOptions: opinion, exactPrimal: true });
+    } catch (error) {
+      last = note("SOLVER_UNSATISFIABLE", error instanceof Error ? error.message : String(error));
+      continue;
+    }
+    if (solution.status !== "optimal") {
+      last = note("SOLVER_UNSATISFIABLE", solution.status);
+      continue;
+    }
+    // `+ 0` turns a negative zero into a zero
+    const x = lp.lo.map((_, c) => {
+      const k = lowered.colOf[c]!;
+      return (k < 0 ? lowered.fixed[c]! : (solution.x[k] ?? 0)) + 0;
+    });
+    const extents = x.slice(0, lp.nMachines);
+    const flows = x.slice(lp.nMachines, lp.nMachines + lp.nEdges);
+    const externals = x.slice(lp.nMachines + lp.nEdges, lp.nMachines + lp.nEdges + lp.nPorts);
+    const residual = ctx.validate(extents, flows, externals);
+    if (residual !== null) {
+      last = note("SOLVER_NOT_CONSERVING", residual);
+      continue;
+    }
+    return { ok: true, point: ctx.outcome(extents, flows, externals), x };
+  }
+  ctx.rejection = last;
+  return { ok: false, rejection: last };
+}

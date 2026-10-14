@@ -1,14 +1,20 @@
 /**
  * The ONE seam between the corpus harness and the solver. `golden.test.ts` calls `solveForTest(input)` and nothing
- * else. Until the solver exists this is `null` and the golden suite is skipped. When the solver lands, replace the
- * `null` with the real entry, for example:
+ * else. Signature: synchronous or async, one `SolveInput` in, one `Answer` out (spec 2.1).
  *
- *   export { solvePlan as solveForTest } from "../index";
- *
- * Signature: synchronous or async, one `SolveInput` in, one `Answer` out (spec 2.1).
+ * WP1a/b wired the core: one island, no alternatives, spares or drawer relaxation. WP1c replaces `solveCore` with the
+ * full entry (islands, alternatives, spares) and `COVERAGE` with "full".
  */
+import { solveCore } from "../solve-core";
 import type { Answer, SolveInput } from "./types-local";
 
 export type SolveForTest = (input: SolveInput) => Answer | Promise<Answer>;
 
-export const solveForTest: SolveForTest | null = null;
+/**
+ * What the wired solver covers, for `golden.test.ts`: which parts of a golden are compared.
+ * - "solution": the whole `solution` digest except `spares`.
+ * - "full": the whole digest (alternatives and spares too).
+ */
+export const COVERAGE: "solution" | "full" = "solution";
+
+export const solveForTest: SolveForTest | null = (input) => solveCore(input);

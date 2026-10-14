@@ -1,6 +1,6 @@
 /*
  * The overview rail and the notices bar. The mod's look in website units:
- * rows 24 (mod 13), setter lines 20, section bars 22, keys 18, the rail 234
+ * rows 22 (mod 13), setter lines 20, section bars 20 (mod 12), keys 18, the rail 234
  * wide. Colours are exact from the mod (`Hyb.java`, `OverviewRail.java`),
  * the same hex as `tokens.ts`. Unlayered, so these beat Tailwind's layers and
  * the global `button { font: inherit }`; every font size lives on a span or a
@@ -27,6 +27,8 @@
   font-family: var(--cc-font);
   font-size: 10px;
   line-height: 14px;
+  /* The game's text shadow, as the mod's overview draws its words: a quarter of the colour, a pixel down and right. */
+  text-shadow: 1px 1px 0 color-mix(in srgb, currentColor 25%, #000);
   user-select: none;
   overflow: hidden;
 }
@@ -140,7 +142,7 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 22px;
+  height: 20px;
   padding: 0 8px;
   background: #2a2d33;
   cursor: pointer;
@@ -205,13 +207,23 @@
   display: flex;
   align-items: center;
   gap: 6px;
-  padding: 0 8px;
+  /* The mod's icon 8 px in and name 13 after it, on its 13 px row: 22 here (26 on screen, as the mod at GUI 2). */
+  padding: 0 8px 0 13px;
 }
 .rail-icon {
   flex: none;
   width: 16px;
   height: 16px;
   position: relative;
+}
+/* An item or machine fills its 16 px square as the mod draws it (Hyb.icon at ICON, a fluid's swatch's size): the
+   picture's box is 2 px bigger each way, as ResourceIcon keeps that margin inside it. */
+.rail-icon-art {
+  position: absolute !important;
+  left: -2px;
+  top: -2px;
+  width: 20px !important;
+  height: 20px !important;
 }
 .rail-name {
   flex: 1;
@@ -357,7 +369,7 @@ input.rail-box-edit {
   display: flex;
   align-items: center;
   gap: 6px;
-  height: 24px;
+  height: 22px;
   margin: 0 -8px;
   padding: 0 8px;
   cursor: pointer;

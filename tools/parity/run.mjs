@@ -57,7 +57,9 @@ for (const st of states) {
     const shot = path.join(OUT, "web", st.id + ".png");
     if (st.clip === "rail") {
       const pr = await rectOf(page, ".rail-root");
-      await page.screenshot({ path: shot, clip: { x: pr.x, y: pr.y, width: ref.width / DSF, height: ref.height / DSF } });
+      // Fixed chrome is compared at the same size on screen: the mod shot is screen px (GUI scale 2), so the web
+      // capture is css px (= screen px at 100% browser zoom), not the board's card-matching scale.
+      await page.screenshot({ path: shot, scale: "css", clip: { x: pr.x, y: pr.y, width: ref.width, height: ref.height } });
     } else {
       await page.screenshot({ path: shot, clip: { x: r.x - offX, y: r.y - offY, width: ref.width / DSF, height: ref.height / DSF } });
     }

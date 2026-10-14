@@ -16,6 +16,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { machineArtPixels } from "../../MachinePicker";
+import { FoldGlyph } from "../fold/FoldKey";
 import { useMachineHandlerIcons } from "../../machine-icons";
 import { getFallbackFluidColor, ResourceIcon } from "@/components/nei/ResourceIcon";
 import { formatCompact } from "@/lib/model/resources";
@@ -154,7 +155,7 @@ function ResourceGlyph({ line }: { line: Pick<RailLine, "resource" | "energy"> }
         showAmount={false}
         bare
         tooltip={false}
-        className="!h-full !w-full"
+        className="rail-icon-art"
       />
     </span>
   );
@@ -189,19 +190,7 @@ function FoldedStrip() {
       }}
       {...tipProps("rail|open", () => ({ title: "Open the overview" }))}
     >
-      <svg
-        viewBox="0 0 16 16"
-        width="16"
-        height="16"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden
-      >
-        <path d="M6 3l5 5-5 5" />
-      </svg>
+      <FoldGlyph direction="right" />
       <span className="rail-strip-label">OVERVIEW</span>
     </div>
   );
@@ -343,7 +332,7 @@ function OpenRail() {
           onClick={() => writeRailView({ open: false })}
           tip={() => ({ title: "Fold the overview" })}
         >
-          «
+          <FoldGlyph direction="left" />
         </RailKey>
       </div>
       <input
@@ -933,8 +922,8 @@ function MachineGlyph({ entry }: { entry: RailMachine }) {
         showAmount={false}
         bare
         tooltip={false}
-        iconPixelSize={machineArtPixels(16)}
-        className="!h-full !w-full"
+        iconPixelSize={machineArtPixels(20)}
+        className="rail-icon-art"
       />
     </span>
   );

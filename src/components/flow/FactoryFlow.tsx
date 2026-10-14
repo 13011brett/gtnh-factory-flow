@@ -225,6 +225,8 @@ import {
 } from "./board-camera";
 import { type RecipeFlowNode } from "./RecipeNode";
 import { RecipeNodeSwitch } from "./clean/CleanRecipeNode";
+import { StorageNodeSwitch } from "./clean/drawer/CleanStorageNode";
+import { CleanDrawerFace } from "./clean/drawer/CleanDrawer";
 import { GT_NODE_COLORS, GT_NODE_COLOR_PALETTE, flowRampColor } from "./node-colors";
 import {
   CANVAS_PATTERNS,
@@ -361,7 +363,7 @@ import {
   snapshotEdgePulses,
   snapshotEdgeWaypointDots,
 } from "./edge-pulse";
-import { StorageNode, StorageTileFace, type StorageFlowNode } from "./StorageNode";
+import { StorageTileFace, type StorageFlowNode } from "./StorageNode";
 import { TrashNode, type TrashFlowNode } from "./TrashNode";
 import {
   POCKET_CARD_SOURCE_HANDLE,
@@ -407,7 +409,7 @@ const MOVE_END_SETTLE_MS = 120;
 
 const nodeTypes = {
   recipeNode: RecipeNodeSwitch,
-  storageNode: StorageNode,
+  storageNode: StorageNodeSwitch,
   trashNode: TrashNode,
   annotationNode: AnnotationNode,
   pocketNode: PocketNode,
@@ -9715,7 +9717,7 @@ function VoidDropGhost() {
                 opacity: 0.62,
               }}
             >
-              <StorageTileFace storage={ghostStorage} role={voidDropGhostRole} />
+              {useFactoryStore.getState().project.planMode === true && ghostStorage.kind !== "power" ? (<CleanDrawerFace storage={ghostStorage} role={voidDropGhostRole} />) : (<StorageTileFace storage={ghostStorage} role={voidDropGhostRole} />)}
             </div>
           </>
         ) : (

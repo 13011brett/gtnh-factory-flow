@@ -105,7 +105,7 @@ export function htgrOperation(pebble: { base: number; mult: number; exp: number 
 }
 
 /** The dataset's names for one HTGR fuel: "Uranium-235" is "(Uranium 235)". */
-function htgrFuelName(pebble: string, burned: boolean): string {
+export function htgrFuelName(pebble: string, burned: boolean): string {
   return `${burned ? "Burned Out TRISO Fuel" : "TRISO Fuel"} (${pebble.replace("-", " ")})`;
 }
 

@@ -1,14 +1,14 @@
 /*
  * The one fold arrow (the mod's OverviewRail): "«" or "»" in the pixel face at the rail's text size, in ink. Open, it
- * sits on a 20 px bevelled key (the mod's 14 px key at the rail's scale); folded, the strip shows the bare glyph at
+ * sits on a 24 px bevelled key (the mod's 14 px key at the rail's scale); folded, the strip shows the bare glyph at
  * its top. Every side panel uses it: the overview, its folded strip, the items column and its folded rail.
  */
 .fold-glyph {
   display: inline-block;
   font-family: var(--font-minecraft), monospace;
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 400;
-  line-height: 14px;
+  line-height: 17px;
   color: #e8e9ee;
   -webkit-font-smoothing: none;
 }
@@ -18,8 +18,8 @@
   align-items: center;
   justify-content: center;
   box-sizing: border-box;
-  width: 20px;
-  height: 20px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   background: #26282d;
   border: 1px solid #111317;

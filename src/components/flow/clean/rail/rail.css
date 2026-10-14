@@ -1,6 +1,7 @@
 /*
  * The overview rail and the notices bar. The mod's look in website units:
- * rows 22 (mod 13), setter lines 20, section bars 20 (mod 12), keys 18, the rail 234
+ * rows 22 (mod 13), setter lines 20, section bars 20 (mod 12), keys 18, type 13 (mod 8), the rail 336 (mod 198): the mod at
+ * GUI scale 2 on screen, 1.69 css px a GUI px at the 1.17 interface base;
  * wide. Colours are exact from the mod (`Hyb.java`, `OverviewRail.java`),
  * the same hex as `tokens.ts`. Unlayered, so these beat Tailwind's layers and
  * the global `button { font: inherit }`; every font size lives on a span or a
@@ -25,8 +26,8 @@
   border-right: 1px solid #0c0d10;
   color: var(--rail-ink);
   font-family: var(--cc-font);
-  font-size: 10px;
-  line-height: 14px;
+  font-size: 13px;
+  line-height: 17px;
   /* The game's text shadow, as the mod's overview draws its words: a quarter of the colour, a pixel down and right. */
   text-shadow: 1px 1px 0 color-mix(in srgb, currentColor 25%, #000);
   user-select: none;
@@ -37,33 +38,34 @@
   flex: none;
   display: flex;
   align-items: center;
-  height: 26px;
-  padding: 0 4px 0 8px;
+  /* The mod's 18 px heading, its fold key 4 in from the right. */
+  height: 30px;
+  padding: 0 7px 0 10px;
   background: #2a2d33;
 }
 .rail-head-title {
   flex: 1;
-  font-size: 10px;
-  letter-spacing: 0.06em;
+  font-size: 13px;
   color: var(--rail-muted);
 }
 
 .rail-filter {
   flex: none;
-  height: 22px;
-  margin: 3px 6px;
+  /* The game's text field: black, a light grey edge; the mod's 14 px at 2 under the heading, 4 above the list. */
+  height: 24px;
+  margin: 3px 7px 7px;
   padding: 0 6px;
-  background: #15171c;
-  border: 1px solid #111317;
+  background: #000;
+  border: 1px solid #a0a0a0;
   color: var(--rail-ink);
-  font-size: 10px;
+  font-size: 13px;
   outline: none;
 }
 .rail-filter::placeholder {
   color: #6a6c74;
 }
 .rail-filter:focus {
-  border-color: #5a5e68;
+  border-color: #e0e0e0;
 }
 
 .rail-list {
@@ -102,7 +104,7 @@
   align-items: center;
   justify-content: center;
   flex: none;
-  min-width: 44px;
+  min-width: 60px;
   height: 18px;
   padding: 0 4px;
   background: #202329;
@@ -113,8 +115,8 @@
   cursor: pointer;
 }
 .rail-key span {
-  font-size: 10px;
-  line-height: 14px;
+  font-size: 13px;
+  line-height: 17px;
   color: var(--rail-ink);
 }
 .rail-key:hover {
@@ -130,9 +132,9 @@
   background: #202329;
 }
 .rail-key-fold {
-  min-width: 20px;
-  width: 20px;
-  height: 20px;
+  min-width: 24px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   background: #26282d;
 }
@@ -154,18 +156,19 @@
   flex: none;
   width: 0;
   height: 0;
-  border-left: 3px solid transparent;
-  border-right: 3px solid transparent;
-  border-top: 4px solid var(--ink);
+  /* The mod's triangle, 6 by 3 (3 by 6 folded), at the rail's scale. */
+  border-left: 5px solid transparent;
+  border-right: 5px solid transparent;
+  border-top: 5px solid var(--ink);
 }
 .rail-sec[data-folded] .rail-sec-tri {
-  border-top: 3px solid transparent;
-  border-bottom: 3px solid transparent;
-  border-left: 4px solid var(--ink);
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 5px solid var(--ink);
   border-right: 0;
 }
 .rail-sec-title {
-  font-size: 10px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: 0.04em;
   color: var(--ink);
@@ -175,8 +178,8 @@
   height: 14px;
   background: #353942;
   color: #a3a3a3;
-  font-size: 10px;
-  line-height: 14px;
+  font-size: 13px;
+  line-height: 17px;
 }
 .rail-sec-end {
   margin-left: auto;
@@ -190,7 +193,7 @@
 .rail-empty {
   padding: 5px 8px;
   color: #6a6c74;
-  font-size: 10px;
+  font-size: 13px;
 }
 
 /* A resource line. */
@@ -232,7 +235,7 @@
   white-space: nowrap;
   text-overflow: ellipsis;
   color: var(--rail-ink);
-  font-size: 10px;
+  font-size: 13px;
 }
 .rail-line[data-hot] .rail-name,
 .rail-machine[data-hot] .rail-name {
@@ -241,7 +244,7 @@
 .rail-num {
   flex: none;
   text-align: right;
-  font-size: 10px;
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
 }
@@ -255,7 +258,7 @@
 }
 .rail-controls {
   flex: none;
-  width: 62px;
+  width: 88px;
   display: flex;
   gap: 2px;
   justify-content: flex-end;
@@ -280,7 +283,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 16px;
+  width: 20px;
   height: 18px;
   background: #34373e;
   border: 1px solid #111317;
@@ -291,8 +294,8 @@
   background: #454952;
 }
 .rail-rule span {
-  font-size: 12px;
-  line-height: 14px;
+  font-size: 15px;
+  line-height: 17px;
   font-weight: 600;
 }
 .rail-rule[data-tone="gold"] span {
@@ -306,7 +309,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
+  width: 64px;
   height: 18px;
   background: #0f1114;
   border: 1px solid #5a5e68;
@@ -315,8 +318,8 @@
   overflow: hidden;
 }
 .rail-box span {
-  font-size: 10px;
-  line-height: 14px;
+  font-size: 13px;
+  line-height: 17px;
   font-variant-numeric: tabular-nums;
   color: #6f737c;
   white-space: nowrap;
@@ -338,7 +341,7 @@
 input.rail-box-edit {
   padding: 0 3px;
   text-align: center;
-  font-size: 10px;
+  font-size: 13px;
   color: var(--rail-ink);
   background: #15171c;
   border-color: var(--rail-gold);
@@ -358,7 +361,7 @@ input.rail-box-edit {
 }
 .rail-spare-title {
   flex: 1;
-  font-size: 10px;
+  font-size: 13px;
   color: var(--sp-ink);
   cursor: default;
 }
@@ -389,7 +392,7 @@ input.rail-box-edit {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: 10px;
+  font-size: 13px;
   color: var(--rail-ink);
 }
 .rail-spare-row[data-off] .rail-spare-name {
@@ -401,7 +404,7 @@ input.rail-box-edit {
 }
 .rail-spare-amount {
   flex: none;
-  font-size: 10px;
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
   color: var(--sp-ink);
 }
@@ -412,7 +415,7 @@ input.rail-box-edit {
 .rail-spare-bar {
   flex: none;
   position: relative;
-  width: 62px;
+  width: 88px;
   height: 20px;
   background: #15171c;
   cursor: ew-resize;
@@ -446,7 +449,7 @@ input.rail-box-edit {
     inset -1px -1px 0 #17191d,
     2px 3px 6px rgba(0, 0, 0, 0.35);
   font-family: var(--cc-font);
-  font-size: 10px;
+  font-size: 13px;
   color: var(--rail-ink, #e8e9ee);
   user-select: none;
 }
@@ -491,7 +494,7 @@ input.rail-box-edit {
   background: rgba(232, 179, 74, 0.14);
 }
 .rail-menu-item span {
-  font-size: 10px;
+  font-size: 13px;
 }
 .rail-menu-item b {
   width: 14px;
@@ -524,8 +527,8 @@ input.rail-box-edit {
   height: 16px;
   padding: 0 4px;
   border: 1px solid;
-  font-size: 10px;
-  line-height: 14px;
+  font-size: 13px;
+  line-height: 17px;
   font-weight: 600;
 }
 .rail-tier[data-underline] {
@@ -537,7 +540,7 @@ input.rail-box-edit {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: 10px;
+  font-size: 13px;
   color: var(--rail-muted);
 }
 .rail-eu[data-make] {
@@ -548,7 +551,7 @@ input.rail-box-edit {
 }
 .rail-count {
   flex: none;
-  font-size: 10px;
+  font-size: 13px;
   font-variant-numeric: tabular-nums;
   color: var(--rail-ink);
   text-align: right;

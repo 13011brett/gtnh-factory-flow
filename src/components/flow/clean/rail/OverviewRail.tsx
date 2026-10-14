@@ -71,12 +71,12 @@ import { SpareBlock } from "./SpareBlock";
  * strip (kept per device). Hovering a row lights its resource on the board.
  */
 
-export const RAIL_WIDTH = 234;
+export const RAIL_WIDTH = 336;
 export const RAIL_FOLDED_WIDTH = 26;
-/** The rail's type: Monocraft at 10 px (the mod's 8 px at the rail's 234 against its 198, to whole pixels). */
-export const RAIL_FONT = 10;
-/** A rule key, a gap and a rate box: the controls' block at a line's right (the mod's 26% of the rail). */
-export const CONTROLS_W = 62;
+/** The rail's type: Monocraft at 13 px (the mod's 8 px at the rail's 336 against its 198: its size on screen). */
+export const RAIL_FONT = 13;
+/** A rule key, a gap and a rate box: the controls' block at a line's right (the mod's 12 + 2 + 38 of its 198). */
+export const CONTROLS_W = 88;
 /** A machine line's room between its left indent (30) and the right padding (8). */
 const MACHINE_INNER = RAIL_WIDTH - 30 - 8;
 

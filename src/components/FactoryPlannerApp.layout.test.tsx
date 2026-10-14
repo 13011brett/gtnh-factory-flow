@@ -78,7 +78,7 @@ describe("workspace layout", () => {
     expect(screen.queryByTestId("inspector")).toBeNull();
     const main = container.querySelector("main")!;
     expect(main.getAttribute("data-items-side")).toBe("right");
-    expect(main.style.gridTemplateColumns).toBe("234px minmax(0,1fr) 256px");
+    expect(main.style.gridTemplateColumns).toBe("336px minmax(0,1fr) 256px");
   });
 
   it("folds the overview to a strip that survives a reload", () => {
@@ -98,7 +98,7 @@ describe("workspace layout", () => {
     setProject({ planMode: true });
     act(() => writeWorkspaceView({ leftPanelOpen: false }));
     const { container } = renderColumns();
-    expect(container.querySelector("main")!.style.gridTemplateColumns).toBe("234px minmax(0,1fr) 26px");
+    expect(container.querySelector("main")!.style.gridTemplateColumns).toBe("336px minmax(0,1fr) 26px");
     const rail = screen.getByRole("button", { name: "Show Items" });
     expect(rail.className).toContain("border-l");
     fireEvent.click(rail);

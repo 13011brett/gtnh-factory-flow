@@ -43,7 +43,10 @@ function setup(ids: string[], drawn = true) {
   );
 }
 
+const idleMs = boardVirtualizer.config.idleMs;
+
 afterEach(() => {
+  (boardVirtualizer.config as { idleMs: number }).idleMs = idleMs;
   cleanup();
   boardVirtualizer.useBoard(undefined);
 });
@@ -115,6 +118,8 @@ describe("virtualised mount", () => {
 describe("far cards", () => {
   it("hide their wrapper once drawn and far, and show it again when the camera comes", () => {
     const ids = ["a", "b"];
+    // The background pass is kept out of this one: it would draw "b" as soon as the camera had rested.
+    (boardVirtualizer.config as { idleMs: number }).idleMs = 1e9;
     const { getByTestId } = setup(ids, false);
     act(() => {
       boardVirtualizer.setView({ x: 0, y: 0, w: 1920, h: 1080 }, false);

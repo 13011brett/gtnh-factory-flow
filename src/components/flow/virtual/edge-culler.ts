@@ -8,7 +8,7 @@
  * is mounted never changes where a wire goes.
  */
 
-import { grow, meets, type VRect } from "./card-virtualizer";
+import { grow, type VRect } from "./card-virtualizer";
 
 export interface CullableEdge {
   id: string;
@@ -41,16 +41,13 @@ export function routeBox(points: RoutePoints | undefined): VRect | undefined {
   return box ?? undefined;
 }
 
-function union(a: VRect, b: VRect): VRect {
-  const x0 = Math.min(a.x, b.x);
-  const y0 = Math.min(a.y, b.y);
-  return { x: x0, y: y0, w: Math.max(a.x + a.w, b.x + b.w) - x0, h: Math.max(a.y + a.h, b.y + b.h) - y0 };
-}
-
 /**
  * The edges to mount, in their original order. `boxOf` is a card's published box; an edge with an end that has no
  * measured box is left out (React Flow cannot draw it yet either). `routeOf` gives the route the router found, if
  * any; without one the wire's box is the two cards' union grown by `detour` px for the way round obstacles.
+ *
+ * Plain numbers throughout: this runs on every camera step over every wire of the plan (2,400 of them were 3 ms of
+ * allocation a step when each wire built three rectangles).
  */
 export function selectVisibleEdges<E extends CullableEdge>(
   edges: readonly E[],
@@ -68,6 +65,15 @@ export function selectVisibleEdges<E extends CullableEdge>(
 ): E[] {
   const reach = grow(view, options.margin);
   const keepReach = options.keepMargin !== undefined && options.kept ? grow(view, options.keepMargin) : undefined;
+  const kept = options.kept;
+  const rx0 = reach.x;
+  const ry0 = reach.y;
+  const rx1 = reach.x + reach.w;
+  const ry1 = reach.y + reach.h;
+  const kx0 = keepReach ? keepReach.x : 0;
+  const ky0 = keepReach ? keepReach.y : 0;
+  const kx1 = keepReach ? keepReach.x + keepReach.w : 0;
+  const ky1 = keepReach ? keepReach.y + keepReach.h : 0;
   const shown: E[] = [];
   for (const edge of edges) {
     if (edge.selected || options.alwaysIds?.has(edge.id)) {
@@ -77,12 +83,26 @@ export function selectVisibleEdges<E extends CullableEdge>(
     const a = options.boxOf(edge.source);
     const b = options.boxOf(edge.target);
     if (!a || !b || !(a.w > 0) || !(b.w > 0)) continue;
-    const route = routeBox(options.routeOf?.(edge.id));
-    const box = route ? union(route, union(a, b)) : union(a, b);
+    let x0 = a.x < b.x ? a.x : b.x;
+    let y0 = a.y < b.y ? a.y : b.y;
+    let x1 = a.x + a.w > b.x + b.w ? a.x + a.w : b.x + b.w;
+    let y1 = a.y + a.h > b.y + b.h ? a.y + a.h : b.y + b.h;
     // Stroke, arrow and hops reach a little past the route; an unrouted wire may detour round obstacles.
-    const pad = route ? 40 : options.detour;
-    const padded = { x: box.x - pad, y: box.y - pad, w: box.w + 2 * pad, h: box.h + 2 * pad };
-    if (meets(padded, keepReach && options.kept!.has(edge.id) ? keepReach : reach)) shown.push(edge);
+    let pad = options.detour;
+    const route = routeBox(options.routeOf?.(edge.id));
+    if (route) {
+      if (route.x < x0) x0 = route.x;
+      if (route.y < y0) y0 = route.y;
+      if (route.x + route.w > x1) x1 = route.x + route.w;
+      if (route.y + route.h > y1) y1 = route.y + route.h;
+      pad = 40;
+    }
+    x0 -= pad;
+    y0 -= pad;
+    x1 += pad;
+    y1 += pad;
+    const wide = keepReach !== undefined && kept!.has(edge.id);
+    if (wide ? x0 < kx1 && x1 > kx0 && y0 < ky1 && y1 > ky0 : x0 < rx1 && x1 > rx0 && y0 < ry1 && y1 > ry0) shown.push(edge);
   }
   return shown;
 }

@@ -85,11 +85,13 @@ export function useVirtualPhase(nodeId: string, selected: boolean): 0 | 1 | 2 {
   );
   useEffect(() => (enabled ? boardVirtualizer.register(nodeId) : undefined), [enabled, nodeId]);
   useEffect(() => {
+    // The first selected cards keep their contents wherever the camera goes (the pin puts them in the mounted set,
+    // which `phase` reads); the rest of a big selection follows the camera like any card.
     if (!selected || !enabled) return;
-    boardVirtualizer.pin(nodeId);
-    return () => boardVirtualizer.unpin(nodeId);
+    boardVirtualizer.pinSelected(nodeId);
+    return () => boardVirtualizer.unpinSelected(nodeId);
   }, [enabled, nodeId, selected]);
-  return !enabled || selected ? 2 : phase;
+  return enabled ? phase : 2;
 }
 
 /**

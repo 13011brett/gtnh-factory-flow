@@ -120,6 +120,19 @@ describe("CardVirtualizer", () => {
     expect(v.hasContents("n29_29")).toBe(false);
   });
 
+  it("pins the first selected cards and lets the rest of a big selection follow the camera", () => {
+    const v = board(30, 30, { maxSelectedPins: 5 });
+    v.setView({ x: 0, y: 0, w: 1920, h: 1080 }, false);
+    v.settle();
+    const far = Array.from({ length: 12 }, (_, i) => `n29_${i}`);
+    const pinned = far.map((id) => v.pinSelected(id));
+    expect(pinned.filter(Boolean)).toHaveLength(5);
+    for (const id of far.slice(0, 5)) expect(v.hasContents(id)).toBe(true);
+    for (const id of far.slice(5)) expect(v.hasContents(id)).toBe(false);
+    v.unpinSelected("n29_0");
+    expect(v.pinSelected("n29_5")).toBe(true);
+  });
+
   it("notifies a card when its phase changes and no other", () => {
     const v = board(30, 30);
     const seen: string[] = [];

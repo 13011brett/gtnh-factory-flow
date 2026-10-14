@@ -55,6 +55,8 @@ export interface VirtualizerConfig {
   backgroundBatch: number;
   /** The background pass waits this long after the camera last moved. */
   idleMs: number;
+  /** The most selected cards pinned in the DOM beyond the camera's own (a selection can be the whole plan). */
+  maxSelectedPins: number;
   /** A card is not released sooner than this after it mounted: React Flow measures it in the meantime. */
   minMountMs: number;
 }
@@ -69,6 +71,7 @@ export const VIRTUAL_DEFAULTS: VirtualizerConfig = {
   batch: 8,
   backgroundBatch: 6,
   idleMs: 100,
+  maxSelectedPins: 60,
   minMountMs: 120,
 };
 
@@ -267,6 +270,23 @@ export class CardVirtualizer {
     let count = 0;
     for (const id of this.members) if (this.geometry.has(id) && !this.drawn.has(id)) count += 1;
     return count;
+  }
+
+  /** Selected cards that keep their contents whatever the camera says: a select-all of a thousand does not. */
+  private selectedPins = new Set<string>();
+
+  /** Pins a selected card unless too many are pinned already; says whether it is. */
+  pinSelected(id: string): boolean {
+    if (!this.selectedPins.has(id)) {
+      if (this.selectedPins.size >= this.config.maxSelectedPins) return false;
+      this.selectedPins.add(id);
+      this.pin(id);
+    }
+    return true;
+  }
+
+  unpinSelected(id: string): void {
+    if (this.selectedPins.delete(id)) this.unpin(id);
   }
 
   pin(id: string): void {

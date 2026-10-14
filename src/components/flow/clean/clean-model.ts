@@ -304,6 +304,58 @@ export function layoutStrip(chips: Array<Omit<CleanChipView, "x" | "y" | "width"
   return { chips: placed, height: (row + 1) * G.stripPitch + G.cell };
 }
 
+/**
+ * What a card needs to be drawn as a shell (virtual/): which machine it is, its tier ladder and whether it can run
+ * (the red ring). The first steps of the card's derived state, so the card and its shell cannot disagree.
+ */
+export function deriveCardFace(recipe: Recipe, projectNode: FactoryNode) {
+  const selectedMachineHandler = getSelectedMachineHandler(recipe, projectNode);
+  const nodeRecipe = applyRecipeInputOverrides(recipe, projectNode);
+  const effectiveRecipe = applyMachineHandlerToRecipe(nodeRecipe, projectNode);
+  const machineDrawsEu = effectiveRecipe.eut > 0 && !isSteamMachineHandler(selectedMachineHandler);
+  const tierControl = machineDrawsEu ? getNodeTierControl(effectiveRecipe, projectNode) : undefined;
+  const powerReport =
+    machineDrawsEu && tierControl && hasPowerReport(nodeRecipe) ? getNodePowerReport(nodeRecipe, projectNode) : undefined;
+  return { selectedMachineHandler, nodeRecipe, effectiveRecipe, machineDrawsEu, tierControl, powerReport };
+}
+
+/** The picture a card shows in its glance face and its picture column: the structure render, else the machine's item. */
+export function cardPicture(
+  recipe: Recipe,
+  projectNode: FactoryNode,
+  face: Pick<ReturnType<typeof deriveCardFace>, "selectedMachineHandler" | "tierControl">,
+  machineIcons: ReturnType<typeof useMachineHandlerIconEntries>,
+  mapIcons: ReturnType<typeof useRecipeMapIcons>,
+) {
+  const pictureTier = (face.tierControl?.current ?? projectNode.overclockTier) as string;
+  const recipeMapIcon = mapIcons.get(recipe.source?.recipeMap ?? recipe.machineType) as MachineHandlerIcon | undefined;
+  const machineIcon = machineIconAtTier(machineIcons.get(face.selectedMachineHandler.id), pictureTier) ?? recipeMapIcon;
+  const art = getMachineStructureArt(face.selectedMachineHandler.id);
+  return { machineIcon, art };
+}
+
+/** The count a card prints, as the card's count box and its glance face do. */
+type PlanExtras = NonNullable<ReturnType<typeof useFactoryStore.getState>["lastResult"]>["plan"];
+const planSets = new WeakMap<object, { unanchored: Set<string>; unneeded: Set<string> }>();
+function planSetsOf(plan: NonNullable<PlanExtras>) {
+  let sets = planSets.get(plan);
+  if (!sets) {
+    sets = { unanchored: new Set(plan.unanchored), unneeded: new Set(plan.unneeded) };
+    planSets.set(plan, sets);
+  }
+  return sets;
+}
+
+export function cardCountState(result: RecipeNodeData["result"], projectNode: FactoryNode, plan: PlanExtras) {
+  const needed = result?.theoreticalMachinesRequired ?? 0;
+  const pin = projectNode.solvePin;
+  const pinned = pin !== undefined && pin > 0;
+  // Sets, kept per plan: a board of a thousand cards asks this of each of them on every solve.
+  const sets = plan !== undefined ? planSetsOf(plan) : undefined;
+  const unset = sets !== undefined && !pinned && (sets.unanchored.has(projectNode.id) || sets.unneeded.has(projectNode.id));
+  return { needed, pin, pinned, unset, value: pinned ? (pin as number) : needed };
+}
+
 /** Everything the clean card draws and does, from the same inputs as the classic card. */
 export function useCleanCardModel(
   data: RecipeNodeData,
@@ -323,13 +375,8 @@ export function useCleanCardModel(
 
   const derived = useMemo(() => {
     const machineHandlers = getRecipeMachineHandlers(recipe);
-    const selectedMachineHandler = getSelectedMachineHandler(recipe, projectNode);
-    const nodeRecipe = applyRecipeInputOverrides(recipe, projectNode);
-    const effectiveRecipe = applyMachineHandlerToRecipe(nodeRecipe, projectNode);
-    const machineDrawsEu = effectiveRecipe.eut > 0 && !isSteamMachineHandler(selectedMachineHandler);
-    const tierControl = machineDrawsEu ? getNodeTierControl(effectiveRecipe, projectNode) : undefined;
-    const powerReport =
-      machineDrawsEu && tierControl && hasPowerReport(nodeRecipe) ? getNodePowerReport(nodeRecipe, projectNode) : undefined;
+    const { selectedMachineHandler, nodeRecipe, effectiveRecipe, machineDrawsEu, tierControl, powerReport } =
+      deriveCardFace(recipe, projectNode);
     const steamReport = !machineDrawsEu ? getNodeSteamReport(nodeRecipe, projectNode) : undefined;
     const showHatchControl = Boolean(
       powerReport?.isMultiblock &&
@@ -370,11 +417,8 @@ export function useCleanCardModel(
   }
 
   const { selectedMachineHandler, machineHandlers, tierControl, powerReport, steamReport } = derived;
-  const pictureTier = (tierControl?.current ?? projectNode.overclockTier) as string;
-  const recipeMapIcon = mapIcons.get(recipe.source?.recipeMap ?? recipe.machineType) as MachineHandlerIcon | undefined;
-  const machineIcon = machineIconAtTier(machineIcons.get(selectedMachineHandler.id), pictureTier) ?? recipeMapIcon;
+  const { machineIcon, art } = cardPicture(recipe, projectNode, derived, machineIcons, mapIcons);
   const name = machineIcon?.displayName ?? selectedMachineHandler.label;
-  const art = getMachineStructureArt(selectedMachineHandler.id);
 
   const hasPicker = machineHandlers.length > 1;
   const tierLabel = powerReport?.isMultiblock ? powerReport.tier : tierControl?.current;
@@ -420,12 +464,7 @@ export function useCleanCardModel(
   }
 
   // Count: the solved number, gold when pinned, a prompt when nothing sets it.
-  const needed = result?.theoreticalMachinesRequired ?? 0;
-  const pin = projectNode.solvePin;
-  const pinned = pin !== undefined && pin > 0;
-  const unset =
-    plan !== undefined && !pinned && (plan.unanchored.includes(projectNode.id) || plan.unneeded.includes(projectNode.id));
-  const countValue = pinned ? pin : needed;
+  const { needed, pinned, unset, value: countValue } = cardCountState(result, projectNode, plan);
   const count = {
     text: `×${formatSolvedMachines(countValue)}`,
     pinned,

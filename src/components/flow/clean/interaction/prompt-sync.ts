@@ -4,6 +4,8 @@
  * starts, its start time is set to the document timeline's origin, so all
  * copies of it are in step (the mod draws them off one clock).
  */
+import { queuePhaseSync } from "../../virtual/prompt-phase";
+
 const PULSES = new Set(["cc-prompt", "cc-accept", "cc-glow"]);
 
 let installed = false;
@@ -20,8 +22,8 @@ export function installPromptSync(): void {
     "animationstart",
     (event) => {
       if (!PULSES.has(event.animationName)) return;
-      const target = event.target as Element | null;
-      for (const animation of target?.getAnimations?.({ subtree: true }) ?? []) syncAnimation(animation);
+      // One flush a frame for every pulse that started in it, not a style recalculation and a subtree walk each.
+      queuePhaseSync();
     },
     { capture: true, passive: true },
   );

@@ -538,7 +538,7 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
   useEffect(() => {
     if (!view.unset) return;
     // Queued: getAnimations flushes the page's style, once a frame for every card mounted in it.
-    syncPromptPhase(rootRef.current);
+    syncPromptPhase();
   }, [view.unset]);
   const deleteNode = useFactoryStore((state) => state.deleteNode);
   const duplicateNode = useFactoryStore((state) => state.duplicateNode);

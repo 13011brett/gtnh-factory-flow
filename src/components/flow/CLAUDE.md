@@ -168,3 +168,32 @@ The board must stay smooth with 100+ cards on weak PCs.
   scheduling, keep the output hot (inaudible keep-alive), overload protection stateless
   (tanh soft-clip, never a compressor); plan arrivals call `quietBoardSoundsFor`; judge
   "the plan changed" by `projectSoundFingerprint`, never object identity.
+
+## Virtual cards (virtual/)
+
+A plan of a thousand cards is a thousand React Flow wrappers but only the cards on or near the screen have
+contents. Read `virtual/card-virtualizer.ts` first (pure, tested); budgets and numbers are in
+`docs/design/backport/spec-performance.md` (10.4 and the WP7b section).
+
+- Three phases a plain recipe card (`useVirtualPhase`): 2 its contents are mounted (the camera's rectangle grown
+  by half a screen, the nearest 150, plus the selected, hovered, focused and everything while `data-cv-hold` is on
+  the board for the export), 1 a `CardShell` (two elements: the frame and the glance face) on or near the screen,
+  0 far and hidden (`data-vfar` on the wrapper, `display: none`; React Flow ignores a zero-sized measure and
+  keeps the card's size and handles). Drawers and special cards keep their contents and are only hidden when far.
+- The glance step shows shells only (the flip releases every card's contents at once). Nothing reads a card's
+  inner DOM to route: routes come from the published boxes, so what is mounted never changes where a wire goes.
+- A shell does not run the card's model (`useCardFace`: count, picture, red ring, a layout key). A card never
+  drawn is drawn once in the background pass (a few a frame, nearest first, only while the camera rests) so React
+  Flow gets its real size and handle boxes; it is marked drawn when React Flow holds its handles, and not
+  released before. A layout change while a card is away (`useCardLayoutKey`) draws it again.
+- A shown shell carries one empty marker per handle (`data-vstub`) at the last measured place: the measure a
+  hidden wrapper provokes when it is shown again reads them back instead of wiping the handles.
+- Wires: `board-edges.ts` hands React Flow only the wires whose box (the two cards, or the routed path once there
+  is one) meets the camera grown by a third. The controller writes React Flow's store as the camera moves; the
+  `edges` prop only changes with the plan, and the memo in FactoryFlow applies the current choice.
+- `--board-zoom` is written on the board only at the glance step and on each sticky note directly (`zoom-var.ts`):
+  an inherited property written per step restyles every element under it.
+- Pulses ("(set count)", the acceptance glow) are pinned to the shared phase by one `document.getAnimations()` a
+  frame (`prompt-phase.ts`), never a subtree walk per card.
+- `localStorage["gtnh-factory-flow.no-virtual"] = "1"` turns all of it off. `window.__gtnhVirtual` reads
+  the counts (mounted, wires shown, pump cost, handle report) for the perf harness.

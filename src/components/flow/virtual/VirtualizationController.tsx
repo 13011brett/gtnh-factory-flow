@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useEffect, type RefObject } from "react";
+import { flushSync } from "react-dom";
 import { useStoreApi } from "@xyflow/react";
 import {
   getPublishedNodeDetailLevel,
@@ -10,6 +11,7 @@ import {
 import { CONTAINMENT_HOLD_ATTRIBUTE } from "../node-containment";
 import { boardVirtualizer, virtualizationEnabled } from "./card-virtualizer";
 import { boardEdges } from "./board-edges";
+import { FAR_ATTRIBUTE } from "./VirtualCard";
 
 /**
  * Feeds the camera to the virtualizer and runs its steps (card-virtualizer.ts), culls the wires
@@ -37,16 +39,94 @@ export const VirtualizationController = memo(function VirtualizationController({
     }
     let frame = 0;
 
+    // What the pump cost, for the perf harness (window.__gtnhVirtual.stats()).
+    const stats = { pumps: 0, stepMs: 0, stepMax: 0, edgeMs: 0, edgeMax: 0, edgeSets: 0, edgesAdded: 0 };
     const applyEdges = () => {
+      const started = performance.now();
       const next = boardEdges.refresh();
       if (next) {
+        const before = flowStore.getState().edges.length;
         flowStore.getState().setEdges(next);
+        stats.edgeSets += 1;
+        stats.edgesAdded += Math.max(0, next.length - before);
       }
+      const took = performance.now() - started;
+      stats.edgeMs += took;
+      stats.edgeMax = Math.max(stats.edgeMax, took);
     };
+
+    // Drawers and special cards keep their contents mounted, so hiding their wrappers when far needs no stand-in:
+    // React Flow ignores the zero size, and a measure when they are shown again reads the same contents.
+    const farOthers = new Set<string>();
+    let previousVisible: ReadonlySet<string> = new Set();
+    const wrapperOf = (id: string) =>
+      board.querySelector<HTMLElement>(`.react-flow__node[data-id="${CSS.escape(id)}"]`);
+    const isCardWrapper = (element: HTMLElement) =>
+      element.classList.contains("react-flow__node-storageNode") || element.classList.contains("react-flow__node-recipeNode");
+    const hideOther = (id: string) => {
+      const element = wrapperOf(id);
+      if (!element || !isCardWrapper(element)) return;
+      element.setAttribute(FAR_ATTRIBUTE, "");
+      farOthers.add(id);
+    };
+    const showOther = (id: string) => {
+      if (!farOthers.delete(id)) return;
+      wrapperOf(id)?.removeAttribute(FAR_ATTRIBUTE);
+    };
+    const showAllOthers = () => {
+      for (const id of [...farOthers]) showOther(id);
+      previousVisible = new Set();
+    };
+    const applyOthers = () => {
+      if (boardVirtualizer.holding()) {
+        showAllOthers();
+        return;
+      }
+      if (!boardVirtualizer.hasView()) {
+        // A different plan is on the board (or none yet): nothing of the last one stays hidden.
+        for (const id of [...farOthers]) showOther(id);
+        previousVisible = new Set();
+        return;
+      }
+      const visible = boardVirtualizer.visibleIds();
+      if (visible === previousVisible) return;
+      const first = previousVisible.size === 0 && farOthers.size === 0;
+      if (first) {
+        for (const id of boardVirtualizer.geometryIds()) {
+          if (!visible.has(id) && !boardVirtualizer.isMember(id)) hideOther(id);
+        }
+      } else {
+        for (const id of visible) if (!previousVisible.has(id)) showOther(id);
+        for (const id of previousVisible) {
+          if (!visible.has(id) && !boardVirtualizer.isMember(id) && boardVirtualizer.boxOf(id)) hideOther(id);
+        }
+      }
+      previousVisible = visible;
+    };
+    // A wrapper that appears while its card is far (an undo far away) is hidden at once.
+    const nodesLayer = board.querySelector(".react-flow__nodes");
+    const wrapperObserver = nodesLayer
+      ? new MutationObserver((records) => {
+          for (const record of records) {
+            record.addedNodes.forEach((added) => {
+              if (!(added instanceof HTMLElement)) return;
+              const id = added.getAttribute("data-id");
+              if (id && farOthers.has(id) && isCardWrapper(added)) added.setAttribute(FAR_ATTRIBUTE, "");
+            });
+          }
+        })
+      : undefined;
+    wrapperObserver?.observe(nodesLayer!, { childList: true });
 
     const pump = () => {
       frame = 0;
-      const again = boardVirtualizer.step(performance.now());
+      const started = performance.now();
+      const again = boardVirtualizer.step(started);
+      applyOthers();
+      const took = performance.now() - started;
+      stats.pumps += 1;
+      stats.stepMs += took;
+      stats.stepMax = Math.max(stats.stepMax, took);
       applyEdges();
       if (again) {
         schedule();
@@ -59,16 +139,28 @@ export const VirtualizationController = memo(function VirtualizationController({
     };
     boardVirtualizer.wake = schedule;
 
+    let wasGlance = false;
     const feedView = () => {
       const { transform, width, height } = flowStore.getState();
       const zoom = transform[2];
       if (!(zoom > 0) || !(width > 0) || !(height > 0)) {
         return;
       }
-      boardVirtualizer.setView(
-        { x: -transform[0] / zoom, y: -transform[1] / zoom, w: width / zoom, h: height / zoom },
-        getPublishedNodeDetailLevel() === NODE_DETAIL_GLANCE,
-      );
+      const glance = getPublishedNodeDetailLevel() === NODE_DETAIL_GLANCE;
+      boardVirtualizer.setView({ x: -transform[0] / zoom, y: -transform[1] / zoom, w: width / zoom, h: height / zoom }, glance);
+      if (glance && !wasGlance && boardVirtualizer.mountedCount() > 0) {
+        // The board is about to take the glance look (NodeDetailController sets the attribute right after this
+        // call). Every card's contents go FIRST, in this very call: the attribute restyles whatever is under the
+        // board, and a hundred mounted cards are five thousand elements, 250 ms of style for contents that are
+        // about to be removed.
+        boardVirtualizer.step(performance.now());
+        try {
+          flushSync(() => undefined);
+        } catch {
+          // Called from inside a React commit: the next frame's pump removes them instead.
+        }
+      }
+      wasGlance = glance;
     };
     feedView();
     const unsubscribeStore = flowStore.subscribe((state, previous) => {
@@ -85,6 +177,7 @@ export const VirtualizationController = memo(function VirtualizationController({
       const held = board.hasAttribute(CONTAINMENT_HOLD_ATTRIBUTE);
       if (held && !release) {
         release = boardVirtualizer.hold();
+        showAllOthers();
         const all = boardEdges.compute();
         boardEdges.shown = all;
         flowStore.getState().setEdges(all);
@@ -134,6 +227,18 @@ export const VirtualizationController = memo(function VirtualizationController({
       edgesShown: () => boardEdges.shown.length,
       edgesAll: () => boardEdges.all.length,
       view: () => boardVirtualizer.viewRect(),
+      handleReport: () => {
+        const lookup = flowStore.getState().nodeLookup;
+        const empty: string[] = [];
+        let withBounds = 0;
+        for (const [id, node] of lookup) {
+          const bounds = node.internals.handleBounds;
+          if (bounds && (bounds.source?.length || bounds.target?.length)) withBounds += 1;
+          else empty.push(id);
+        }
+        return { withBounds, empty: empty.length, sample: empty.slice(0, 8), drawn: empty.filter((id) => boardVirtualizer.isDrawn(id)).length };
+      },
+      stats: () => ({ ...stats, undrawn: boardVirtualizer.undrawnCount() }),
     };
 
     return () => {
@@ -142,6 +247,8 @@ export const VirtualizationController = memo(function VirtualizationController({
       unsubscribeStore();
       unsubscribeLevel();
       holdObserver.disconnect();
+      wrapperObserver?.disconnect();
+      for (const id of [...farOthers]) showOther(id);
       release?.();
       setHovered(undefined);
       setFocused(undefined);

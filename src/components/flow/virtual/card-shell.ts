@@ -1,41 +1,33 @@
 /**
- * What a card's shell needs from the card model, as pure functions (tested without React).
+ * The first paint of a shell, as pure functions (tested without React).
  *
- * The shell is the stand-in for a card whose contents are not mounted: a box of the card's size that wears the
+ * A shell is the stand-in for a card whose contents are not mounted: a box of the card's size that wears the
  * card's frame and the glance face. Its size is what React Flow measured while the card was drawn, so the box
- * never changes size when the contents come and go; a card nobody has drawn yet (a plan just opened) is
- * mounted instead (card-virtualizer.ts), so the estimate below is only the very first paint of a card whose
- * measure is still on its way.
+ * never changes size when the contents come and go. A card nobody has drawn yet (a plan just opened) is measured
+ * at the estimate below and drawn once in the background pass (card-virtualizer.ts), which gives React Flow the
+ * real box and handles.
  */
 
 import { CC_GEOMETRY } from "../clean/tokens";
-import type { CleanCardView } from "../clean/clean-model";
 
-/** A port row is two cells; a row with a forced line under it is two more. */
+/** A port row is two cells. */
 const ROW = CC_GEOMETRY.rowHeight;
 
-function railHeight(ports: CleanCardView["inputs"], extraRows: number): number {
-  let height = extraRows * ROW;
-  for (const port of ports) height += port.forced ? 2 * ROW : ROW;
-  return height;
-}
-
-/** The card's height from its view: head, the tallest of the two rails and the picture, the strip. */
-export function estimateCardHeight(view: CleanCardView): number {
-  const rails = Math.max(
-    railHeight(view.inputs, view.power ? 1 : 0),
-    railHeight(view.outputs, 0),
-    CC_GEOMETRY.pictureMinHeight,
-  );
-  return CC_GEOMETRY.headHeight + rails + (view.chips.length > 0 ? view.stripHeight : 0);
-}
+type Slot = { kind: string; id: string };
 
 /**
- * Everything about a card that moves its box or its handles, as one string. When it changes while the card is
- * not mounted, the card is mounted once so React Flow measures the new box and handles (use-rendered-handles.ts
- * does the same for a mounted card).
+ * A card's height from its recipe alone: a row for each distinct input and output (a free input is a row too),
+ * a power row on the input rail, the picture's minimum, no strip.
  */
-export function cardLayoutSignature(view: CleanCardView): string {
-  const rail = (ports: CleanCardView["inputs"]) => ports.map((p) => `${p.handleId}${p.forced ? "+" : ""}`).join(",");
-  return `${rail(view.inputs)}|${rail(view.outputs)}|${view.power ? 1 : 0}|${view.chips.length > 0 ? view.stripHeight : 0}`;
+export function estimateRecipeCardHeight(
+  recipe: { inputs: ReadonlyArray<Slot>; outputs: ReadonlyArray<Slot> },
+  hasPowerRow: boolean,
+): number {
+  const distinct = (list: ReadonlyArray<Slot>) => new Set(list.map((entry) => `${entry.kind}:${entry.id}`)).size;
+  const rails = Math.max(
+    (distinct(recipe.inputs) + (hasPowerRow ? 1 : 0)) * ROW,
+    distinct(recipe.outputs) * ROW,
+    CC_GEOMETRY.pictureMinHeight,
+  );
+  return CC_GEOMETRY.headHeight + rails;
 }

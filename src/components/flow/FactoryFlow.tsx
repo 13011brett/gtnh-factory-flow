@@ -7518,8 +7518,8 @@ const AutoSolveKeys = memo(function AutoSolveKeys() {
   );
 });
 
-/** A zoom change this large (a ratio, in nats: about 12%) writes --board-zoom at once. */
-const BOARD_ZOOM_STEP = 0.12;
+/** A zoom change this large (a ratio, in nats: about 22%) writes --board-zoom at once (only at the glance step). */
+const BOARD_ZOOM_STEP = 0.2;
 /** Smaller changes write the exact zoom once it has rested this long. */
 const BOARD_ZOOM_SETTLE_MS = 140;
 

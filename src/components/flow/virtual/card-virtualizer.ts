@@ -19,6 +19,11 @@
  *   its real size and handles come from that one draw. A plan of a thousand cards opens as shells and fills in over
  *   a second or two, nearest the camera first, a few cards a frame, with no frame over a few milliseconds.
  * - Zoomed out to the glance step nothing is in (the shell paints the glance face) except the background pass.
+ * - A card that has been drawn and is far from the screen (past `farMargin`) is FAR: its shell is hidden with
+ *   `display: none`, so the browser has nothing of it to style, hit-test or layerize (a thousand positioned
+ *   wrappers cost 20 ms a frame to the compositor even when nothing in them paints). React Flow ignores the
+ *   zero-sized measure of a hidden card and keeps the card's size and handles. Three phases, then: 0 far,
+ *   1 a shell on or near the screen, 2 the card.
  *
  * It never reads the DOM and never schedules: `step(now)` does one round of work and says whether another is
  * wanted. The controller (VirtualizationController.tsx) calls it from requestAnimationFrame.
@@ -38,12 +43,18 @@ export interface VirtualizerConfig {
   margin: number;
   /** How far past it a mounted card is kept; larger than `margin`. */
   keepMargin: number;
+  /** How far past the screen a drawn card's shell is still shown (not hidden as far). */
+  farMargin: number;
   /** How long a card must stay out of the keep rectangle before it goes. */
   releaseMs: number;
   /** The same at the glance step. */
   glanceReleaseMs: number;
-  /** The most cards one step mounts. */
+  /** The most cards one step mounts for the camera. */
   batch: number;
+  /** The most cards one step mounts for the background pass (a card costs about 8 ms to draw the first time). */
+  backgroundBatch: number;
+  /** The background pass waits this long after the camera last moved. */
+  idleMs: number;
   /** A card is not released sooner than this after it mounted: React Flow measures it in the meantime. */
   minMountMs: number;
 }
@@ -52,9 +63,12 @@ export const VIRTUAL_DEFAULTS: VirtualizerConfig = {
   cap: 150,
   margin: 0.5,
   keepMargin: 0.9,
+  farMargin: 1.1,
   releaseMs: 300,
   glanceReleaseMs: 0,
-  batch: 24,
+  batch: 8,
+  backgroundBatch: 6,
+  idleMs: 100,
   minMountMs: 120,
 };
 
@@ -82,11 +96,18 @@ export class CardVirtualizer {
   private cells = new Map<number, string[]>();
   /** Cards whose contents have been drawn since their layout last changed (their size and handles are real). */
   private drawn = new Set<string>();
+  /** The layout key each card had when its contents were last drawn (virtual/use-card-face.ts). */
+  private keys = new Map<string, string>();
+  /** The cards that mount their contents by this (drawers, notes and special cards do not). */
+  private members = new Set<string>();
   private view: VRect | undefined;
   private boardKey: string | undefined;
   private glance = false;
   private mountedSet = new Set<string>();
   private mountedAt = new Map<string, number>();
+  /** The cards whose box meets the camera grown by `farMargin`. */
+  private visibleSet = new Set<string>();
+  private visibleKnown = false;
   private pins = new Map<string, number>();
   private holds = 0;
   private outSince = new Map<string, number>();
@@ -129,6 +150,7 @@ export class CardVirtualizer {
       }
     }
     for (const id of [...this.drawn]) if (!this.geometry.has(id)) this.drawn.delete(id);
+    for (const id of [...this.keys.keys()]) if (!this.geometry.has(id)) this.keys.delete(id);
     this.dirty = true;
     this.wake?.();
   }
@@ -138,6 +160,8 @@ export class CardVirtualizer {
   }
 
   /** The camera: the rectangle of flow space the screen shows, and whether the board is at the glance step. */
+  private movedAt = Number.NEGATIVE_INFINITY;
+
   setView(view: VRect, glance: boolean): void {
     const same =
       this.view &&
@@ -149,6 +173,7 @@ export class CardVirtualizer {
     if (same) return;
     this.view = view;
     this.glance = glance;
+    this.movedAt = performance.now();
     this.dirty = true;
     this.wake?.();
   }
@@ -163,12 +188,16 @@ export class CardVirtualizer {
 
   /** The card's contents were drawn: its size and handles are measured for real. */
   markDrawn(id: string): void {
+    const before = this.phase(id);
     this.drawn.add(id);
+    if (this.phase(id) !== before) this.notify(id);
   }
 
   /** The card's layout changed while it was away: it is drawn once more in the background pass. */
   markUndrawn(id: string): void {
+    const before = this.phase(id);
     if (this.drawn.delete(id)) {
+      if (this.phase(id) !== before) this.notify(id);
       this.dirty = true;
       this.wake?.();
     }
@@ -181,6 +210,9 @@ export class CardVirtualizer {
     this.geometry.clear();
     this.cells.clear();
     this.drawn.clear();
+    this.visibleSet = new Set();
+    this.visibleKnown = false;
+    this.keys.clear();
     this.mountedSet.clear();
     this.mountedAt.clear();
     this.outSince.clear();
@@ -188,13 +220,52 @@ export class CardVirtualizer {
     // No notify: this runs while the board renders, and the cards of the old plan are on their way out.
   }
 
+  /** The layout key of the card's last draw. */
+  drawnKeyOf(id: string): string | undefined {
+    return this.keys.get(id);
+  }
+
+  setDrawnKey(id: string, key: string | undefined): void {
+    if (key === undefined) this.keys.delete(id);
+    else this.keys.set(id, key);
+  }
+
+  /** The ids whose box meets the camera grown by `farMargin` (empty before the first camera). */
+  visibleIds(): ReadonlySet<string> {
+    return this.visibleSet;
+  }
+
+  /** Whether the camera is known and every card's visibility has been worked out. */
+  hasView(): boolean {
+    return this.visibleKnown;
+  }
+
+  /** Every card with a published box. */
+  geometryIds(): IterableIterator<string> {
+    return this.geometry.keys();
+  }
+
+  isMember(id: string): boolean {
+    return this.members.has(id);
+  }
+
   isDrawn(id: string): boolean {
     return this.drawn.has(id);
   }
 
+  /** A card that is virtualised says so, so the background pass knows which cards to draw. */
+  register(id: string): () => void {
+    this.members.add(id);
+    this.dirty = true;
+    this.wake?.();
+    return () => {
+      this.members.delete(id);
+    };
+  }
+
   undrawnCount(): number {
     let count = 0;
-    for (const id of this.geometry.keys()) if (!this.drawn.has(id)) count += 1;
+    for (const id of this.members) if (this.geometry.has(id) && !this.drawn.has(id)) count += 1;
     return count;
   }
 
@@ -204,7 +275,7 @@ export class CardVirtualizer {
     // Pinned means mounted by the ordinary set too, so that when the pin ends the camera's rules decide
     // whether it stays, and nothing changes under a card that is being used.
     if (!this.mountedSet.has(id)) {
-      const was = this.isMounted(id);
+      const was = this.hasContents(id);
       this.mountedSet.add(id);
       this.mountedAt.set(id, 0);
       if (!was) this.notify(id);
@@ -245,8 +316,16 @@ export class CardVirtualizer {
     return this.holds > 0;
   }
 
-  isMounted(id: string): boolean {
+  hasContents(id: string): boolean {
     return this.holds > 0 || this.mountedSet.has(id);
+  }
+
+  /** 2 the card is in the DOM, 1 its shell is shown, 0 it is far from the screen and hidden. */
+  phase(id: string): 0 | 1 | 2 {
+    if (this.hasContents(id)) return 2;
+    // Not hidden before it has been drawn (its size and handles are not known yet) or before there is a camera.
+    if (!this.view || !this.drawn.has(id) || this.visibleSet.has(id)) return 1;
+    return 0;
   }
 
   mountedCount(): number {
@@ -317,14 +396,39 @@ export class CardVirtualizer {
     return found.map((entry) => entry[1]);
   }
 
+  /** The ids whose box meets the camera grown by `farMargin` (the glance step shows its faces the same way). */
+  private visibleNow(): Set<string> {
+    const out = new Set<string>();
+    const view = this.view;
+    if (!view) return out;
+    const reach = grow(view, this.config.farMargin);
+    const x0 = Math.floor(reach.x / VIRTUAL_CELL);
+    const x1 = Math.floor((reach.x + reach.w) / VIRTUAL_CELL);
+    const y0 = Math.floor(reach.y / VIRTUAL_CELL);
+    const y1 = Math.floor((reach.y + reach.h) / VIRTUAL_CELL);
+    if ((x1 - x0 + 1) * (y1 - y0 + 1) > this.geometry.size) {
+      for (const [id, rect] of this.geometry) if (meets(rect, reach)) out.add(id);
+    } else {
+      for (let ix = x0; ix <= x1; ix += 1) {
+        for (let iy = y0; iy <= y1; iy += 1) {
+          const bucket = this.cells.get(cellKey(ix, iy));
+          if (!bucket) continue;
+          for (const id of bucket) if (!out.has(id) && meets(this.geometry.get(id)!, reach)) out.add(id);
+        }
+      }
+    }
+    return out;
+  }
+
   /** Cards never drawn, nearest the middle of the screen first (the whole board when there is no camera yet). */
   private undrawn(): string[] {
     const view = this.view;
     const cx = view ? view.x + view.w / 2 : 0;
     const cy = view ? view.y + view.h / 2 : 0;
     const found: Array<[number, string]> = [];
-    for (const [id, rect] of this.geometry) {
-      if (this.drawn.has(id) || this.mountedSet.has(id)) continue;
+    for (const id of this.members) {
+      const rect = this.geometry.get(id);
+      if (!rect || this.drawn.has(id) || this.mountedSet.has(id)) continue;
       found.push([Math.hypot(rect.x + rect.w / 2 - cx, rect.y + rect.h / 2 - cy), id]);
     }
     found.sort((a, b) => a[0] - b[0] || (a[1] < b[1] ? -1 : 1));
@@ -340,6 +444,23 @@ export class CardVirtualizer {
     const wanted = this.wanted();
     const wantedSet = new Set(wanted);
     let again = false;
+
+    // Which shells are shown: the others are hidden. Only a change of phase of an unmounted card is news.
+    let visible = this.visibleNow();
+    const previous = this.visibleSet;
+    const hadView = this.visibleKnown;
+    // The same object while nothing changed, so a reader can compare by identity.
+    if (hadView && visible.size === previous.size && [...visible].every((id) => previous.has(id))) visible = previous;
+    this.visibleSet = visible;
+    this.visibleKnown = true;
+    const shellOnly = (id: string) => !this.mountedSet.has(id) && this.drawn.has(id);
+    if (hadView) {
+      for (const id of visible) if (!previous.has(id) && shellOnly(id)) this.notify(id);
+      for (const id of previous) if (!visible.has(id) && shellOnly(id)) this.notify(id);
+    } else {
+      // The first camera: every shell was shown, now the far ones are hidden.
+      for (const id of this.geometry.keys()) if (!visible.has(id) && shellOnly(id)) this.notify(id);
+    }
 
     // Release first, so a card that left frees its place before one that arrived takes it.
     const keep = this.glance ? undefined : grow(this.view, this.config.keepMargin);
@@ -390,13 +511,17 @@ export class CardVirtualizer {
       mount(id);
     }
     if (mountedNow < queue.length) again = true;
-    if (mountedNow < this.config.batch) {
-      const rest = this.undrawn();
-      for (const id of rest) {
-        if (mountedNow >= this.config.batch) break;
-        mount(id);
+    // The background pass keeps out of the way of a moving camera.
+    if (this.undrawnCount() > 0) {
+      again = true;
+      if (now - this.movedAt >= this.config.idleMs) {
+        let background = 0;
+        for (const id of this.undrawn()) {
+          if (background >= this.config.backgroundBatch) break;
+          mount(id);
+          background += 1;
+        }
       }
-      if (mountedNow < rest.length) again = true;
     }
 
     this.dirty = again;
@@ -433,3 +558,4 @@ export function virtualizationEnabled(): boolean {
     return true;
   }
 }
+

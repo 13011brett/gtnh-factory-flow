@@ -1,28 +1,30 @@
 /**
- * Every "(set count)" prompt on the board blinks in one phase, however late its card mounted: a new card's
- * animations are pinned to the document timeline's start.
+ * Every pulsing prompt on the board ("(set count)", "Set rate", the acceptance glow) shares one phase, however
+ * late it mounted: a new animation's start time is set to the document timeline's origin.
  *
- * `getAnimations` flushes style for the whole page, so doing it in each card's mount effect cost a full style
- * recalculation per card (7 ms each at 1,000 cards, 160 ms a batch of 24). The cards queue their roots here and
- * one flush a frame pins them all after a single recalculation.
+ * Doing it per card (in the mount effect, and again from an `animationstart` listener for each animation) forced
+ * a style recalculation and a walk of the card's subtree for every card mounted: 600 ms of a 1,000-card load.
+ * Cards and the listener queue here instead and one flush a frame pins every pulse with a single
+ * `document.getAnimations()`.
  */
-const pending = new Set<Element>();
+const PULSES = new Set(["cc-prompt", "cc-accept", "cc-glow"]);
+
 let frame = 0;
 
 function flush() {
   frame = 0;
-  for (const root of pending) {
-    if (!root.isConnected) continue;
-    for (const animation of root.getAnimations?.({ subtree: true }) ?? []) {
-      if ((animation as CSSAnimation).animationName === "cc-prompt") animation.startTime = 0;
-    }
+  for (const animation of document.getAnimations()) {
+    const name = (animation as CSSAnimation).animationName;
+    if (name && PULSES.has(name) && animation.startTime !== 0) animation.startTime = 0;
   }
-  pending.clear();
 }
 
-/** Pins the prompt animations under `root` to the shared phase, in the next frame. */
-export function syncPromptPhase(root: Element | null): void {
-  if (!root) return;
-  pending.add(root);
-  if (!frame) frame = requestAnimationFrame(flush);
+/** Pins the pulses on the page to the shared phase, in the next frame. */
+export function queuePhaseSync(): void {
+  if (!frame && typeof document !== "undefined") frame = requestAnimationFrame(flush);
+}
+
+/** The card's own call: its root is not needed, every pulse is pinned together. */
+export function syncPromptPhase(): void {
+  queuePhaseSync();
 }

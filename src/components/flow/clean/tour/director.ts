@@ -7,6 +7,7 @@ import type { Mods } from "./input";
 import { resetBorrowedSettings, restoreProject } from "./sandbox";
 import { bringIntoView, centreOf, ensureHittable, scrollToShow, settled, type Target } from "./targets";
 import { getTour, resetTour, setTour } from "./tour-store";
+import { setSfxHurried } from "@/lib/sound/sfx";
 
 /**
  * Plays the script a step at a time. A step acts something out (the cursor glides, clicks, drags, types, presses
@@ -388,6 +389,8 @@ export class Director {
     this.steps = steps;
     this.cursor = cursor;
     this.hooks = hooks;
+    // Catching up to a step is silent; played at its own pace, the tour sounds as the player would.
+    setSfxHurried(() => this.busy && this.fast);
   }
 
   get length(): number {

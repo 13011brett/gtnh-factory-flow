@@ -108,7 +108,7 @@ describe("the mod's top bar", () => {
     renderBar();
     fireEvent.click(key("share"));
     const rows = [...document.querySelectorAll('[role="menu"] [role="menuitem"] .mm-label')].map((element) => element.textContent);
-    expect(rows).toEqual(["Share to library...", "Copy plan code", "Screenshot..."]);
+    expect(rows).toEqual(["Share to library...", "Copy plan code", "Export plan file (.json)", "Screenshot..."]);
   });
 
   it("the Help key opens the tour, the controls list and the website's own links", () => {

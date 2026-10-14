@@ -72,13 +72,15 @@ export async function resolveProjectRecipes(
   version: DatasetVersion,
   recipes: Recipe[],
 ): Promise<{ refreshed: Recipe[]; migration: Record<string, string> }> {
+  // A demo recipe is the plan's own data: the dataset never has it, so asking only fills the console with 404s.
+  const asked = recipes.filter((recipe) => !recipe.isDemo && !isPowerRecipe(recipe));
   const byId = await Promise.allSettled(
-    recipes.map((recipe) => getRecipeDatasetRecipe(manifestUrl, version, recipe.id)),
+    asked.map((recipe) => getRecipeDatasetRecipe(manifestUrl, version, recipe.id)),
   );
   const refreshed = byId
     .filter((result): result is PromiseFulfilledResult<Recipe> => result.status === "fulfilled")
     .map((result) => result.value);
-  const stale = recipes.filter(
+  const stale = asked.filter(
     (recipe, index) => byId[index]?.status === "rejected" && !isPowerRecipe(recipe),
   );
   const migration: Record<string, string> = {};

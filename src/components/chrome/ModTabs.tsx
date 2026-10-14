@@ -14,6 +14,8 @@ import { useDesignStore } from "@/store/design-store";
 import { useFactoryStore } from "@/store/factory-store";
 import { useSolvingBooks } from "@/components/flow/use-solving-books";
 import { tipAttrs } from "@/components/flow/clean/interaction";
+import { openPlanFile } from "@/lib/import-export/open-plan-file";
+import { flashNotice } from "@/components/flow/clean/rail/NoticeBar";
 import { ChromeMenu, chromeAnchorOf, MENU_ANCHOR_ATTR, type ChromeAnchor, type MenuEntry } from "./ChromeMenu";
 
 /** What the tab strip asks of the bar: the dialogs it does not own. */
@@ -48,6 +50,7 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
   const [renaming, setRenaming] = useState<string>();
   const [fade, setFade] = useState({ left: false, right: false });
   const stripRef = useRef<HTMLDivElement>(null);
+  const planFileRef = useRef<HTMLInputElement>(null);
   const canClose = designs.length + publicViews.length > 1;
   const closeMenu = useCallback(() => setMenu(undefined), []);
 
@@ -121,7 +124,8 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
           },
         },
         { label: "Open a plan...", detail: "My plans", onSelect: () => openLibrary({ kind: "all" }) },
-        { label: "Paste plan", detail: "a plan link or code", onSelect: onPaste },
+        { label: "Open plan file...", detail: ".json", onSelect: () => planFileRef.current?.click() },
+        { label: "Paste plan", detail: "a plan link, code or file", onSelect: onPaste },
         { label: "Browse library", detail: "public plans", onSelect: () => openLibrary({ kind: "public" }) },
       ];
     }
@@ -301,6 +305,24 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
       >
         +
       </div>
+      <input
+        ref={planFileRef}
+        type="file"
+        accept="application/json,.json"
+        className="hidden"
+        data-plan-file-input=""
+        aria-label="Open plan file"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (!file) return;
+          leaveWelcomeTab();
+          leaveLibrary();
+          openPlanFile(file).catch((error) =>
+            flashNotice("warn", error instanceof Error ? error.message : "That plan file could not be opened."),
+          );
+        }}
+      />
       {menu ? (
         <ChromeMenu
           anchor={menu.anchor}

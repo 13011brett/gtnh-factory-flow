@@ -21,6 +21,7 @@ import { openSidebarTab } from "@/lib/sidebar-tab";
 import { APP_VERSION } from "@/lib/version";
 import { leaveWelcomeTab, setWelcomeOnStartup, useWelcomeTab } from "@/lib/welcome/welcome-tab";
 import { writeWorkspaceView } from "@/lib/workspace-view";
+import { UNTITLED_DESIGN_NAME } from "@/lib/designs/design-library";
 import { useDesignStore } from "@/store/design-store";
 import { useFactoryStore } from "@/store/factory-store";
 import { WelcomeBackdrop } from "./WelcomeBackdrop";
@@ -118,6 +119,13 @@ export function WelcomePage() {
                   // Step off first: adding a design does not, and the new
                   // tab would otherwise sit under this page unseen.
                   leaveWelcomeTab();
+                  // An empty untitled plan already open is the new design: a second one would only sit beside it.
+                  const { project } = useFactoryStore.getState();
+                  const blank =
+                    project.nodes.length === 0 && (project.storages ?? []).length === 0 && (project.annotations ?? []).length === 0;
+                  const open = useDesignStore.getState();
+                  const current = open.designs.find((design) => design.id === open.activeDesignId);
+                  if (blank && current?.name === UNTITLED_DESIGN_NAME && !current.closed) return;
                   void addDesign();
                 }}
               >

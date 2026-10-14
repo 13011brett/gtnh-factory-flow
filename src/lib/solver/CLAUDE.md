@@ -69,6 +69,10 @@ nowhere or goes nowhere except through a source, a drawer or trash. Longer versi
   default for intermediates, see `effectiveBufferMode`); ratio splits by weights on both
   sides with a Setup output share (`storage-ratios.ts` here and in model/). Pool ignores
   manual ratio splits.
+- Plan mode (`plan/`): a buffer wired only to cards is a BUFFER drawer (`DrawerIn.takers`), its rule a product's
+  on what passes through (`docs/buffer-drawers.md`); `adapter/buffers.ts` joins only buffers wired to another drawer or
+  by a cell wire. The solver change mirrors the mod's line for line; adding any feature to both:
+  `docs/cross-repo-features.md`.
 - Drain drawers cycle product / byproduct / trash. Trash is free disposal with its books
   voided (`applyTrashedOutputBalances`). Old trash-can nodes convert on load.
 - In Build, targets are display arithmetic; in Solve and Pool they are LP rows.

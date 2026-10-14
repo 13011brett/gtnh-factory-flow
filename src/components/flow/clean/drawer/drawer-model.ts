@@ -11,7 +11,8 @@ import type { TipSpec } from "../interaction/tip-spec";
 /**
  * The clean drawer as plain data: every string final, nothing measured from the DOM.
  * `CleanDrawer.tsx` only draws it. The kinds are the mod's (`Drawer.Kind`): a source, a product (a byproduct is a
- * product with no rule) and trash.
+ * product with no rule), trash, and a buffer (fed and drawn from: the one drawer inside the plan,
+ * `docs/buffer-drawers.md`).
  */
 
 /** The menu's last row for a product, and for trash: the mod's words (`DrawerCard.TO_TRASH`, `TO_PRODUCT`). */
@@ -23,8 +24,8 @@ const WORDS = 76;
 
 /**
  * Whether the clean drawer draws this one: every drawer. A power drawer is the same source or product drawer with
- * EU in it (its picture the bolt in its amber box); a buffer, which the plan converts to plain wires, reads as the
- * product drawer it is wired like. The classic drawer is no longer reachable from the board.
+ * EU in it (its picture the bolt in its amber box); a buffer is its own kind. The classic drawer is no longer
+ * reachable from the board.
  */
 export function supportsCleanDrawer(
   _storage: Pick<FactoryStorage, "kind">,
@@ -35,13 +36,14 @@ export function supportsCleanDrawer(
   return true;
 }
 
-/** The mod's kind: trash is steel, a source blue, everything that leaves the plan orange. */
+/** The mod's kind: trash is steel, a source blue, everything that leaves the plan orange, a buffer teal. */
 export function drawerKindFor(
   role: StorageRole,
   storage: Pick<FactoryStorage, "targetPerSecond">,
 ): DrawerKind {
   if (role === "source") return "source";
   if (role === "trash") return "trash";
+  if (role === "buffer") return "buffer";
   // An unwired drawer reads as the end it was made as (a negative goal is an input).
   if (role === "idle" && (storage.targetPerSecond ?? 0) < 0) return "source";
   return "product";
@@ -117,9 +119,27 @@ const KIND_NAME: Record<DrawerKind, string> = {
   source: "Source",
   product: "Product",
   trash: "Trash",
+  buffer: "Buffer",
 };
 
+/** What a buffer passes: what its makers put in, which is what its users take out. */
+export function bufferThroughput(result: Pick<StorageThroughputResult, "producedPerSecond"> | undefined): number {
+  return Math.abs(result?.producedPerSecond ?? 0);
+}
+
 function ruleMeaning(kind: DrawerKind, rule: TargetMode): string {
+  if (kind === "buffer") {
+    switch (rule) {
+      case "ignore":
+        return "No target: the plan passes whatever its users take.";
+      case "at-least":
+        return "The plan passes at least the rate through it.";
+      case "exact":
+        return "The plan passes exactly the rate through it.";
+      case "at-most":
+        return "The plan passes no more than the rate through it.";
+    }
+  }
   const flow = kind === "source" ? "draws from it" : "puts in it";
   switch (rule) {
     case "ignore":
@@ -137,7 +157,8 @@ export function buildDrawerView(input: DrawerViewInput): CleanDrawerView {
   const { storage, role, label, result, unanchored, unmet, linked } = input;
   const kind = drawerKindFor(role, storage);
   const resourceKind = storage.kind;
-  const net = Math.abs(result?.netPerSecond ?? 0);
+  // A buffer's net is zero (in equals out): its figure is what passes through.
+  const net = kind === "buffer" ? bufferThroughput(result) : Math.abs(result?.netPerSecond ?? 0);
   const { number, unit } = formatRateParts(net, resourceKind);
   const zero = !(net > 0.000005);
   const hasRule = kind !== "trash";
@@ -165,9 +186,9 @@ export function buildDrawerView(input: DrawerViewInput): CleanDrawerView {
     hasTarget && Math.abs(target!) > 0 ? Math.min(1, net / Math.abs(target!)) : undefined;
   const isUnmet = hasTarget && (unmet || result?.targetUnreachable === true);
   const tone: ProgressTone = isUnmet ? "bad" : rule === "at-most" ? "calm" : "ok";
-  const sign = zero ? "" : kind === "source" ? "-" : "+";
+  const sign = zero || kind === "buffer" ? "" : kind === "source" ? "-" : "+";
   const reaches = isUnmet ? `${formatRateField(net, resourceKind)} ${unitLabel}` : undefined;
-  const flowWord = kind === "source" ? "Supplies" : "Takes";
+  const flowWord = kind === "source" ? "Supplies" : kind === "buffer" ? "Passes" : "Takes";
 
   // The mod's tips (`DrawerCard.tip`), word for word.
   const ruleTip: TipSpec =
@@ -208,6 +229,7 @@ export function buildDrawerView(input: DrawerViewInput): CleanDrawerView {
     ],
   };
   const bodyNotes: NonNullable<TipSpec["notes"]> = [];
+  if (kind === "buffer") bodyNotes.push({ text: "Its makers put in what its users take out.", tone: "muted" });
   if (!linked) bodyNotes.push({ text: "Unconnected", tone: "warn" });
   if (isUnmet && hasTarget) {
     bodyNotes.push({

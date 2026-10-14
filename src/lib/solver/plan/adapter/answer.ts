@@ -30,7 +30,7 @@ export interface PlanReading {
   extras: PlanSolveExtras;
 }
 
-const EMPTY_DRAWERS: DrawerReadout = { rates: {}, unmet: [], shortfalls: [] };
+const EMPTY_DRAWERS: DrawerReadout = { rates: {}, unmet: [], shortfalls: [], ports: {} };
 
 /** Rates below this share of the port's own rate are solver dust. */
 const DUST = 1e-9;
@@ -85,11 +85,23 @@ export function readAnswer(model: PlanModel, answer: Answer): PlanReading {
     wired.set(`${edge.target}|i|${target.index}`, (wired.get(`${edge.target}|i|${target.index}`) ?? 0) + flow);
   }
 
+  // Wires on a buffer: what the solver moved through the buffer at that port.
+  const bufferPorts = solution.drawers?.ports ?? {};
+  for (const link of model.drawerEdges.values()) {
+    const through = bufferPorts[link.drawerId];
+    if (!through) continue;
+    const at = through.find(
+      (e) => e.port.node === link.ref.node && e.port.port === link.ref.port && e.port.input === link.ref.input,
+    );
+    flowOf.set(link.edgeId, Math.max(0, at?.ratePerSecond ?? 0));
+  }
+
   // Wires to drawers: what the port makes (or takes) that its other wires do
   // not carry. A port has one drawer; should it have more, the first (by id)
   // takes it all.
   const taken = new Map<string, number>();
   for (const link of [...model.drawerEdges.values()].sort((a, b) => compareIds(a.edgeId, b.edgeId))) {
+    if (bufferPorts[link.drawerId]) continue;
     const entry = model.machines.get(link.ref.node)!;
     const row = (link.ref.input ? entry.inputs : entry.outputs)[link.ref.port]!;
     const extent = solution.extentsPerSecond[entry.id] ?? 0;

@@ -31,7 +31,7 @@ function pinsOnly(input: SolveInput): Answer {
       totalInternalFlow: 0,
       notes: [],
       key: { gateAnchors: [] },
-      drawers: { rates: {}, unmet: [], shortfalls: [] },
+      drawers: { rates: {}, unmet: [], shortfalls: [], ports: {} },
       spares: [],
     },
     alternatives: { chosen: null, options: [], complete: true, notes: [] },

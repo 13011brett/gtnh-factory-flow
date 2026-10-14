@@ -9,7 +9,7 @@ import { customRecipe, drawer, handle, node, project, recipe, wire } from "./tes
 
 afterEach(() => setSolveCore(undefined));
 
-const idle = { rates: {}, unmet: [], shortfalls: [] };
+const idle = { rates: {}, unmet: [], shortfalls: [], ports: {} };
 
 function view(partial: Partial<SolutionView> = {}): SolutionView {
   return {
@@ -275,18 +275,62 @@ describe("buffers", () => {
     ],
   });
 
-  it("a drawer fed and drawn from is joined away; both wires show the joined flow", () => {
-    const { input, result } = run(p, (i) =>
+  it("a drawer fed and drawn from is a buffer drawer; each wire shows what passes at its port", () => {
+    const { input, result } = run(p, () =>
       solved({
         extentsPerSecond: { a: 1, b: 4 },
         machineCounts: { a: 1, b: 4 },
-        edgeFlowsPerSecond: { [i.edges[0]!.id]: 4 },
+        edgeFlowsPerSecond: {},
+        drawers: {
+          rates: { buf: 4 },
+          unmet: [],
+          shortfalls: [],
+          ports: {
+            buf: [
+              { port: { node: "a", port: 0, input: false }, ratePerSecond: 4 },
+              { port: { node: "b", port: 0, input: true }, ratePerSecond: 4 },
+            ],
+          },
+        },
       }),
     );
-    expect(input.edges).toHaveLength(1);
-    expect(input.drawers).toEqual([]);
+    expect(input.edges).toHaveLength(0);
+    expect(input.drawers).toEqual([
+      {
+        id: "buf",
+        label: "y",
+        kind: "BUFFER",
+        rule: "ANY",
+        rate: 0,
+        links: [{ node: "a", port: 0 }],
+        takers: [{ node: "b", port: 0 }],
+      },
+    ]);
     expect(result.edges["in"]!.transferredPerSecond).toBeCloseTo(4, 9);
     expect(result.edges["out"]!.transferredPerSecond).toBeCloseTo(4, 9);
+    expect(result.storages["buf"]!.producedPerSecond).toBeCloseTo(4, 9);
+  });
+
+  it("a buffer's rule is a product's: at least, exactly or at most what passes through", () => {
+    const ruled = { ...p, storages: [{ ...p.storages![0]!, targetPerSecond: 3, targetMode: "at-most" as const }] };
+    const { input } = run(ruled);
+    expect(input.drawers.map((d) => [d.kind, d.rule, d.rate])).toEqual([["BUFFER", "AT_MOST", 3]]);
+  });
+
+  it("a buffer wired to another drawer is still joined away", () => {
+    const chained = project({
+      recipes: [recipe("a", [], [["y", 4]]), recipe("b", [["y", 1]], [])],
+      nodes: [node("a", "a", { solvePin: 1 }), node("b", "b")],
+      storages: [drawer("b1", "y"), drawer("b2", "y")],
+      edges: [
+        wire("x", "a", "b1", "y", {}, { toDrawer: true }),
+        wire("y", "b1", "b2", "y", {}, { fromDrawer: true, toDrawer: true }),
+        wire("z", "b2", "b", "y", {}, { fromDrawer: true }),
+      ],
+    });
+    const { input } = run(chained);
+    expect(input.edges).toHaveLength(1);
+    expect(input.drawers).toEqual([]);
   });
 });
 

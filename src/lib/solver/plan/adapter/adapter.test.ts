@@ -23,7 +23,7 @@ function withoutDecision<T extends { decision?: string }>(row: T): Omit<T, "deci
   return copy;
 }
 
-const NO_DRAWERS = { rates: {}, unmet: [], shortfalls: [] };
+const NO_DRAWERS = { rates: {}, unmet: [], shortfalls: [], ports: {} };
 
 /** The port a mock PortKey names, in the input the adapter produced. */
 function refOf(input: SolveInput, portKey: string): PortRef {
@@ -79,7 +79,7 @@ function replay(mock: MockPlan, input: SolveInput): Answer {
     totalInternalFlow: 0,
     notes: extra.notes,
     key: { gateAnchors: [] },
-    drawers: { rates: {}, unmet: [], shortfalls: [] },
+    drawers: { rates: {}, unmet: [], shortfalls: [], ports: {} },
     spares,
   };
   return {
@@ -147,7 +147,7 @@ describe("answer to books, replaying the UI mocks", () => {
     setSolveCore((input) => {
       const answer = replay(mockUnneeded, input);
       if (answer.kind === "solved") {
-        answer.solution.drawers = { rates: {}, unmet: ["steel"], shortfalls: [] };
+        answer.solution.drawers = { rates: {}, unmet: ["steel"], shortfalls: [], ports: {} };
       }
       return answer;
     });

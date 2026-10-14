@@ -195,7 +195,7 @@ describe("the store keeps them true", () => {
       kind: "failed",
       failure: { message: "NO_PIN", args: [] },
       notes: [],
-      drawers: { rates: {}, unmet: [], shortfalls: [] },
+      drawers: { rates: {}, unmet: [], shortfalls: [], ports: {} },
     }));
     const p = shared({
       [handle("output", "y")]: 1,

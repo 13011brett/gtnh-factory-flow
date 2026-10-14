@@ -56,7 +56,7 @@ export function findUnanchored(model: PlanModel, storages: readonly FactoryStora
     union(edge.source, edge.target);
   }
   for (const drawer of input.drawers) {
-    for (const link of drawer.links) {
+    for (const link of [...drawer.links, ...(drawer.takers ?? [])]) {
       union(drawer.id, link.node);
     }
   }

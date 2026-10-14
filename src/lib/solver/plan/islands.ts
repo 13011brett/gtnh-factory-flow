@@ -49,7 +49,7 @@ export function splitIslands(input: SolveInput): SolveInput[] {
   }
   for (const drawer of input.drawers) {
     let first: number | undefined;
-    for (const link of drawer.links) {
+    for (const link of [...drawer.links, ...(drawer.takers ?? [])]) {
       const m = index.get(link.node);
       if (m === undefined) continue;
       if (first === undefined) first = m;
@@ -101,7 +101,7 @@ export function splitIslands(input: SolveInput): SolveInput[] {
     ps[at < 0 ? 0 : at]!.push(pool);
   }
   for (const drawer of input.drawers) {
-    const at = islandOfIds(drawer.links.map((l) => l.node));
+    const at = islandOfIds([...drawer.links, ...(drawer.takers ?? [])].map((l) => l.node));
     ds[at < 0 ? 0 : at]!.push(drawer);
   }
 

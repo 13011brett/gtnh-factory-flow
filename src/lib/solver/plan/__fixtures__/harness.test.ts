@@ -7,12 +7,12 @@ import { CHART_NAMES, PLAN_NAMES, TILED_CASES, caseNames, compareId, listFiles, 
 import type { Answer, ChoiceKey, External, Leftover, Note, PortRef, SolutionView } from "./types-local";
 
 describe("corpus files", () => {
-  it("has 30 inputs and 32 goldens, and every case has both (tiled cases build from platline)", () => {
-    expect(PLAN_NAMES).toHaveLength(14);
+  it("has 31 inputs and 33 goldens, and every case has both (tiled cases build from platline)", () => {
+    expect(PLAN_NAMES).toHaveLength(15);
     expect(CHART_NAMES).toHaveLength(16);
-    expect(listFiles("inputs")).toHaveLength(30);
-    expect(listFiles("goldens")).toHaveLength(32);
-    expect(caseNames()).toHaveLength(32);
+    expect(listFiles("inputs")).toHaveLength(31);
+    expect(listFiles("goldens")).toHaveLength(33);
+    expect(caseNames()).toHaveLength(33);
     const inputs = new Set(listFiles("inputs"));
     const goldens = new Set(listFiles("goldens"));
     for (const n of caseNames()) {
@@ -37,6 +37,7 @@ describe("corpus files", () => {
     mv: [33, 50, 0, 25],
     "full-platline": [46, 53, 0, 62],
     platline: [49, 60, 0, 58],
+    "buffer-drawers": [9, 1, 0, 3],
   };
   it.each(Object.entries(shapes))("%s has the documented shape", (name, [m, e, p, d]) => {
     const input = loadInput(name);
@@ -211,7 +212,14 @@ function answerFromGolden(g: ReturnType<typeof loadGolden>): Answer {
     totalInternalFlow: s.totalInternalFlow,
     notes: s.notes.map(nt),
     key: ck(s.key),
-    drawers: s.drawers,
+    drawers: {
+      ...s.drawers,
+      ports: Object.fromEntries(
+        Object.entries(s.drawers.ports as Record<string, Array<{ port: PortD; ratePerSecond: number }>>).map(
+          ([id, list]) => [id, list.map(ext)],
+        ),
+      ),
+    },
     spares: s.spares.map(
       (l: any): Leftover => ({ // eslint-disable-line @typescript-eslint/no-explicit-any
         key: l.key,

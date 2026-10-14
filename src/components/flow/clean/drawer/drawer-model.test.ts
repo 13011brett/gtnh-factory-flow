@@ -27,6 +27,39 @@ describe("which drawers are clean", () => {
   });
 });
 
+describe("a buffer drawer (docs/buffer-drawers.md)", () => {
+  const base = { label: "Dust", unanchored: false, unmet: false, linked: true };
+  it("is its own kind, teal, and shows what passes through with no sign", () => {
+    expect(drawerKindFor("buffer", {})).toBe("buffer");
+    const view = buildDrawerView({
+      ...base,
+      storage: storage(),
+      role: "buffer",
+      result: { netPerSecond: 0, producedPerSecond: 12, consumedPerSecond: 12 } as never,
+    });
+    expect(view.kind).toBe("buffer");
+    expect(view.number).toBe("12");
+    expect(view.glanceRate).toBe("12");
+    expect(view.hasRule).toBe(true);
+    expect(view.tips.body.sub).toBe("Buffer");
+    expect(view.tips.body.rows).toEqual([{ label: "Passes", value: "12 /s" }]);
+    expect(drawerMixes("buffer").tint).toBe("#2E9C8F");
+  });
+  it("holds its rule on what passes through", () => {
+    const view = buildDrawerView({
+      ...base,
+      storage: storage({ targetPerSecond: 20, targetMode: "at-least" }),
+      role: "buffer",
+      result: { netPerSecond: 0, producedPerSecond: 10 } as never,
+      unmet: true,
+    });
+    expect(view.rule).toBe("at-least");
+    expect(view.unmet).toBe(true);
+    expect(view.reaches).toBe("10 /s");
+    expect(view.tips.rule.notes).toEqual([{ text: "The plan passes at least the rate through it.", tone: "muted" }]);
+  });
+});
+
 describe("the drawer view", () => {
   const base = { label: "Hydrogen", unanchored: false, unmet: false, linked: true };
 
@@ -102,7 +135,7 @@ describe("the rate shorthand", () => {
 
 describe("drawer.css", () => {
   const css = readFileSync(join(__dirname, "drawer.css"), "utf8").toLowerCase();
-  for (const kind of ["source", "product", "trash"] as const) {
+  for (const kind of ["source", "product", "trash", "buffer"] as const) {
     it(`${kind}'s colours are the tokens' mixes`, () => {
       const mixes = drawerMixes(kind);
       const block = css.slice(css.indexOf(`.cd[data-kind="${kind}"] {`));

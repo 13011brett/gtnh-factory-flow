@@ -11,6 +11,7 @@ import { digest } from "./__fixtures__/digest";
 import { caseNames, loadInput } from "./__fixtures__/load";
 import { SolveContext } from "./context";
 import { setColumnOrder, takeLpCount } from "./lp";
+import { drawerRelaxation } from "./relax";
 import { solveCore } from "./solve-core";
 import { tieWeight } from "./tie-weight";
 import { levels } from "./trade";
@@ -420,12 +421,14 @@ describe("determinism (SolverPathTest)", () => {
   );
   it.each(cases)("%s answers the same solved again and built in reverse column order", (name) => {
     const i = loadInput(name);
-    const first = digest(solveCore(i));
-    const again = digest(solveCore(i));
+    // With the drawer relaxation, as the Java's chain always runs it: a plan with a rule it cannot keep needs it.
+    const solve = () => digest(solveCore(i, { relax: drawerRelaxation }));
+    const first = solve();
+    const again = solve();
     setColumnOrder("reverse");
     let reversed;
     try {
-      reversed = digest(solveCore(i));
+      reversed = solve();
     } finally {
       setColumnOrder("forward");
     }

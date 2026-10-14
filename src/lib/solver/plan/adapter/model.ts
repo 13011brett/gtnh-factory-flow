@@ -116,12 +116,14 @@ function drawerKindAndRule(
   role: StorageRole,
 ): { kind: DrawerKind; rule: DrawerRule; rate: number } {
   const kind: DrawerKind =
-    role === "source" ? "SOURCE" : role === "trash" ? "TRASH" : "PRODUCT";
-  // A byproduct or trash drawer's number is dormant: it asks for nothing.
-  if (role === "byproduct" || role === "trash" || !hasStorageTarget(storage, role)) {
+    role === "source" ? "SOURCE" : role === "trash" ? "TRASH" : role === "buffer" ? "BUFFER" : "PRODUCT";
+  // A byproduct or trash drawer's number is dormant: it asks for nothing. A buffer's rule is on what passes through:
+  // a product's (at least unless it says otherwise).
+  const ruleRole: StorageRole = role === "buffer" ? "product" : role;
+  if (role === "byproduct" || role === "trash" || !hasStorageTarget(storage, ruleRole)) {
     return { kind, rule: "ANY", rate: 0 };
   }
-  const mode = storageTargetMode(storage, role);
+  const mode = storageTargetMode(storage, ruleRole);
   const rule: DrawerRule =
     mode === "at-least"
       ? "AT_LEAST"
@@ -218,7 +220,8 @@ export function buildPlanModel(args: PlanSolveArgs): PlanModel {
   const storagesById = new Map(flat.storages.map((storage) => [storage.id, storage]));
   const linkedDrawer = (id: string) => {
     const role = roles.get(id);
-    return storagesById.has(id) && (role === "source" || role === "product" || role === "byproduct" || role === "trash")
+    return storagesById.has(id) &&
+      (role === "source" || role === "product" || role === "byproduct" || role === "trash" || role === "buffer")
       ? role
       : undefined;
   };
@@ -253,7 +256,7 @@ export function buildPlanModel(args: PlanSolveArgs): PlanModel {
       }
     } else if (target && !source) {
       const role = linkedDrawer(edge.source);
-      const into = role === "source" ? inputRowFor(target.inputs, edge) : undefined;
+      const into = role === "source" || role === "buffer" ? inputRowFor(target.inputs, edge) : undefined;
       if (into) {
         drawerEdges.set(edge.id, {
           edgeId: edge.id,
@@ -266,6 +269,8 @@ export function buildPlanModel(args: PlanSolveArgs): PlanModel {
 
   // ---- drawers -------------------------------------------------------------
   const linksByDrawer = new Map<Id, Array<{ node: Id; port: number }>>();
+  // A buffer's users (the input ports it feeds); its links are the outputs feeding it.
+  const takersByDrawer = new Map<Id, Array<{ node: Id; port: number }>>();
   const drawerPorts = new Set<PortKey>();
   const portByKey = new Map<PortKey, PortRef>();
   for (const entry of entries) {
@@ -277,20 +282,25 @@ export function buildPlanModel(args: PlanSolveArgs): PlanModel {
     }
   }
   for (const link of [...drawerEdges.values()].sort((a, b) => compareIds(a.edgeId, b.edgeId))) {
-    const links = linksByDrawer.get(link.drawerId) ?? [];
+    const buffer = roles.get(link.drawerId) === "buffer";
+    const byDrawer = buffer && link.ref.input ? takersByDrawer : linksByDrawer;
+    const links = byDrawer.get(link.drawerId) ?? [];
     if (!links.some((l) => l.node === link.ref.node && l.port === link.ref.port)) {
       links.push({ node: link.ref.node, port: link.ref.port });
     }
-    linksByDrawer.set(link.drawerId, links);
+    byDrawer.set(link.drawerId, links);
+    // A buffer is no end of the plan: what crosses at its ports is a forced row there, as on a wire.
+    if (buffer) continue;
     const entry = machines.get(link.ref.node)!;
     drawerPorts.add((link.ref.input ? entry.inputs : entry.outputs)[link.ref.port]!.portKey);
   }
   const drawerIns: DrawerIn[] = [];
   const drawerMap = new Map<Id, FactoryStorage>();
   for (const storage of [...flat.storages].sort((a, b) => compareIds(a.id, b.id))) {
-    const links = linksByDrawer.get(storage.id);
+    const links = linksByDrawer.get(storage.id) ?? [];
+    const takers = takersByDrawer.get(storage.id) ?? [];
     const role = roles.get(storage.id);
-    if (!links || links.length === 0 || !role) {
+    if (links.length + takers.length === 0 || !role) {
       continue;
     }
     const { kind, rule, rate } = drawerKindAndRule(storage, role);
@@ -301,6 +311,7 @@ export function buildPlanModel(args: PlanSolveArgs): PlanModel {
       rule,
       rate,
       links,
+      ...(kind === "BUFFER" ? { takers } : {}),
     });
     drawerMap.set(storage.id, storage);
   }
@@ -365,9 +376,16 @@ export function buildPlanModel(args: PlanSolveArgs): PlanModel {
       resourceOfRow.set(row, numberOf(row.key));
     }
   }
-  // An ore-dictionary input takes the number of the output wired to it.
+  // An ore-dictionary input takes the number of the output wired to it, or of the first output feeding the buffer it
+  // draws from (the solver joins a buffer's ports of one number).
   for (const { source, target } of engineEdges.values()) {
     resourceOfRow.set(target, resourceOfRow.get(source)!);
+  }
+  for (const drawer of drawerIns) {
+    const first = drawer.links[0];
+    if (drawer.kind !== "BUFFER" || !first) continue;
+    const made = resourceOfRow.get(machines.get(first.node)!.outputs[first.port]!)!;
+    for (const taker of drawer.takers ?? []) resourceOfRow.set(machines.get(taker.node)!.inputs[taker.port]!, made);
   }
 
   // ---- machines out -----------------------------------------------------------

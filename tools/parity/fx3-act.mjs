@@ -57,7 +57,7 @@ const tests = {
     await wait(page, 1000);
     await frame(page, ids.nb);
     const sel = node(ids.nb);
-    check("two rules", (await page.locator(`${sel} .cs-rule`).count()) === 2);
+    check("two rules", (await page.locator(`${sel} .sp-rule`).count()) === 2);
     check(
       "section 1 ports wear the r1: prefix",
       (
@@ -69,7 +69,7 @@ const tests = {
     );
     // move section 1 up
     const before = (await proj(page)).nodes.find((n) => n.id === ids.nb).extraRecipes[0].recipeId;
-    await page.locator(`${sel} .cs-rule`).nth(1).locator(".cs-rk[data-kind=up]").click();
+    await page.locator(`${sel} .sp-rule`).nth(1).locator(".sp-rk[data-kind=up]").click();
     await wait(page, 900);
     const after = await proj(page);
     const n = after.nodes.find((x) => x.id === ids.nb);
@@ -81,9 +81,9 @@ const tests = {
     check(
       "first rule has no active up key",
       (await page
-        .locator(`${sel} .cs-rule`)
+        .locator(`${sel} .sp-rule`)
         .first()
-        .locator(".cs-rk[data-kind=up]")
+        .locator(".sp-rk[data-kind=up]")
         .getAttribute("data-disabled")) !== null,
     );
     // pin the count and read the power row
@@ -97,11 +97,11 @@ const tests = {
       .catch(() => "");
     console.log("   power row:", JSON.stringify(power));
     // remove section 1
-    await page.locator(`${sel} .cs-rule`).nth(1).locator(".cs-rk[data-kind=off]").click();
+    await page.locator(`${sel} .sp-rule`).nth(1).locator(".sp-rk[data-kind=off]").click();
     await wait(page, 900);
     const gone = (await proj(page)).nodes.find((x) => x.id === ids.nb);
     check("off key takes the recipe off", !gone.extraRecipes || gone.extraRecipes.length === 0);
-    check("one rule left? (a plain card)", (await page.locator(`${sel} .cs-rule`).count()) === 0);
+    check("one rule left? (a plain card)", (await page.locator(`${sel} .sp-rule`).count()) === 0);
   },
 
   async power(page) {
@@ -132,9 +132,13 @@ const tests = {
     // open the gear and list settings
     await page.locator(`${sel} .cc-key[data-glyph=gear]`).click();
     await wait(page, 500);
-    const rows = await page.locator("[role=menu] button").allInnerTexts();
+    const rows = await page.locator(".cs-row").allInnerTexts();
     console.log("   gear rows:", JSON.stringify(rows.slice(0, 6)));
     check("gear lists settings", rows.length > 0);
+    // pin the first non-tier setting: a chip appears
+    await page.locator(".cs-pin").first().click();
+    await wait(page, 700);
+    check("a pinned setting shows as a strip chip", (await page.locator(sel + " .cc-sc").count()) === 1);
     await page.keyboard.press("Escape");
   },
 
@@ -157,10 +161,10 @@ const tests = {
     await wait(page, 500);
     await frame(page, ids.nb);
     const sel = node(cid);
-    check("two sockets", (await page.locator(`${sel} .cs-socket`).count()) === 2);
+    check("two sockets", (await page.locator(`${sel} .sp-socket`).count()) === 2);
     // wire: drag the nitrobenzene reactor's sulfuric acid input row onto the supply socket (it feeds an input)
     await page.mouse.move(1500, 960);
-    const supply = page.locator(`${sel} .cs-socket[data-side=output]`);
+    const supply = page.locator(`${sel} .sp-socket[data-side=output]`);
     const sb = await supply.boundingBox();
     // bring the reactor into view next to it
     const nbSel = node(ids.nb);
@@ -238,10 +242,10 @@ tests.tank = async (page) => {
   const sel = node(tid);
   check(
     "tank has two sockets and no count",
-    (await page.locator(sel + " .cs-socket").count()) === 2 &&
+    (await page.locator(sel + " .sp-socket").count()) === 2 &&
       (await page.locator(sel + " .cc-count").count()) === 0,
   );
-  const give = await page.locator(sel + " .cs-socket[data-side=output]").boundingBox();
+  const give = await page.locator(sel + " .sp-socket[data-side=output]").boundingBox();
   const row = await page
     .locator(node(ids.nb) + ` .cc-row[data-resource-handle-id="input:fluid:sulfuricacid"]`)
     .first()
@@ -279,7 +283,7 @@ tests.tank = async (page) => {
     released.inputs.length === 0 && released.outputs.length === 0,
     JSON.stringify(released).slice(0, 160),
   );
-  check("sockets are back", (await page.locator(sel + " .cs-socket").count()) === 2);
+  check("sockets are back", (await page.locator(sel + " .sp-socket").count()) === 2);
 };
 
 tests.eec = async (page) => {
@@ -308,9 +312,9 @@ tests.crop = async (page) => {
   const id = await lastNode(page);
   await frame(page, id);
   const sel = node(id);
-  check("farm shows the pick key", (await page.locator(sel + " .cs-pick").count()) === 1);
+  check("farm shows the pick key", (await page.locator(sel + " .sp-pick").count()) === 1);
   await page
-    .locator(sel + " .cs-pick")
+    .locator(sel + " .sp-pick")
     .click({ timeout: 4000 })
     .catch((e) =>
       console.log(String(e).split(String.fromCharCode(10)).slice(0, 14).join(" | ").slice(-900)),

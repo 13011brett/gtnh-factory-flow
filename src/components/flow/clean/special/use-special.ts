@@ -84,6 +84,7 @@ import {
   type SpecialSection,
   type SpecialView,
 } from "./special-model";
+import type { SheetRow } from "./SpecialSheets";
 
 /** What a special card does beyond the plain card's actions. */
 export interface SpecialActions extends CleanCardActions {
@@ -95,6 +96,8 @@ export interface SpecialActions extends CleanCardActions {
 /** The menus' inputs: the gear's rows, and the readings a generator keeps in it. */
 export interface SpecialContext extends CleanCardContext {
   readings: Array<{ label: string; value: string }>;
+  /** The gear's sheet: the machine's own settings (shared machines, crops), or rows of the card's own. */
+  sheet: { kind: "machine" } | { kind: "rows"; rows: SheetRow[]; foot?: string };
 }
 
 export interface SpecialModel {
@@ -363,6 +366,7 @@ export function useSharedCardModel(data: RecipeNodeData, selected: boolean): Spe
     machineHandlers: handlers,
     handleIds: view.handleIds,
     readings: [],
+    sheet: { kind: "machine" },
   };
   return { view, actions, context };
 }
@@ -388,11 +392,15 @@ export function usePowerCardModel(data: RecipeNodeData, selected: boolean): Spec
   const info = recipe.power!;
   const source = getPowerSource(info.sourceId);
   const setPowerSetting = useFactoryStore((state) => state.setPowerSetting);
+  const setSettingPins = useFactoryStore((state) => state.setSettingPins);
+  // The pins are the plan's, kept per source as a machine's are: a generator shows none until one is pinned.
+  const pinKey = `power:${info.sourceId}`;
+  const pins = useFactoryStore((state) => state.project.settingPins?.[pinKey]);
   const values = projectNode.machineConfigTiers;
 
   const rows: PowerSettingRow[] = source ? powerSettingRows(source, values) : [];
   const tier = source ? powerTierChip(source, values) : undefined;
-  const stripRows = powerStripRows(rows);
+  const stripRows = powerStripRows(rows, pins ?? []);
   const strip = layoutStrip(
     stripRows.map((row) => ({
       id: row.id,
@@ -485,15 +493,39 @@ export function usePowerCardModel(data: RecipeNodeData, selected: boolean): Spec
   const context: SpecialContext = {
     ...base.context,
     machineHandlers: [],
-    settings: rows
-      .filter((row) => !isTierSelect(row.setting))
-      .map((row) => ({
-        id: row.id,
-        label: row.label,
-        value: row.value,
-        steps: row.steps && row.enabled,
-      })),
+    settings: [],
     readings: info.stats,
+    sheet: {
+      kind: "rows",
+      foot: "Pinned settings show on the card. Click, right-click or scroll to change.",
+      rows: rows.map(
+        (row): SheetRow => ({
+          id: row.id,
+          label: row.label,
+          value: row.value,
+          options: row.setting.type === "select" ? row.setting.options : undefined,
+          currentKey: row.key,
+          number:
+            row.setting.type === "number"
+              ? { text: row.value.split(" ")[0]!, commit: (text) => commitNumber(row, text) }
+              : undefined,
+          flip: row.setting.type === "toggle" ? () => actions.stepChip(row.id, 1) : undefined,
+          enabled: row.enabled,
+          pinned: (pins ?? []).includes(row.id),
+          onPin: isTierSelect(row.setting)
+            ? undefined
+            : () => {
+                const now = pins ?? [];
+                setSettingPins(
+                  pinKey,
+                  now.includes(row.id) ? now.filter((id) => id !== row.id) : [...now, row.id],
+                );
+              },
+          onPick: (key) => setPowerSetting(projectNode.id, row.id, key),
+          onStep: (direction) => actions.stepChip(row.id, direction),
+        }),
+      ),
+    },
   };
   return { view, actions, context };
 }
@@ -636,7 +668,7 @@ export function useCropCardModel(data: RecipeNodeData, selected: boolean): Speci
     unset: placeholder ? false : baseCount.unset,
     handleIds: placeholder ? [] : base.context.handleIds,
   };
-  const context: SpecialContext = { ...base.context, readings: [] };
+  const context: SpecialContext = { ...base.context, readings: [], sheet: { kind: "machine" } };
   const actions: SpecialActions = {
     ...base.actions,
     stepTier,
@@ -776,11 +808,45 @@ export function useHolderCardModel(
     moveSection: () => undefined,
     removeSection: () => undefined,
   };
+  const dial = kind === "custom-rate" ? getCustomRateDial(projectNode, recipe) : undefined;
+  const dialRate = chips.find((chip) => chip.id === "rate")?.edit;
   const context: SpecialContext = {
     ...base.context,
     machineHandlers: [],
     settings: [],
     readings: [],
+    sheet: {
+      kind: "rows",
+      rows: dial
+        ? [
+            {
+              id: "mode",
+              label: "Mode",
+              value: dial.mode === "supply" ? "Supply" : "Request",
+              options: [
+                { key: "supply", label: "Supply" },
+                { key: "request", label: "Request" },
+              ],
+              currentKey: dial.mode,
+              flip: () => actions.stepChip("mode", 1),
+              enabled: true,
+              onPick: (key) => {
+                if (key !== dial.mode && !isLocked())
+                  setCustomRateConfig(projectNode.id, { mode: key as "supply" | "request" });
+              },
+              onStep: () => actions.stepChip("mode", 1),
+            },
+            {
+              id: "rate",
+              label: "Rate",
+              value: dialRate?.text ?? "1",
+              number: dialRate,
+              enabled: true,
+              onStep: () => undefined,
+            },
+          ]
+        : [],
+    },
   };
   return { view, actions, context };
 }

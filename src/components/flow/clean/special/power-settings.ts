@@ -108,9 +108,9 @@ export function powerSettingRows(
   });
 }
 
-/** The strip's chips: settings in play that differ from their default, the tier (a header chip) left out. */
-export function powerStripRows(rows: PowerSettingRow[]): PowerSettingRow[] {
-  return rows.filter((row) => row.enabled && row.changed && !isTierSelect(row.setting));
+/** The strip's chips: the settings pinned to the card and in play, the tier (a header chip) left out. */
+export function powerStripRows(rows: PowerSettingRow[], pins: readonly string[]): PowerSettingRow[] {
+  return rows.filter((row) => row.enabled && pins.includes(row.id) && !isTierSelect(row.setting));
 }
 
 export function isTierSelect(setting: PowerSetting): setting is PowerSelectSetting {

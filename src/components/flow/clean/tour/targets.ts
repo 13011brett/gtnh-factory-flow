@@ -26,9 +26,9 @@ export function visible(el: Element | null): el is Element {
 }
 
 /** The first visible element matching the selector. */
-export function css(selector: string, root: ParentNode = document): Target {
+export function css(selector: string, root?: ParentNode): Target {
   return () => {
-    for (const el of root.querySelectorAll(selector)) if (visible(el)) return el;
+    for (const el of (root ?? document).querySelectorAll(selector)) if (visible(el)) return el;
     return null;
   };
 }

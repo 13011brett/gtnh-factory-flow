@@ -1,0 +1,402 @@
+"use client";
+
+import "./chrome.css";
+import "./settings.css";
+
+import { useEffect, useRef, useState, type ReactNode } from "react";
+import { createPortal } from "react-dom";
+import {
+  APP_FONTS,
+  getStoredAppFont,
+  setAppFont,
+  type AppFontId,
+} from "@/lib/app-font";
+import { SEE_THROUGH_STEP, useDeviceSettings, writeDeviceSettings } from "@/lib/device-settings";
+import { areBoardSoundsEnabled, getBoardSoundVolume, playBoardSound, setBoardSoundsEnabled, setBoardSoundVolume } from "@/lib/board-sounds";
+import { setUiScalePercent, useUiScalePercent } from "@/lib/ui-scale";
+import { BOARD_TIMELAPSE_PRESETS, runBoardTimelapsePreset } from "@/components/flow/board-timelapse";
+import { useFactoryStore } from "@/store/factory-store";
+import { ChromeMenu, chromeAnchorOf, MENU_ANCHOR_ATTR, type ChromeAnchor } from "./ChromeMenu";
+import { knock, OPEN_CONTROLS_EVENT, OPEN_TOUR_EVENT } from "./chrome-events";
+import { SettingsPreview } from "./SettingsPreview";
+import {
+  SEE_THROUGH_NAMES,
+  SIZE_NAMES,
+  SOUND_NAMES,
+  SOUND_VOLUME,
+  sizeIndexOf,
+  sizePercentOf,
+  soundIndexOf,
+} from "./settings-model";
+
+type Kind = "switch" | "choice" | "slider" | "button";
+
+interface Row {
+  label: string;
+  hint?: string;
+  about?: string;
+  kind: Kind;
+  names: readonly string[];
+  /** The value's index; -1 when none of the choices is the current one. */
+  at: number;
+  /** A button: the name shown instead of a value (for `button`, `names` are its keys). */
+  to: (index: number, anchor?: HTMLElement) => void;
+  /** Dimmed and inert. */
+  off?: boolean;
+}
+
+interface Section {
+  name: string;
+  /** One short line on what the section is for. */
+  intro?: string;
+  rows: Row[];
+}
+
+/**
+ * The planner's settings, the mod's box: a title bar, the sections down the left and the chosen one's settings on the
+ * right, each with the control that fits it (a switch, a row of choices, a slider), a picture of what the section
+ * changes beside them, and the section left open remembered. A change saves at once.
+ */
+export function ModSettings({
+  onClose,
+  onOpenMachineList,
+}: {
+  onClose: () => void;
+  onOpenMachineList?: () => void;
+}) {
+  const settings = useDeviceSettings();
+  const uiPercent = useUiScalePercent();
+  const [font, setFont] = useState<AppFontId>(() => getStoredAppFont());
+  const [sounds, setSounds] = useState(() => ({ enabled: areBoardSoundsEnabled(), volume: getBoardSoundVolume() }));
+  const [menu, setMenu] = useState<{ anchor: ChromeAnchor }>();
+  const canPlayTimelapse = useFactoryStore(
+    (state) => state.project.nodes.length + (state.project.storages?.length ?? 0) >= 2,
+  );
+  const dragRef = useRef<string | undefined>(undefined);
+
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape" && !menu) {
+        event.stopPropagation();
+        onClose();
+      }
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, [onClose, menu]);
+
+  const soundIndex = soundIndexOf(sounds.enabled, sounds.volume);
+  const setSound = (index: number) => {
+    const enabled = index > 0;
+    setBoardSoundsEnabled(enabled);
+    if (enabled) setBoardSoundVolume(SOUND_VOLUME[index]);
+    setSounds({ enabled, volume: enabled ? SOUND_VOLUME[index] : sounds.volume });
+    // The Sounds row clicks at its new loudness.
+    if (enabled) window.setTimeout(() => playBoardSound("tick"), 40);
+  };
+
+  const sections: Section[] = [
+    {
+      name: "Board",
+      rows: [
+        {
+          label: "Size",
+          hint: "of the planner",
+          kind: "choice",
+          names: SIZE_NAMES,
+          at: sizeIndexOf(uiPercent),
+          to: (index) => setUiScalePercent(sizePercentOf(index)),
+        },
+        {
+          label: "Names when zoomed out",
+          kind: "switch",
+          names: ["Off", "On"],
+          at: settings.zoomedOutNames ? 1 : 0,
+          to: (index) => writeDeviceSettings({ zoomedOutNames: index === 1 }),
+        },
+        {
+          label: "Circuit as an input",
+          kind: "switch",
+          names: ["Off", "On"],
+          at: settings.circuitAsInput ? 1 : 0,
+          to: (index) => writeDeviceSettings({ circuitAsInput: index === 1 }),
+        },
+        {
+          label: "See-through",
+          kind: "slider",
+          names: SEE_THROUGH_NAMES,
+          at: settings.boardSeeThrough / SEE_THROUGH_STEP,
+          to: (index) => writeDeviceSettings({ boardSeeThrough: index * SEE_THROUGH_STEP }),
+        },
+        {
+          label: "Font",
+          kind: "button",
+          names: [APP_FONTS.find((option) => option.id === font)?.label ?? "Minecraft"],
+          at: 0,
+          to: (_, anchor) => anchor && setMenu({ anchor: chromeAnchorOf(anchor) }),
+        },
+        ...(onOpenMachineList
+          ? [
+              {
+                label: "Machine list",
+                kind: "button" as const,
+                names: ["Open"],
+                at: 0,
+                to: () => {
+                  onClose();
+                  onOpenMachineList();
+                },
+              },
+            ]
+          : []),
+        {
+          label: "Animation",
+          hint: "build timelapse",
+          kind: "button" as const,
+          names: BOARD_TIMELAPSE_PRESETS.map((preset) => preset.name),
+          at: -1,
+          off: !canPlayTimelapse,
+          to: (index) => {
+            onClose();
+            requestAnimationFrame(() => runBoardTimelapsePreset(BOARD_TIMELAPSE_PRESETS[index]));
+          },
+        },
+      ],
+    },
+    {
+      name: "Sound",
+      rows: [
+        {
+          label: "Sounds",
+          kind: "choice",
+          names: SOUND_NAMES,
+          at: soundIndex,
+          to: setSound,
+        },
+      ],
+    },
+    {
+      name: "Controls",
+      rows: [
+        {
+          label: "Controls and shortcuts",
+          kind: "button",
+          names: ["Open"],
+          at: 0,
+          to: () => {
+            onClose();
+            window.setTimeout(() => knock(OPEN_CONTROLS_EVENT), 0);
+          },
+        },
+        {
+          label: "The tour",
+          kind: "button",
+          names: ["Take it"],
+          at: 0,
+          to: () => {
+            onClose();
+            window.setTimeout(() => knock(OPEN_TOUR_EVENT), 0);
+          },
+        },
+      ],
+    },
+  ];
+
+  const sectionIndex = Math.max(0, sections.findIndex((section) => section.name === settings.settingsSection));
+  const section = sections[sectionIndex];
+  const pick = (index: number) => {
+    if (index === sectionIndex) return;
+    writeDeviceSettings({ settingsSection: sections[index].name });
+    playBoardSound("tick");
+  };
+
+  const set = (row: Row, index: number, anchor?: HTMLElement) => {
+    if (row.off) return;
+    if (row.kind !== "button" && index === row.at) return;
+    row.to(index, anchor);
+    if (row.kind === "switch") playBoardSound("tick", { gain: index === 1 ? 1.1 : 0.9 });
+    else if (row.kind === "button") playBoardSound("tick");
+    else if (row.kind === "choice" && row.label !== "Sounds") playBoardSound("tick");
+  };
+
+  return createPortal(
+    <div
+      className="ms-backdrop ui-zoom"
+      onPointerDown={(event) => {
+        if (event.target === event.currentTarget) onClose();
+      }}
+    >
+      <div
+        className="ms mx"
+        role="dialog"
+        aria-modal="true"
+        aria-label="Settings"
+        data-mod-settings=""
+        data-section={section.name}
+        onWheel={(event) => {
+          // Over the sections, the wheel goes through them.
+          const target = event.target as HTMLElement;
+          if (!target.closest(".ms-side")) return;
+          const next = Math.max(0, Math.min(sections.length - 1, sectionIndex + (event.deltaY > 0 ? 1 : -1)));
+          pick(next);
+        }}
+      >
+        <div className="ms-title">
+          <span>Settings</span>
+          <div className="ms-close" role="button" aria-label="Close" onClick={onClose}>
+            <svg width="14" height="14" viewBox="0 0 14 14" shapeRendering="crispEdges" aria-hidden fill="currentColor">
+              <path d={crossPath()} />
+            </svg>
+          </div>
+        </div>
+        <div className="ms-body">
+          <nav className="ms-side" aria-label="Settings sections">
+            {sections.map((entry, index) => (
+              <div
+                key={entry.name}
+                role="tab"
+                aria-selected={index === sectionIndex}
+                className="ms-section"
+                data-picked={index === sectionIndex ? "" : undefined}
+                onClick={() => pick(index)}
+              >
+                {entry.name}
+              </div>
+            ))}
+          </nav>
+          <div className="ms-rows">
+            {section.intro ? <div className="ms-intro">{section.intro}</div> : null}
+            {section.rows.map((row) => (
+              <SettingRow key={row.label} row={row} onSet={set} dragRef={dragRef} />
+            ))}
+          </div>
+          <div className="ms-preview" aria-hidden>
+            <SettingsPreview
+              section={section.name}
+              seeThrough={settings.boardSeeThrough}
+              names={settings.zoomedOutNames}
+              circuit={settings.circuitAsInput}
+              sizeIndex={sizeIndexOf(uiPercent)}
+              soundIndex={soundIndex}
+            />
+          </div>
+        </div>
+      </div>
+      {menu ? (
+        <ChromeMenu
+          anchor={menu.anchor}
+          label="Font"
+          align="right"
+          minWidth={150}
+          entries={APP_FONTS.map((option) => ({
+            label: option.label,
+            current: option.id === font,
+            onSelect: () => {
+              setAppFont(option.id);
+              setFont(option.id);
+            },
+          }))}
+          onClose={() => setMenu(undefined)}
+        />
+      ) : null}
+    </div>,
+    document.body,
+  );
+}
+
+/** The pixel cross of a close key: two seven-pixel diagonals. */
+export function crossPath(): string {
+  const d: string[] = [];
+  for (let k = -3; k <= 3; k++) {
+    d.push(`M${6.5 + k} ${6.5 + k}h1v1h-1z`, `M${6.5 + k} ${6.5 - k}h1v1h-1z`);
+  }
+  return d.join("");
+}
+
+function SettingRow({
+  row,
+  onSet,
+  dragRef,
+}: {
+  row: Row;
+  onSet: (row: Row, index: number, anchor?: HTMLElement) => void;
+  dragRef: React.MutableRefObject<string | undefined>;
+}) {
+  const last = row.names.length - 1;
+  let control: ReactNode;
+  if (row.kind === "switch") {
+    control = (
+      <span className="ms-switch" role="switch" aria-checked={row.at === 1} aria-label={row.label} data-on={row.at === 1 ? "" : undefined}>
+        <span className="ms-knob" />
+      </span>
+    );
+  } else if (row.kind === "slider") {
+    control = (
+      <span className="ms-slider-wrap">
+        <input
+          className="ms-slider"
+          type="range"
+          min={0}
+          max={last}
+          step={1}
+          value={Math.max(0, row.at)}
+          aria-label={row.label}
+          onPointerDown={() => (dragRef.current = row.label)}
+          onPointerUp={() => (dragRef.current = undefined)}
+          onChange={(event) => {
+            const value = Number(event.target.value);
+            row.to(value);
+          }}
+        />
+        <span className="ms-value">{row.names[Math.max(0, row.at)]}</span>
+      </span>
+    );
+  } else {
+    control = (
+      <span className="ms-choices" role={row.kind === "choice" ? "radiogroup" : "group"} aria-label={row.label}>
+        {row.names.map((name, index) => (
+          <span
+            key={name}
+            role={row.kind === "choice" ? "radio" : "button"}
+            aria-checked={row.kind === "choice" ? row.at === index : undefined}
+            className="ms-choice"
+            data-picked={row.kind === "choice" && row.at === index ? "" : undefined}
+            {...(row.kind === "button" && row.label === "Font" ? { [MENU_ANCHOR_ATTR]: "" } : {})}
+            onClick={(event) => {
+              event.stopPropagation();
+              onSet(row, index, event.currentTarget);
+            }}
+          >
+            {name}
+          </span>
+        ))}
+      </span>
+    );
+  }
+  return (
+    <div
+      className="ms-row"
+      data-kind={row.kind}
+      data-off={row.off ? "" : undefined}
+      onClick={() => {
+        // The whole row flips a switch.
+        if (row.kind === "switch") onSet(row, 1 - row.at);
+      }}
+      onWheel={(event) => {
+        if (row.off || event.deltaY === 0) return;
+        const step = event.deltaY < 0 ? 1 : -1;
+        if (row.kind === "switch") onSet(row, step > 0 ? 1 : 0);
+        else if (row.kind === "choice" || row.kind === "slider") {
+          const next = Math.max(0, Math.min(last, (row.at < 0 ? 0 : row.at) + step));
+          if (row.kind === "slider") row.to(next);
+          else onSet(row, next);
+        }
+      }}
+    >
+      <span className="ms-label">{row.label}</span>
+      {row.hint ? <span className="ms-hint">{row.hint}</span> : null}
+      <span className="ms-spacer" />
+      {control}
+    </div>
+  );
+}

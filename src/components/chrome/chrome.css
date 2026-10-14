@@ -1,0 +1,399 @@
+/*
+ * The mod's top bar, tabs, menus and boxes on the website (Hyb.java / BoardScreen / PlanTabs / PickList / Popup).
+ * Plain unlayered CSS on classes (the card's rule: unlayered beats Tailwind's layers and globals.css's
+ * `button { font: inherit }`), sizes in the mod's GUI pixels (one CSS px each, the shell's zoom does the rest),
+ * the pixel face at 8 px. Tokens are the mod's own and read the clean card's where it has them.
+ */
+.mb,
+.mm,
+.mx {
+  --mc-ink: #e8e9ee;
+  --mc-muted: #9a9ca4;
+  --mc-frame: #3c3e45;
+  --mc-ring: #52545c;
+  --mc-highlight: #5a5c65;
+  --mc-shadow: #1d1f23;
+  --mc-tile: #36383f;
+  --mc-key: #26282d;
+  --mc-key-hover: #2d2f35;
+  --mc-key-edge: #111317;
+  --mc-key-hi: #4a4c54;
+  --mc-key-lo: #17191d;
+  --mc-menu: #3c3e45;
+  --mc-menu-hover: #4e5058;
+  --mc-bar: #0e0f12;
+  --mc-bar-line: #2a2c31;
+  --mc-red: #e05252;
+  --mc-gold: #ffd257;
+  --mc-cyan: #22d3ee;
+  --mc-off: #5a5c65;
+  font-family: var(--font-minecraft), monospace;
+  font-size: 8px;
+  line-height: 10px;
+  font-weight: 400;
+  letter-spacing: 0;
+  text-shadow: none;
+  -webkit-font-smoothing: none;
+  color: var(--mc-ink);
+}
+
+/* ---- The bar ------------------------------------------------------------- */
+
+.mb {
+  position: relative;
+  z-index: 30;
+  flex: none;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  width: 100%;
+  height: 20px;
+  padding: 2px 4px;
+  background: var(--mc-bar);
+  box-shadow: inset 0 -1px 0 var(--mc-bar-line);
+  user-select: none;
+}
+.mb-grow {
+  flex: 1 1 0;
+  min-width: 0;
+}
+
+/* A key: the card's key style, 16 high, the bevel one pixel. */
+.mb-key {
+  position: relative;
+  flex: none;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 16px;
+  padding: 0 6px;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--mc-key);
+  color: var(--mc-ink);
+  font: inherit;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow:
+    inset 1px 1px 0 var(--mc-key-hi),
+    inset -1px -1px 0 var(--mc-key-lo);
+}
+.mb-key:hover {
+  background: var(--mc-key-hover);
+}
+.mb-key[data-off] {
+  color: var(--mc-off);
+  cursor: default;
+}
+.mb-key[data-off]:hover {
+  background: var(--mc-key);
+}
+.mb-key[data-icon] {
+  width: 18px;
+  padding: 0;
+}
+.mb-key[data-open] {
+  background: var(--mc-key-hover);
+}
+.mb-key > svg {
+  flex: none;
+}
+.mb-key.mb-gap {
+  margin-left: 6px;
+}
+.mb-key[data-glyph="bolt"] {
+  gap: 3px;
+  padding: 0 6px 0 6px;
+}
+.mb-bolt {
+  color: #fcd34d;
+}
+.mb-bug {
+  color: var(--mc-red);
+}
+
+/* ---- The plan tabs ------------------------------------------------------- */
+
+.mt {
+  position: relative;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 16px;
+  display: flex;
+  align-items: stretch;
+  gap: 2px;
+}
+.mt-strip {
+  position: relative;
+  min-width: 0;
+  flex: 0 1 auto;
+  height: 16px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: none;
+  display: flex;
+  gap: 2px;
+}
+.mt-strip::-webkit-scrollbar {
+  display: none;
+}
+.mt-wrap {
+  position: relative;
+  min-width: 0;
+  flex: 0 1 auto;
+  height: 16px;
+}
+.mt-tab {
+  position: relative;
+  flex: none;
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  height: 15px;
+  margin-top: 1px;
+  padding: 0 14px 0 5px;
+  min-width: 48px;
+  max-width: 120px;
+  background: #1c1e22;
+  color: var(--mc-muted);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.mt-tab:hover {
+  background: #2d2f35;
+}
+.mt-tab[data-active] {
+  height: 16px;
+  margin-top: 0;
+  padding-top: 1px;
+  background: linear-gradient(#52545c 0 1px, #5a5c65 1px 2px, var(--mc-frame) 2px);
+  color: #fff;
+  box-shadow:
+    inset 1px 0 0 var(--mc-ring),
+    inset -1px 0 0 var(--mc-ring);
+  z-index: 1;
+}
+.mt-tab[data-readonly] {
+  color: #e0a63a;
+}
+.mt-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.mt-close {
+  display: none;
+  position: absolute;
+  right: 2px;
+  top: 3px;
+  box-sizing: border-box;
+  width: 9px;
+  height: 9px;
+  align-items: center;
+  justify-content: center;
+  color: var(--mc-muted);
+}
+.mt-tab:hover .mt-close {
+  display: flex;
+}
+.mt-close:hover {
+  background: #4a4c54;
+  color: #fff;
+}
+.mt-plus {
+  position: relative;
+  flex: none;
+  box-sizing: border-box;
+  width: 16px;
+  height: 15px;
+  margin-top: 1px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #1c1e22;
+  color: var(--mc-muted);
+  cursor: pointer;
+  padding-top: 1px;
+}
+.mt-plus:hover {
+  background: #2d2f35;
+  color: #fff;
+}
+.mt-fade {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 18px;
+  pointer-events: none;
+  opacity: 0;
+}
+.mt-fade[data-on] {
+  opacity: 1;
+}
+.mt-fade[data-edge="l"] {
+  left: 0;
+  background: linear-gradient(to right, var(--mc-bar) 0%, rgba(14, 15, 18, 0.5) 40%, rgba(14, 15, 18, 0) 100%);
+}
+.mt-fade[data-edge="r"] {
+  right: 0;
+  background: linear-gradient(to left, var(--mc-bar) 0%, rgba(14, 15, 18, 0.5) 40%, rgba(14, 15, 18, 0) 100%);
+}
+.mt-solving {
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  bottom: 0;
+  height: 1px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.mt-solving::after {
+  content: "";
+  display: block;
+  width: 33%;
+  height: 1px;
+  background: var(--mc-cyan);
+  animation: mt-solve 0.9s linear infinite;
+}
+@keyframes mt-solve {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+.mt-rename {
+  flex: 1 1 auto;
+  min-width: 0;
+  width: 100%;
+  height: 12px;
+  padding: 0 2px;
+  border: 0;
+  outline: 1px solid var(--mc-cyan);
+  background: #000;
+  color: #fff;
+  font: inherit;
+}
+
+/* ---- Menus (PickList in Popup's skin) ------------------------------------ */
+
+.mm {
+  position: fixed;
+  z-index: 9999;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  min-width: 100px;
+  width: max-content;
+  max-width: 360px;
+  padding: 0 4px 4px 4px;
+  background: var(--mc-menu);
+  box-shadow:
+    0 0 0 1px var(--mc-key-edge),
+    inset 1px 1px 0 var(--mc-highlight),
+    inset -1px -1px 0 var(--mc-shadow),
+    4px 4px 0 rgba(0, 0, 0, 0.35);
+  user-select: none;
+}
+.mm::before {
+  content: "";
+  display: block;
+  height: 4px;
+  flex: none;
+}
+.mm-title {
+  flex: none;
+  padding: 2px 2px 4px;
+  color: var(--mc-muted);
+  font-size: 8px;
+  line-height: 10px;
+  text-transform: none;
+}
+.mm-scroll {
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #9a9ca4 transparent;
+  margin: 0 -4px;
+  padding: 0 4px;
+}
+.mm-row {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  box-sizing: border-box;
+  height: 20px;
+  margin: 0 -4px;
+  padding: 0 8px 0 8px;
+  color: var(--mc-ink);
+  white-space: nowrap;
+  cursor: pointer;
+}
+.mm-row:hover,
+.mm-row[data-hot] {
+  background: var(--mc-menu-hover);
+}
+.mm-row[data-current] {
+  background: var(--mc-tile);
+}
+.mm-row[data-current]:hover {
+  background: var(--mc-menu-hover);
+}
+.mm-row[data-tone="red"] {
+  color: var(--mc-red);
+}
+.mm-row[data-off] {
+  color: var(--mc-off);
+  cursor: default;
+}
+.mm-row[data-off]:hover {
+  background: transparent;
+}
+.mm-label {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.mm-detail {
+  flex: none;
+  color: var(--mc-muted);
+  text-align: right;
+}
+.mm-rule {
+  height: 1px;
+  margin: 2px -4px;
+  background: #2f3138;
+}
+
+/* ---- The controls list ---------------------------------------------------- */
+
+.mc-controls {
+  max-width: none;
+  width: 420px;
+  padding-bottom: 6px;
+}
+.mc-controls-grid {
+  display: grid;
+  gap: 0;
+}
+.mc-controls-row {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: 8px;
+  padding: 3px 2px;
+}
+.mc-controls-key {
+  color: var(--mc-ink);
+}
+.mc-controls-effect {
+  color: var(--mc-muted);
+}

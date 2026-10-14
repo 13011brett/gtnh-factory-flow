@@ -1,0 +1,229 @@
+/*
+ * The non-recipe machines picker (the mod's PowerPicker): a dimmed board, a sheet of five columns, brass column titles,
+ * one tile per machine (picture 44 wide, name, tier tag), and a larger picture beside the tile the mouse rests on.
+ */
+.mp-backdrop {
+  position: fixed;
+  z-index: 50;
+  bottom: 0;
+  display: flex;
+  justify-content: center;
+  align-items: flex-start;
+  padding: 6px 8px 8px;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.7);
+}
+.mp {
+  --mp-brass: color-mix(in srgb, #d99a2b 35%, #31333a 65%);
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 802px;
+  max-width: 100%;
+  max-height: 100%;
+  background: #101215;
+  box-shadow:
+    0 0 0 2px #23262d,
+    inset 0 2px 0 rgba(255, 255, 255, 0.05);
+}
+.mp-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 26px;
+  padding: 0 6px 0 8px;
+  box-shadow: inset 0 -2px 0 #23262d;
+}
+.mp-bolt {
+  color: #fcd34d;
+  flex: none;
+}
+.mp-title {
+  margin-left: 4px;
+  color: var(--mc-ink);
+  white-space: nowrap;
+}
+.mp-search {
+  width: 220px;
+  margin-right: 4px;
+}
+.mp-close {
+  width: 16px;
+  padding: 0;
+  margin-left: 4px;
+}
+.mp-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 8px;
+  scrollbar-width: thin;
+  scrollbar-color: #4a4c54 transparent;
+}
+.mp-columns {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 150px));
+  gap: 8px;
+  justify-content: start;
+}
+.mp-col {
+  min-width: 0;
+}
+.mp-group + .mp-group {
+  margin-top: 8px;
+}
+.mp-brass {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 14px;
+  padding: 0 4px;
+  margin-bottom: 1px;
+  background: var(--mp-brass);
+  color: #fef3c7;
+}
+.mp-brass i {
+  font-style: normal;
+  color: rgba(254, 243, 199, 0.6);
+}
+.mp-results {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+  gap: 0 8px;
+  align-content: start;
+}
+.mp-none {
+  padding: 4px 0;
+  color: var(--mc-muted);
+}
+.mp-tile {
+  position: relative;
+  box-sizing: border-box;
+  display: block;
+  height: 30px;
+  margin-bottom: 2px;
+  background: #24262b;
+  box-shadow: 0 0 0 1px #3a3c43;
+  margin-left: 1px;
+  margin-right: 1px;
+  cursor: pointer;
+  overflow: hidden;
+}
+.mp-tile[data-via] {
+  height: 40px;
+  overflow: visible;
+}
+.mp-tile:hover {
+  background: #2e3036;
+  box-shadow: 0 0 0 1px rgba(252, 211, 77, 0.7);
+}
+.mp-art {
+  position: absolute;
+  left: 1px;
+  top: 1px;
+  width: 44px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: #0b0d10;
+  overflow: hidden;
+}
+.mp-img {
+  max-width: 40px;
+  max-height: 24px;
+  object-fit: contain;
+  image-rendering: pixelated;
+}
+.mp-icon {
+  display: block;
+}
+.mp-name {
+  position: absolute;
+  left: 49px;
+  right: 3px;
+  top: 5px;
+  line-height: 10px;
+  color: var(--mc-ink);
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  word-break: normal;
+  padding-right: 0;
+}
+.mp-tier {
+  position: absolute;
+  right: 3px;
+  bottom: 3px;
+  height: 11px;
+  line-height: 11px;
+  padding: 0 3px;
+  box-sizing: border-box;
+  background: #36383f;
+  color: var(--mc-ink);
+}
+.mp-via {
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  bottom: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--mc-cyan);
+}
+.mp-preview {
+  position: fixed;
+  z-index: 60;
+  box-sizing: border-box;
+  padding: 6px;
+  background: rgba(16, 18, 21, 0.94);
+  box-shadow: 0 0 0 1px #3a3c43;
+  font-family: var(--font-minecraft), monospace;
+  font-size: 8px;
+  line-height: 9px;
+  color: var(--mc-ink, #e8e9ee);
+  pointer-events: none;
+}
+.mp-preview-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 84px;
+  margin-bottom: 6px;
+  background: #0b0d10;
+  overflow: hidden;
+}
+.mp-preview-art .mp-img {
+  max-width: 100%;
+  max-height: 80px;
+}
+.mp-preview-name {
+  color: #e8e9ee;
+  line-height: 10px;
+}
+.mp-preview-kind {
+  color: #9a9ca4;
+  line-height: 10px;
+}
+.mp-preview-blurb {
+  margin-top: 0;
+  color: #b8bac2;
+}
+.mp-preview .mp-via {
+  position: static;
+  display: block;
+  margin-top: 1px;
+}
+.mp-line {
+  position: absolute;
+  left: 49px;
+  right: 3px;
+  line-height: 10px;
+  white-space: nowrap;
+  color: var(--mc-ink);
+  overflow: hidden;
+}

@@ -223,6 +223,7 @@ import { RecipeNodeSwitch } from "./clean/CleanRecipeNode";
 import { StorageNodeSwitch } from "./clean/drawer/CleanStorageNode";
 import { CleanDrawerFace } from "./clean/drawer/CleanDrawer";
 import { PlanNoticeSwitch, PlanTopNotices } from "./clean/rail/NoticeBar";
+import { registerBoardCommands, reportArrange } from "../chrome/board-commands";
 import { GT_NODE_COLORS, GT_NODE_COLOR_PALETTE, flowRampColor } from "./node-colors";
 import {
   CANVAS_PATTERNS,
@@ -2290,6 +2291,9 @@ export function FactoryFlow() {
   // A phone changes several things about the board: which cards can be dragged,
   // which toolbars are folded, where the centred banners sit.
   const isCompact = useIsCompactViewport();
+  // The mod's top bar (src/components/chrome) carries the keys the board's own toolbars used to: plan boards on a
+  // desktop screen leave them out.
+  const modBar = project.planMode === true && !isCompact;
   // The board's zoom ceiling carries the interface size (ui-scale.ts); the
   // prop must follow the setting live, so it is a hook rather than a getter.
   const uiScale = useUiScale();
@@ -5359,6 +5363,21 @@ export function FactoryFlow() {
     useFactoryStore.getState().frameBoardNodes();
   }, []);
 
+  // The top bar's Arrange and Fit keys (src/components/chrome) call these, and
+  // its Arrange label follows the arrange's progress.
+  useEffect(
+    () =>
+      registerBoardCommands({
+        arrange: () => void handleAutoArrange({ keepBoards: false }),
+        cancelArrange,
+        fit: handleFitView,
+      }),
+    [handleAutoArrange, handleFitView],
+  );
+  useEffect(() => {
+    reportArrange(arrangeProgress, ARRANGE_STEPS.length);
+  }, [arrangeProgress]);
+
   // Stable references keep the memoized PaintToolbar from re-rendering on the
   // per-frame FactoryFlow renders a node drag produces.
   const handlePaintModeChange = useCallback(
@@ -6358,7 +6377,7 @@ export function FactoryFlow() {
       />
       <SolvingBooksOverlay />
       {worksheet ? <PoolWorksheet /> : null}
-      {!isReadOnly ? <PaintToolbar
+      {!isReadOnly && !modBar ? <PaintToolbar
         paintMode={nodeColorPaintMode}
         onPaintModeChange={handlePaintModeChange}
         activeColorTag={activeColorTag}
@@ -6376,20 +6395,23 @@ export function FactoryFlow() {
         onToggleGroup={handleToolGroupToggle}
         shiftedDown={false}
       /> : null}
-      <SourceToolbar
-        readOnly={isReadOnly}
-        folded={!isReadOnly && toolbarFold.build}
-        openGroup={openToolGroup}
-        onToggleGroup={handleToolGroupToggle}
-        shiftedDown={false}
-      />
+      {modBar ? null : (
+        <SourceToolbar
+          readOnly={isReadOnly}
+          folded={!isReadOnly && toolbarFold.build}
+          openGroup={openToolGroup}
+          onToggleGroup={handleToolGroupToggle}
+          shiftedDown={false}
+        />
+      )}
       {/* The phone sheet on compact only: a desktop window narrow enough to
-          fold the paint row still gets the panel or the spread. */}
-      <BoardHelp compact={isCompact} />
+          fold the paint row still gets the panel or the spread. The mod's bar
+          carries its own help key. */}
+      {modBar ? null : <BoardHelp compact={isCompact} />}
       {/* Toggled from the dev menu (shift-click the version chip). Sits above
           the help button; see PerfHud.tsx. */}
       <PerfHud />
-      {arrangeProgress ? (
+      {arrangeProgress && !modBar ? (
         <ArrangeLoader progress={arrangeProgress} onCancel={cancelArrange} />
       ) : null}
       {timelapseActive ? (
@@ -6435,11 +6457,13 @@ export function FactoryFlow() {
         canCombine={selectionCanCombine}
         onCombine={combineSelectedMachines}
       />
-      <SmartViewToolbar
-        glanceMode={boardView.glanceMode}
-        onModeChange={handleGlanceModeChange}
-        onFitView={handleFitView}
-      />
+      {modBar ? null : (
+        <SmartViewToolbar
+          glanceMode={boardView.glanceMode}
+          onModeChange={handleGlanceModeChange}
+          onFitView={handleFitView}
+        />
+      )}
       <HopMapLegend />
       <PlanTopNotices />
       {/* The notices share one column, so none sits on top of another.

@@ -7,7 +7,7 @@ import {
   resolveProjectRecipes,
 } from "@/lib/datasets/refresh-project-recipes";
 import type { Recipe } from "@/lib/model/types";
-import { useCallback, useEffect, useRef, type CSSProperties } from "react";
+import { useCallback, useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import {
   DEFAULT_DATASET_MANIFEST_URL,
   fetchDatasetManifest,
@@ -32,6 +32,8 @@ import { useLibraryTab } from "@/lib/library/library-tab";
 import { useWelcomeTab } from "@/lib/welcome/welcome-tab";
 import { AppHeader } from "./AppHeader";
 import { LibraryPage } from "./library/LibraryPage";
+import { ModLibrary } from "./chrome/ModLibrary";
+import { ModPowerPicker } from "./chrome/ModPowerPicker";
 import { WelcomePage } from "./welcome/WelcomePage";
 import { PlanIdentityDrawer } from "./PlanIdentityDrawer";
 import { SharedAddressSync } from "./SharedAddressSync";
@@ -54,6 +56,7 @@ export function FactoryPlannerApp() {
   const lastResult = useFactoryStore((state) => state.lastResult);
   const workspace = useWorkspaceView();
   const isCompact = useIsCompactViewport();
+  const barInGrid = usePlanLayout() && !isCompact;
   const hydrateResourceHistory = useFactoryStore((state) => state.hydrateResourceHistory);
   const hydrateDesigns = useDesignStore((state) => state.hydrate);
   const saveActiveProject = useDesignStore((state) => state.saveActiveProject);
@@ -301,15 +304,21 @@ export function FactoryPlannerApp() {
       <RecipeBookOpener />
       <PlacementRevealer />
       <SharedAddressSync />
-      <AppHeader onLoadDatasetVersion={loadDatasetVersion} />
+      {/* The mod's bar sits over the overview and the board only, the items list running the screen's height beside
+          it (like NEI beside the mod's board): on a desktop plan board the bar is a grid row of the workspace. */}
+      {barInGrid ? null : <AppHeader onLoadDatasetVersion={loadDatasetVersion} />}
       {isCompact ? (
         <CompactWorkspace workspace={workspace} onLoadDatasetVersion={loadDatasetVersion} />
       ) : (
-        <ColumnWorkspace workspace={workspace} onLoadDatasetVersion={loadDatasetVersion} />
+        <ColumnWorkspace
+          workspace={workspace}
+          onLoadDatasetVersion={loadDatasetVersion}
+          header={barInGrid ? <AppHeader onLoadDatasetVersion={loadDatasetVersion} /> : undefined}
+        />
       )}
       {/* The power source picker portals to the body, so it works from either
           layout and outranks the drawers on compact. */}
-      <PowerSourceOverlay />
+      {isCompact ? <PowerSourceOverlay /> : <ModPowerPicker />}
       {/* Every pocket-to-shelf path (card save, share-a-pocket,
           overwrite) confirms through this one dialog. */}
       <BlueprintSaveDialog />
@@ -320,6 +329,8 @@ export function FactoryPlannerApp() {
 interface WorkspaceProps {
   workspace: ReturnType<typeof useWorkspaceView>;
   onLoadDatasetVersion: (versionId: string) => void;
+  /** Desktop plan boards: the top bar, as the grid's first row over the overview and the board. */
+  header?: ReactNode;
 }
 
 /**
@@ -368,11 +379,13 @@ function PlacementRevealer() {
 function BoardColumn() {
   const covering = useCoveringPage();
   const publicView = useDesignStore((state) => state.publicView);
+  // The mod's bar renames in the tab menu and describes in the share box: no identity strip on a desktop board.
+  const isCompact = useIsCompactViewport();
 
   return (
     <div className="grid h-full min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)]">
       <div className="min-w-0">
-        {covering ? null : publicView ? <PublicViewBar key={publicView.id} /> : <PlanIdentityDrawer />}
+        {covering ? null : publicView ? <PublicViewBar key={publicView.id} /> : isCompact ? <PlanIdentityDrawer /> : null}
         {covering ? null : <TabConflictNotice />}
       </div>
       {/*
@@ -387,7 +400,7 @@ function BoardColumn() {
           </div>
         ) : covering === "shelf" ? (
           <div className="absolute inset-0 z-40">
-            <LibraryPage />
+            {isCompact ? <LibraryPage /> : <ModLibrary />}
           </div>
         ) : null}
       </div>
@@ -414,7 +427,7 @@ function useCoveringPage(): "welcome" | "shelf" | undefined {
   return undefined;
 }
 
-export function ColumnWorkspace({ workspace, onLoadDatasetVersion }: WorkspaceProps) {
+export function ColumnWorkspace({ workspace, onLoadDatasetVersion, header }: WorkspaceProps) {
   // While Welcome covers the board, the resource column (which reads the
   // hidden board's solve) folds to a blank strip WITHOUT writing the workspace
   // view, so it returns as it was.
@@ -454,13 +467,33 @@ export function ColumnWorkspace({ workspace, onLoadDatasetVersion }: WorkspacePr
             ? `${workspace.rightPanelOpen ? INSPECTOR_WIDTH : PANEL_RAIL_WIDTH}px`
             : "0px",
           gridTemplateColumns: columns.template,
+          ...(header ? { gridTemplateRows: "auto minmax(0,1fr)" } : {}),
         } as CSSProperties}
       >
+        {/* The bar over the first two columns; the items column beside it runs both rows. */}
+        {header ? (
+          <div className="min-w-0" style={{ gridColumn: "1 / 3", gridRow: 1 }}>
+            {header}
+          </div>
+        ) : null}
         {/* Each column carries its own same-height header row. The browser
             owns its header, so it stays a direct grid item with no wrapper. */}
-        {planLayout ? covering ? <div /> : <PlanOverview /> : items}
-        <BoardColumn />
-        {planLayout ? (
+        {header ? (
+          <>
+            <div className="grid min-h-0 min-w-0" style={{ gridColumn: 1, gridRow: 2 }}>
+              {covering ? <div /> : <PlanOverview />}
+            </div>
+            <div className="grid min-h-0 min-w-0" style={{ gridColumn: 2, gridRow: 2 }}>
+              <BoardColumn />
+            </div>
+            <div className="grid min-h-0 min-w-0" style={{ gridColumn: 3, gridRow: "1 / 3" }}>
+              {items}
+            </div>
+          </>
+        ) : null}
+        {header ? null : planLayout ? covering ? <div /> : <PlanOverview /> : items}
+        {header ? null : <BoardColumn />}
+        {header ? null : planLayout ? (
           items
         ) : columns.inspectorShown ? (
           <InspectorPanel />

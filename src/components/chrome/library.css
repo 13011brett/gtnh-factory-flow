@@ -1,0 +1,322 @@
+/*
+ * The Library (the mod's LibraryView): the shelves' header, My plans' tiles, the sign-in form. Sizes are the mod's GUI
+ * pixels (HEAD_H 24, PAD 8, GAP 6, tiles 214 wide at least and 50 high).
+ */
+.ml {
+  display: flex;
+  flex-direction: column;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  background: #141414;
+}
+.ml-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 24px;
+  padding: 0 8px;
+  background: #2a2d33;
+  box-shadow: inset 0 -1px 0 #52545c;
+  position: relative;
+}
+.ml-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  height: 24px;
+  padding: 0 2px;
+  margin-right: 6px;
+  color: var(--mc-muted);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.ml-tab:hover {
+  color: #d0d2d8;
+}
+.ml-tab[data-on] {
+  color: var(--mc-ink);
+}
+.ml-tab[data-on]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 1px;
+  height: 2px;
+  background: var(--mc-cyan);
+}
+.ml-tab i {
+  font-style: normal;
+  padding: 0 3px;
+  height: 10px;
+  line-height: 10px;
+  background: #353942;
+  color: #a3a3a3;
+}
+.ml-search {
+  box-sizing: border-box;
+  flex: none;
+  height: 14px;
+  margin-left: 6px;
+  padding: 0 3px;
+  border: 0;
+  border-radius: 0;
+  outline: none;
+  background: #000;
+  color: var(--mc-ink);
+  font: inherit;
+  box-shadow: 0 0 0 1px #111317;
+}
+.ml-search::placeholder {
+  color: #6f737c;
+}
+.ml-search:focus {
+  box-shadow: 0 0 0 1px var(--mc-cyan);
+}
+.ml-drop {
+  gap: 5px;
+  padding: 0 5px 0 5px;
+}
+.ml-drop > svg {
+  color: var(--mc-muted);
+  margin-left: 2px;
+}
+.ml-account {
+  margin-left: 4px;
+  max-width: 120px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.ml-signin {
+  color: var(--mc-cyan);
+}
+.ml-close {
+  width: 16px;
+  padding: 0;
+  margin-left: 4px;
+}
+.ml-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  scrollbar-width: thin;
+  scrollbar-color: #4a4c54 transparent;
+}
+.ml-public {
+  height: 100%;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+}
+.ml-public > * {
+  min-height: 0;
+  flex: 1 1 auto;
+}
+.ml-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(214px, 1fr));
+  gap: 6px;
+  padding: 8px;
+  align-content: start;
+}
+.ml-tile {
+  position: relative;
+  box-sizing: border-box;
+  height: 50px;
+  background: #24262b;
+  box-shadow:
+    0 0 0 1px #3a3c43,
+    3px 3px 0 rgba(0, 0, 0, 0.4);
+  margin: 1px;
+  cursor: pointer;
+  overflow: hidden;
+  color: #fff;
+}
+.ml-tile:hover {
+  background: #2e3036;
+  box-shadow:
+    0 0 0 1px #52545c,
+    3px 3px 0 rgba(0, 0, 0, 0.4);
+}
+.ml-tile[data-showing] {
+  background: #2e3036;
+  box-shadow:
+    0 0 0 1px var(--mc-cyan),
+    3px 3px 0 rgba(0, 0, 0, 0.4);
+}
+.ml-new {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  box-shadow: none;
+  outline: 1px dashed #3a3c43;
+  outline-offset: -1px;
+  color: var(--mc-cyan);
+}
+.ml-new:hover {
+  background: #1d1f23;
+  box-shadow: none;
+  outline-color: #52545c;
+}
+.ml-face {
+  position: absolute;
+  left: 5px;
+  top: 5px;
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.ml-noface {
+  position: relative;
+  width: 24px;
+  height: 24px;
+  background: #1d1f23;
+}
+.ml-noface::before,
+.ml-noface::after {
+  content: "";
+  position: absolute;
+  width: 3px;
+  height: 3px;
+  background: #36383f;
+}
+.ml-noface::before {
+  left: 5px;
+  top: 8px;
+}
+.ml-noface::after {
+  left: 13px;
+  top: 14px;
+}
+.ml-name {
+  position: absolute;
+  left: 34px;
+  right: 6px;
+  top: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #fff;
+}
+.ml-tile:has(.ml-chip) .ml-name {
+  right: 62px;
+}
+.ml-chip {
+  position: absolute;
+  right: 6px;
+  top: 5px;
+  height: 10px;
+  padding: 0 3px;
+  line-height: 10px;
+  background: #353942;
+  color: #a3a3a3;
+}
+.ml-chip[data-showing] {
+  background: #1e4a52;
+  color: var(--mc-cyan);
+}
+.ml-size {
+  position: absolute;
+  left: 34px;
+  right: 6px;
+  top: 17px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: #8a8c94;
+}
+.ml-when {
+  position: absolute;
+  left: 6px;
+  bottom: 5px;
+  color: var(--mc-muted);
+}
+.ml-posted {
+  position: absolute;
+  right: 6px;
+  bottom: 5px;
+  color: #9fd9e6;
+}
+.ml-rename {
+  position: absolute;
+  left: 34px;
+  right: 62px;
+  top: 4px;
+  height: 12px;
+  box-sizing: border-box;
+  padding: 0 2px;
+  border: 0;
+  outline: 1px solid var(--mc-cyan);
+  background: #000;
+  color: #fff;
+  font: inherit;
+}
+
+/* ---- Signing in -------------------------------------------------------- */
+
+.ml-signpanel {
+  width: 236px;
+  padding: 8px 8px 6px;
+  max-width: none;
+}
+.ml-signpanel::before {
+  display: none;
+}
+.ml-sign-title {
+  color: var(--mc-ink);
+}
+.ml-sign-sub {
+  margin-bottom: 4px;
+  color: var(--mc-muted);
+}
+.ml-sign-label {
+  display: block;
+  margin: 4px 0 2px;
+  color: var(--mc-muted);
+  font-size: 7px;
+}
+.ml-sign-field {
+  display: block;
+  width: 100%;
+  height: 16px;
+  margin-left: 0;
+  padding: 0 4px;
+}
+.ml-sign-gap {
+  height: 14px;
+}
+.ml-sign-error {
+  margin: 4px 0;
+  color: #e0a63a;
+  line-height: 10px;
+}
+.ml-sign-go {
+  display: block;
+  width: 100%;
+  height: 18px;
+  margin: 0;
+  border: 0;
+  border-radius: 0;
+  background: var(--mc-cyan);
+  color: #0e0f12;
+  font: inherit;
+  cursor: pointer;
+}
+.ml-sign-go:disabled {
+  background: #1d5560;
+  color: #5a5c65;
+  cursor: default;
+}
+.ml-sign-switch {
+  margin-top: 5px;
+  text-align: center;
+  color: var(--mc-cyan);
+  cursor: pointer;
+}

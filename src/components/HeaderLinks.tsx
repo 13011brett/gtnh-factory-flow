@@ -8,26 +8,26 @@ import { leaveLibrary, openLibrary } from "@/lib/library/library-tab";
 import { openWelcomeTab } from "@/lib/welcome/welcome-tab";
 import { APP_VERSION } from "@/lib/version";
 
-const GITHUB_URL = "https://github.com/jackwrichards/gtnh-factory-flow";
+export const GITHUB_URL = "https://github.com/jackwrichards/gtnh-factory-flow";
 
 /**
  * The planner's thread in the GTNH Discord. A thread, not a server invite,
  * so it only opens for people already in the server.
  */
-const DISCORD_THREAD_URL = "https://discord.com/channels/181078474394566657/1531402304530682036";
+export const DISCORD_THREAD_URL = "https://discord.com/channels/181078474394566657/1531402304530682036";
 
 /**
  * The tip jar. Clicks are counted through Umami's `data-umami-event`
  * auto-tracking (they land in the dashboard's Events panel, split by the
  * `source` field); the attribute is inert when the analytics script is off.
  */
-const KOFI_URL = "https://ko-fi.com/gtnhplanner";
+export const KOFI_URL = "https://ko-fi.com/gtnhplanner";
 
 /**
  * The bug report form with the app version pre-filled, since reporters rarely
  * think to include the build.
  */
-const BUG_REPORT_URL = `${GITHUB_URL}/issues/new?template=bug_report.yml&version=${encodeURIComponent(
+export const BUG_REPORT_URL = `${GITHUB_URL}/issues/new?template=bug_report.yml&version=${encodeURIComponent(
   APP_VERSION,
 )}`;
 

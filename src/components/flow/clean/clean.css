@@ -1,0 +1,742 @@
+/*
+ * The clean look: the mod's flat card on the website's 380 px / 20 px grid.
+ * Plain unlayered CSS, so its class selectors beat globals.css's unlayered
+ * element rules (`button, input { font: inherit }`) and Tailwind's layers.
+ * Everything hangs on data attributes: React rewrites className on the board.
+ *
+ * Tokens (mirrored in tokens.ts) are on :root so the drawers, the overview and
+ * the card all read one palette.
+ */
+:root,
+.cc {
+  --cc-surface: #23252a;
+  --cc-edge: #34363c;
+  --cc-hair: #2c2e34;
+  --cc-ink: #e8e9ee;
+  --cc-muted: #9a9ca4;
+  --cc-gold: #ffd257;
+  --cc-select: #22d3ee;
+  --cc-red: #e05252;
+  --cc-amber: #e0a63a;
+  --cc-ok: #5ee9b5;
+  --cc-source: #78b6f4;
+  --cc-product: #f59a5c;
+  --cc-trash: #8a93a6;
+  --cc-idle: #a8afbb;
+  --cc-accept: #4ade80;
+  --cc-wire-go: #22c55e;
+  --cc-wire-no: #ef4444;
+  --cc-key: #26282d;
+  --cc-key-hover: #2d2f35;
+  --cc-key-edge: #111317;
+  --cc-key-hi: #4a4c54;
+  --cc-key-lo: #17191d;
+  --cc-canvas: #141414;
+  --cc-canvas-dot: #26282d;
+  --cc-prompt-off: #6f737c;
+  --cc-pulse: 1.9s;
+  --cc-accept-pulse: 1.43s;
+  --cc-prompt: 1s;
+}
+
+/* ---- The card ---------------------------------------------------------- */
+
+.cc-card {
+  position: relative;
+  box-sizing: border-box;
+  width: 380px;
+  display: grid;
+  grid-template-columns: 112px minmax(0, 1fr) 112px;
+  grid-template-rows: 40px auto auto;
+  padding: 0 4px;
+  background: var(--cc-surface);
+  color: var(--cc-ink);
+  font-family: var(--app-font, ui-sans-serif, system-ui, sans-serif);
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0;
+  text-shadow: none;
+  font-variant-numeric: tabular-nums;
+  /* The frame is an inset shadow, never a border: a border would push rows off the grid. */
+  box-shadow:
+    inset 0 0 0 1px var(--cc-edge),
+    6px 8px 7px rgba(0, 0, 0, 0.36);
+}
+
+/* Selection and "cannot run" rings, outside the edge. */
+.cc-card::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 3;
+}
+.cc-card[data-selected]::before {
+  box-shadow: 0 0 0 2px var(--cc-select);
+}
+.cc-card[data-cannot-run]::before {
+  box-shadow: 0 0 0 2px var(--cc-red);
+}
+.cc-card[data-selected][data-cannot-run]::before {
+  box-shadow:
+    0 0 0 2px var(--cc-select),
+    0 0 0 4px var(--cc-red);
+}
+
+/* ---- Head --------------------------------------------------------------- */
+
+.cc-head {
+  position: relative;
+  grid-column: 1 / -1;
+  margin: 0 -4px;
+  padding: 0 8px;
+  height: 40px;
+  display: flex;
+  align-items: center;
+  gap: 2px;
+  min-width: 0;
+}
+.cc-head::after {
+  content: "";
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  bottom: 0;
+  height: 1px;
+  background: var(--cc-hair);
+  pointer-events: none;
+}
+
+/* A key: 24 square, the mod's bevel in one shadow list. */
+.cc-key {
+  position: relative;
+  flex: none;
+  width: 24px;
+  height: 24px;
+  box-sizing: border-box;
+  background: var(--cc-key);
+  color: var(--cc-ink);
+  cursor: pointer;
+  box-shadow:
+    inset 0 0 0 1px var(--cc-key-edge),
+    inset 2px 2px 0 0 var(--cc-key-hi),
+    inset -2px -2px 0 0 var(--cc-key-lo);
+}
+.cc-key:hover {
+  background: var(--cc-key-hover);
+}
+.cc-key::before {
+  content: "";
+  position: absolute;
+  left: 5px;
+  top: 5px;
+  width: 14px;
+  height: 14px;
+  background: currentColor;
+  -webkit-mask: var(--cc-glyph) center / contain no-repeat;
+  mask: var(--cc-glyph) center / contain no-repeat;
+}
+.cc-key:active::before {
+  top: 6px;
+}
+.cc-key[data-glyph="menu"] {
+  --cc-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Crect x='2' y='2.5' width='10' height='2'/%3E%3Crect x='2' y='6' width='10' height='2'/%3E%3Crect x='2' y='9.5' width='10' height='2'/%3E%3C/svg%3E");
+}
+.cc-key[data-glyph="gear"] {
+  --cc-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z'/%3E%3Ccircle cx='12' cy='12' r='3'/%3E%3C/svg%3E");
+}
+.cc-key[data-warn]::before {
+  color: var(--cc-red);
+}
+
+/* The machine's name: large, left, a plate on hover, a chevron when it opens a list. */
+.cc-name {
+  flex: 1 1 0;
+  min-width: 0;
+  margin: 0 8px 0 8px;
+  padding: 0 4px;
+  height: 24px;
+  line-height: 24px;
+  font-size: var(--cc-name-size, 14px);
+  font-weight: 500;
+  color: var(--cc-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  position: relative;
+  user-select: none;
+}
+.cc-name[data-clip] {
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 12px), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - 12px), transparent);
+}
+.cc-name[data-picker] {
+  cursor: pointer;
+}
+.cc-name[data-picker]:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.cc-name[data-picker]::after {
+  content: "";
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  margin-left: 5px;
+  vertical-align: -1px;
+  background: var(--cc-muted);
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 3.5 5 7l3.5-3.5' fill='none' stroke='black' stroke-width='1.6'/%3E%3C/svg%3E") center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 3.5 5 7l3.5-3.5' fill='none' stroke='black' stroke-width='1.6'/%3E%3C/svg%3E") center / contain no-repeat;
+}
+.cc-name[data-picker]:hover::after {
+  background: var(--cc-ink);
+}
+.cc-name[data-open]::after {
+  transform: rotate(180deg);
+}
+
+/* Flat tier and amps chips: tier colours, black or white label, no shadow. */
+.cc-chip {
+  flex: none;
+  box-sizing: border-box;
+  min-width: 50px;
+  height: 24px;
+  padding: 0 4px;
+  border: 1px solid var(--chip-border);
+  background: var(--chip-bg);
+  color: var(--chip-ink);
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 22px;
+  text-align: center;
+  white-space: nowrap;
+  cursor: pointer;
+  user-select: none;
+  text-shadow: none;
+}
+.cc-chip:hover {
+  background: var(--chip-hover);
+}
+.cc-chip:active {
+  background: var(--chip-pressed);
+}
+.cc-chip[data-underline] {
+  text-decoration: underline;
+  text-decoration-thickness: 1px;
+  text-underline-offset: 2px;
+}
+.cc-chip[data-fixed] {
+  cursor: default;
+}
+.cc-chip input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: center;
+}
+
+/* ---- Rails and port rows -------------------------------------------------- */
+
+.cc-rail {
+  grid-row: 2;
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.cc-rail[data-side="input"] {
+  grid-column: 1;
+}
+.cc-rail[data-side="output"] {
+  grid-column: 3;
+}
+
+.cc-row {
+  position: relative;
+  box-sizing: border-box;
+  flex: none;
+  height: 40px;
+  padding: 0 0 0 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  min-width: 0;
+}
+.cc-row[data-side="output"] {
+  padding: 0 40px 0 0;
+  text-align: right;
+  align-items: flex-end;
+}
+.cc-row[data-forced] {
+  height: 80px;
+  justify-content: flex-start;
+}
+.cc-row + .cc-row::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 4px;
+  right: 4px;
+  height: 1px;
+  background: var(--cc-hair);
+  pointer-events: none;
+}
+.cc-row[data-port]:hover {
+  background: rgba(255, 255, 255, 0.063);
+}
+/* An unwired port the plan runs through anyway is a free end of it: the striped box of a source (blue, a tank) or a product (orange, a crate). */
+.cc-row[data-open] {
+  height: 38px;
+  margin: 1px -2px;
+  padding-left: 42px;
+  background: repeating-linear-gradient(135deg, var(--cc-open-stripe) 0 3px, var(--cc-open-body) 3px 8px);
+  box-shadow: inset 0 0 0 1px var(--cc-open-edge);
+  border-radius: 2px;
+}
+.cc-row[data-open][data-side="input"] {
+  --cc-open-body: #292f38;
+  --cc-open-stripe: #2e3844;
+  --cc-open-edge: #4f6986;
+  border-radius: 5px;
+}
+.cc-row[data-open][data-side="output"] {
+  --cc-open-body: #322d2e;
+  --cc-open-stripe: #3e3431;
+  --cc-open-edge: #815e49;
+  padding: 0 42px 0 0;
+}
+.cc-row[data-open]::before {
+  display: none;
+}
+.cc-row[data-open] .cc-icon {
+  left: 6px;
+  top: 3px;
+}
+.cc-row[data-open][data-side="output"] .cc-icon {
+  left: auto;
+  right: 6px;
+}
+.cc-row[data-open][data-side="input"] .cc-num {
+  color: #94c3f3;
+}
+.cc-row[data-open][data-side="output"] .cc-num {
+  color: #f2ae81;
+}
+.cc-row[data-open][data-side="input"] .cc-pname {
+  color: #8ba8c8;
+}
+.cc-row[data-open][data-side="output"] .cc-pname {
+  color: #c39b84;
+}
+.cc-row[data-open] .cc-num[data-zero] {
+  color: var(--cc-idle);
+}
+/* Lit by a hover scope or an overview row: gold ring and three halos, steady. */
+.cc-row[data-lit] {
+  box-shadow:
+    inset 0 0 0 1px rgba(255, 210, 87, 0.75),
+    inset 0 0 0 2px rgba(255, 210, 87, 0.18),
+    inset 0 0 0 3px rgba(255, 210, 87, 0.12),
+    inset 0 0 0 4px rgba(255, 210, 87, 0.06);
+  z-index: 1;
+}
+
+/* The row's top 40 px when it also holds a forced row below. */
+.cc-line {
+  position: relative;
+  box-sizing: border-box;
+  height: 40px;
+  padding: 0 0 0 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+}
+.cc-row[data-side="output"] .cc-line {
+  padding: 0 40px 0 0;
+  align-items: flex-end;
+  text-align: right;
+}
+.cc-row[data-forced] {
+  padding: 0 !important;
+}
+
+.cc-icon {
+  position: absolute !important;
+  left: 4px;
+  top: 4px;
+  width: 32px !important;
+  height: 32px !important;
+  pointer-events: none;
+}
+.cc-row[data-side="output"] .cc-icon {
+  left: auto;
+  right: 4px;
+}
+
+.cc-num {
+  display: block;
+  max-width: 70px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--cc-ink);
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
+.cc-num::after {
+  content: attr(data-unit);
+  margin-left: 2px;
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--cc-muted);
+  position: relative;
+  top: -3px;
+}
+.cc-num[data-zero] {
+  color: var(--cc-idle);
+}
+.cc-num[data-gold] {
+  color: var(--cc-gold);
+}
+.cc-num[data-small] {
+  font-size: 9px;
+  line-height: 16px;
+}
+.cc-num[data-small]::after {
+  top: 0;
+  margin-left: 0;
+  color: inherit;
+  font-weight: 600;
+}
+
+.cc-pname {
+  display: block;
+  width: 70px;
+  max-width: 70px;
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 10px;
+  color: var(--cc-muted);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.cc-pname[data-small] {
+  font-size: 7.5px;
+}
+.cc-pname[data-clip] {
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 10px), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - 10px), transparent);
+}
+.cc-row[data-side="output"] .cc-pname:not([data-clip]) {
+  text-align: right;
+}
+
+/* The power row: a port row without a wire. */
+.cc-row[data-power] {
+  cursor: default;
+}
+.cc-bolt {
+  position: absolute;
+  left: 4px;
+  top: 4px;
+  box-sizing: border-box;
+  width: 32px;
+  height: 32px;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%23F5B731' d='M18 3 7 18h7l-2 11 12-17h-8z'/%3E%3C/svg%3E") center / 24px no-repeat,
+    #2b2410;
+  box-shadow: inset 0 0 0 1px #6b5a22;
+  pointer-events: none;
+}
+.cc-row[data-stalled] .cc-num {
+  color: var(--cc-red);
+  font-weight: 700;
+}
+.cc-row[data-stalled] .cc-bolt {
+  box-shadow: inset 0 0 0 1px #6b2a2a;
+}
+
+/* A choice mark: the slot takes several items. */
+.cc-row[data-choice]::after {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 32px;
+  width: 5px;
+  height: 5px;
+  background: #ffaa00;
+  box-shadow: 0 0 0 1px #000;
+  pointer-events: none;
+}
+.cc-row[data-side="output"][data-choice]::after {
+  left: auto;
+  right: 31px;
+}
+
+/* A forced row: the plan sends material out (or brings it in) here with no drawer. */
+.cc-forced {
+  position: relative;
+  box-sizing: border-box;
+  align-self: stretch;
+  margin: 1px -2px 0;
+  height: 38px;
+  padding: 0 0 0 42px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  background: repeating-linear-gradient(135deg, var(--cc-forced-stripe) 0 3px, var(--cc-forced-body) 3px 8px);
+  box-shadow: inset 0 0 0 1px var(--cc-forced-edge);
+  border-radius: var(--cc-forced-radius, 2px);
+}
+.cc-row[data-side="output"] .cc-forced {
+  padding: 0 42px 0 0;
+  align-items: flex-end;
+}
+.cc-forced[data-kind="in"] {
+  --cc-forced-body: #292f38;
+  --cc-forced-stripe: #2e3844;
+  --cc-forced-edge: #4f6986;
+  --cc-forced-radius: 5px;
+}
+.cc-forced[data-kind="out"] {
+  --cc-forced-body: #322d2e;
+  --cc-forced-stripe: #3e3431;
+  --cc-forced-edge: #815e49;
+}
+.cc-forced .cc-icon {
+  left: 6px;
+  top: 3px;
+}
+.cc-row[data-side="output"] .cc-forced .cc-icon {
+  left: auto;
+  right: 6px;
+}
+.cc-forced[data-kind="in"] .cc-num {
+  color: #94c3f3;
+}
+.cc-forced[data-kind="out"] .cc-num {
+  color: #f2ae81;
+}
+.cc-forced[data-kind="in"] .cc-pname {
+  color: #8ba8c8;
+}
+.cc-forced[data-kind="out"] .cc-pname {
+  color: #c39b84;
+}
+
+/* ---- Picture column ------------------------------------------------------ */
+
+.cc-pic {
+  grid-row: 2;
+  grid-column: 2;
+  position: relative;
+  min-height: 80px;
+  min-width: 0;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+  padding-top: 8px;
+  box-sizing: border-box;
+}
+.cc-art {
+  max-width: 96px;
+  max-height: 96px;
+  object-fit: contain;
+  image-rendering: pixelated;
+  filter: drop-shadow(5px 7px 6px rgba(0, 0, 0, 0.6));
+  pointer-events: none;
+}
+.cc-machine {
+  width: 64px !important;
+  height: 64px !important;
+  filter: drop-shadow(5px 7px 6px rgba(0, 0, 0, 0.6));
+  pointer-events: none;
+}
+.cc-circuit {
+  position: absolute !important;
+  left: 4px;
+  bottom: 4px;
+  width: 28px !important;
+  height: 28px !important;
+}
+
+/* The count: bottom right, with a line under it that never moves it. */
+.cc-count {
+  position: absolute;
+  right: 2px;
+  bottom: 0;
+  min-width: 64px;
+  height: 30px;
+  box-sizing: border-box;
+  padding-top: 4px;
+  text-align: right;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--cc-ink);
+  cursor: text;
+  user-select: none;
+  white-space: nowrap;
+}
+.cc-count::after {
+  content: attr(data-note);
+  display: block;
+  height: 10px;
+  font-size: 10px;
+  font-weight: 400;
+  line-height: 10px;
+  color: var(--cc-muted);
+  text-align: center;
+}
+.cc-count[data-pinned] {
+  color: var(--cc-gold);
+}
+.cc-count[data-zero] {
+  color: var(--cc-muted);
+}
+.cc-count:hover:not([data-editing]) {
+  text-decoration: underline dotted;
+  text-underline-offset: 3px;
+  text-decoration-color: var(--cc-muted);
+}
+.cc-count[data-prompt]::after {
+  animation: cc-prompt var(--cc-prompt) steps(1, end) infinite;
+}
+.cc-count input {
+  box-sizing: border-box;
+  width: 64px;
+  height: 18px;
+  margin: 0;
+  padding: 0 3px;
+  border: 1px solid var(--cc-gold);
+  outline: 0;
+  background: #0f1114;
+  color: var(--cc-gold);
+  font: inherit;
+  font-size: 13px;
+  text-align: right;
+}
+
+@keyframes cc-prompt {
+  0%,
+  49.99% {
+    color: var(--cc-gold);
+  }
+  50%,
+  100% {
+    color: var(--cc-prompt-off);
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .cc-count[data-prompt]::after {
+    animation: none;
+    color: var(--cc-prompt-off);
+  }
+}
+
+/* ---- Settings strip ------------------------------------------------------- */
+
+.cc-strip {
+  position: relative;
+  grid-column: 1 / -1;
+  margin: 0 -4px;
+}
+.cc-strip::before {
+  content: "";
+  position: absolute;
+  top: 6px;
+  left: 1px;
+  right: 1px;
+  height: 1px;
+  background: var(--cc-hair);
+}
+.cc-sc {
+  background-repeat: no-repeat;
+  background-position: 5px center;
+  background-size: 14px;
+  image-rendering: pixelated;
+  position: absolute;
+  box-sizing: border-box;
+  height: 18px;
+  padding: 0 5px;
+  border: 1px solid var(--cc-edge);
+  background-color: #2a2c31;
+  color: var(--cc-ink);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  cursor: pointer;
+  user-select: none;
+}
+.cc-sc::before {
+  content: attr(data-label);
+  margin-right: 4px;
+  color: var(--cc-muted);
+}
+.cc-sc:hover {
+  border-color: #4a4d55;
+  background-color: #33363c;
+}
+.cc-sc[data-warn] {
+  border-color: #6b2a2a;
+  color: var(--cc-red);
+}
+.cc-sc[data-reading] {
+  padding: 0;
+  border: 0;
+  background-color: transparent;
+  background-image: none;
+  cursor: default;
+}
+
+/* ---- Zoomed out ------------------------------------------------------------ */
+
+/* The glance layer: art and the count only. The board hides every other child. */
+.cc-glance {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: calc(100% - 24px) calc(100% - 24px);
+  image-rendering: pixelated;
+}
+.cc-glance::after {
+  content: attr(data-count);
+  position: absolute;
+  right: calc(2px + 6px / var(--board-zoom, 1));
+  bottom: calc(2px + 4px / var(--board-zoom, 1));
+  font-size: min(calc(20px / var(--board-zoom, 1)), 90px);
+  font-weight: 600;
+  line-height: 1;
+  color: var(--cc-ink);
+  text-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
+}
+.factory-flow-board[data-detail-level="glance"] .cc-card {
+  box-shadow:
+    inset 0 0 0 max(2px, calc(1px / var(--board-zoom, 1))) var(--cc-edge),
+    6px 8px 7px rgba(0, 0, 0, 0.36);
+}
+
+/* Zoomed out the rings hold a constant screen thickness: red when the card cannot run, cyan three times that for a selection. */
+.factory-flow-board[data-detail-level="glance"] .cc-card[data-cannot-run]::before {
+  box-shadow: 0 0 0 min(max(2px, calc(2px / var(--board-zoom, 1))), 12px) var(--cc-red);
+}
+.factory-flow-board[data-detail-level="glance"] .cc-card[data-selected]::before {
+  box-shadow: 0 0 0 min(max(3px, calc(6px / var(--board-zoom, 1))), 24px) var(--cc-select);
+}
+.factory-flow-board[data-detail-level="glance"] .cc-card[data-selected][data-cannot-run]::before {
+  box-shadow:
+    0 0 0 min(max(3px, calc(6px / var(--board-zoom, 1))), 24px) var(--cc-select),
+    0 0 0 min(max(5px, calc(8px / var(--board-zoom, 1))), 32px) var(--cc-red);
+}

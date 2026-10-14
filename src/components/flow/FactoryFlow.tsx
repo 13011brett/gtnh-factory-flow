@@ -223,7 +223,8 @@ import {
   zoomForRect,
   type BoardRect,
 } from "./board-camera";
-import { RecipeNode, type RecipeFlowNode } from "./RecipeNode";
+import { type RecipeFlowNode } from "./RecipeNode";
+import { RecipeNodeSwitch } from "./clean/CleanRecipeNode";
 import { GT_NODE_COLORS, GT_NODE_COLOR_PALETTE, flowRampColor } from "./node-colors";
 import {
   CANVAS_PATTERNS,
@@ -405,7 +406,7 @@ import { RESOURCE_DRAG_TYPE, readResourceDrag } from "@/lib/resource-drag";
 const MOVE_END_SETTLE_MS = 120;
 
 const nodeTypes = {
-  recipeNode: RecipeNode,
+  recipeNode: RecipeNodeSwitch,
   storageNode: StorageNode,
   trashNode: TrashNode,
   annotationNode: AnnotationNode,

@@ -6,5 +6,9 @@ import { OverviewRail, useRailColumnWidth } from "./flow/clean/rail/OverviewRail
 export const usePlanOverviewWidth = useRailColumnWidth;
 
 export function PlanOverview({ inDrawer = false }: { inDrawer?: boolean }) {
-  return <OverviewRail forceOpen={inDrawer} />;
+  return (
+    <div data-testid="plan-overview" className="h-full min-h-0">
+      <OverviewRail forceOpen={inDrawer} />
+    </div>
+  );
 }

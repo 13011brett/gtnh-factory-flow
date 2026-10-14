@@ -20,6 +20,10 @@ vi.mock("./welcome/WelcomePage", () => ({ WelcomePage: () => null }));
 vi.mock("./PowerSourceOverlay", () => ({ PowerSourceOverlay: () => null }));
 vi.mock("./BlueprintSaveDialog", () => ({ BlueprintSaveDialog: () => null }));
 
+class ResizeObserverStub { observe() {} unobserve() {} disconnect() {} }
+vi.stubGlobal("ResizeObserver", ResizeObserverStub);
+
+import { resetRailViewForTests, writeRailView } from "./flow/clean/rail/rail-view";
 import { ColumnWorkspace, CompactWorkspace } from "./FactoryPlannerApp";
 import { DEFAULT_WORKSPACE_VIEW, readWorkspaceViewSnapshot, writeWorkspaceView } from "@/lib/workspace-view";
 import { leaveWelcomeTab } from "@/lib/welcome/welcome-tab";
@@ -48,6 +52,7 @@ function order(container: HTMLElement): string[] {
 describe("workspace layout", () => {
   beforeEach(() => {
     window.localStorage.clear();
+    resetRailViewForTests();
     writeWorkspaceView({ ...DEFAULT_WORKSPACE_VIEW, leftPanelOpen: true, rightPanelOpen: true });
     leaveWelcomeTab();
     useDesignStore.setState({ isHydrated: true, activeDesignId: "d1" });
@@ -69,7 +74,7 @@ describe("workspace layout", () => {
   it("puts the overview left, the items right and no inspector in plan mode", () => {
     setProject({ planMode: true });
     const { container } = renderColumns();
-    expect(order(container)).toEqual(["plan-overview-placeholder", "board", "items"]);
+    expect(order(container)).toEqual(["plan-overview", "board", "items"]);
     expect(screen.queryByTestId("inspector")).toBeNull();
     const main = container.querySelector("main")!;
     expect(main.getAttribute("data-items-side")).toBe("right");
@@ -79,14 +84,14 @@ describe("workspace layout", () => {
   it("folds the overview to a strip that survives a reload", () => {
     setProject({ planMode: true });
     const first = renderColumns();
-    fireEvent.click(screen.getByRole("button", { name: "Fold the overview" }));
+    act(() => writeRailView({ open: false }));
     first.unmount();
-    const stored = JSON.parse(window.localStorage.getItem("gtnh-factory-flow-workspace-view")!);
-    expect(stored.rightPanelOpen).toBe(false);
+    const stored = JSON.parse(window.localStorage.getItem("gtnh-factory-flow-overview-rail")!);
+    expect(stored.open).toBe(false);
     const { container } = renderColumns();
     expect(container.querySelector("main")!.style.gridTemplateColumns).toBe("26px minmax(0,1fr) 256px");
-    fireEvent.click(screen.getByRole("button", { name: "Show the overview" }));
-    expect(readWorkspaceViewSnapshot().rightPanelOpen).toBe(true);
+    act(() => writeRailView({ open: true }));
+    expect(JSON.parse(window.localStorage.getItem("gtnh-factory-flow-overview-rail")!).open).toBe(true);
   });
 
   it("folds the items to a 26px rail on the right", () => {
@@ -104,7 +109,7 @@ describe("workspace layout", () => {
     setProject({ planMode: true, poolMode: true });
     const { container } = renderColumns();
     expect(container.querySelector("main")!.getAttribute("data-items-side")).toBe("left");
-    expect(screen.queryByTestId("plan-overview-placeholder")).toBeNull();
+    expect(screen.queryByTestId("plan-overview")).toBeNull();
   });
 
   describe("compact", () => {

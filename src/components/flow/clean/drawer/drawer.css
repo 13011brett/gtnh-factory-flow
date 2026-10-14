@@ -1,6 +1,6 @@
 /*
  * The clean drawer: the mod's drawer (DrawerPaint, a card's port row lifted off the card) on the website's
- * 120 x 80 footprint. A bar 20 px along the top (move, select, tooltip), a body 60 px with the row and its
+ * 120 x 80 footprint. A bar 12 px along the top (the mod 8 of 54: move, select, tooltip), a body 68 px with the row and its
  * controls. Plain unlayered CSS like clean.css; state hangs on data attributes (React rewrites className on the
  * board). Colours are the mod's: blue source, orange product and byproduct, steel trash. The per-kind values are
  * the mixes of tokens.ts `drawerMixes`, pinned by drawer.test.ts.
@@ -18,12 +18,13 @@
   width: 120px;
   height: 80px;
   color: var(--cc-ink);
-  font-family: var(--app-font, ui-sans-serif, system-ui, sans-serif);
-  font-size: 12px;
-  line-height: 16px;
+  font-family: var(--cc-font);
+  font-size: 8px;
+  line-height: 10px;
+  font-weight: 400;
   letter-spacing: 0;
   text-shadow: none;
-  font-variant-numeric: tabular-nums;
+  -webkit-font-smoothing: none;
   --cd-radius: 6px;
 }
 
@@ -114,7 +115,8 @@
   left: 0;
   right: 0;
   top: 0;
-  height: 19px;
+  height: 12px;
+  box-sizing: border-box;
   background: var(--cd-bar);
   border-bottom: 1px solid var(--cd-frame);
   pointer-events: auto;
@@ -124,22 +126,22 @@
 .cd[data-selected] .cd-bar {
   background: var(--cd-bar-hot);
 }
-/* The grip: two rows of 1 px dots, 15 px wide, 2 px pitch, at y 7 and y 11 of the drawer (6 and 10 in the bar). */
+/* The grip: two rows of 1 px dots, 15 px wide, 2 px pitch, at y 3 and y 6 of the bar (the mod 2 and 4 of its 8). */
 .cd-bar::before {
   content: "";
   position: absolute;
   left: calc(50% - 7.5px);
-  top: 6px;
+  top: 3px;
   width: 15px;
-  height: 5px;
+  height: 4px;
   background:
     repeating-linear-gradient(90deg, var(--cd-grip) 0 1px, transparent 1px 2px) 0 0 / 15px 1px no-repeat,
-    repeating-linear-gradient(90deg, var(--cd-grip) 0 1px, transparent 1px 2px) 0 4px / 15px 1px no-repeat;
+    repeating-linear-gradient(90deg, var(--cd-grip) 0 1px, transparent 1px 2px) 0 3px / 15px 1px no-repeat;
 }
 .cd:hover .cd-bar::before {
   background:
     repeating-linear-gradient(90deg, var(--cd-grip-hot) 0 1px, transparent 1px 2px) 0 0 / 15px 1px no-repeat,
-    repeating-linear-gradient(90deg, var(--cd-grip-hot) 0 1px, transparent 1px 2px) 0 4px / 15px 1px no-repeat;
+    repeating-linear-gradient(90deg, var(--cd-grip-hot) 0 1px, transparent 1px 2px) 0 3px / 15px 1px no-repeat;
 }
 
 /* The delete key: 14 x 14 at (3, 3) in the bar, only while the pointer is on the drawer or it is selected. */
@@ -185,7 +187,7 @@
   position: absolute;
   left: 0;
   right: 0;
-  top: 20px;
+  top: 12px;
   bottom: 0;
   /* The port row: lights, scopes and starts a wire; the Handle blankets it. */
 }
@@ -198,10 +200,17 @@
 .cd-icon {
   position: absolute !important;
   z-index: 1;
-  top: 27px;
+  top: 30px;
   width: 32px !important;
   height: 32px !important;
   pointer-events: none;
+}
+/* A fluid is the card's flat square in its own colour: 28 of the 32 box, no bevel, no art. */
+.cd-swatch {
+  box-sizing: border-box;
+  display: block;
+  padding: 2px;
+  background-clip: content-box;
 }
 .cd[data-kind="source"] .cd-icon {
   left: 4px;
@@ -215,10 +224,10 @@
 
 .cd-num {
   position: absolute;
-  top: 0;
+  top: 6px;
   width: 76px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 400;
   line-height: 16px;
   color: var(--cd-number);
   white-space: nowrap;
@@ -227,8 +236,8 @@
 .cd-num::after {
   content: attr(data-unit);
   margin-left: 2px;
-  font-size: 9px;
-  font-weight: 500;
+  font-size: 8px;
+  font-weight: 400;
   color: var(--cc-muted);
   position: relative;
   top: -3px;
@@ -237,20 +246,19 @@
   color: var(--cc-idle);
 }
 .cd-num[data-small] {
-  font-size: 9px;
+  font-size: 8px;
 }
 .cd-num[data-small]::after {
   top: 0;
   margin-left: 0;
   color: inherit;
-  font-weight: 600;
 }
 .cd-name {
   position: absolute;
-  top: 17px;
+  top: 24px;
   width: 76px;
-  font-size: 9px;
-  font-weight: 500;
+  font-size: 8px;
+  font-weight: 400;
   line-height: 10px;
   color: var(--cd-name);
   white-space: nowrap;
@@ -258,7 +266,7 @@
   pointer-events: none;
 }
 .cd-name[data-small] {
-  font-size: 7.5px;
+  font-size: 6px;
 }
 .cd-name[data-clip] {
   -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 10px), transparent);
@@ -283,7 +291,7 @@
 .cd-key,
 .cd-box {
   position: absolute;
-  top: 38px;
+  top: 48px;
   height: 14px;
   box-sizing: border-box;
   z-index: 40;
@@ -297,8 +305,8 @@
     inset 0 0 0 1px #111317,
     inset 0 1px 0 1px rgba(255, 255, 255, 0.12);
   color: var(--cc-gold);
-  font-size: 11px;
-  font-weight: 600;
+  font-size: 9px;
+  font-weight: 400;
   line-height: 14px;
   text-align: center;
 }
@@ -316,8 +324,8 @@
   width: 56px;
   background: #0f1114;
   color: var(--cc-gold);
-  font-size: 9px;
-  font-weight: 500;
+  font-size: 8px;
+  font-weight: 400;
   line-height: 14px;
   text-align: center;
   white-space: nowrap;
@@ -545,24 +553,25 @@
   position: fixed;
   z-index: 9999;
   box-sizing: border-box;
-  width: 110px;
+  width: 156px;
   padding: 2px 0;
   background: #2b2d33;
   box-shadow:
     inset 0 0 0 1px #111317,
     4px 4px 0 rgba(0, 0, 0, 0.35);
   color: var(--cc-ink);
-  font-family: var(--app-font, ui-sans-serif, system-ui, sans-serif);
-  font-size: 11px;
-  line-height: 14px;
+  font-family: var(--cc-font);
+  font-size: 9px;
+  line-height: 12px;
+  -webkit-font-smoothing: none;
 }
 .cd-menu-row {
   display: flex;
   align-items: center;
   gap: 6px;
   box-sizing: border-box;
-  height: 20px;
-  padding: 0 8px;
+  height: 24px;
+  padding: 0 10px;
   cursor: pointer;
   white-space: nowrap;
 }

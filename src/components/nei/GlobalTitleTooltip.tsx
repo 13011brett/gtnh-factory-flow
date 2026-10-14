@@ -5,6 +5,8 @@ import { createPortal } from "react-dom";
 import { getUiScale } from "@/lib/ui-scale";
 import { isTouchPointer } from "@/lib/pointer-kind";
 import { TOOLTIP_PANEL_CLASS } from "./tooltip-style";
+import { ensureTipHost } from "@/components/flow/clean/interaction/TipHost";
+import { restWait } from "@/components/flow/clean/interaction/rest-wait";
 
 /**
  * Renders every browser `title` attribute as the planner's own tooltip.
@@ -30,6 +32,8 @@ export function GlobalTitleTooltip() {
   const pointerRef = useRef<{ x: number; y: number } | undefined>(undefined);
 
   useEffect(() => {
+    // Plan-mode boards give titles to the clean tip host (0.8 s wait, none while holding something).
+    ensureTipHost();
     let hovered: Element | null = null;
     let buttons = 0;
     let pressedAt: { x: number; y: number } | undefined;
@@ -74,7 +78,7 @@ export function GlobalTitleTooltip() {
     };
 
     const resolveAt = (target: Element | null, clientX: number, clientY: number, buttons: number) => {
-      if (isTouchPointer()) {
+      if (isTouchPointer() || restWait() > 0) {
         hide();
         return;
       }

@@ -4,6 +4,7 @@ import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-libra
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { GlobalTitleTooltip } from "./GlobalTitleTooltip";
 import { isTouchPointer } from "@/lib/pointer-kind";
+import { setRestWait } from "@/components/flow/clean/interaction/rest-tracker";
 vi.mock("@/lib/pointer-kind", () => ({ isTouchPointer: vi.fn(() => false) }));
 
 function pointer(target: Element | Window, type: string, x = 120, buttons = type === "pointerdown" ? 1 : 0) {
@@ -18,6 +19,8 @@ function Toggle() {
 const hover = (target: Element) => fireEvent.mouseMove(target, { clientX: 120, clientY: 80, buttons: 0 });
 
 beforeEach(() => {
+  // These are the classic boards' immediate tips; plan boards hand titles to the clean tip host (TipHost.test).
+  setRestWait(0);
   vi.mocked(isTouchPointer).mockReturnValue(false);
   vi.spyOn(window, "requestAnimationFrame").mockImplementation(callback => window.setTimeout(() => callback(0), 0));
   vi.spyOn(window, "cancelAnimationFrame").mockImplementation(id => window.clearTimeout(id));

@@ -5,7 +5,8 @@ import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type C
 import { snapToGrid } from "@/lib/board-grid";
 import type { FactoryAnnotation } from "@/lib/model/types";
 import { useFactoryStore } from "@/store/factory-store";
-import { measureText } from "../text-measure";
+import { measureClean } from "../text-measure";
+import type { TipSpec } from "../interaction/tip-spec";
 import { NoteMenu, type NoteMenuState } from "./NoteMenu";
 import "./note.css";
 import {
@@ -30,14 +31,22 @@ export interface StickyNoteData extends Record<string, unknown> {
 
 export type StickyNoteFlowNode = Node<StickyNoteData, "annotationNode">;
 
-const measure = (text: string, fontPx: number) => measureText(text, fontPx, 400);
+const measure = (text: string, fontPx: number) => measureClean(text, fontPx, 400);
 
-const TITLES: Record<NotePart, string> = {
-  body: "Click: write. Drag: move. Right-click: colour, text size, delete",
-  delete: "Delete note",
-  smaller: "Smaller text",
-  bigger: "Bigger text",
-  resize: "Drag the corner or an edge to resize",
+/** The mod's tips (`NoteCard.tip`), by what the pointer is on. */
+const TIPS: Record<NotePart, Omit<TipSpec, "id">> = {
+  body: {
+    title: "Sticky note",
+    actions: [
+      { input: "left", label: "Click: write" },
+      { input: "drag", label: "Move" },
+      { input: "right", label: "Colour, text size, delete" },
+    ],
+  },
+  delete: { title: "Delete note" },
+  smaller: { title: "Smaller text" },
+  bigger: { title: "Bigger text" },
+  resize: { title: "Resize", actions: [{ input: "drag", label: "Drag the corner or an edge" }] },
 };
 
 const CURSORS = { nwse: "nwse-resize", ew: "ew-resize", ns: "ns-resize" } as const;
@@ -163,7 +172,14 @@ function StickyNoteComponent({ data, selected, width, height }: NodeProps<Sticky
     if (locked) return;
     const part = partUnder(event.clientX, event.clientY);
     root.dataset.part = part;
-    root.title = editing ? "" : TITLES[part];
+    if (editing) {
+      root.removeAttribute("data-tip");
+      root.removeAttribute("data-tip-id");
+    } else {
+      const id = `${annotation.id}|${part}`;
+      root.setAttribute("data-tip", JSON.stringify({ ...TIPS[part], id }));
+      root.setAttribute("data-tip-id", id);
+    }
     if (part === "resize") {
       const p = localPoint(event.clientX, event.clientY);
       const axes = resizeAxes(p.x, p.y, w, h, p.zoom);
@@ -304,7 +320,7 @@ function StickyNoteComponent({ data, selected, width, height }: NodeProps<Sticky
           />
         ) : (
           <div ref={displayRef} className="sn-text" data-empty={noText ? "" : undefined}>
-            {noText ? "Click to write" : text}
+            {noText ? "Double-click to write" : text}
           </div>
         )}
         {fits ? (

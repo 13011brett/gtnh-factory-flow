@@ -21,6 +21,9 @@ import {
 } from "@/lib/welcome/welcome-tab";
 import { useDesignStore } from "@/store/design-store";
 import { useSolvingBooks } from "@/components/flow/use-solving-books";
+import { useFactoryStore } from "@/store/factory-store";
+import { tipAttrs } from "@/components/flow/clean/interaction/tip-spec";
+import { closeTabTip, newTabTip, planTabTip } from "@/components/flow/clean/interaction/board-tips";
 
 // Wide enough for the longest item on one line ("Close tabs to right"); the
 // menu clips rather than wraps, so this and the labels move together.
@@ -44,6 +47,8 @@ interface OpenMenu {
 export function DesignTabs() {
   const publicView = useDesignStore((state) => state.publicView);
   const publicViews = useDesignStore((state) => state.publicViews);
+  // Plan boards word their tabs' tips as the mod does and close a tab on a middle click.
+  const planBoard = useFactoryStore((state) => state.project.planMode === true);
   const allDesigns = useDesignStore((state) => state.designs);
   const folders = useDesignStore((state) => state.folders);
   const activeDesignId = useDesignStore((state) => state.activeDesignId);
@@ -603,6 +608,12 @@ export function DesignTabs() {
                   ) : null}
                 <div
                   data-design-id={design.id}
+                  onAuxClick={planBoard ? (event) => {
+                    if (event.button !== 1) return;
+                    event.preventDefault();
+                    void closeFromTab(design.id);
+                  } : undefined}
+                  onMouseDown={planBoard ? (event) => { if (event.button === 1) event.preventDefault(); } : undefined}
                   style={closingLayout?.widths[design.id] ? { width: closingLayout.widths[design.id], flexShrink: 0 } : undefined}
                   onPointerDown={(event) => beginTabDrag(event, design.id)}
                   onContextMenu={(event) => {
@@ -636,6 +647,7 @@ export function DesignTabs() {
                   ) : (
                     <button
                       type="button"
+                      {...(planBoard ? tipAttrs(planTabTip(`tab|${design.id}`, design.name)) : {})}
                       onClick={() => {
                         if (suppressClickRef.current) {
                           return;
@@ -656,6 +668,7 @@ export function DesignTabs() {
                   {isActive ? <button
                     type="button"
                     aria-label={`Close ${design.name}`}
+                    {...(planBoard ? tipAttrs(closeTabTip(`tabx|${design.id}`)) : {})}
                     onPointerDown={(event) => event.stopPropagation()}
                     onClick={() => void closeFromTab(design.id)}
                     className="ml-1 shrink-0 rounded px-1 text-xs text-fg-muted hover:bg-surface hover:text-fg"
@@ -694,6 +707,7 @@ export function DesignTabs() {
             void addDesign();
           }}
           aria-label="New design"
+          {...(planBoard ? tipAttrs(newTabTip("tab|new")) : {})}
           className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded text-fg-muted hover:bg-surface-sunken hover:text-fg"
         >
           <Plus className="h-3.5 w-3.5" aria-hidden />

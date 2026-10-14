@@ -8,7 +8,9 @@
   position: relative;
   box-sizing: border-box;
   color: var(--sn-ink);
-  font-family: var(--app-font, ui-sans-serif, system-ui, sans-serif);
+  /* The mod's pixel face, as the card's. */
+  font-family: var(--cc-font);
+  -webkit-font-smoothing: none;
   /* Follows the folded outline. */
   filter: drop-shadow(2px 3px 3px rgba(0, 0, 0, 0.32));
   user-select: none;

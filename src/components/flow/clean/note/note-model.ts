@@ -29,9 +29,13 @@ export const NOTE = {
   /** The text's margin from the edges, and its first line's top. */
   pad: px(7),
   textTop: px(11) + px(4),
-  /** The note's own units (the mod and the website share them): new size, smallest, text sizes and their step. */
-  defaultWidth: 180,
-  defaultHeight: 120,
+  /**
+   * The note's own units (the mod and the website share them): new size, smallest, text sizes and their step. The mod's
+   * new note is 180 by 120 beside a 320 card (0.56 of its width); the website's card is 380, so the same share is 214 by
+   * 143, taken to the 20 px grid.
+   */
+  defaultWidth: 220,
+  defaultHeight: 140,
   minWidth: 100,
   minHeight: 40,
   defaultFont: 14,

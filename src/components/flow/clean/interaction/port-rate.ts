@@ -25,13 +25,13 @@ export interface StepModifiers {
 }
 
 /**
- * One wheel step of the box: +1 in the shown unit, Ctrl x10, Shift x100, landing
- * on whole steps; from what the port runs at now when nothing is set; a step
+ * One wheel step of the box, the mod's (`PortSlot`, `DrawerCard.stepRate`): the shown figure rounded, then plus or
+ * minus 1 in the shown unit, 10 with Ctrl, 100 with Shift; from what the port runs at now when nothing is set; a step
  * below 1 clears (undefined). `shown` is in the board's unit.
  */
 export function stepShownRate(shown: number, up: boolean, modifiers: StepModifiers): number | undefined {
   const step = modifiers.shiftKey ? 100 : modifiers.ctrlKey || modifiers.metaKey ? 10 : 1;
-  const next = up ? Math.floor(shown / step + 1e-9) * step + step : Math.ceil(shown / step - 1e-9) * step - step;
+  const next = Math.max(0, Math.round(shown) + (up ? step : -step));
   return next >= 1 ? next : undefined;
 }
 

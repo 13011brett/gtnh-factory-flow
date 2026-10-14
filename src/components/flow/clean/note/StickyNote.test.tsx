@@ -102,7 +102,7 @@ describe("StickyNote", () => {
 
   it("an empty note says so, dimly", () => {
     const { container } = renderNote(note({ text: "" }));
-    expect(container.querySelector(".sn-text")?.textContent).toBe("Click to write");
+    expect(container.querySelector(".sn-text")?.textContent).toBe("Double-click to write");
     expect(container.querySelector(".sn-text")?.hasAttribute("data-empty")).toBe(true);
   });
 

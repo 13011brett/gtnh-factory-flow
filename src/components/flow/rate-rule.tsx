@@ -179,13 +179,17 @@ export function useRateRule({
   // board's rate unit, Ctrl (or Cmd) by 10, Shift by 100, landing on whole
   // steps. From Any it starts at what flows now, under the role's default
   // rule. Never below zero, and never across it: the sign stays the row's.
-  const stepRate = (up: boolean, modifiers: { shiftKey: boolean; ctrlKey: boolean; metaKey: boolean }) => {
+  // `add` is the mod's wheel (DrawerCard.stepRate): the shown figure rounded, then plus or minus the step, not a landing on
+  // whole steps.
+  const stepRate = (up: boolean, modifiers: { shiftKey: boolean; ctrlKey: boolean; metaKey: boolean; add?: boolean }) => {
     const state = useFactoryStore.getState();
     if (state.isReadOnly || state.checklistMode) return;
     const step = modifiers.shiftKey ? 100 : modifiers.ctrlKey || modifiers.metaKey ? 10 : 1;
     const unitScale = rateMultiplierForKind(kind);
     const shown = (any ? Math.abs(flowing) : Math.abs(target!)) * unitScale;
-    const next = Math.max(0, up ? Math.floor(shown / step + 1e-9) * step + step : Math.ceil(shown / step - 1e-9) * step - step);
+    const next = modifiers.add
+      ? Math.max(0, Math.round(shown) + (up ? step : -step))
+      : Math.max(0, up ? Math.floor(shown / step + 1e-9) * step + step : Math.ceil(shown / step - 1e-9) * step - step);
     if (!any && Math.abs(next - shown) < 1e-9) return;
     // Scrolling down on an empty box asks for nothing: no zero rule appears.
     if (any && next === 0) return;

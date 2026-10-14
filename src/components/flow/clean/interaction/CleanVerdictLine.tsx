@@ -1,6 +1,7 @@
 "use client";
 
 import { Position } from "@xyflow/react";
+import { carriedHome } from "./accept";
 
 export type WireVerdict = "connect" | "spawn" | "refuse" | "dead";
 
@@ -36,6 +37,8 @@ export function CleanVerdictLine({
   pointer: { x: number; y: number };
   verdict: WireVerdict;
 }) {
+  // A picked-up port carried back over its own card snaps home: shown just as it was, no line, no green.
+  if (carriedHome()) return <g className="react-flow__connection" data-verdict="home" />;
   const color = verdict === "connect" || verdict === "spawn" ? GO : NO;
   const dotted = verdict === "spawn" || verdict === "dead";
   return (

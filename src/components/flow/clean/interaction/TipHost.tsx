@@ -4,9 +4,10 @@ import { useLayoutEffect, useRef, useSyncExternalStore } from "react";
 import { createRoot } from "react-dom/client";
 import { getUiScale } from "@/lib/ui-scale";
 import { isWiringConnection } from "../../connection-drag";
-import { createRestTracker, handFull, onHandChange, TIP_WAIT_MS } from "./rest-tracker";
+import { createRestTracker, handFull, onHandChange, restWait, TIP_WAIT_MS } from "./rest-tracker";
 import { readTip, type TipSpec } from "./tip-spec";
 import { TipPanel } from "./TipPanel";
+import { modKeyTip } from "./board-tips";
 
 /**
  * One tooltip for the whole board (the mod's `Tip` plus `Tip.Wait`). Controls
@@ -68,9 +69,67 @@ export function tipBlocked(target: Element | null | undefined): boolean {
   return false;
 }
 
+/**
+ * On a plan board every browser `title` becomes one of this host's tips (so the top bar, tabs, overview and
+ * library wait 0.8 s and stay quiet while something is in hand, like the card's): the text moves into
+ * `data-tip` as a title and muted lines, and the native attribute goes so the browser never draws its own.
+ * An element that is a rich tooltip's root keeps its rich panel; its duplicate title is only stripped.
+ */
+let titleCounter = 0;
+const titleIds = new WeakMap<Element, string>();
+
+function stamp(element: Element, spec: Omit<TipSpec, "id">): void {
+  let id = titleIds.get(element);
+  if (!id) {
+    id = `title|${++titleCounter}`;
+    titleIds.set(element, id);
+  }
+  element.setAttribute("data-tip", JSON.stringify({ ...spec, id }));
+  element.setAttribute("data-tip-id", id);
+  element.setAttribute("data-tooltip-stop", "");
+}
+
+/** Moves an element's `title` into a tip (the mod's wording when it names the key); true when it now has one. */
+function adoptTitle(element: Element): boolean {
+  const native = element.getAttribute("title");
+  if (native === null) return false;
+  element.removeAttribute("title");
+  if (element.hasAttribute("data-tooltip-root") || !native.trim()) return false;
+  const known = modKeyTip(element.getAttribute("aria-label"));
+  if (known) {
+    stamp(element, known);
+    return true;
+  }
+  const [title = "", ...rest] = native.split(/\r?\n/);
+  stamp(element, {
+    title,
+    notes: rest.filter((line) => line.trim() !== "").map((text) => ({ text, tone: "muted" as const })),
+  });
+  return true;
+}
+
+/**
+ * The nearest element with a tip: one that carries `data-tip-id`, or (plan boards) a titled one, adopted now, or a key
+ * the mod words itself (`modKeyTip`, by aria-label).
+ */
+function tipElement(from: Element | null | undefined): Element | null {
+  const plan = restWait() > 0;
+  for (let element = from ?? null; element; element = element.parentElement) {
+    if (plan && element.hasAttribute("title") && adoptTitle(element)) return element;
+    if (element.hasAttribute("data-tip-id")) return element;
+    if (plan) {
+      const known = modKeyTip(element.getAttribute("aria-label"));
+      if (known) {
+        stamp(element, known);
+        return element;
+      }
+    }
+  }
+  return null;
+}
+
 function targetAt(x: number, y: number): Element | null {
-  const under = document.elementFromPoint?.(x, y) ?? null;
-  return under?.closest("[data-tip-id]") ?? null;
+  return tipElement(document.elementFromPoint?.(x, y));
 }
 
 function fire(): void {
@@ -99,7 +158,7 @@ function onMove(event: PointerEvent): void {
   lastX = event.clientX;
   lastY = event.clientY;
   buttonsDown = event.buttons !== 0;
-  const element = (event.target as Element | null)?.closest?.("[data-tip-id]") ?? null;
+  const element = tipElement(event.target as Element | null);
   const id = element?.getAttribute("data-tip-id") ?? undefined;
   const before = tracker.target();
   tracker.point(id, now());

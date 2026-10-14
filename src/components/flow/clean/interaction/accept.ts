@@ -1,5 +1,6 @@
 import { onWiringConnectionChange } from "../../connection-drag";
 import { parseResourceHandleId } from "../../resource-handles";
+import { useFactoryStore } from "@/store/factory-store";
 
 /**
  * Wire in hand (spec 5): every card that would take the dragged resource
@@ -33,6 +34,8 @@ export function rowAccepts(dragged: DraggedPort, row: { nodeId: string; handleId
 }
 
 let dragged: DraggedPort | undefined;
+let overOrigin = false;
+let draggedWired = false;
 let snappedCard: Element | undefined;
 let snappedRow: Element | undefined;
 let installed = false;
@@ -66,6 +69,14 @@ function unsnap(): void {
 function startPaint(): void {
   dragged = draggedFromDom();
   if (!dragged) return;
+  const from = dragged;
+  draggedWired = useFactoryStore
+    .getState()
+    .project.edges.some(
+      (edge) =>
+        (edge.source === from.nodeId && edge.sourceHandle === from.handleId) ||
+        (edge.target === from.nodeId && edge.targetHandle === from.handleId),
+    );
   for (const card of document.querySelectorAll<HTMLElement>(".cc-card")) {
     const node = card.closest<HTMLElement>(".react-flow__node");
     if (node?.dataset.id === dragged.nodeId) card.setAttribute("data-origin", "");
@@ -84,6 +95,8 @@ function startPaint(): void {
 function endPaint(): void {
   unsnap();
   dragged = undefined;
+  overOrigin = false;
+  draggedWired = false;
   for (const element of document.querySelectorAll("[data-accepts], [data-carried], [data-origin], [data-snapped]")) {
     element.removeAttribute("data-accepts");
     element.removeAttribute("data-carried");
@@ -107,9 +120,17 @@ function snapTo(node: Element): void {
 
 function onMove(event: PointerEvent): void {
   if (!dragged) return;
+  overOrigin = Boolean(
+    (event.target as Element | null)?.closest?.(".react-flow__node")?.querySelector(".cc-card[data-origin]"),
+  );
   const node = (event.target as Element | null)?.closest?.('.react-flow__node[data-drop-fit="yes"]');
   if (node) snapTo(node);
   else if (snappedCard) unsnap();
+}
+
+/** A wired port is carried back over its own card: it is home, the line in hand is not drawn. */
+export function carriedHome(): boolean {
+  return overOrigin && draggedWired;
 }
 
 /** Installs the wire-in-hand painter. Idempotent; the first clean card calls it. */

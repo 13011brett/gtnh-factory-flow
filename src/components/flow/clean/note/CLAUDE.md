@@ -16,4 +16,7 @@ text annotation (`kind: "text"`, `colorTag`, `fontSize`), so import, export and 
   mouse press follows it. Written on, the textarea keeps the keyboard through a press that drags.
 - DOM: the note, its text (or textarea) and three keys. Paper, band, fold, grip and the selection outline are pseudo-elements
   and a `filter: drop-shadow`; state is on data attributes (`data-editing`, `data-multi`, `data-part`).
+- Face and words are the mod's: Monocraft (`--cc-font`, measured with `measureClean`), "Double-click to write" on an empty
+  note, tips as `NoteCard.tip`; a new note is 220 by 140, the mod's 180 by 120 beside its 320 card taken to the 380 card
+  and the 20 px grid.
 - Selection outline only when several nodes are selected. Stacked over wires, under cards (`STICKY_NOTE_Z_INDEX`).

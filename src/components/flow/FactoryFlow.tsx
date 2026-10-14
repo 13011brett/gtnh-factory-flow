@@ -139,6 +139,7 @@ import {
 } from "@/store/factory-store";
 import { getAutoSolve, setAutoSolve, subscribeAutoSolve } from "@/store/solve-books";
 import { PlanConversionNotice } from "./PlanConversionNotice";
+import { dropFilesOnPlanBoard } from "@/lib/import-export/open-plan-file";
 import { getStorageRoles } from "@/lib/model/storage-role";
 import { useBlueprintStore } from "@/store/blueprint-store";
 import {
@@ -2319,7 +2320,7 @@ export function FactoryFlow() {
   const isCompact = useIsCompactViewport();
   // The mod's top bar (src/components/chrome) carries the keys the board's own toolbars used to: plan boards on a
   // desktop screen leave them out.
-  const modBar = project.planMode === true && !isCompact;
+  const modBar = project.planMode === true;
   // The board's zoom ceiling carries the interface size (ui-scale.ts); the
   // prop must follow the setting live, so it is a hook rather than a getter.
   const uiScale = useUiScale();
@@ -6275,6 +6276,16 @@ export function FactoryFlow() {
           const resource = readResourceDrag(event.dataTransfer);
           const point = flowInstanceRef.current?.screenToFlowPosition({ x: event.clientX, y: event.clientY });
           if (resource && point) useFactoryStore.getState().addPoolStorage(resource, "drain", point);
+          return;
+        }
+        // A plan file dropped on a plan board opens as a new plan; a picture has no place there (plan boards hide
+        // image annotations), so it says so instead of placing one nothing shows.
+        if (useFactoryStore.getState().project.planMode === true) {
+          const dropped = Array.from(event.dataTransfer.files);
+          if (dropped.length > 0) {
+            event.preventDefault();
+            void dropFilesOnPlanBoard(dropped);
+          }
           return;
         }
         const file = Array.from(event.dataTransfer.files).find((candidate) =>

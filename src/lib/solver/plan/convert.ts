@@ -30,6 +30,13 @@ export interface PlanConversionReport {
   drawerRatesParked: number;
   /** Ids of targets (card or plan) that name a resource no card makes. */
   droppedTargets: string[];
+  /**
+   * A Solve plan that nothing anchored (no pin, no drawer rate, no port rate) would have opened at zero everywhere,
+   * so its card targets and plan target became port rates (counted in `portRates`).
+   */
+  seededFromTargets: boolean;
+  /** A Solve plan that is still unanchored after that: nothing to calculate until a count or rate is set. */
+  unanchored: boolean;
 }
 
 export interface PlanConversion {
@@ -66,6 +73,8 @@ export function convertBuildToPlanWithReport(project: FactoryProject): PlanConve
     ratioBuffersFlattened: 0,
     drawerRatesParked: 0,
     droppedTargets: [],
+    seededFromTargets: false,
+    unanchored: false,
   };
   if (project.planMode) {
     return { project, report };
@@ -89,6 +98,12 @@ export function convertBuildToPlanWithReport(project: FactoryProject): PlanConve
   }
 
   const parkedStorages = build ? parkDormantRates(storages, edges, project, report) : storages;
+  if (!build && !hasLiveAnchor(nodes, parkedStorages, edges, project)) {
+    // The old Solve had no unique answer here (every machine zero), so the targets the plan states stand in for it.
+    nodes = applyTargets(project, nodes, recipesById, report);
+    report.seededFromTargets = report.portRates > 0;
+    report.unanchored = !report.seededFromTargets;
+  }
 
   return {
     project: {
@@ -106,6 +121,20 @@ export function convertBuildToPlanWithReport(project: FactoryProject): PlanConve
 
 export function convertBuildToPlan(project: FactoryProject): FactoryProject {
   return convertBuildToPlanWithReport(project).project;
+}
+
+/** Whether anything in a converted Solve plan sets a count or a rate: a pin, a port rate or a drawer rule. */
+function hasLiveAnchor(
+  nodes: FactoryNode[],
+  storages: FactoryStorage[],
+  edges: FactoryEdge[],
+  project: FactoryProject,
+): boolean {
+  if (nodes.some((node) => node.enabled && ((node.solvePin ?? 0) > 0 || Object.keys(node.portRates ?? {}).length > 0))) {
+    return true;
+  }
+  const roles = getStorageRoles({ ...project, storages, edges, poolMode: undefined });
+  return storages.some((storage) => hasStorageTarget(storage, roles.get(storage.id)));
 }
 
 function pinNode(
@@ -310,6 +339,8 @@ export function planClipboard<
     ratioBuffersFlattened: 0,
     drawerRatesParked: 0,
     droppedTargets: [],
+    seededFromTargets: false,
+    unanchored: false,
   };
   const expanded = payload.storages.length > 0 ? expandBuffers(scratch, report) : undefined;
   const storages = (expanded?.storages ?? payload.storages).map((storage) => {

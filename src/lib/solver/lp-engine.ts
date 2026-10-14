@@ -30,13 +30,21 @@ let highs: HighsInstance | undefined;
 let loading: Promise<boolean> | undefined;
 
 export function initLpEngine(
-  options: { wasmUrl?: string; glueUrl?: string } = {},
+  options: { wasmUrl?: string; glueUrl?: string; fallback?: { wasmUrl: string; glueUrl: string } } = {},
 ): Promise<boolean> {
   loading ??= (async () => {
     try {
-      highs = options.glueUrl
-        ? await loadBrowserHighs(options.glueUrl, options.wasmUrl)
-        : await loadNodeHighs(options.wasmUrl);
+      if (options.glueUrl) {
+        try {
+          highs = await loadBrowserHighs(options.glueUrl, options.wasmUrl);
+        } catch (error) {
+          // The first place may not have the files in every start mode; the fallback says where else they live.
+          if (!options.fallback) throw error;
+          highs = await loadBrowserHighs(options.fallback.glueUrl, options.fallback.wasmUrl);
+        }
+      } else {
+        highs = await loadNodeHighs(options.wasmUrl);
+      }
       return true;
     } catch (error) {
       console.error("HiGHS failed to load; the homegrown simplex stays on.", error);

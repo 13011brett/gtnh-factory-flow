@@ -35,7 +35,6 @@ import { LibraryPage } from "./library/LibraryPage";
 import { ModLibrary } from "./chrome/ModLibrary";
 import { ModPowerPicker } from "./chrome/ModPowerPicker";
 import { WelcomePage } from "./welcome/WelcomePage";
-import { PlanIdentityDrawer } from "./PlanIdentityDrawer";
 import { SharedAddressSync } from "./SharedAddressSync";
 import { PublicViewBar } from "./community/PublicViewBar";
 import { ViewOnlyNotice } from "./community/ViewOnlyNotice";
@@ -385,7 +384,7 @@ function BoardColumn() {
   return (
     <div className="grid h-full min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)]">
       <div className="min-w-0">
-        {covering ? null : publicView ? <PublicViewBar key={publicView.id} /> : isCompact ? <PlanIdentityDrawer /> : null}
+        {covering ? null : publicView ? <PublicViewBar key={publicView.id} /> : null}
         {covering ? null : <TabConflictNotice />}
       </div>
       {/*
@@ -516,6 +515,10 @@ export function CompactWorkspace({ workspace, onLoadDatasetVersion }: WorkspaceP
   const poolMode = useFactoryStore((state) => state.project.poolMode === true);
   const planLayout = usePlanLayout();
   const worksheet = poolMode;
+  // Both flags can be set from a desktop session: a phone shows neither then (the board), never both at once.
+  const bothOpen = workspace.leftPanelOpen && workspace.rightPanelOpen;
+  const itemsOpen = workspace.leftPanelOpen && !bothOpen;
+  const sideOpen = workspace.rightPanelOpen && !bothOpen;
   const openLeft = () => writeWorkspaceView({ leftPanelOpen: true, rightPanelOpen: false });
   const openRight = () => writeWorkspaceView({ leftPanelOpen: false, rightPanelOpen: true });
 
@@ -534,7 +537,7 @@ export function CompactWorkspace({ workspace, onLoadDatasetVersion }: WorkspaceP
         side={planLayout ? "right" : "left"}
         label="items"
         width={ITEMS_WIDTH}
-        open={workspace.leftPanelOpen}
+        open={itemsOpen}
         onOpen={openLeft}
         onClose={() => writeWorkspaceView({ leftPanelOpen: false })}
       >
@@ -545,7 +548,7 @@ export function CompactWorkspace({ workspace, onLoadDatasetVersion }: WorkspaceP
           side={planLayout ? "left" : "right"}
           label={planLayout ? "overview" : "resources"}
           width={INSPECTOR_WIDTH}
-          open={workspace.rightPanelOpen}
+          open={sideOpen}
           onOpen={openRight}
           onClose={() => writeWorkspaceView({ rightPanelOpen: false })}
         >

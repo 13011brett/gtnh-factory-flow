@@ -110,7 +110,7 @@ describe("the plan tabs", () => {
   it("the + menu: New plan, Open a plan, Paste plan, Browse library", () => {
     render(<ModTabs {...props} />);
     fireEvent.click(screen.getByLabelText("New plan"));
-    expect(rows()).toEqual(["New plan", "Open a plan...My plans", "Paste plana plan link or code", "Browse librarypublic plans"]);
+    expect(rows()).toEqual(["New plan", "Open a plan...My plans", "Open plan file....json", "Paste plana plan link, code or file", "Browse librarypublic plans"]);
     fireEvent.click(screen.getByText("Paste plan"));
     expect(props.onPaste).toHaveBeenCalled();
   });

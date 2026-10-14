@@ -2,6 +2,7 @@
 
 import { Check, Eye, EyeOff, ImageDown, LoaderCircle, X } from "lucide-react";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useDialogA11y } from "@/lib/hooks/use-dialog-a11y";
 import { toBlob, toSvg } from "html-to-image";
 import { computeCommunityPlanStats } from "@/lib/community/plan-stats";
 import type { PlanResourceStat } from "@/lib/community/types";
@@ -81,6 +82,8 @@ const CHECKER_STYLE: React.CSSProperties = {
  * itself; a GIF carries the motion.
  */
 export function ExportImageDialog({ onClose }: { onClose: () => void }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogA11y(dialogRef, { onClose });
   const project = useFactoryStore((state) => state.project);
   const result = useFactoryStore((state) => state.lastResult);
   const mode = project.poolMode ? "pool" : project.solveMode ? "solve" : "build";
@@ -393,7 +396,7 @@ export function ExportImageDialog({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div role="dialog" aria-modal="true" aria-label="Screenshot editor" className="fixed inset-0 z-[100] grid place-items-center bg-neutral-950/50 p-4">
+    <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Screenshot editor" className="fixed inset-0 z-[100] grid place-items-center bg-neutral-950/50 p-4">
       <div className="flex max-h-[calc(94*var(--ui-vh))] w-full max-w-5xl flex-col overflow-y-auto rounded border border-line-strong bg-surface p-4 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-base font-semibold">

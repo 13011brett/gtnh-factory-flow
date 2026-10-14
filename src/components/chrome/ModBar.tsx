@@ -4,7 +4,10 @@ import "./chrome.css";
 
 import { useCallback, useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import { copyToClipboard } from "@/lib/clipboard";
+import { activateOnKey } from "@/lib/hooks/button-keys";
 import { encodePlanCode, planCodeLink } from "@/lib/import-export/plan-code";
+import { useIsCompactViewport } from "@/lib/compact-view";
+import { usePlanLayout } from "@/components/use-plan-layout";
 import { leaveLibrary, openLibrary, useLibraryTab } from "@/lib/library/library-tab";
 import { isPowerDisplayUnit, type RateUnit } from "@/lib/model/rate-unit";
 import { playBoardSound } from "@/lib/board-sounds";
@@ -15,6 +18,7 @@ import { stampOpened } from "@/lib/library/last-open";
 import { ensureInteractionHost } from "@/components/flow/clean/interaction";
 import { tipAttrs } from "@/components/flow/clean/interaction";
 import { isEditableKeyboardTarget } from "@/components/flow/keyboard";
+import { downloadPlanFile } from "@/lib/import-export/open-plan-file";
 import { PastePlanDialog } from "@/components/export/PastePlanDialog";
 import { arrangeLabel, pressArrange, getBoardCommands, useArrangeState } from "./board-commands";
 import { ChromeMenu, chromeAnchorOf, MENU_ANCHOR_ATTR, type ChromeAnchor, type MenuEntry } from "./ChromeMenu";
@@ -92,8 +96,11 @@ function BarKey({
   return (
     <div
       role="button"
-      tabIndex={-1}
+      tabIndex={off ? -1 : 0}
       aria-label={ariaLabel ?? label ?? id}
+      aria-haspopup={menuAnchor ? "menu" : undefined}
+      aria-expanded={menuAnchor ? Boolean(open) : undefined}
+      onKeyDown={activateOnKey}
       aria-disabled={off || undefined}
       className={gap ? "mb-key mb-gap" : "mb-key"}
       data-mb={id}
@@ -170,6 +177,12 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
   const openPowerMenu = useFactoryStore((state) => state.openPowerMenu);
   const closePowerMenu = useFactoryStore((state) => state.closePowerMenu);
   const workspace = useWorkspaceView();
+  // A phone: the two side columns are drawers over the board, one at a time; their keys sit first in the bar.
+  const compact = useIsCompactViewport();
+  const planLayout = usePlanLayout();
+  const bothOpen = workspace.leftPanelOpen && workspace.rightPanelOpen;
+  const itemsOpen = workspace.leftPanelOpen && !bothOpen;
+  const sideOpen = workspace.rightPanelOpen && !bothOpen;
   const library = useLibraryTab();
   const arrange = useArrangeState();
   const isReadOnly = useFactoryStore((state) => state.isReadOnly);
@@ -234,6 +247,7 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
   const shareEntries: MenuEntry[] = [
     { label: linkedPost ? "Update in library..." : "Share to library...", onSelect: onShare, disabled: isReadOnly },
     { label: "Copy plan code", onSelect: () => void copyPlanCode() },
+    { label: "Export plan file (.json)", onSelect: () => downloadPlanFile(useFactoryStore.getState().project) },
     { label: "Screenshot...", onSelect: onScreenshot },
   ];
 
@@ -243,8 +257,31 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
   };
 
   return (
-    <header className="mb" data-mod-bar="" data-help-anchor="plan-actions">
+    <>
+      <header className="mb" data-mod-bar="" data-help-anchor="plan-actions">
       <ModTabs onPaste={() => setPasting(true)} onShare={onShare} />
+      {compact ? (
+        <>
+          <BarKey
+            id="drawer-side"
+            label={planLayout ? "Overview" : "Resources"}
+            tip={planLayout ? "Overview: inputs, outputs and machines" : "Resources"}
+            open={sideOpen}
+            onClick={() =>
+              writeWorkspaceView(sideOpen ? { rightPanelOpen: false } : { rightPanelOpen: true, leftPanelOpen: false })
+            }
+          />
+          <BarKey
+            id="drawer-items"
+            label="Items"
+            tip="Items: search and place recipes"
+            open={itemsOpen}
+            onClick={() =>
+              writeWorkspaceView(itemsOpen ? { leftPanelOpen: false } : { leftPanelOpen: true, rightPanelOpen: false })
+            }
+          />
+        </>
+      ) : null}
       <BarKey
         id="nonrecipe"
         gap
@@ -393,8 +430,10 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
         />
       ) : null}
       {controlsOpen ? <ControlsList onClose={() => setControlsOpen(false)} /> : null}
+      </header>
+      {/* Outside the bar: its stacking context (z 30) would put the box under the side columns and drawers. */}
       {pasting ? <PastePlanDialog onClose={() => setPasting(false)} /> : null}
-    </header>
+    </>
   );
 }
 

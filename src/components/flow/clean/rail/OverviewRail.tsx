@@ -17,7 +17,7 @@ import {
 import { createPortal } from "react-dom";
 import { machineArtPixels } from "../../MachinePicker";
 import { useMachineHandlerIcons } from "../../machine-icons";
-import { ResourceIcon } from "@/components/nei/ResourceIcon";
+import { getFallbackFluidColor, ResourceIcon } from "@/components/nei/ResourceIcon";
 import { formatCompact } from "@/lib/model/resources";
 import {
   powerDisplayFromEuT,
@@ -131,6 +131,19 @@ function ResourceGlyph({ line }: { line: Pick<RailLine, "resource" | "energy"> }
       <span className="rail-icon" style={{ background: "#7a5a12" }}>
         <Zap aria-hidden size={12} style={{ margin: 2 }} color="#fcd34d" fill="#fcd34d" />
       </span>
+    );
+  }
+  if (line.resource.kind === "fluid") {
+    // The mod's flat square in the fluid's own colour, as on the cards and drawers.
+    const resource = line.resource;
+    const color = resource.dominantColor ?? resource.iconAtlas?.dominantColor ?? getFallbackFluidColor(resource.id);
+    return (
+      <span
+        className="rail-icon rail-swatch"
+        role="img"
+        aria-label={resource.displayName}
+        style={{ backgroundColor: color }}
+      />
     );
   }
   return (

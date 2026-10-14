@@ -370,8 +370,29 @@ describe("Build and Solve plans: what changes and what does not", () => {
     expect(opened.project.nodes[1]!.portRates).toBeUndefined();
   });
 
-  it("a plan that lost nothing says nothing; a ratio buffer is named", () => {
-    expect(openAsPlan(chain()).notice).toBeUndefined();
+  it("a converted Build or Solve plan always says what came over; an empty one says nothing", () => {
+    const notice = openAsPlan(chain()).notice;
+    expect(notice?.text).toBe("Converted from a Build plan.");
+    expect(notice?.details).toContain("2 cards pinned at their counts.");
+    expect(openAsPlan(chain({ solveMode: true })).notice?.text).toBe("Converted from a Solve plan.");
+    expect(openAsPlan({ ...chain(), nodes: [], edges: [], storages: [] }).notice).toBeUndefined();
+  });
+
+  it("a Solve plan nothing sets takes its stated targets as port rates, and names what it dropped", () => {
+    const opened = openAsPlan(
+      chain({
+        solveMode: true,
+        storages: [],
+        nodes: [
+          node("a", "rA"),
+          node("b", "rB", { targetOutput: { kind: "item", resourceId: "plate", amountPerSecond: 99 } }),
+        ],
+      }),
+    );
+    expect(Object.values(opened.project.nodes[1]!.portRates ?? {})).toEqual([99]);
+    expect(opened.notice?.details).toContain("1 rate set from a target.");
+    const bare = openAsPlan(chain({ solveMode: true, storages: [] }));
+    expect(bare.notice?.details).toContain("Nothing is set yet. Pin a count or set a rate.");
   });
 
   it("a custom rate card is pinned at its dial", () => {

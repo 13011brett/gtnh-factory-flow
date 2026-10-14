@@ -316,7 +316,8 @@
 /* The first-run offer: a note over the board. */
 .tour-offer {
   position: fixed;
-  z-index: 250;
+  /* Over the board and its notices, under the recipe search (z 50) and every dialog (z 100) that opens on top. */
+  z-index: 45;
   width: 330px;
   box-sizing: border-box;
   padding: 14px 16px 14px;

@@ -3,6 +3,7 @@
 import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
 import { useStoreApi, useUpdateNodeInternals } from "@xyflow/react";
 import "./virtual.css";
+import { applyZoomTo } from "./zoom-var";
 import { boardVirtualizer, virtualizationEnabled } from "./card-virtualizer";
 import type { ShellFace } from "./use-card-face";
 
@@ -176,7 +177,11 @@ export function CardShell({
     const wrapper = ref.current?.closest(".react-flow__node");
     if (!wrapper) return;
     if (far) wrapper.setAttribute(FAR_ATTRIBUTE, "");
-    else wrapper.removeAttribute(FAR_ATTRIBUTE);
+    else {
+      wrapper.removeAttribute(FAR_ATTRIBUTE);
+      // Shown at the glance step: it takes the zoom variable now, not at the next zoom step.
+      applyZoomTo(wrapper as HTMLElement);
+    }
     return () => wrapper.removeAttribute(FAR_ATTRIBUTE);
   }, [far]);
   const internal = storeApi.getState().nodeLookup.get(nodeId);

@@ -16,6 +16,9 @@ type StoreApi = ReturnType<typeof useStoreApi>;
 
 /** The least time between two rebuilds of the scene. */
 const REBUILD_GAP_MS = 100;
+/** A map of this many tiles redraws at most every DRAW_GAP_MS while the camera moves (1,500 tiles are 10 ms a draw). */
+const BIG_MAP_TILES = 300;
+const DRAW_GAP_MS = 40;
 
 const IMAGE_CACHE = new Map<string, HTMLImageElement | "loading" | "failed">();
 
@@ -70,6 +73,8 @@ export class MinimapEngine {
   private font: string | undefined;
   private lastRebuildAt = -1000;
   private deferTimer = 0;
+  private drawTimer = 0;
+  private lastDrawAt = -1000;
 
   constructor(
     private readonly store: StoreApi,
@@ -105,6 +110,7 @@ export class MinimapEngine {
       unsubscribe();
       window.clearInterval(poll);
       window.clearTimeout(this.deferTimer);
+      window.clearTimeout(this.drawTimer);
       if (this.raf) cancelAnimationFrame(this.raf);
       this.raf = 0;
     };
@@ -173,8 +179,19 @@ export class MinimapEngine {
       }
     }
     if (!this.dirty.draw) return;
-    this.dirty.draw = false;
     const drawStart = performance.now();
+    if ((this.scene?.tiles.length ?? 0) > BIG_MAP_TILES && drawStart - this.lastDrawAt < DRAW_GAP_MS) {
+      // Still dirty: it is drawn when the gap is over, with the camera as it is then.
+      if (!this.drawTimer) {
+        this.drawTimer = window.setTimeout(() => {
+          this.drawTimer = 0;
+          this.schedule("draw");
+        }, DRAW_GAP_MS - (drawStart - this.lastDrawAt));
+      }
+      return;
+    }
+    this.lastDrawAt = drawStart;
+    this.dirty.draw = false;
     const state = this.store.getState();
     const [tx, ty, tz] = state.transform;
     const viewW = state.width / tz;

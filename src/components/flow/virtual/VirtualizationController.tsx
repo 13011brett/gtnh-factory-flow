@@ -12,6 +12,7 @@ import { CONTAINMENT_HOLD_ATTRIBUTE } from "../node-containment";
 import { boardVirtualizer, virtualizationEnabled } from "./card-virtualizer";
 import { boardEdges } from "./board-edges";
 import { FAR_ATTRIBUTE } from "./VirtualCard";
+import { applyZoomTo, setZoomTargets } from "./zoom-var";
 
 /**
  * Feeds the camera to the virtualizer and runs its steps (card-virtualizer.ts), culls the wires
@@ -71,7 +72,9 @@ export const VirtualizationController = memo(function VirtualizationController({
     };
     const showOther = (id: string) => {
       if (!farOthers.delete(id)) return;
-      wrapperOf(id)?.removeAttribute(FAR_ATTRIBUTE);
+      const element = wrapperOf(id);
+      element?.removeAttribute(FAR_ATTRIBUTE);
+      if (element) applyZoomTo(element);
     };
     const showAllOthers = () => {
       for (const id of [...farOthers]) showOther(id);
@@ -103,15 +106,39 @@ export const VirtualizationController = memo(function VirtualizationController({
       }
       previousVisible = visible;
     };
-    // A wrapper that appears while its card is far (an undo far away) is hidden at once.
+    // Every node wrapper by id, for the zoom variable at the glance step (zoom-var.ts: written on the wrappers the
+    // camera can see, not on the board, so a step restyles a few hundred elements and not every wire).
+    const wrapperById = new Map<string, HTMLElement>();
     const nodesLayer = board.querySelector(".react-flow__nodes");
+    if (nodesLayer) {
+      for (const child of Array.from(nodesLayer.children)) {
+        const id = child.getAttribute("data-id");
+        if (id && child instanceof HTMLElement) wrapperById.set(id, child);
+      }
+    }
+    function* visibleWrappers(): Generator<HTMLElement> {
+      for (const id of boardVirtualizer.visibleIds()) {
+        const element = wrapperById.get(id);
+        if (element && !element.hasAttribute(FAR_ATTRIBUTE)) yield element;
+      }
+    }
+    setZoomTargets(() => visibleWrappers());
+    // A wrapper that appears while its card is far (an undo far away) is hidden at once.
     const wrapperObserver = nodesLayer
       ? new MutationObserver((records) => {
           for (const record of records) {
+            record.removedNodes.forEach((removed) => {
+              if (!(removed instanceof HTMLElement)) return;
+              const id = removed.getAttribute("data-id");
+              if (id && wrapperById.get(id) === removed) wrapperById.delete(id);
+            });
             record.addedNodes.forEach((added) => {
               if (!(added instanceof HTMLElement)) return;
               const id = added.getAttribute("data-id");
-              if (id && farOthers.has(id) && isCardWrapper(added)) added.setAttribute(FAR_ATTRIBUTE, "");
+              if (!id) return;
+              wrapperById.set(id, added);
+              if (farOthers.has(id) && isCardWrapper(added)) added.setAttribute(FAR_ATTRIBUTE, "");
+              else applyZoomTo(added);
             });
           }
         })
@@ -248,6 +275,7 @@ export const VirtualizationController = memo(function VirtualizationController({
       unsubscribeLevel();
       holdObserver.disconnect();
       wrapperObserver?.disconnect();
+      setZoomTargets(undefined);
       for (const id of [...farOthers]) showOther(id);
       release?.();
       setHovered(undefined);

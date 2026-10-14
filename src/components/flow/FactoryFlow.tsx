@@ -332,6 +332,10 @@ import { describeClogLock, findClogLocks } from "./clog-lock";
 import { findUnwiredNodeIds } from "./node-verdict";
 import { useBoardPulseGate, useBoardPulseSync } from "./animation-phase";
 import { useSlicedMount } from "./sliced-mount";
+import { boardVirtualizer } from "./virtual/card-virtualizer";
+import { boardEdges } from "./virtual/board-edges";
+import { VirtualizationController } from "./virtual/VirtualizationController";
+import { writeBoardZoom } from "./virtual/zoom-var";
 import {
   CONTAINMENT_HOLD_ATTRIBUTE,
   isCardSkipped,
@@ -854,6 +858,8 @@ const directRouteCache = new Map<
     segments: ReturnType<typeof getPolylineSegments>;
   }
 >();
+// Wire culling asks for a wire's route to know whether it crosses the screen (virtual/board-edges.ts).
+boardEdges.routeOf = (edgeId) => directRouteCache.get(edgeId)?.route.points;
 
 /**
  * Spatial index over every cached route's segments.
@@ -2706,6 +2712,10 @@ export function FactoryFlow() {
       });
     }
     publishedBoardGeometryById = geometryById;
+    // Which cards have their contents mounted is decided from these boxes (virtual/card-virtualizer.ts).
+    boardVirtualizer.setGeometry(
+      [...geometryById].map(([id, box]) => [id, { x: box.x, y: box.y, w: box.width, h: box.height }] as const),
+    );
     const solidCardIds = new Set<string>();
     for (const node of flowNodesRef.current) {
       if (node.type !== "annotationNode" && node.type !== "boardNode") {
@@ -6172,6 +6182,9 @@ export function FactoryFlow() {
     };
   }, []);
   const mounted = useSlicedMount(checklistNodes, checklistEdges, project.id, sliceFocus);
+  // Only the wires on or near the screen reach React Flow; the controller moves the choice with the camera.
+  boardVirtualizer.useBoard(project.id);
+  const shownEdges = useMemo(() => boardEdges.setAll(mounted.edges), [mounted.edges]);
 
   const paintCursor =
     nodeColorPaintMode !== undefined
@@ -6295,7 +6308,7 @@ export function FactoryFlow() {
       <StorageRatioEditor />
       <ReactFlow
         nodes={mounted.nodes}
-        edges={mounted.edges}
+        edges={shownEdges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         // A press that travels under this many pixels is a CLICK, over it a
@@ -6378,6 +6391,7 @@ export function FactoryFlow() {
         nodesDraggable={!isCompact && !isReadOnly}
       >
         <NodeDetailController boardRef={boardRef} />
+        <VirtualizationController boardRef={boardRef} />
         <HopMapController boardRef={boardRef} />
         <SelectionHandoffController signal={selectionHandoffCount} />
         {/* The pan is a scroll offset, not a transform: see scroll-camera.tsx. */}
@@ -7548,7 +7562,7 @@ const NodeDetailController = memo(function NodeDetailController({
       }
       const write = () => {
         publishedZoom = rounded;
-        boardRef.current?.style.setProperty("--board-zoom", String(rounded));
+        writeBoardZoom(boardRef.current, rounded);
       };
       if (publishedZoom === 0 || Math.abs(Math.log(rounded / publishedZoom)) >= BOARD_ZOOM_STEP) {
         write();

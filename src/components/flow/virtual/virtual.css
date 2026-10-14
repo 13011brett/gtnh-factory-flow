@@ -1,0 +1,15 @@
+/*
+ * Shells (VirtualCard.tsx): the stand-in for a card whose contents are not mounted.
+ *
+ * The board fades a card's contents against its glance face for 560 ms when the zoom crosses the glance step
+ * (globals.css). With a card's contents mounted only near the screen, the flip swaps which element is there
+ * rather than fading it, and a thousand glance faces each starting a transition at once was the slowest frame of
+ * a zoom. So cards swap without the fade.
+ */
+.factory-flow-board .cc-card[data-node-glance-root],
+.factory-flow-board .cc-card[data-node-glance-root] > * {
+  transition: none !important;
+}
+.factory-flow-board .cc-card[data-node-glance-root] > .cc-glance {
+  animation: none !important;
+}

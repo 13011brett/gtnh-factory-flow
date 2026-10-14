@@ -39,6 +39,7 @@ import {
 import type { PlanConversionNotice } from "@/lib/solver/plan/to-plan";
 import { planClipboard } from "@/lib/solver/plan/convert";
 import { playBoardSound, quietBoardSoundsFor, suppressBoardSound } from "@/lib/board-sounds";
+import { playEditSfx } from "@/lib/sound/sfx";
 import { GT_VOLTAGE_TIERS } from "@/lib/model/tiers";
 import {
   setActiveRateUnit,
@@ -1165,6 +1166,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
     });
   },
   undo: () => {
+    playEditSfx(get().undoHistory.length > 0 ? "board.undo" : "ui.deny");
     set((state) => {
       const previousProject = state.undoHistory.at(-1);
       if (!previousProject) {
@@ -1179,6 +1181,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
     });
   },
   redo: () => {
+    playEditSfx(get().redoHistory.length > 0 ? "board.redo" : "ui.deny");
     set((state) => {
       const nextProject = state.redoHistory.at(-1);
       if (!nextProject) {

@@ -1,287 +1,122 @@
 "use client";
 
 import { useEffect } from "react";
-import type { FactoryProject, StorageBufferMode } from "@/lib/model/types";
-import { playBoardSound, primeBoardSounds } from "@/lib/board-sounds";
+import type { FactoryProject, ThroughputResult } from "@/lib/model/types";
+import { boardFingerprint, snapshotBoard, soundForDiff, type BoardShot, type DiffSound } from "@/lib/sound/board-diff";
+import { installBoardGestureSounds, lastWheelStep } from "@/lib/sound/board-gestures";
+import { editClaimedNear, installSfxUnlock, playSfx, sfxTick } from "@/lib/sound/sfx";
 import { useFactoryStore } from "@/store/factory-store";
 
 /**
- * Plays the board's interface sounds by WATCHING the project rather than by
- * instrumenting call sites. Every way a card can land (recipe book add,
- * drawer drag, paste, refactor, undo) funnels through the store, so a diff
- * of ids between one project and the next catches all of them, including
- * paths added later.
+ * Plays the board's sounds, the mod's files by the mod's rules (`src/lib/sound/CLAUDE.md` has the table):
  *
- * SOUNDS ARE FOR THE CANVAS ONLY: cards landing and leaving, wires
- * connecting and cutting, boards folding and unfolding, card settings
- * changing, bulk changes. Navigation and chrome are silent. Two guards
- * enforce that beyond the id-diff itself:
- * - A project id change is navigation and plays nothing, and it opens a
- *   short QUIET WINDOW: loading machinery (migrations, icon refreshes,
- *   dataset touch-ups) often rewrites the plan right after a switch.
- * - The config signature ignores cosmetic fields (positions, icons,
- *   colors, tooltips, names), so a refresh that re-resolves art can never
- *   fake a settings change.
+ * - every edit by WATCHING the plan (`soundForDiff`): a card landing, a wire latching as what it carries, a drawer made,
+ *   a pin, a tier, a setting. An edit that sounded for itself (undo, clone, a chip with its own voice) claims it
+ *   (`claimEdit`) and the watcher stays quiet; the check waits a task so a claim made just after the edit counts.
+ * - a wheel spin ticks each step, and a pin or rate wheeled plays once the wheel has been still for 500 ms (the mod's
+ *   `live`).
+ * - the hand's sounds (press, lift, drop, wire grab, select) from the page's events (`board-gestures.ts`).
+ * - the plan starting to run (`board.running`) when a solve has it running where it did not before.
  *
- * Undo and redo are not special-cased: undoing a delete diffs as an add and
- * sounds like one, which is what the hand just did.
+ * A different plan arriving is navigation and plays nothing, and a short quiet follows it (loading machinery rewrites
+ * the plan right after a switch).
  */
 
-interface ProjectSoundSnapshot {
-  projectId: string;
-  nodeIds: Set<string>;
-  edgeIds: Set<string>;
-  /** Boards standing open as windows; folding and unfolding sound. */
-  openPocketIds: Set<string>;
-  /** Drawer ids, to tell a supply spawn from a catch spawn. */
-  storageIds: Set<string>;
-  storageModes: Map<string, StorageBufferMode>;
-  /** Edge endpoints, to see which way a freshly spawned drawer faces. */
-  edgeEnds: Map<string, { source: string; target: string }>;
-  /** POWER wires, for the zap: connecting electricity sounds electric. */
-  powerEdgeIds: Set<string>;
-  /**
-   * Every card serialized through the cosmetic filter: machine counts,
-   * tiers, drain pills, config choices survive; positions and art do not.
-   * When the structure is unchanged but this moved, a knob was turned
-   * somewhere and the adjust tap plays. A project write only happens per
-   * user action, so the stringify cost is nothing.
-   */
-  configSignature: string;
-}
-
-/**
- * Fields that change without the player turning any knob: drag positions,
- * icon re-resolution, display names, paint. None of them may sound.
- */
-const COSMETIC_KEYS = new Set([
-  "position",
-  "iconPath",
-  "iconAtlas",
-  "dominantColor",
-  "tooltip",
-  "displayName",
-  "colorTag",
-]);
-
-function signatureReplacer(key: string, value: unknown): unknown {
-  return COSMETIC_KEYS.has(key) ? undefined : value;
-}
-
-export function snapshotProject(project: FactoryProject): ProjectSoundSnapshot {
-  const nodeIds = new Set<string>();
-  const signatureParts: string[] = [];
-  for (const node of project.nodes) {
-    nodeIds.add(node.id);
-    signatureParts.push(JSON.stringify(node, signatureReplacer));
-  }
-  const storageIds = new Set<string>();
-  const storageModes = new Map<string, StorageBufferMode>();
-  for (const storage of project.storages ?? []) {
-    nodeIds.add(storage.id);
-    storageIds.add(storage.id);
-    storageModes.set(storage.id, storage.bufferMode ?? "overflow");
-    signatureParts.push(JSON.stringify(storage, signatureReplacer));
-  }
-  const edgeIds = new Set<string>();
-  const edgeEnds = new Map<string, { source: string; target: string }>();
-  const powerEdgeIds = new Set<string>();
-  for (const edge of project.edges) {
-    edgeIds.add(edge.id);
-    edgeEnds.set(edge.id, { source: edge.source, target: edge.target });
-    if (edge.resourceKind === "power") {
-      powerEdgeIds.add(edge.id);
-    }
-  }
-  const openPocketIds = new Set<string>();
-  for (const pocket of project.pockets ?? []) {
-    if (pocket.expanded) {
-      openPocketIds.add(pocket.id);
-    }
-  }
-  return {
-    projectId: project.id,
-    nodeIds,
-    edgeIds,
-    openPocketIds,
-    storageIds,
-    storageModes,
-    edgeEnds,
-    powerEdgeIds,
-    configSignature: signatureParts.join("\n"),
-  };
-}
-
-/**
- * What the ear would consider "the plan changed", as one comparable string.
- * The gesture failure-check needs this instead of a reference compare: a
- * refused drawer spawn (storage endpoint conflict) COMMITS a rebuilt,
- * content-identical project, which a reference compare would read as success.
- */
-export function projectSoundFingerprint(project: FactoryProject): string {
-  const snap = snapshotProject(project);
-  return [
-    [...snap.nodeIds].sort().join(","),
-    [...snap.edgeIds].sort().join(","),
-    [...snap.openPocketIds].sort().join(","),
-    snap.configSignature,
-  ].join("|");
-}
-
-function countMissing(from: Set<string>, inSet: Set<string>): number {
-  let count = 0;
-  for (const id of from) {
-    if (!inSet.has(id)) {
-      count += 1;
-    }
-  }
-  return count;
-}
-
-/** At or past this many changed ids, one change is a bulk change. */
-const BULK_THRESHOLD = 8;
-
-/**
- * Which place voice a landing gets. When everything that landed is drawers,
- * the new wire's direction tells supply from catch: a wire OUT of the new
- * drawer is "who supplies this" answered (placeSource, stepping up), a wire
- * INTO it is a product getting banked (placeProduct, stepping down).
- * Machine cards and mixed paste-ins keep the plain flat thump.
- */
-function placeKindFor(
-  prev: ProjectSoundSnapshot,
-  next: ProjectSoundSnapshot,
-): "place" | "placeProduct" | "placeSource" {
-  const newSolids: string[] = [];
-  for (const id of next.nodeIds) {
-    if (!prev.nodeIds.has(id)) {
-      newSolids.push(id);
-    }
-  }
-  if (newSolids.length === 0 || !newSolids.every((id) => next.storageIds.has(id))) {
-    return "place";
-  }
-  for (const [id, ends] of next.edgeEnds) {
-    if (prev.edgeEnds.has(id)) {
-      continue;
-    }
-    if (newSolids.includes(ends.source)) {
-      return "placeSource";
-    }
-    if (newSolids.includes(ends.target)) {
-      return "placeProduct";
-    }
-  }
-  return "place";
-}
-
-export function playProjectDiff(prev: ProjectSoundSnapshot, next: ProjectSoundSnapshot): void {
-  const addedNodes = countMissing(next.nodeIds, prev.nodeIds);
-  const removedNodes = countMissing(prev.nodeIds, next.nodeIds);
-  const addedEdges = countMissing(next.edgeIds, prev.edgeIds);
-  const removedEdges = countMissing(prev.edgeIds, next.edgeIds);
-
-  const total = addedNodes + removedNodes + addedEdges + removedEdges;
-  if (total >= BULK_THRESHOLD) {
-    playBoardSound("sweep");
-    return;
-  }
-
-  // Nothing structural moved: a board folded or unfolded, or a card's
-  // settings changed (machine count, drain pill, config). One sound.
-  if (total === 0) {
-    if (countMissing(next.openPocketIds, prev.openPocketIds) > 0) {
-      playBoardSound("open");
-    } else if (countMissing(prev.openPocketIds, next.openPocketIds) > 0) {
-      playBoardSound("close");
-    } else if (next.configSignature !== prev.configSignature) {
-      const modes = [...next.storageModes].filter(([id, mode]) => prev.storageModes.get(id) !== mode);
-      if (modes.length === 1) {
-        const sound = { overflow: "drawerOverflow", strict: "drawerStrict", ratio: "drawerRatio" } as const;
-        playBoardSound(sound[modes[0][1]]);
-      } else {
-        playBoardSound(modes.length > 1 ? "sweep" : "adjust");
-      }
-    }
-    return;
-  }
-
-  // ONE sound per transaction: a refactor adds and removes in the same step,
-  // and two sounds together read as broken volume. Priority: what arrived
-  // beats what left, cards beat wires. Except ELECTRICITY: a gesture that
-  // lands a power wire zaps, whatever else came with it.
-  let addedPowerEdge = false;
-  for (const edgeId of next.powerEdgeIds) {
-    if (!prev.edgeIds.has(edgeId)) {
-      addedPowerEdge = true;
-      break;
-    }
-  }
-  // And its complement: a gesture that takes a power wire out (cutting it,
-  // or deleting the EU drawer it fed) discharges instead of the ordinary
-  // delete thud.
-  let removedPowerEdge = false;
-  for (const edgeId of prev.powerEdgeIds) {
-    if (!next.edgeIds.has(edgeId)) {
-      removedPowerEdge = true;
-      break;
-    }
-  }
-  if (addedPowerEdge) {
-    playBoardSound("zap");
-  } else if (removedPowerEdge) {
-    playBoardSound("zapOff");
-  } else if (addedNodes > 0) {
-    playBoardSound(placeKindFor(prev, next));
-  } else if (removedNodes > 0) {
-    playBoardSound("delete");
-  } else if (addedEdges > 0) {
-    playBoardSound("connect");
-  } else if (removedEdges > 0) {
-    playBoardSound("unwire");
-  }
-}
-
-/**
- * How long after a plan switch the board stays quiet. Loading machinery
- * rewrites the project in the moments after a switch; the player's own
- * first action after picking a tab comes later than this.
- */
+/** How long after a plan switch the board stays quiet. */
 const QUIET_AFTER_SWITCH_MS = 1200;
+/** A plan change this soon after a wheel step came from the wheel. */
+const WHEEL_EDIT_MS = 80;
+/** The mod's `LIVE_SETTLE_MS`: a wheeled pin sounds once the wheel has been still this long. */
+const SETTLE_MS = 500;
+
+/** The plan as the ear knows it, for a gesture's "did anything change" check. */
+export function projectSoundFingerprint(project: FactoryProject): string {
+  return boardFingerprint(project);
+}
+
+function playDiffSound(sound: DiffSound): void {
+  playSfx(sound.name, 1, sound.pitch ?? 1);
+}
+
+/** Whether the books have the plan running: solved, and some machine working. */
+export function isRunning(result: ThroughputResult | undefined): boolean {
+  if (!result || result.stale || result.held) return false;
+  for (const node of Object.values(result.nodes)) if (node.operationRatePerSecond > 1e-9) return true;
+  return false;
+}
 
 export function useBoardSoundEffects(): void {
   useEffect(() => {
-    let snapshot = snapshotProject(useFactoryStore.getState().project);
+    let shot: BoardShot = snapshotBoard(useFactoryStore.getState().project);
     let quietUntil = 0;
+    let settleTimer: number | undefined;
+    let settleSound: DiffSound | undefined;
+    let running = isRunning(useFactoryStore.getState().lastResult);
+    let runningOf = useFactoryStore.getState().project.id;
+    let lastUndoAt = -1;
+
+    const settle = (sound: DiffSound) => {
+      settleSound = sound;
+      if (settleTimer !== undefined) window.clearTimeout(settleTimer);
+      settleTimer = window.setTimeout(() => {
+        settleTimer = undefined;
+        const wheel = lastWheelStep();
+        // Still turning: wait for it to stop.
+        if (wheel && performance.now() - wheel.at < SETTLE_MS - 20) {
+          settle(settleSound ?? sound);
+          return;
+        }
+        if (settleSound) playDiffSound(settleSound);
+        settleSound = undefined;
+      }, SETTLE_MS);
+    };
 
     const unsubscribe = useFactoryStore.subscribe((state, prevState) => {
-      if (state.project === prevState.project) {
-        return;
+      if (state.undoHistory !== prevState.undoHistory && state.redoHistory !== prevState.redoHistory) {
+        lastUndoAt = performance.now();
       }
-      const next = snapshotProject(state.project);
-      const prev = snapshot;
-      snapshot = next;
-      // A different plan arriving is navigation, not an action - and the
-      // writes that trail it (migrations, refreshes) are not one either.
+      if (state.lastResult !== prevState.lastResult || state.project.id !== runningOf) {
+        const now = isRunning(state.lastResult);
+        const fresh = state.project.id === runningOf && performance.now() >= quietUntil;
+        // Not on a tab switch or an undo: those plans were running before.
+        if (fresh && now && !running && performance.now() - lastUndoAt > 1500) playSfx("board.running");
+        running = now;
+        runningOf = state.project.id;
+      }
+      if (state.project === prevState.project) return;
+      const next = snapshotBoard(state.project);
+      const prev = shot;
+      shot = next;
       if (next.projectId !== prev.projectId) {
         quietUntil = performance.now() + QUIET_AFTER_SWITCH_MS;
         return;
       }
-      if (performance.now() < quietUntil) {
-        return;
-      }
-      playProjectDiff(prev, next);
+      if (performance.now() < quietUntil) return;
+      const sound = soundForDiff(prev, next);
+      if (!sound) return;
+      const at = performance.now();
+      const wheel = lastWheelStep();
+      const wheeled = wheel !== undefined && at - wheel.at < WHEEL_EDIT_MS;
+      // A task later, so a control that sounds for itself just after its edit still claims it.
+      window.setTimeout(() => {
+        if (editClaimedNear(at)) return;
+        if (wheeled && wheel) {
+          if (sound.name === "dial.tier") playDiffSound(sound);
+          else sfxTick(wheel.up);
+          if (sound.settles) settle(sound);
+          return;
+        }
+        playDiffSound(sound);
+      }, 0);
     });
 
-    // Warm the audio path on the first gesture so the first REAL sound
-    // never plays into a cold output stream (Chrome parks the hardware
-    // stream during silence and eats short notes while it wakes).
-    const prime = () => primeBoardSounds();
-    window.addEventListener("pointerdown", prime, { once: true, passive: true });
-
+    const stopGestures = installBoardGestureSounds();
+    const stopUnlock = installSfxUnlock();
     return () => {
       unsubscribe();
-      window.removeEventListener("pointerdown", prime);
+      stopGestures();
+      stopUnlock();
+      if (settleTimer !== undefined) window.clearTimeout(settleTimer);
     };
   }, []);
 }

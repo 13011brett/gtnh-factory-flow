@@ -11,6 +11,7 @@ import { usePlanLayout } from "@/components/use-plan-layout";
 import { leaveLibrary, openLibrary, useLibraryTab } from "@/lib/library/library-tab";
 import { isPowerDisplayUnit, type RateUnit } from "@/lib/model/rate-unit";
 import { playBoardSound } from "@/lib/board-sounds";
+import { sfxTick } from "@/lib/sound/sfx";
 import { useWorkspaceView, writeWorkspaceView } from "@/lib/workspace-view";
 import { useFactoryStore } from "@/store/factory-store";
 import { useDesignStore } from "@/store/design-store";
@@ -127,6 +128,8 @@ function BarKey({
           ? (event) => {
               if (off || event.deltaY === 0) return;
               onWheel(event.deltaY < 0 ? 1 : -1);
+              // A top-bar key the wheel steps too ticks (the mod's WheelKey).
+              sfxTick(event.deltaY < 0);
             }
           : undefined
       }
@@ -216,7 +219,6 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
   const stepRate = (step: number) => {
     const next = RATE_ORDER[(rateIndex + step + RATE_ORDER.length) % RATE_ORDER.length];
     setRateUnit(next);
-    playBoardSound("dialRate", { step: RATE_ORDER.indexOf(next) });
   };
 
   const isAmps = powerDisplayUnit !== "eu";
@@ -227,7 +229,6 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
       // The mod's Amps: every card counts in its own machine's tier.
       setPowerDisplayUnit("amps");
     }
-    playBoardSound("dialPower");
   };
 
   const peak = !workspace.averageMachineDraw;

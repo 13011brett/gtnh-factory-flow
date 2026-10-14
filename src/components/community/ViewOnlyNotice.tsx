@@ -4,8 +4,10 @@ import { Copy, LockKeyhole } from "lucide-react";
 import { useState } from "react";
 import { copyViewedPost } from "@/lib/community/open-post";
 import { writeWorkspaceView } from "@/lib/workspace-view";
+import { usePlanLayout } from "../use-plan-layout";
 
 export function ViewOnlyNotice() {
+  const itemsOnRight = usePlanLayout();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
 
@@ -13,7 +15,7 @@ export function ViewOnlyNotice() {
     <div className="absolute inset-x-2 top-2 border border-line bg-surface p-3 text-sm shadow-lg">
       <div className="flex items-center justify-between gap-2">
         <strong className="inline-flex items-center gap-1.5"><LockKeyhole className="h-3.5 w-3.5" aria-hidden />View only</strong>
-        <button type="button" aria-label="Hide the items column" onClick={() => writeWorkspaceView({ leftPanelOpen: false })} className="px-2">‹</button>
+        <button type="button" aria-label="Hide the items column" onClick={() => writeWorkspaceView({ leftPanelOpen: false })} className="px-2">{itemsOnRight ? "›" : "‹"}</button>
       </div>
       <p className="mt-1 text-xs leading-5 text-fg-muted">This shared plan is view only. Make a copy to add machines, connect items, or change settings.</p>
       <button

@@ -36,6 +36,7 @@ import {
   type IndexedResource,
 } from "./ResourceIndexPane";
 import { ChevronIcon } from "./PanelDrawer";
+import { usePlanLayout } from "./use-plan-layout";
 import {
   RecipeSearchOverlay,
   type RecipeMapChip,
@@ -63,6 +64,8 @@ interface RecipeBrowserProps {
 }
 
 export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
+  // Plan boards seat the items on the right: its edge, fold key and arrow face the other way.
+  const itemsOnRight = usePlanLayout();
   const datasetManifest = useFactoryStore((state) => state.datasetManifest);
   const datasetManifestUrl = useFactoryStore((state) => state.datasetManifestUrl);
   const selectedDatasetVersionId = useFactoryStore((state) => state.selectedDatasetVersionId);
@@ -793,7 +796,7 @@ export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
     <>
       <aside
         data-help-anchor="browser"
-        className="relative z-40 flex h-full min-h-[360px] compact:min-h-0 flex-col border-r border-neutral-800 bg-[#25272c] text-neutral-100"
+        className={`relative z-40 flex h-full min-h-[360px] compact:min-h-0 flex-col ${itemsOnRight ? "border-l" : "border-r"} border-neutral-800 bg-[#25272c] text-neutral-100`}
       >
         {(
           // The wheel pages the list from anywhere in the column, including over
@@ -810,7 +813,7 @@ export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
               aria-label="Hide the items column"
               className="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-neutral-100"
             >
-              <ChevronIcon direction="left" />
+              <ChevronIcon direction={itemsOnRight ? "right" : "left"} />
             </button>
           }
         />

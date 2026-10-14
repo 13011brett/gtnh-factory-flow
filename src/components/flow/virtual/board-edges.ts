@@ -6,6 +6,10 @@ import { sameEdgeList, selectVisibleEdges, type RoutePoints } from "./edge-culle
 export const EDGE_MARGIN = 0.35;
 /** A wire already mounted stays until it is this far out, so a zoom that goes back and forth does not remount it. */
 export const EDGE_KEEP_MARGIN = 0.9;
+/** How far the camera may move (a share of the screen) before the wires are picked again. */
+export const EDGE_STEP = 0.1;
+/** The wires are picked again at least this often while the camera moves (routes may have arrived). */
+export const EDGE_REPICK_MS = 250;
 /** How far an unrouted wire may wander round obstacles beyond its two cards, in flow px. */
 export const EDGE_DETOUR = 480;
 
@@ -26,6 +30,7 @@ class BoardEdges {
   setAll<E extends Edge>(edges: E[]): E[] {
     this.all = edges;
     this.shown = this.compute();
+    this.lastView = undefined;
     return this.shown as E[];
   }
 
@@ -56,8 +61,36 @@ class BoardEdges {
     return this.shownIdSet;
   }
 
-  /** Recomputes; returns the new list when the choice changed. */
-  refresh(): Edge[] | undefined {
+  private lastView: { x: number; y: number; w: number; h: number } | undefined;
+  private lastAt = 0;
+
+  /** The next refresh picks again whatever the camera did (the export's hold ended, say). */
+  invalidate(): void {
+    this.lastView = undefined;
+  }
+
+  /**
+   * Recomputes; returns the new list when the choice changed. A camera that moved less than `EDGE_STEP` of the
+   * screen (and zoomed less than that) since the last pick keeps it: the pick reaches `EDGE_MARGIN` past the
+   * screen, so nothing it left out can have come on screen yet. It is picked again at least every
+   * `EDGE_REPICK_MS` all the same, for routes that arrived meanwhile.
+   */
+  refresh(now = performance.now()): Edge[] | undefined {
+    const view = boardVirtualizer.viewRect();
+    const last = this.lastView;
+    if (
+      view &&
+      last &&
+      now - this.lastAt < EDGE_REPICK_MS &&
+      !boardVirtualizer.holding() &&
+      Math.abs(view.x - last.x) < last.w * EDGE_STEP &&
+      Math.abs(view.y - last.y) < last.h * EDGE_STEP &&
+      Math.abs(view.w - last.w) < last.w * EDGE_STEP
+    ) {
+      return undefined;
+    }
+    this.lastView = view ? { ...view } : undefined;
+    this.lastAt = now;
     const next = this.compute();
     if (sameEdgeList(next, this.shown)) return undefined;
     this.shown = next;

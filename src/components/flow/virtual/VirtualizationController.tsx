@@ -227,6 +227,7 @@ export const VirtualizationController = memo(function VirtualizationController({
       } else if (!held && release) {
         release();
         release = undefined;
+        boardEdges.invalidate();
         schedule();
       }
     };

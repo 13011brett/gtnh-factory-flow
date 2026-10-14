@@ -16,7 +16,6 @@ import { RatioWireLabel as RatioWireLabelControl } from "./RatioWireLabel";
 import {
   BaseEdge,
   ConnectionMode,
-  EdgeLabelRenderer,
   Position,
   ReactFlow,
   SelectionMode,
@@ -36,8 +35,9 @@ import {
   type ReactFlowInstance,
   useStore,
   useStoreApi,
-  ViewportPortal,
 } from "@xyflow/react";
+// React Flow's portals, with their target looked up once rather than on every store change.
+import { FlowEdgeLabelPortal as EdgeLabelRenderer, FlowViewportPortal as ViewportPortal } from "./virtual/flow-portals";
 import { toBlob, toSvg } from "html-to-image";
 import {
   Activity,

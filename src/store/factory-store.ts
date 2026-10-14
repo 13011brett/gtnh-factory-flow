@@ -1026,6 +1026,9 @@ function withViewerGuard(
   };
 }
 
+/** Where the board's camera is looking, in flow space (setFlowViewportCenter); new cards land there. */
+let viewportCenter: FactoryNode["position"] | undefined;
+
 export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, write, setPresentation) => ({
   isReadOnly: false,
   loadViewedProject: (project) => {
@@ -1639,7 +1642,9 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
     set({ hoveredUsageNodeId: nodeId });
   },
   setFlowViewportCenter: (position) => {
-    set({ flowViewportCenter: position });
+    // Kept outside the store's state: only adding a card reads it, and a store write after every camera move
+    // ran every subscriber of the store (18 ms at 1,000 cards) for a value nothing renders.
+    viewportCenter = position;
   },
   recalculate: () => {
     const { project } = get();
@@ -4846,10 +4851,11 @@ function addRecipeNodeToState(
   },
 ): Partial<FactoryStore> {
   const index = state.project.nodes.length;
-  const viewportPosition = state.flowViewportCenter
+  const center = state.flowViewportCenter ?? viewportCenter;
+  const viewportPosition = center
     ? snapPositionToGrid({
-        x: state.flowViewportCenter.x - RECIPE_NODE_WIDTH / 2,
-        y: state.flowViewportCenter.y - 160,
+        x: center.x - RECIPE_NODE_WIDTH / 2,
+        y: center.y - 160,
       })
     : undefined;
   const desiredPosition =

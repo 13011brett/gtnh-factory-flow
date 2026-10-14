@@ -21,13 +21,9 @@ if (solveForTest === null) {
     beforeAll(async () => {
       await initLpEngine();
     });
-    // Plans of several islands whose tie-breaks move when an island is numbered inside the whole plan (spec 4.1.2): the
-    // core solves one model, so they are checked island by island in `solve-core.test.ts` until WP1c splits islands.
-    const NEEDS_ISLANDS = new Set(["gtnh-flow-two_decisions", "platline-x4", "platline-x10"]);
     for (const name of caseNames()) {
       // platline-x10 is a bench case in the mod; it is slow, so it runs only when asked for.
-      const skipped = NEEDS_ISLANDS.has(name) && COVERAGE === "solution";
-      const run = skipped || (name === "platline-x10" && !process.env.CORPUS_BENCH) ? it.skip : it;
+      const run = (name === "platline-x10" && !process.env.CORPUS_BENCH) ? it.skip : it;
       run(
         name,
         async () => {

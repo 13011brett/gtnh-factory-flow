@@ -55,6 +55,17 @@ describe("the rail's totals", () => {
     expect(rail.wholeMachines).toBe(6);
   });
 
+  it("lists no machine for a fluid tank: it is free and instant (the mod lists none)", () => {
+    const project = structuredClone(mockUnneeded.project);
+    const comp = project.nodes.find((n) => n.id === "comp")!;
+    const recipe = project.recipes.find((r) => r.id === comp.recipeId)!;
+    recipe.machineType = "Tank";
+    recipe.source = { ...recipe.source, recipeMap: "Tank" } as typeof recipe.source;
+    const rail = buildRailModel(project, mockUnneeded.result);
+    expect(rail.machines).toEqual([]);
+    expect(rail.wholeMachines).toBe(0);
+  });
+
   it("adds up power from the machine list (peak and average)", () => {
     const rail = model(mockForced);
     expect(rail.power.peak.used).toBeGreaterThan(0);

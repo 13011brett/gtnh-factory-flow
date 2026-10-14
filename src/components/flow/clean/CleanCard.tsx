@@ -3,7 +3,7 @@
 import "./clean.css";
 
 import { Handle, Position } from "@xyflow/react";
-import { useEffect, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent, type WheelEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type MouseEvent, type WheelEvent } from "react";
 import { Copy, Plus, RefreshCw, Trash2 } from "lucide-react";
 import type { FactoryNode, Recipe } from "@/lib/model/types";
 import { fluidArtPixels, isSwatchFluid, ResourceIcon } from "@/components/nei/ResourceIcon";
@@ -18,27 +18,35 @@ import { MenuShell } from "../EnergyHatchMenu";
 import { checklistLocked } from "../RecipeNode";
 import type { CleanCardActions, CleanCardContext, CleanCardView, CleanChipView, CleanPortView } from "./clean-model";
 import { tierChipColors } from "./tokens";
-
-/** A press that moved this far (screen px) before release is a drag, not a click. */
-const CLICK_SLOP = 3;
-
-function useClickSlop() {
-  const down = useRef({ x: 0, y: 0 });
-  return {
-    onPointerDownCapture: (event: PointerEvent) => {
-      down.current = { x: event.clientX, y: event.clientY };
-    },
-    wasClick: (event: MouseEvent) =>
-      Math.hypot(event.clientX - down.current.x, event.clientY - down.current.y) < CLICK_SLOP,
-  };
-}
+import { ensureInteractionHost, useClickSlop, tipAttrs, type TipSpec } from "./interaction";
+import { PortRateControls } from "./interaction/PortRateControls";
+import {
+  countTip,
+  forcedTip,
+  gearTip,
+  menuTip,
+  nameTip,
+  portTip,
+  powerPanelTip,
+  powerTip,
+  stripChipTip,
+  tierTip,
+} from "./interaction/tips";
 
 function glyph(event: { stopPropagation: () => void }) {
   event.stopPropagation();
 }
 
 /** One input or output row. A component of its own so hover scope and resource lighting re-render only it. */
-export function CleanPortRow({ p, wasClick }: { p: CleanPortView; wasClick: (event: MouseEvent) => boolean }) {
+export function CleanPortRow({
+  p,
+  wasClick,
+  unset = false,
+}: {
+  p: CleanPortView;
+  wasClick: (event: MouseEvent) => boolean;
+  unset?: boolean;
+}) {
   const browseResource = useFactoryStore((state) => state.browseResource);
   const setHoveredFlowScope = useFactoryStore((state) => state.setHoveredFlowScope);
   const readOnly = useFactoryStore((state) => state.isReadOnly);
@@ -107,7 +115,7 @@ export function CleanPortRow({ p, wasClick }: { p: CleanPortView; wasClick: (eve
       data-resource-edge-anchor="true"
       data-resource-node-id={p.nodeId}
       data-resource-handle-id={p.handleId}
-      title={p.title}
+      {...tipAttrs(portTip(p))}
       onPointerEnter={() => {
         rowBrowse.handlers.onPointerEnter();
         if (!isWiringConnection() && !checklistLocked()) {
@@ -135,7 +143,7 @@ export function CleanPortRow({ p, wasClick }: { p: CleanPortView; wasClick: (eve
         <Words p={p} iconProps={iconProps} />
       )}
       {p.forced ? (
-        <div className="cc-forced" data-kind={isInput ? "in" : "out"} title="The plan brings this in here with nothing to supply it. Drag it out to make a drawer.">
+        <div className="cc-forced" data-kind={isInput ? "in" : "out"} {...tipAttrs(forcedTip(p))}>
           {port.resource ? (
             <ResourceIcon {...iconProps} resource={{ ...port.resource, amount: 1, chance: undefined }} className="cc-icon" />
           ) : null}
@@ -145,6 +153,7 @@ export function CleanPortRow({ p, wasClick }: { p: CleanPortView; wasClick: (eve
           <span className="cc-pname">Forced</span>
         </div>
       ) : null}
+      {!p.wired && !p.forced ? <PortRateControls p={p} unset={unset} wasClick={wasClick} /> : null}
       <Handle
         id={p.handleId}
         type={isInput ? "target" : "source"}
@@ -194,10 +203,12 @@ function Words({ p, iconProps }: { p: CleanPortView; iconProps: Record<string, u
 
 function CountBox({
   view,
+  tip,
   onSet,
   wasClick,
 }: {
   view: CleanCardView["count"];
+  tip: TipSpec;
   onSet: (count: number | undefined) => void;
   wasClick: (event: MouseEvent) => boolean;
 }) {
@@ -224,7 +235,7 @@ function CountBox({
       data-prompt={view.note === "(set count)" ? "" : undefined}
       data-editing={editing ? "" : undefined}
       data-note={view.note}
-      title={view.title}
+      {...tipAttrs(tip)}
       onClick={(event) => {
         glyph(event);
         if (!editing && wasClick(event)) {
@@ -266,14 +277,14 @@ function CountBox({
 
 function TierChip({
   label,
-  title,
+  tip,
   fixed,
   onStep,
   wasClick,
   extraData,
 }: {
   label: string;
-  title: string;
+  tip: TipSpec;
   fixed?: boolean;
   onStep: (direction: -1 | 1) => void;
   wasClick: (event: MouseEvent) => boolean;
@@ -295,7 +306,7 @@ function TierChip({
       tabIndex={0}
       className="cc-chip nowheel"
       style={style}
-      title={title}
+      {...tipAttrs(tip)}
       aria-label={`Tier ${label}`}
       data-hatch-menu-anchor=""
       data-fixed={fixed ? "" : undefined}
@@ -324,11 +335,13 @@ function TierChip({
 function AmpsChip({
   amps,
   tier,
+  tip,
   onSet,
   wasClick,
 }: {
   amps: NonNullable<CleanCardView["amps"]>;
   tier?: string;
+  tip: TipSpec;
   onSet: (value: number) => void;
   wasClick: (event: MouseEvent) => boolean;
 }) {
@@ -365,7 +378,7 @@ function AmpsChip({
       tabIndex={0}
       className="cc-chip nowheel"
       style={{ ...style, minWidth: 50, width: "max-content" }}
-      title="Amps this multiblock draws. Click to type, right click one less, wheel to change."
+      {...tipAttrs(tip)}
       onClick={(event) => {
         glyph(event);
         if (draft === undefined && wasClick(event)) setDraft(String(amps.value));
@@ -404,10 +417,12 @@ function AmpsChip({
 
 function StripChip({
   chip,
+  nodeId,
   onStep,
   wasClick,
 }: {
   chip: CleanChipView;
+  nodeId: string;
   onStep: (id: string, direction: -1 | 1) => void;
   wasClick: (event: MouseEvent) => boolean;
 }) {
@@ -419,7 +434,7 @@ function StripChip({
       data-label={chip.label}
       data-warn={chip.warn ? "" : undefined}
       data-reading={chip.reading ? "" : undefined}
-      title={chip.title}
+      {...tipAttrs(stripChipTip(nodeId, chip))}
       style={{
         left: chip.x,
         top: chip.y,
@@ -459,6 +474,7 @@ export interface CleanCardProps {
 export function CleanCard({ view, actions, context, recipe, node }: CleanCardProps) {
   const { wasClick, onPointerDownCapture } = useClickSlop();
   const rootRef = useRef<HTMLDivElement>(null);
+  useEffect(() => ensureInteractionHost(), []);
   // Every prompt on the board shares one phase however late it mounted.
   useEffect(() => {
     if (!view.unset) return;
@@ -504,7 +520,7 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
           aria-label="Card actions"
           aria-haspopup="menu"
           aria-expanded={menu?.kind === "actions"}
-          title="Card actions"
+          {...tipAttrs(menuTip(view.nodeId))}
           onClick={openMenu("actions")}
         />
         <div
@@ -517,7 +533,7 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
           aria-label="Machine settings"
           aria-haspopup="menu"
           aria-expanded={menu?.kind === "settings"}
-          title="Machine settings"
+          {...tipAttrs(gearTip(view.nodeId))}
           onClick={openMenu("settings")}
         />
         <div
@@ -530,7 +546,7 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
           data-clip={view.nameSize <= 9 ? "" : undefined}
           data-machine-menu-toggle={view.hasPicker ? "" : undefined}
           data-wheel-steps={view.hasPicker ? "" : undefined}
-          title={view.name}
+          {...tipAttrs(nameTip(view))}
           onClick={
             view.hasPicker
               ? (event) => {
@@ -569,12 +585,18 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
           ) : null}
         </div>
         {view.amps ? (
-          <AmpsChip amps={view.amps} tier={view.tier?.label} onSet={actions.setAmps} wasClick={wasClick} />
+          <AmpsChip
+            amps={view.amps}
+            tier={view.tier?.label}
+            tip={powerPanelTip(view, "amps")}
+            onSet={actions.setAmps}
+            wasClick={wasClick}
+          />
         ) : null}
         {view.tier ? (
           <TierChip
             label={view.tier.label}
-            title={view.tier.title}
+            tip={view.amps ? powerPanelTip(view, "tier") : tierTip(view)}
             fixed={view.tier.fixed}
             onStep={actions.stepTier}
             wasClick={wasClick}
@@ -584,7 +606,7 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
 
       <div className="cc-rail" data-side="input">
         {view.inputs.map((p) => (
-          <CleanPortRow key={p.key} p={p} wasClick={wasClick} />
+          <CleanPortRow key={p.key} p={p} wasClick={wasClick} unset={view.unset} />
         ))}
         {view.power ? (
           <div
@@ -592,7 +614,7 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
             data-power=""
             data-side="input"
             data-stalled={view.power.stalled ? "" : undefined}
-            title={view.power.title}
+            {...tipAttrs(view.amps ? powerPanelTip(view, "power") : powerTip(view))}
           >
             <span className="cc-bolt" />
             <span className="cc-num" data-unit={view.power.unit}>
@@ -639,19 +661,19 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
             />
           ) : null
         ) : null}
-        <CountBox view={view.count} onSet={actions.setCount} wasClick={wasClick} />
+        <CountBox view={view.count} tip={countTip(view)} onSet={actions.setCount} wasClick={wasClick} />
       </div>
 
       <div className="cc-rail" data-side="output">
         {view.outputs.map((p) => (
-          <CleanPortRow key={p.key} p={p} wasClick={wasClick} />
+          <CleanPortRow key={p.key} p={p} wasClick={wasClick} unset={view.unset} />
         ))}
       </div>
 
       {view.chips.length > 0 ? (
         <div className="cc-strip" style={{ height: view.stripHeight }}>
           {view.chips.map((chip) => (
-            <StripChip key={chip.id} chip={chip} onStep={actions.stepSetting} wasClick={wasClick} />
+            <StripChip key={chip.id} chip={chip} nodeId={view.nodeId} onStep={actions.stepSetting} wasClick={wasClick} />
           ))}
         </div>
       ) : null}

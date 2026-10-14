@@ -4,7 +4,7 @@ import { useEffect } from "react";
 import type { FactoryProject, ThroughputResult } from "@/lib/model/types";
 import { boardFingerprint, snapshotBoard, soundForDiff, type BoardShot, type DiffSound } from "@/lib/sound/board-diff";
 import { installBoardGestureSounds, lastWheelStep } from "@/lib/sound/board-gestures";
-import { editClaimedNear, installSfxUnlock, playSfx, sfxTick } from "@/lib/sound/sfx";
+import { editClaimedNear, installSfxUnlock, playSfx, recentSfx, sfxTick } from "@/lib/sound/sfx";
 import { useFactoryStore } from "@/store/factory-store";
 
 /**
@@ -38,10 +38,22 @@ function playDiffSound(sound: DiffSound): void {
   playSfx(sound.name, 1, sound.pitch ?? 1);
 }
 
-/** Whether the books have the plan running: solved, and some machine working. */
+/** Whether an undo or redo played lately (the store plays them as it acts). */
+function undoneLately(): boolean {
+  const now = performance.now();
+  return recentSfx().some((p) => (p.name === "board.undo" || p.name === "board.redo") && now - p.at < 1500);
+}
+
+/**
+ * Whether the books have the plan running (the mod's `heardRunning`): solved, and some machine working that a pin or
+ * rate sets (a part nothing sets, or a machine left unneeded, is not running).
+ */
 export function isRunning(result: ThroughputResult | undefined): boolean {
-  if (!result || result.stale || result.held) return false;
-  for (const node of Object.values(result.nodes)) if (node.operationRatePerSecond > 1e-9) return true;
+  if (!result || result.stale || result.held || result.plan?.failure) return false;
+  const idle = new Set<string>([...(result.plan?.unneeded ?? []), ...(result.plan?.unanchored ?? [])]);
+  for (const [id, node] of Object.entries(result.nodes)) {
+    if (node.operationRatePerSecond > 1e-9 && !idle.has(id)) return true;
+  }
   return false;
 }
 
@@ -53,7 +65,6 @@ export function useBoardSoundEffects(): void {
     let settleSound: DiffSound | undefined;
     let running = isRunning(useFactoryStore.getState().lastResult);
     let runningOf = useFactoryStore.getState().project.id;
-    let lastUndoAt = -1;
 
     const settle = (sound: DiffSound) => {
       settleSound = sound;
@@ -72,14 +83,11 @@ export function useBoardSoundEffects(): void {
     };
 
     const unsubscribe = useFactoryStore.subscribe((state, prevState) => {
-      if (state.undoHistory !== prevState.undoHistory && state.redoHistory !== prevState.redoHistory) {
-        lastUndoAt = performance.now();
-      }
       if (state.lastResult !== prevState.lastResult || state.project.id !== runningOf) {
         const now = isRunning(state.lastResult);
         const fresh = state.project.id === runningOf && performance.now() >= quietUntil;
         // Not on a tab switch or an undo: those plans were running before.
-        if (fresh && now && !running && performance.now() - lastUndoAt > 1500) playSfx("board.running");
+        if (fresh && now && !running && !undoneLately()) playSfx("board.running");
         running = now;
         runningOf = state.project.id;
       }
@@ -110,6 +118,13 @@ export function useBoardSoundEffects(): void {
       }, 0);
     });
 
+    // A handle for checking the sounds by hand in development (the plays, newest last, and the running state).
+    if (process.env.NODE_ENV !== "production") {
+      (window as unknown as { __sfx?: object }).__sfx = {
+        recent: recentSfx,
+        running: () => ({ running, runningOf, nodes: Object.values(useFactoryStore.getState().lastResult?.nodes ?? {}).map((n) => n.operationRatePerSecond), stale: useFactoryStore.getState().lastResult?.stale }),
+      };
+    }
     const stopGestures = installBoardGestureSounds();
     const stopUnlock = installSfxUnlock();
     return () => {

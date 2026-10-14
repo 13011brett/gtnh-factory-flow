@@ -23,7 +23,32 @@ const FIXTURES = {
 
 afterEach(() => setSolveCore(undefined));
 
+/**
+ * The mod's corpus dumps were made by an importer that joined every buffer drawer into wires; the adapter now passes a
+ * buffer wired only to cards as a BUFFER drawer (`docs/buffer-drawers.md`). With rule Any the solver answers a buffer
+ * exactly as those wires (the mod's `BufferDrawerTest.aBufferWithRuleAnyAnswersAsPlainWires`), so the comparison joins
+ * them the same way: each maker wired to each user of the same ingredient.
+ */
+function joinBuffers(input: SolveInput): SolveInput {
+  const byId = new Map(input.machines.map((m) => [m.id, m]));
+  const edges = [...input.edges];
+  for (const d of input.drawers) {
+    if (d.kind !== "BUFFER") continue;
+    expect(d.rule).toBe("ANY");
+    for (const from of d.links)
+      for (const to of d.takers ?? []) {
+        if (byId.get(from.node)!.outputs[from.port]!.resource !== byId.get(to.node)!.inputs[to.port]!.resource) continue;
+        edges.push({ id: `${d.id}>${from.node}>${to.node}`, source: from.node, sourceOutput: from.port, target: to.node, targetInput: to.port });
+      }
+  }
+  return { ...input, edges, drawers: input.drawers.filter((d) => d.kind !== "BUFFER") };
+}
+
 function adapterInput(path: string): SolveInput {
+  return joinBuffers(adapterInputWithBuffers(path));
+}
+
+function adapterInputWithBuffers(path: string): SolveInput {
   const project = normalizeLoadedProject(JSON.parse(readFileSync(new URL(path, import.meta.url), "utf8")));
   let got: SolveInput | undefined;
   setSolveCore((input) => {
@@ -128,7 +153,34 @@ describe("adapter vs the mod's corpus: structure (level 2)", () => {
   });
 });
 
+describe("buffers the website plans carry", () => {
+  it("come over as buffer drawers, each joined to cards on both sides", () => {
+    for (const name of ["titanium", "pa-cell"] as const) {
+      const buffers = adapterInputWithBuffers(FIXTURES[name][0]).drawers.filter((d) => d.kind === "BUFFER");
+      expect(buffers.length, name).toBeGreaterThan(0);
+      for (const b of buffers) {
+        expect(b.links.length).toBeGreaterThan(0);
+        expect(b.takers!.length).toBeGreaterThan(0);
+      }
+    }
+  });
+});
+
 describe.skipIf(solveForTest === null)("adapter + solver vs the mod's goldens (level 3)", () => {
+  it("solved with its buffers as buffer drawers, each plan sizes its machines as the golden does", async () => {
+    for (const name of ["titanium", "pa-cell"] as const) {
+      const [path, corpus] = FIXTURES[name];
+      const answer = await solveForTest!(adapterInputWithBuffers(path));
+      expect(answer.kind).toBe("solved");
+      if (answer.kind !== "solved") return;
+      const golden = loadGolden(corpus).solution as { machineCounts: Record<string, number> };
+      const sortNums = (xs: number[]) => xs.map((x) => Math.round(x * 1e6) / 1e6).sort((p, q) => p - q);
+      expect(sortNums(Object.values(answer.solution.machineCounts)), name).toEqual(
+        sortNums(Object.values(golden.machineCounts)),
+      );
+    }
+  });
+
   for (const name of ["titanium", "pa-cell"] as const) {
     it(`${name}: a plan that is all pins answers with the golden's counts and flows`, async () => {
       const [path, corpus] = FIXTURES[name];

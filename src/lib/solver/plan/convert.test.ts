@@ -207,7 +207,7 @@ describe("convertBuildToPlan", () => {
     });
   });
 
-  describe("buffer drawers become wires", () => {
+  describe("buffer drawers", () => {
     const withBuffer = (extra?: Partial<FactoryStorage>, edgeExtra?: Partial<FactoryEdge>) =>
       project({
         recipes: [recipe("make", [], [["gear", 1]]), recipe("use", [["gear", 1]], [["kit", 1]]), recipe("use2", [["gear", 2]], [["bit", 1]])],
@@ -220,23 +220,32 @@ describe("convertBuildToPlan", () => {
         ],
       });
 
-    it("joins each feeder to each taker", () => {
+    it("keeps a buffer wired only to cards as a buffer drawer", () => {
       const { project: plan, report } = convertBuildToPlanWithReport(withBuffer());
-      expect(plan.storages).toEqual([]);
+      expect(plan.storages!.map((s) => s.id)).toEqual(["buf"]);
       expect(plan.edges.map((e) => [e.id, e.source, e.target])).toEqual([
-        ["in>out1", "a", "b"],
-        ["in>out2", "a", "c"],
+        ["in", "a", "buf"],
+        ["out1", "buf", "b"],
+        ["out2", "buf", "c"],
       ]);
-      expect(report.buffersExpanded).toBe(1);
+      expect(report.buffersExpanded).toBe(0);
     });
 
-    it("flattens a ratio buffer to plain wires", () => {
+    it("keeps a ratio buffer as a plain buffer, its shares dropped", () => {
       const { project: plan, report } = convertBuildToPlanWithReport(
         withBuffer({ bufferMode: "ratio", ratioExportPercent: 50 }, { ratioWeight: 3 }),
       );
-      expect(plan.edges).toHaveLength(2);
+      expect(plan.storages![0]!.bufferMode).toBeUndefined();
+      expect(plan.storages![0]!.ratioExportPercent).toBeUndefined();
+      expect(plan.edges).toHaveLength(3);
       expect(plan.edges.every((e) => e.ratioWeight === undefined && e.ratioInputWeight === undefined)).toBe(true);
       expect(report.ratioBuffersFlattened).toBe(1);
+    });
+
+    it("parks a rate no older board enforced on a buffer", () => {
+      const { project: plan } = convertBuildToPlanWithReport(withBuffer({ targetPerSecond: 5, targetMode: "exact" }));
+      expect(plan.storages![0]!.targetMode).toBe("ignore");
+      expect(plan.storages![0]!.targetPerSecond).toBe(5);
     });
 
     it("joins the ends of a chain of buffers", () => {
@@ -268,7 +277,7 @@ describe("convertBuildToPlan", () => {
       ]);
     });
 
-    it("keeps a loose cell wire's litres on the joined wire", () => {
+    it("joins a buffer with a loose cell wire, keeping its litres on the joined wire", () => {
       const plan = convertBuildToPlan(
         project({
           recipes: [recipe("make", [], [["gear", 1]]), recipe("use", [["gear", 1]], [["kit", 1]])],

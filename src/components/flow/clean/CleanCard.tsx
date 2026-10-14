@@ -32,6 +32,8 @@ import {
   stripChipTip,
   tierTip,
 } from "./interaction/tips";
+import { openSparePopupForPort } from "./rail/SparePopup";
+import { makePortKey } from "@/lib/solver/plan/port-key";
 
 function glyph(event: { stopPropagation: () => void }) {
   event.stopPropagation();
@@ -143,7 +145,17 @@ export function CleanPortRow({
         <Words p={p} iconProps={iconProps} />
       )}
       {p.forced ? (
-        <div className="cc-forced" data-kind={isInput ? "in" : "out"} {...tipAttrs(forcedTip(p))}>
+        <div
+          className="cc-forced"
+          data-kind={isInput ? "in" : "out"}
+          {...tipAttrs(forcedTip(p))}
+          onClick={(event) => {
+            // A leftover with somewhere else to go opens its split (rail/SparePopup.tsx).
+            if (wasClick(event) && openSparePopupForPort(makePortKey(p.nodeId, isInput ? "i" : "o", p.handleId), event.clientX, event.clientY)) {
+              event.stopPropagation();
+            }
+          }}
+        >
           {port.resource ? (
             <ResourceIcon {...iconProps} resource={{ ...port.resource, amount: 1, chance: undefined }} className="cc-icon" />
           ) : null}

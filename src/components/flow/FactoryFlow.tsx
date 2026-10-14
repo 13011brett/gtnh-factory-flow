@@ -227,6 +227,7 @@ import { type RecipeFlowNode } from "./RecipeNode";
 import { RecipeNodeSwitch } from "./clean/CleanRecipeNode";
 import { StorageNodeSwitch } from "./clean/drawer/CleanStorageNode";
 import { CleanDrawerFace } from "./clean/drawer/CleanDrawer";
+import { PlanNoticeSwitch } from "./clean/rail/NoticeBar";
 import { GT_NODE_COLORS, GT_NODE_COLOR_PALETTE, flowRampColor } from "./node-colors";
 import {
   CANVAS_PATTERNS,
@@ -6449,10 +6450,12 @@ export function FactoryFlow() {
           recipeSearchOpen ? "opacity-20 grayscale [&_*]:pointer-events-none" : "",
         ].join(" ")}
       >
+        <PlanNoticeSwitch>
         <UnwiredNotice onShow={handleShowNodes} />
         <DeathSpiralNotice onShow={handleShowNodes} />
         <ClogLockNotice onShow={handleShowNodes} />
         <SolveModeNotice onShow={handleShowNodes} />
+        </PlanNoticeSwitch>
         <RecipeAddChips />
       </div>
       {isProjectImporting ? <FlowLoadingOverlay /> : null}

@@ -351,10 +351,19 @@
   position: relative;
   box-sizing: border-box;
   height: 40px;
+  padding: 0 0 0 40px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 2px;
+}
+.cc-row[data-side="output"] .cc-line {
+  padding: 0 40px 0 0;
+  align-items: flex-end;
+  text-align: right;
+}
+.cc-row[data-forced] {
+  padding: 0 !important;
 }
 
 .cc-icon {
@@ -474,8 +483,8 @@
 .cc-forced {
   position: relative;
   box-sizing: border-box;
-  margin: 1px 0 0 -2px;
-  width: 116px;
+  align-self: stretch;
+  margin: 1px -2px 0;
   height: 38px;
   padding: 0 0 0 42px;
   display: flex;
@@ -489,9 +498,6 @@
 .cc-row[data-side="output"] .cc-forced {
   padding: 0 42px 0 0;
   align-items: flex-end;
-  margin-left: 2px;
-  margin-right: -2px;
-  align-self: flex-end;
 }
 .cc-forced[data-kind="in"] {
   --cc-forced-body: #292f38;

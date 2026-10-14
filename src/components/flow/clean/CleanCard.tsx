@@ -3,7 +3,7 @@
 import "./clean.css";
 
 import { Handle, Position } from "@xyflow/react";
-import { useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent, type WheelEvent } from "react";
+import { useEffect, useRef, useState, type CSSProperties, type MouseEvent, type PointerEvent, type WheelEvent } from "react";
 import { Copy, Plus, RefreshCw, Trash2 } from "lucide-react";
 import type { FactoryNode, Recipe } from "@/lib/model/types";
 import { fluidArtPixels, isSwatchFluid, ResourceIcon } from "@/components/nei/ResourceIcon";
@@ -458,6 +458,14 @@ export interface CleanCardProps {
 /** The clean recipe card: header, hairline, port rails around the picture, power row, settings strip. */
 export function CleanCard({ view, actions, context, recipe, node }: CleanCardProps) {
   const { wasClick, onPointerDownCapture } = useClickSlop();
+  const rootRef = useRef<HTMLDivElement>(null);
+  // Every prompt on the board shares one phase however late it mounted.
+  useEffect(() => {
+    if (!view.unset) return;
+    for (const animation of rootRef.current?.getAnimations?.({ subtree: true }) ?? []) {
+      if ((animation as CSSAnimation).animationName === "cc-prompt") animation.startTime = 0;
+    }
+  }, [view.unset]);
   const machineIcons = useMachineHandlerIcons();
   const mapIcons = useRecipeMapIcons();
   const deleteNode = useFactoryStore((state) => state.deleteNode);
@@ -478,6 +486,7 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
 
   return (
     <div
+      ref={rootRef}
       className="cc-card"
       data-node-glance-root=""
       data-selected={view.selected ? "" : undefined}

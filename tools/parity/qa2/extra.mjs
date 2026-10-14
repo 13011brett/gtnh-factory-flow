@@ -133,7 +133,7 @@ export default function ({ page, wait, rec, check, shot, nodeSel, focus, idle, s
     rec("panels", "help menu offers a tour (mod: Take the tour, 37 steps)", /tour/i.test(help) ? "PASS" : "FAIL", "");
     await page.keyboard.press("Escape");
     // minimap
-    rec("panels", "minimap on the board (mod: minimap of the plan last open)", (await page.locator(".mm").count()) ? "PASS" : "FAIL", `.mm count ${await page.locator(".mm").count()}`);
+    rec("panels", "minimap on the board (mod: minimap of the plan last open)", (await page.locator(".mmap").count()) ? "PASS" : "FAIL", `.mmap count ${await page.locator(".mmap").count()}`);
     // see-through
     await page.locator('[aria-label="Settings"]').first().click();
     await wait(600);

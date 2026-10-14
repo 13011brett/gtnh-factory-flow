@@ -21,7 +21,9 @@ export const FLUID_TANK_EMPTY_RECIPE_PREFIX = "fluid-tank:empty:";
 export type FluidTankMode = "empty" | "fill";
 
 export function isFluidTankRecipe(
-  recipe: (Pick<Recipe, "machineType"> & { source?: Pick<NonNullable<Recipe["source"]>, "recipeMap"> }) | undefined,
+  recipe:
+    | (Pick<Recipe, "machineType"> & { source?: Pick<NonNullable<Recipe["source"]>, "recipeMap"> })
+    | undefined,
 ): boolean {
   if (recipe?.machineType !== FLUID_TANK_MACHINE_TYPE) return false;
   const map = recipe.source?.recipeMap;
@@ -58,7 +60,9 @@ export function createFluidTankPlaceholderRecipe(id: string): Recipe {
 }
 
 /** What the card holds, read off its recipe; undefined while it is empty. */
-export function getFluidTankSlot(recipe: Pick<Recipe, "inputs" | "outputs">): FluidTankSlot | undefined {
+export function getFluidTankSlot(
+  recipe: Pick<Recipe, "inputs" | "outputs">,
+): FluidTankSlot | undefined {
   const fluidOut = recipe.outputs.find((slot) => slot.kind === "fluid");
   const itemsIn = recipe.inputs.filter((slot) => slot.kind === "item");
   const itemsOut = recipe.outputs.filter((slot) => slot.kind === "item");

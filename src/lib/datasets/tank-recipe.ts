@@ -30,12 +30,18 @@ export async function fetchFluidTankRecipe(
       resource: { kind: resource.kind, id: resource.id },
     });
     const fits = result.recipes.filter((recipe) => recipe.recipeMap === FLUID_TANK_MAP);
-    const plain = (recipe: { name?: string; inputs?: ResourceAmount[]; outputs?: ResourceAmount[] }) =>
+    const plain = (recipe: {
+      name?: string;
+      inputs?: ResourceAmount[];
+      outputs?: ResourceAmount[];
+    }) =>
       [...(recipe.inputs ?? []), ...(recipe.outputs ?? [])].some(
         (slot) => slot.kind === "item" && /(^|:)itemCellEmpty$/i.test(slot.id),
       ) || /empty cell/i.test(recipe.name ?? "");
     const pick = fits.find(plain) ?? fits[0];
-    return pick ? await getRecipeDatasetRecipe(DEFAULT_DATASET_MANIFEST_URL, version, pick.id) : undefined;
+    return pick
+      ? await getRecipeDatasetRecipe(DEFAULT_DATASET_MANIFEST_URL, version, pick.id)
+      : undefined;
   } catch {
     return undefined;
   }

@@ -4,7 +4,13 @@ import { memo } from "react";
 import type { RecipeNodeData } from "../../RecipeNode";
 import { useRenderedHandles } from "../../use-rendered-handles";
 import { SpecialCard } from "./SpecialCard";
-import { useCropCardModel, useHolderCardModel, usePowerCardModel, useSharedCardModel, type SpecialModel } from "./use-special";
+import {
+  useCropCardModel,
+  useHolderCardModel,
+  usePowerCardModel,
+  useSharedCardModel,
+  type SpecialModel,
+} from "./use-special";
 import type { SpecialKind } from "./special-model";
 
 function Drawn({ model, data }: { model: SpecialModel; data: RecipeNodeData }) {

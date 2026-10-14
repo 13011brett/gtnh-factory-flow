@@ -10,9 +10,18 @@ import {
   getSelectedMachineHandler,
   isSteamMachineHandler,
 } from "@/lib/model";
-import { powerDisplayFromEuT, powerDisplaySuffix, rateMultiplierForKind, rateSuffixForKind } from "@/lib/model/rate-unit";
+import {
+  powerDisplayFromEuT,
+  powerDisplaySuffix,
+  rateMultiplierForKind,
+  rateSuffixForKind,
+} from "@/lib/model/rate-unit";
 import { getRecipeProgrammedCircuit } from "@/lib/model/programmed-circuit";
-import { getCustomRateDial, getCustomRateSlot, CUSTOM_RATE_ANY_RESOURCE_ID } from "@/lib/model/custom-rate";
+import {
+  getCustomRateDial,
+  getCustomRateSlot,
+  CUSTOM_RATE_ANY_RESOURCE_ID,
+} from "@/lib/model/custom-rate";
 import { getFluidTankSlot, FLUID_TANK_NAME } from "@/lib/model/fluid-tank";
 import {
   CROP_FARM_PLACEHOLDER_RECIPE_ID,
@@ -31,7 +40,12 @@ import {
   isCropFarmRecipe,
   isCropProductionRecipe,
 } from "@/lib/model";
-import { getSharedMachineHandlers, listNodeSections, sectionNodeId, sectionHandleId } from "@/lib/model/shared-machine";
+import {
+  getSharedMachineHandlers,
+  listNodeSections,
+  sectionNodeId,
+  sectionHandleId,
+} from "@/lib/model/shared-machine";
 import { applyMachineOutputMultipliers } from "@/lib/solver/machine-effects";
 import { getOverclockedRecipeStats } from "@/lib/solver/overclock";
 import { getNodePowerReport, getNodeSteamReport, hasPowerReport } from "@/lib/solver/power-report";
@@ -64,7 +78,12 @@ import {
   steppedPowerValue,
   type PowerSettingRow,
 } from "./power-settings";
-import { sectionShare, type SpecialChip, type SpecialSection, type SpecialView } from "./special-model";
+import {
+  sectionShare,
+  type SpecialChip,
+  type SpecialSection,
+  type SpecialView,
+} from "./special-model";
 
 /** What a special card does beyond the plain card's actions. */
 export interface SpecialActions extends CleanCardActions {
@@ -106,7 +125,10 @@ export function countView(
 ): CleanCardView["count"] & { unset: boolean } {
   const pin = node.solvePin;
   const pinned = pin !== undefined && pin > 0;
-  const unset = plan !== undefined && !pinned && (plan.unanchored.includes(node.id) || plan.unneeded.includes(node.id));
+  const unset =
+    plan !== undefined &&
+    !pinned &&
+    (plan.unanchored.includes(node.id) || plan.unneeded.includes(node.id));
   const value = pinned ? pin : needed;
   return {
     text: `${opts?.noTimes ? "" : "×"}${formatSolvedMachines(value)}`,
@@ -115,7 +137,8 @@ export function countView(
     note: (pinned ? "(pinned)" : unset ? "(set count)" : "") as "" | "(pinned)" | "(set count)",
     value,
     title: pinned
-      ? (opts?.pinnedTitle ?? "Pinned count. Click to change it, clear the field to let the plan decide.")
+      ? (opts?.pinnedTitle ??
+        "Pinned count. Click to change it, clear the field to let the plan decide.")
       : (opts?.title ?? "How many of this machine the plan needs. Click to pin a count."),
     unset,
   };
@@ -125,7 +148,13 @@ export function countView(
 function iconOf(context: CleanCardContext): SpecialView["icon"] {
   const icon = context.machineIcon;
   if (!icon || !(icon.iconPath || icon.iconAtlas)) return undefined;
-  return { id: icon.id, displayName: icon.displayName ?? icon.id, iconPath: icon.iconPath, iconAtlas: icon.iconAtlas, dominantColor: icon.dominantColor };
+  return {
+    id: icon.id,
+    displayName: icon.displayName ?? icon.id,
+    iconPath: icon.iconPath,
+    iconAtlas: icon.iconAtlas,
+    dominantColor: icon.dominantColor,
+  };
 }
 
 function section0(base: { view: CleanCardView }): SpecialSection {
@@ -180,24 +209,36 @@ export function useSharedCardModel(data: RecipeNodeData, selected: boolean): Spe
     if (owner !== projectNode.id) continue;
     const at = entry.nodeId.indexOf("#r");
     const section = at < 0 ? 0 : Number(entry.nodeId.slice(at + 2));
-    forcedAt.set(`${projectNode.id}|${parsed.side}|${sectionHandleId(section, parsed.handle)}`, entry.perSecond);
+    forcedAt.set(
+      `${projectNode.id}|${parsed.side}|${sectionHandleId(section, parsed.handle)}`,
+      entry.perSecond,
+    );
   }
 
   const sections: SpecialSection[] = [section0(base)];
   const machinesBySection: number[] = [result?.theoreticalMachinesRequired ?? 0];
   const usageBySection: number[] = [Math.min(1, result?.utilization ?? 0)];
-  const circuits = [base.view.circuit, ...extras.map((entry) => getRecipeProgrammedCircuit(entry.display))];
+  const circuits = [
+    base.view.circuit,
+    ...extras.map((entry) => getRecipeProgrammedCircuit(entry.display)),
+  ];
   for (const entry of extras) {
     const id = sectionNodeId(projectNode.id, entry.section);
     const verdict = deriveNodeVerdict(liveProject, lastResult, id);
-    const rails = buildRailPorts(liveProject, lastResult, id, entry.display, verdict, { handleSection: entry.section });
+    const rails = buildRailPorts(liveProject, lastResult, id, entry.display, verdict, {
+      handleSection: entry.section,
+    });
     const sectionResult = lastResult?.nodes[id];
     machinesBySection.push(sectionResult?.theoreticalMachinesRequired ?? 0);
     usageBySection.push(Math.min(1, sectionResult?.utilization ?? 0));
     sections.push({
       section: entry.section,
-      inputs: rails.inputs.map((port) => buildPortView(projectNode.id, port, projectNode, forcedAt)),
-      outputs: rails.outputs.map((port) => buildPortView(projectNode.id, port, projectNode, forcedAt)),
+      inputs: rails.inputs.map((port) =>
+        buildPortView(projectNode.id, port, projectNode, forcedAt),
+      ),
+      outputs: rails.outputs.map((port) =>
+        buildPortView(projectNode.id, port, projectNode, forcedAt),
+      ),
     });
   }
   // Section 0's forced rows were keyed for the plain card; re-key the ones filed under the section prefix.
@@ -208,7 +249,9 @@ export function useSharedCardModel(data: RecipeNodeData, selected: boolean): Spe
     entry.rule = {
       section: entry.section,
       pct: share.pct,
-      word: share.unused ? "UNUSED" : `×${formatSolvedMachines(machinesBySection[entry.section] ?? 0)}`,
+      word: share.unused
+        ? "UNUSED"
+        : `×${formatSolvedMachines(machinesBySection[entry.section] ?? 0)}`,
       unused: share.unused,
       circuit: circuits[entry.section],
       canUp: entry.section > 0,
@@ -220,13 +263,22 @@ export function useSharedCardModel(data: RecipeNodeData, selected: boolean): Spe
   // machines when the board shows peaks).
   const own = sectionPower(recipe, projectNode);
   const parts = [own, ...extras];
-  const wholeOrSolved = (n: number) => (averageDraw ? n : Math.ceil(n - 1e-9));
-  const euT = parts.reduce((sum, part, i) => sum + (part.powerReport?.drawEuT ?? 0) * wholeOrSolved(machinesBySection[i] ?? 0), 0);
-  const stalled = parts.some((part) => part.powerReport !== undefined && part.powerReport.state !== "ok");
-  const litres = parts.reduce(
-    (sum, part, i) => sum + (part.steamReport ? part.steamReport.drawSteamPerTick * 20 * wholeOrSolved(machinesBySection[i] ?? 0) : 0),
-    0,
+  // Average: each recipe's draw at its own solved machines. Peak: the card's whole machines, each at the hungriest
+  // recipe that runs (the recipes time-share one machine, so whole machines are the card's, not each recipe's).
+  const drawOf = (i: number) => parts[i]?.powerReport?.drawEuT ?? 0;
+  const wholeMachines = Math.ceil(machinesBySection.reduce((sum, n) => sum + n, 0) - 1e-9);
+  const hungriest = Math.max(0, ...machinesBySection.map((n, i) => (n > 0 ? drawOf(i) : 0)));
+  const euT = averageDraw
+    ? machinesBySection.reduce((sum, n, i) => sum + drawOf(i) * n, 0)
+    : hungriest * wholeMachines;
+  const stalled = parts.some(
+    (part) => part.powerReport !== undefined && part.powerReport.state !== "ok",
   );
+  const litresOf = (i: number) =>
+    parts[i]?.steamReport ? parts[i]!.steamReport!.drawSteamPerTick * 20 : 0;
+  const litres = averageDraw
+    ? machinesBySection.reduce((sum, n, i) => sum + litresOf(i) * n, 0)
+    : Math.max(0, ...machinesBySection.map((n, i) => (n > 0 ? litresOf(i) : 0))) * wholeMachines;
   const anyEu = parts.some((part) => part.powerReport);
   const anySteam = !anyEu && parts.some((part) => part.steamReport);
   const power: SpecialView["power"] = anyEu
@@ -240,18 +292,30 @@ export function useSharedCardModel(data: RecipeNodeData, selected: boolean): Spe
           : "What the machine draws: the hungriest recipe at its peak, every recipe by its share on average.",
       }
     : anySteam
-      ? { number: formatCompact(litres), unit: "L/s", name: "Steam", stalled: false, title: "Steam this machine burns" }
+      ? {
+          number: formatCompact(litres),
+          unit: "L/s",
+          name: "Steam",
+          stalled: false,
+          title: "Steam this machine burns",
+        }
       : undefined;
 
   const needed = machinesBySection.reduce((sum, n) => sum + n, 0);
   const count = countView(projectNode, needed, plan);
   const handlers = useMemo(
-    () => getSharedMachineHandlers(projectNode, (id) => (id === recipe.id ? recipe : liveRecipes.find((entry) => entry.id === id))),
+    () =>
+      getSharedMachineHandlers(projectNode, (id) =>
+        id === recipe.id ? recipe : liveRecipes.find((entry) => entry.id === id),
+      ),
     [liveRecipes, projectNode, recipe],
   );
   const hasPicker = handlers.length > 1;
   const name = base.view.name;
-  const nameSize = fitNameSize(name, { chips: (base.view.tier ? 1 : 0) + (base.view.amps ? 1 : 0), picker: hasPicker });
+  const nameSize = fitNameSize(name, {
+    chips: (base.view.tier ? 1 : 0) + (base.view.amps ? 1 : 0),
+    picker: hasPicker,
+  });
 
   const view: SpecialView = {
     kind: "shared",
@@ -307,9 +371,11 @@ export function useSharedCardModel(data: RecipeNodeData, selected: boolean): Spe
 function sectionPower(recipe: Recipe, node: FactoryNode) {
   const nodeRecipe = applyRecipeInputOverrides(recipe, node);
   const effective = applyMachineHandlerToRecipe(nodeRecipe, node);
-  const drawsEu = effective.eut > 0 && !isSteamMachineHandler(getSelectedMachineHandler(recipe, node));
+  const drawsEu =
+    effective.eut > 0 && !isSteamMachineHandler(getSelectedMachineHandler(recipe, node));
   return {
-    powerReport: drawsEu && hasPowerReport(nodeRecipe) ? getNodePowerReport(nodeRecipe, node) : undefined,
+    powerReport:
+      drawsEu && hasPowerReport(nodeRecipe) ? getNodePowerReport(nodeRecipe, node) : undefined,
     steamReport: !drawsEu ? getNodeSteamReport(nodeRecipe, node) : undefined,
   };
 }
@@ -338,7 +404,10 @@ export function usePowerCardModel(data: RecipeNodeData, selected: boolean): Spec
   const chips: SpecialChip[] = strip.chips.map((chip) => {
     const row = stripRows.find((entry) => entry.id === chip.id)!;
     return row.setting.type === "number"
-      ? { ...chip, edit: { text: row.value.split(" ")[0]!, commit: (text) => commitNumber(row, text) } }
+      ? {
+          ...chip,
+          edit: { text: row.value.split(" ")[0]!, commit: (text) => commitNumber(row, text) },
+        }
       : chip;
   });
   const commitNumber = (row: PowerSettingRow, text: string) => {
@@ -365,11 +434,26 @@ export function usePowerCardModel(data: RecipeNodeData, selected: boolean): Spec
     nameSize: fitNameSize(name, { chips: tier ? 1 : 0, picker: false }),
     nameTone: "power",
     hasPicker: false,
-    tier: tier ? { label: tier.label, fixed: tier.fixed, title: tier.fixed ? `Unlocks at ${tier.label}` : `Tier ${tier.label}. Click up, right click down.` } : undefined,
+    tier: tier
+      ? {
+          label: tier.label,
+          fixed: tier.fixed,
+          title: tier.fixed
+            ? `Unlocks at ${tier.label}`
+            : `Tier ${tier.label}. Click up, right click down.`,
+        }
+      : undefined,
     sections: [section0(base)],
     art,
     glanceArt: art ?? icon?.iconPath,
-    icon: icon ? { id: icon.id, displayName: icon.displayName ?? icon.id, iconPath: icon.iconPath, dominantColor: icon.dominantColor } : undefined,
+    icon: icon
+      ? {
+          id: icon.id,
+          displayName: icon.displayName ?? icon.id,
+          iconPath: icon.iconPath,
+          dominantColor: icon.dominantColor,
+        }
+      : undefined,
     count,
     chips,
     stripHeight: strip.height,
@@ -403,7 +487,12 @@ export function usePowerCardModel(data: RecipeNodeData, selected: boolean): Spec
     machineHandlers: [],
     settings: rows
       .filter((row) => !isTierSelect(row.setting))
-      .map((row) => ({ id: row.id, label: row.label, value: row.value, steps: row.steps && row.enabled })),
+      .map((row) => ({
+        id: row.id,
+        label: row.label,
+        value: row.value,
+        steps: row.steps && row.enabled,
+      })),
     readings: info.stats,
   };
   return { view, actions, context };
@@ -424,14 +513,19 @@ export function useCropCardModel(data: RecipeNodeData, selected: boolean): Speci
   const plan = useFactoryStore.getState().lastResult?.plan;
 
   const farm = isCropFarmRecipe(recipe);
-  const placeholder = recipe.id === CROP_FARM_PLACEHOLDER_RECIPE_ID || (farm && recipe.outputs.length === 0);
+  const placeholder =
+    recipe.id === CROP_FARM_PLACEHOLDER_RECIPE_ID || (farm && recipe.outputs.length === 0);
   const effective = useMemo(
     () => applyMachineHandlerToRecipe(applyRecipeInputOverrides(recipe, projectNode), projectNode),
     [recipe, projectNode],
   );
-  const controls = useMemo(() => getRecipeMachineConfigTierControls(effective, projectNode), [effective, projectNode]);
+  const controls = useMemo(
+    () => getRecipeMachineConfigTierControls(effective, projectNode),
+    [effective, projectNode],
+  );
   const tierControl = controls.find(
-    (control) => control.id === CROP_MANAGER_TIER_CONTROL_ID || control.id === CROP_SEED_BED_TIER_CONTROL_ID,
+    (control) =>
+      control.id === CROP_MANAGER_TIER_CONTROL_ID || control.id === CROP_SEED_BED_TIER_CONTROL_ID,
   );
 
   const needed = result?.theoreticalMachinesRequired ?? 0;
@@ -468,8 +562,13 @@ export function useCropCardModel(data: RecipeNodeData, selected: boolean): Speci
       return cropsNhFarmEut(setup) * cropsNhHarvesterMachineCount(setup, crops);
     }
     if (!stats) return 0;
-    const ticks = cropsNhHarvestTicks(stats, cropsNhEnvironmentFromTiers(projectNode.machineConfigTiers));
-    return Number.isFinite(ticks) && ticks > 0 ? (cropsNhManagerEuPerHarvest(setup) * crops) / ticks : 0;
+    const ticks = cropsNhHarvestTicks(
+      stats,
+      cropsNhEnvironmentFromTiers(projectNode.machineConfigTiers),
+    );
+    return Number.isFinite(ticks) && ticks > 0
+      ? (cropsNhManagerEuPerHarvest(setup) * crops) / ticks
+      : 0;
   })();
   const usage = Math.min(1, Math.max(0, result?.utilization ?? 1));
   const drawScale = averageDraw ? usage : usage > 0 ? 1 : 0;
@@ -485,14 +584,21 @@ export function useCropCardModel(data: RecipeNodeData, selected: boolean): Speci
       : undefined;
 
   const tierIndex = tierControl
-    ? Math.max(0, tierControl.tiers.findIndex((tier) => tier.key === tierControl.current.key))
+    ? Math.max(
+        0,
+        tierControl.tiers.findIndex((tier) => tier.key === tierControl.current.key),
+      )
     : 0;
   const stepTier = (direction: -1 | 1) => {
     if (isLocked() || !tierControl) return;
-    const next = tierControl.tiers[Math.max(0, Math.min(tierControl.tiers.length - 1, tierIndex + direction))];
+    const next =
+      tierControl.tiers[Math.max(0, Math.min(tierControl.tiers.length - 1, tierIndex + direction))];
     if (next && next.key !== tierControl.current.key) {
       updateNode(projectNode.id, {
-        machineConfigTiers: { ...(projectNode.machineConfigTiers ?? {}), [tierControl.id]: next.key },
+        machineConfigTiers: {
+          ...(projectNode.machineConfigTiers ?? {}),
+          [tierControl.id]: next.key,
+        },
       });
     }
   };
@@ -510,7 +616,8 @@ export function useCropCardModel(data: RecipeNodeData, selected: boolean): Speci
       ? {
           label: tierControl.current.label,
           fixed: false,
-          title: tierControl.label + ": " + tierControl.current.label + ". Click up, right click down.",
+          title:
+            tierControl.label + ": " + tierControl.current.label + ". Click up, right click down.",
         }
       : undefined,
     sections: placeholder ? [{ section: 0, inputs: [], outputs: [] }] : [section0(base)],
@@ -542,7 +649,11 @@ export function useCropCardModel(data: RecipeNodeData, selected: boolean): Speci
 
 // ---------------------------------------------------------------- holders
 
-export function useHolderCardModel(data: RecipeNodeData, selected: boolean, kind: "custom-rate" | "tank"): SpecialModel {
+export function useHolderCardModel(
+  data: RecipeNodeData,
+  selected: boolean,
+  kind: "custom-rate" | "tank",
+): SpecialModel {
   const base = useCleanCardModel(data, selected);
   const { projectNode, recipe } = data;
   const setCustomRateConfig = useFactoryStore((state) => state.setCustomRateConfig);
@@ -560,8 +671,14 @@ export function useHolderCardModel(data: RecipeNodeData, selected: boolean, kind
     ? {
         take: kind === "tank" ? "TAKE CELL/FLUID" : "DRAIN ANY",
         give: kind === "tank" ? "GIVE CELL/FLUID" : "SUPPLY ANY",
-        takeHandle: makeResourceHandleId("input", { kind: "item", id: CUSTOM_RATE_ANY_RESOURCE_ID }),
-        giveHandle: makeResourceHandleId("output", { kind: "item", id: CUSTOM_RATE_ANY_RESOURCE_ID }),
+        takeHandle: makeResourceHandleId("input", {
+          kind: "item",
+          id: CUSTOM_RATE_ANY_RESOURCE_ID,
+        }),
+        giveHandle: makeResourceHandleId("output", {
+          kind: "item",
+          id: CUSTOM_RATE_ANY_RESOURCE_ID,
+        }),
       }
     : undefined;
 
@@ -575,8 +692,18 @@ export function useHolderCardModel(data: RecipeNodeData, selected: boolean, kind
     const step = 1000 / Math.min(multiplier, 1);
     const shown = String(Math.round(dial.perSecond * multiplier * step) / step);
     const laid = layoutStrip([
-      { id: "mode", label: "Mode", value: dial.mode === "supply" ? "Supply" : "Request", title: "Which way the card faces." },
-      { id: "rate", label: `Rate (${rateSuffixForKind(factKind).trim() || "/s"})`, value: shown, title: "The rate it holds." },
+      {
+        id: "mode",
+        label: "Mode",
+        value: dial.mode === "supply" ? "Supply" : "Request",
+        title: "Which way the card faces.",
+      },
+      {
+        id: "rate",
+        label: `Rate (${rateSuffixForKind(factKind).trim() || "/s"})`,
+        value: shown,
+        title: "The rate it holds.",
+      },
     ]);
     stripHeight = laid.height;
     for (const chip of laid.chips) {
@@ -589,7 +716,8 @@ export function useHolderCardModel(data: RecipeNodeData, selected: boolean, kind
                 commit: (text) => {
                   if (isLocked()) return;
                   const parsed = Number.parseFloat(text.replace(/,/g, "").trim());
-                  if (Number.isFinite(parsed) && parsed >= 0) setCustomRateConfig(projectNode.id, { perSecond: parsed / multiplier });
+                  if (Number.isFinite(parsed) && parsed >= 0)
+                    setCustomRateConfig(projectNode.id, { perSecond: parsed / multiplier });
                 },
               },
             }
@@ -600,7 +728,9 @@ export function useHolderCardModel(data: RecipeNodeData, selected: boolean, kind
 
   const iconKey = kind === "tank" ? "Tank" : undefined;
   const mapIcon = iconKey ? (mapIcons.get(iconKey) as MachineHandlerIcon | undefined) : undefined;
-  const sections: SpecialSection[] = empty ? [{ section: 0, inputs: [], outputs: [] }] : [section0(base)];
+  const sections: SpecialSection[] = empty
+    ? [{ section: 0, inputs: [], outputs: [] }]
+    : [section0(base)];
 
   const view: SpecialView = {
     kind,
@@ -612,7 +742,14 @@ export function useHolderCardModel(data: RecipeNodeData, selected: boolean, kind
     sections,
     sockets,
     glyph: kind === "custom-rate" ? "gauge" : undefined,
-    icon: mapIcon ? { id: mapIcon.id, displayName: mapIcon.displayName ?? FLUID_TANK_NAME, iconPath: mapIcon.iconPath, dominantColor: mapIcon.dominantColor } : undefined,
+    icon: mapIcon
+      ? {
+          id: mapIcon.id,
+          displayName: mapIcon.displayName ?? FLUID_TANK_NAME,
+          iconPath: mapIcon.iconPath,
+          dominantColor: mapIcon.dominantColor,
+        }
+      : undefined,
     glanceArt: mapIcon?.iconPath,
     count,
     chips,
@@ -630,13 +767,20 @@ export function useHolderCardModel(data: RecipeNodeData, selected: boolean, kind
       if (isLocked()) return;
       if (id === "mode" && kind === "custom-rate") {
         const dial = getCustomRateDial(projectNode, recipe);
-        setCustomRateConfig(projectNode.id, { mode: dial.mode === "supply" ? "request" : "supply" });
+        setCustomRateConfig(projectNode.id, {
+          mode: dial.mode === "supply" ? "request" : "supply",
+        });
         void direction;
       }
     },
     moveSection: () => undefined,
     removeSection: () => undefined,
   };
-  const context: SpecialContext = { ...base.context, machineHandlers: [], settings: [], readings: [] };
+  const context: SpecialContext = {
+    ...base.context,
+    machineHandlers: [],
+    settings: [],
+    readings: [],
+  };
   return { view, actions, context };
 }

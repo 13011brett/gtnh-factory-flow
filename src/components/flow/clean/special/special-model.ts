@@ -79,7 +79,13 @@ export interface SpecialView {
   art?: string;
   glanceArt?: string;
   /** The machine item the picture draws when there is no render. */
-  icon?: { id: string; displayName: string; iconPath?: string; iconAtlas?: ResourceAmount["iconAtlas"]; dominantColor?: string };
+  icon?: {
+    id: string;
+    displayName: string;
+    iconPath?: string;
+    iconAtlas?: ResourceAmount["iconAtlas"];
+    dominantColor?: string;
+  };
   glyph?: "gauge";
   /** A fluid tank has no count. */
   count?: CleanCardView["count"];
@@ -104,7 +110,10 @@ export function sectionShare(machines: number, total: number): { pct: string; un
 }
 
 /** Rows a section's rails need: the longer side, at least one. */
-export function sectionRows(section: Pick<SpecialSection, "inputs" | "outputs">, extraRowsOf: (p: CleanPortView) => number): number {
+export function sectionRows(
+  section: Pick<SpecialSection, "inputs" | "outputs">,
+  extraRowsOf: (p: CleanPortView) => number,
+): number {
   const rows = (ports: CleanPortView[]) => ports.reduce((sum, p) => sum + 1 + extraRowsOf(p), 0);
   return Math.max(1, rows(section.inputs), rows(section.outputs));
 }

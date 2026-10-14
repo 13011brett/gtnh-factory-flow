@@ -11,7 +11,11 @@ const OUT = path.join(here, "out");
 const want = process.argv[2] ?? "all";
 const EMPTY = { nodes: [], drawers: [], wires: [] };
 const wait = (page, ms = 900) => page.waitForTimeout(ms);
-const lastNode = (page) => page.evaluate(() => { const n = window.__ccStore.getState().project.nodes; return n[n.length - 1].id; });
+const lastNode = (page) =>
+  page.evaluate(() => {
+    const n = window.__ccStore.getState().project.nodes;
+    return n[n.length - 1].id;
+  });
 const store = (page, fn, arg) => page.evaluate(fn, arg);
 
 const scenarios = {
@@ -23,15 +27,23 @@ const scenarios = {
     ]) {
       try {
         const other = await pickRecipe(page, spec);
-        await store(page, ({ id, other }) => window.__ccStore.getState().addRecipeToNode(id, other), { id: ids.nb, other });
-      } catch (e) { console.log("  (no recipe)", String(e).slice(0, 100)); }
+        await store(
+          page,
+          ({ id, other }) => window.__ccStore.getState().addRecipeToNode(id, other),
+          { id: ids.nb, other },
+        );
+      } catch (e) {
+        console.log("  (no recipe)", String(e).slice(0, 100));
+      }
     }
     await wait(page, 1200);
     return ids.nb;
   },
   async "power-steam"(page) {
     await loadPlan(page, EMPTY);
-    await store(page, () => window.__ccStore.getState().addPowerSourceNode("large-steam-turbine", { tier: "EV" }));
+    await store(page, () =>
+      window.__ccStore.getState().addPowerSourceNode("large-steam-turbine", { tier: "EV" }),
+    );
     await wait(page, 1200);
     return lastNode(page);
   },
@@ -63,10 +75,19 @@ const scenarios = {
     const ids = await loadPlan(page, refChain);
     await store(page, () => window.__ccStore.getState().addCustomRateNode());
     const cid = await lastNode(page);
-    await store(page, ({ cid, nb }) => {
-      const S = window.__ccStore.getState();
-      S.connectCustomRate(cid, "output", { nodeId: nb, handleId: "input:fluid:sulfuricacid" }, { kind: "fluid", id: "sulfuricacid", displayName: "Sulfuric Acid" });
-    }, { cid, nb: ids.nb });
+    await store(
+      page,
+      ({ cid, nb }) => {
+        const S = window.__ccStore.getState();
+        S.connectCustomRate(
+          cid,
+          "output",
+          { nodeId: nb, handleId: "input:fluid:sulfuricacid" },
+          { kind: "fluid", id: "sulfuricacid", displayName: "Sulfuric Acid" },
+        );
+      },
+      { cid, nb: ids.nb },
+    );
     await wait(page, 1200);
     return cid;
   },
@@ -80,23 +101,46 @@ const scenarios = {
     const ids = await loadPlan(page, refChain);
     await store(page, () => window.__ccStore.getState().addFluidTankNode());
     const tid = await lastNode(page);
-    await store(page, ({ tid, nb }) => {
-      window.__ccStore.getState().connectCustomRate(tid, "output", { nodeId: nb, handleId: "input:fluid:sulfuricacid" }, { kind: "fluid", id: "sulfuricacid", displayName: "Sulfuric Acid" });
-    }, { tid, nb: ids.nb });
+    await store(
+      page,
+      ({ tid, nb }) => {
+        window.__ccStore
+          .getState()
+          .connectCustomRate(
+            tid,
+            "output",
+            { nodeId: nb, handleId: "input:fluid:sulfuricacid" },
+            { kind: "fluid", id: "sulfuricacid", displayName: "Sulfuric Acid" },
+          );
+      },
+      { tid, nb: ids.nb },
+    );
     await wait(page, 2500);
     return tid;
   },
   async eec(page) {
     await loadPlan(page, EMPTY);
-    const recipe = await pickRecipe(page, { query: "Extreme Entity Crusher", mapRe: "Extreme Entity", nameRe: "Guardian" });
-    await store(page, (recipe) => window.__ccStore.getState().addNodeForRecipeObject(recipe), recipe);
+    const recipe = await pickRecipe(page, {
+      query: "Extreme Entity Crusher",
+      mapRe: "Extreme Entity",
+      nameRe: "Guardian",
+    });
+    await store(
+      page,
+      (recipe) => window.__ccStore.getState().addNodeForRecipeObject(recipe),
+      recipe,
+    );
     await wait(page, 1200);
     return lastNode(page);
   },
   async bee(page) {
     await loadPlan(page, EMPTY);
     const recipe = await pickRecipe(page, { query: "bee", recipeMap: "Bee Produce" });
-    await store(page, (recipe) => window.__ccStore.getState().addNodeForRecipeObject(recipe), recipe);
+    await store(
+      page,
+      (recipe) => window.__ccStore.getState().addNodeForRecipeObject(recipe),
+      recipe,
+    );
     await wait(page, 1200);
     return lastNode(page);
   },
@@ -109,11 +153,15 @@ const scenarios = {
   async crop(page) {
     await loadPlan(page, EMPTY);
     const recipe = await pickRecipe(page, { query: "crop", recipeMap: "Crop Farm" });
-    await store(page, (recipe) => window.__ccStore.getState().addNodeForRecipeObject(recipe), recipe);
+    await store(
+      page,
+      (recipe) => window.__ccStore.getState().addNodeForRecipeObject(recipe),
+      recipe,
+    );
     await wait(page, 1200);
     return lastNode(page);
   },
-  async "ebf"(page) {
+  async ebf(page) {
     const ids = await loadPlan(page, ebfOne);
     return ids.ebf;
   },
@@ -131,8 +179,17 @@ for (const [name, make] of Object.entries(scenarios)) {
     await wait(page, 500);
     const r = await rectOf(page, sel);
     const file = path.join(OUT, `fx3-${name}.png`);
-    await page.screenshot({ path: file, clip: { x: r.x - 12, y: r.y - 12, width: r.w + 24, height: r.h + 24 } });
-    console.log("ok", name, JSON.stringify({ w: Math.round(r.w), h: Math.round(r.h) }), "dom", await page.evaluate((s) => document.querySelector(s)?.querySelectorAll("*").length, sel));
+    await page.screenshot({
+      path: file,
+      clip: { x: r.x - 12, y: r.y - 12, width: r.w + 24, height: r.h + 24 },
+    });
+    console.log(
+      "ok",
+      name,
+      JSON.stringify({ w: Math.round(r.w), h: Math.round(r.h) }),
+      "dom",
+      await page.evaluate((s) => document.querySelector(s)?.querySelectorAll("*").length, sel),
+    );
   } catch (e) {
     console.log("FAIL", name, String(e).slice(0, 300));
   }

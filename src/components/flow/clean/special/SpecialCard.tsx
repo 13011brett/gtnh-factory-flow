@@ -23,10 +23,30 @@ import type { SpecialChip, SpecialSection, SpecialView } from "./special-model";
 
 /** The bolt-box and the gauge, as pixel runs (the mod's `PowerPicker.bolt` and `gauge`), drawn once as data URIs. */
 function runsSvg(runs: number[][], width: number, height: number, fill: string): string {
-  const rects = runs.map(([x, y, w]) => `<rect x='${x}' y='${y}' width='${w}' height='1'/>`).join("");
+  const rects = runs
+    .map(([x, y, w]) => `<rect x='${x}' y='${y}' width='${w}' height='1'/>`)
+    .join("");
   return `url("data:image/svg+xml,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 ${width} ${height}' shape-rendering='crispEdges' fill='${fill}'>${rects}</svg>`)}")`;
 }
-const GAUGE_RUNS = [[2, 0, 5], [1, 1, 1], [7, 1, 1], [0, 2, 1], [6, 2, 1], [8, 2, 1], [0, 3, 1], [5, 3, 1], [8, 3, 1], [0, 4, 1], [4, 4, 1], [8, 4, 1], [0, 5, 1], [3, 5, 2], [8, 5, 1], [1, 6, 1], [7, 6, 1]];
+const GAUGE_RUNS = [
+  [2, 0, 5],
+  [1, 1, 1],
+  [7, 1, 1],
+  [0, 2, 1],
+  [6, 2, 1],
+  [8, 2, 1],
+  [0, 3, 1],
+  [5, 3, 1],
+  [8, 3, 1],
+  [0, 4, 1],
+  [4, 4, 1],
+  [8, 4, 1],
+  [0, 5, 1],
+  [3, 5, 2],
+  [8, 5, 1],
+  [1, 6, 1],
+  [7, 6, 1],
+];
 export const GAUGE_URL = runsSvg(GAUGE_RUNS, 9, 8, "#AEBCEB");
 
 function dataKindOf(view: SpecialView): string {
@@ -48,7 +68,13 @@ function SectionRule({
   wasClick: (event: MouseEvent) => boolean;
 }) {
   const rule = section.rule!;
-  const key = (kind: "up" | "down" | "off", enabled: boolean, label: string, run: () => void, note?: string) => (
+  const key = (
+    kind: "up" | "down" | "off",
+    enabled: boolean,
+    label: string,
+    run: () => void,
+    note?: string,
+  ) => (
     <div
       role="button"
       tabIndex={enabled ? 0 : -1}
@@ -69,13 +95,24 @@ function SectionRule({
     />
   );
   return (
-    <div className="cs-rule" style={{ gridRow: row }} data-first={section.section === 0 ? "" : undefined}>
+    <div
+      className="cs-rule"
+      style={{ gridRow: row }}
+      data-first={section.section === 0 ? "" : undefined}
+    >
       <span className="cs-pct">{rule.pct}</span>
       <span className="cs-word" data-unused={rule.unused ? "" : undefined}>
         {rule.word}
       </span>
       {rule.circuit ? (
-        <span className="cs-circ" {...tipAttrs({ id: `${view.nodeId}|circuit|${section.section}`, title: "Programmed circuit", notes: [{ text: "Not consumed.", tone: "muted" }] })}>
+        <span
+          className="cs-circ"
+          {...tipAttrs({
+            id: `${view.nodeId}|circuit|${section.section}`,
+            title: "Programmed circuit",
+            notes: [{ text: "Not consumed.", tone: "muted" }],
+          })}
+        >
           {rule.circuit.resource ? (
             <ResourceIcon
               itemZoom={1.5}
@@ -90,8 +127,16 @@ function SectionRule({
         </span>
       ) : null}
       {key("up", rule.canUp, "Move this recipe up", () => actions.moveSection(section.section, -1))}
-      {key("down", rule.canDown, "Move this recipe down", () => actions.moveSection(section.section, 1))}
-      {key("off", true, "Take this recipe off the machine", () => actions.removeSection(section.section), "Its wires are removed too.")}
+      {key("down", rule.canDown, "Move this recipe down", () =>
+        actions.moveSection(section.section, 1),
+      )}
+      {key(
+        "off",
+        true,
+        "Take this recipe off the machine",
+        () => actions.removeSection(section.section),
+        "Its wires are removed too.",
+      )}
     </div>
   );
 }
@@ -109,7 +154,15 @@ function Sockets({ view }: { view: SpecialView }) {
       {...tipAttrs({
         id: `${view.nodeId}|socket|${side}`,
         title: label,
-        notes: [{ text: side === "input" ? "Wire a machine's output (or a tank) here." : "Wire a machine's input (or a tank) here.", tone: "muted" }],
+        notes: [
+          {
+            text:
+              side === "input"
+                ? "Wire a machine's output (or a tank) here."
+                : "Wire a machine's input (or a tank) here.",
+            tone: "muted",
+          },
+        ],
       })}
     >
       <span className="cs-socket-word">{label}</span>
@@ -159,7 +212,9 @@ function Rail({
 }) {
   return (
     <div className="cc-rail" data-side={side} style={{ gridRow: row }} data-section={section}>
-      {ports.length === 0 && shared ? <div className="cs-none">{side === "input" ? "No input" : "No output"}</div> : null}
+      {ports.length === 0 && shared ? (
+        <div className="cs-none">{side === "input" ? "No input" : "No output"}</div>
+      ) : null}
       {ports.map((p) => (
         <CleanPortRow key={p.key} p={p} wasClick={wasClick} unset={unset} />
       ))}
@@ -180,7 +235,10 @@ function SpecialChipView({
   wasClick: (event: MouseEvent) => boolean;
 }) {
   const [draft, setDraft] = useState<string>();
-  if (!chip.edit) return <StripChip chip={chip as CleanChipView} nodeId={nodeId} onStep={onStep} wasClick={wasClick} />;
+  if (!chip.edit)
+    return (
+      <StripChip chip={chip as CleanChipView} nodeId={nodeId} onStep={onStep} wasClick={wasClick} />
+    );
   const { edit } = chip;
   const commit = () => {
     if (draft === undefined) return;
@@ -276,7 +334,13 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
   const browseMachineRecipes = useFactoryStore((state) => state.browseMachineRecipes);
   const [listOpen, setListOpen] = useState(false);
   const [cropOpen, setCropOpen] = useState(false);
-  const [menu, setMenu] = useState<{ kind: "actions" | "settings"; x: number; top: number; bottom: number; hangsFrom?: Element }>();
+  const [menu, setMenu] = useState<{
+    kind: "actions" | "settings";
+    x: number;
+    top: number;
+    bottom: number;
+    hangsFrom?: Element;
+  }>();
   const shared = view.kind === "shared";
   const holder = view.kind === "custom-rate" || view.kind === "tank";
 
@@ -285,7 +349,11 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
     if (!wasClick(event)) return;
     const card = event.currentTarget.closest("[data-node-glance-root]") ?? undefined;
     const r = (card ?? event.currentTarget).getBoundingClientRect();
-    setMenu(menu?.kind === kind ? undefined : { kind, x: r.left, top: r.top, bottom: r.bottom, hangsFrom: card });
+    setMenu(
+      menu?.kind === kind
+        ? undefined
+        : { kind, x: r.left, top: r.top, bottom: r.bottom, hangsFrom: card },
+    );
   };
 
   // Rows: the head, then per recipe a rule (shared only) and its rails, then the shared machine's power row, then the strip.
@@ -304,7 +372,9 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
       data-power=""
       data-side="input"
       data-stalled={view.power.stalled ? "" : undefined}
-      {...tipAttrs(powerTip({ nodeId: view.nodeId, power: view.power } as unknown as CleanCardView))}
+      {...tipAttrs(
+        powerTip({ nodeId: view.nodeId, power: view.power } as unknown as CleanCardView),
+      )}
     >
       <span className="cc-bolt" />
       <span className="cc-num" data-unit={view.power.unit}>
@@ -432,12 +502,26 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
           ) : null}
         </div>
         {view.amps ? (
-          <AmpsChip amps={view.amps} tier={view.tier?.label} tip={tipFor(view, "amps")} onSet={actions.setAmps} wasClick={wasClick} />
+          <AmpsChip
+            amps={view.amps}
+            tier={view.tier?.label}
+            tip={tipFor(view, "amps")}
+            onSet={actions.setAmps}
+            wasClick={wasClick}
+          />
         ) : null}
         {view.tier ? (
           <TierChip
             label={view.tier.label}
-            tip={view.amps ? tipFor(view, "tier") : tierTip({ nodeId: view.nodeId, tier: view.tier, power: view.power } as unknown as CleanCardView)}
+            tip={
+              view.amps
+                ? tipFor(view, "tier")
+                : tierTip({
+                    nodeId: view.nodeId,
+                    tier: view.tier,
+                    power: view.power,
+                  } as unknown as CleanCardView)
+            }
             fixed={view.tier.fixed}
             onStep={actions.stepTier}
             wasClick={wasClick}
@@ -470,22 +554,34 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
         </div>
       ) : null}
 
-      <div className="cc-pic cs-pic" style={{ gridRow: `2 / ${pictureEnd}` }} data-holder={holder ? "" : undefined}>
-        <Picture view={view} context={context} />
-        {view.count ? (
-          <CountBox
-            view={view.count}
-            tip={countTip({ nodeId: view.nodeId, count: view.count } as unknown as CleanCardView)}
-            onSet={actions.setCount}
-            wasClick={wasClick}
-          />
-        ) : null}
-      </div>
+      {view.pick ? null : (
+        <div
+          className="cc-pic cs-pic"
+          style={{ gridRow: `2 / ${pictureEnd}` }}
+          data-holder={holder ? "" : undefined}
+        >
+          <Picture view={view} context={context} />
+          {view.count ? (
+            <CountBox
+              view={view.count}
+              tip={countTip({ nodeId: view.nodeId, count: view.count } as unknown as CleanCardView)}
+              onSet={actions.setCount}
+              wasClick={wasClick}
+            />
+          ) : null}
+        </div>
+      )}
 
       {view.chips.length > 0 ? (
         <div className="cc-strip" style={{ height: view.stripHeight, gridRow: stripRow }}>
           {view.chips.map((chip) => (
-            <SpecialChipView key={chip.id} chip={chip} nodeId={view.nodeId} onStep={actions.stepChip} wasClick={wasClick} />
+            <SpecialChipView
+              key={chip.id}
+              chip={chip}
+              nodeId={view.nodeId}
+              onStep={actions.stepChip}
+              wasClick={wasClick}
+            />
           ))}
         </div>
       ) : null}
@@ -504,7 +600,10 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
         aria-hidden
         style={
           view.glyph === "gauge"
-            ? ({ backgroundImage: GAUGE_URL, backgroundSize: "calc(100% - 96px) calc(100% - 96px)" } as CSSProperties)
+            ? ({
+                backgroundImage: GAUGE_URL,
+                backgroundSize: "calc(100% - 96px) calc(100% - 96px)",
+              } as CSSProperties)
             : view.glanceArt
               ? { backgroundImage: `url(${view.glanceArt})` }
               : undefined
@@ -512,13 +611,33 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
       />
 
       {menu ? (
-        <MenuShell anchor={menu} align="left" width={224} maxHeight={280} onClose={() => setMenu(undefined)}>
-          <div role="menu" aria-label={menu.kind === "actions" ? "Card actions" : "Machine settings"} className="text-[13px] leading-[18px]">
+        <MenuShell
+          anchor={menu}
+          align="left"
+          width={224}
+          maxHeight={280}
+          onClose={() => setMenu(undefined)}
+        >
+          <div
+            role="menu"
+            aria-label={menu.kind === "actions" ? "Card actions" : "Machine settings"}
+            className="text-[13px] leading-[18px]"
+          >
             {menu.kind === "actions" ? (
               [
                 { label: "Clone node", icon: Copy, run: () => duplicateNode(node.id), show: true },
-                { label: "Replace the recipe", icon: RefreshCw, run: () => beginRecipeRefactor(node.id), show: view.kind === "shared" || view.kind === "power" },
-                { label: "Add another recipe", icon: Plus, run: () => browseMachineRecipes(node.id), show: shared },
+                {
+                  label: "Replace the recipe",
+                  icon: RefreshCw,
+                  run: () => beginRecipeRefactor(node.id),
+                  show: view.kind === "shared" || view.kind === "power",
+                },
+                {
+                  label: "Add another recipe",
+                  icon: Plus,
+                  run: () => browseMachineRecipes(node.id),
+                  show: shared,
+                },
                 { label: "Delete node", icon: Trash2, run: () => deleteNode(node.id), show: true },
               ]
                 .filter((entry) => entry.show)
@@ -557,8 +676,13 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
                   </button>
                 ))}
                 {context.readings.map((reading) => (
-                  <div key={reading.label} className="flex min-h-8 items-center justify-between gap-2 px-2 py-1.5">
-                    <span className="min-w-0 truncate text-[var(--mc-ink-muted)]">{reading.label}</span>
+                  <div
+                    key={reading.label}
+                    className="flex min-h-8 items-center justify-between gap-2 px-2 py-1.5"
+                  >
+                    <span className="min-w-0 truncate text-[var(--mc-ink-muted)]">
+                      {reading.label}
+                    </span>
                     <span className="shrink-0 text-[var(--mc-ink)]">{reading.value}</span>
                   </div>
                 ))}
@@ -604,7 +728,13 @@ function SectionBlock({
   return (
     <>
       {shared && section.rule ? (
-        <SectionRule view={view} section={section} row={ruleRow} actions={actions} wasClick={wasClick} />
+        <SectionRule
+          view={view}
+          section={section}
+          row={ruleRow}
+          actions={actions}
+          wasClick={wasClick}
+        />
       ) : null}
       {pick ? (
         <div
@@ -613,7 +743,11 @@ function SectionBlock({
           className="cs-pick"
           data-crop-picker-toggle=""
           style={{ gridRow: railRow }}
-          {...tipAttrs({ id: `${view.nodeId}|pick`, title: "Pick a crop", notes: [{ text: "Click to pick what this farm plants.", tone: "muted" }] })}
+          {...tipAttrs({
+            id: `${view.nodeId}|pick`,
+            title: "Pick a crop",
+            notes: [{ text: "Click to pick what this farm plants.", tone: "muted" }],
+          })}
           onClick={(event) => {
             glyph(event);
             if (wasClick(event) && !checklistLocked()) onPick();
@@ -625,8 +759,25 @@ function SectionBlock({
       ) : null}
       {empty || pick ? null : (
         <>
-          <Rail side="input" ports={section.inputs} section={section.section} row={railRow} unset={view.unset} wasClick={wasClick} shared={shared} power={power} />
-          <Rail side="output" ports={section.outputs} section={section.section} row={railRow} unset={view.unset} wasClick={wasClick} shared={shared} />
+          <Rail
+            side="input"
+            ports={section.inputs}
+            section={section.section}
+            row={railRow}
+            unset={view.unset}
+            wasClick={wasClick}
+            shared={shared}
+            power={power}
+          />
+          <Rail
+            side="output"
+            ports={section.outputs}
+            section={section.section}
+            row={railRow}
+            unset={view.unset}
+            wasClick={wasClick}
+            shared={shared}
+          />
         </>
       )}
     </>
@@ -635,7 +786,8 @@ function SectionBlock({
 
 function Picture({ view, context }: { view: SpecialView; context: SpecialContext }) {
   void context;
-  if (view.glyph === "gauge") return <span className="cs-gauge" style={{ backgroundImage: GAUGE_URL }} />;
+  if (view.glyph === "gauge")
+    return <span className="cs-gauge" style={{ backgroundImage: GAUGE_URL }} />;
   if (view.art) {
     // eslint-disable-next-line @next/next/no-img-element
     return <img className="cc-art" src={view.art} alt="" draggable={false} />;
@@ -665,7 +817,11 @@ function Picture({ view, context }: { view: SpecialView; context: SpecialContext
 }
 
 function tipFor(view: SpecialView, part: "tier" | "amps"): TipSpec {
-  return { id: `${view.nodeId}|${part}`, title: "Power input", panel: { kind: "power", nodeId: view.nodeId } };
+  return {
+    id: `${view.nodeId}|${part}`,
+    title: "Power input",
+    panel: { kind: "power", nodeId: view.nodeId },
+  };
 }
 
 function specialNameTip(view: SpecialView): TipSpec {
@@ -676,10 +832,27 @@ function specialNameTip(view: SpecialView): TipSpec {
       sub: view.amps ? "Multiblock" : "Machine",
       rows: [
         { label: "Recipes", value: String(view.sections.length) },
-        ...(view.count ? [{ label: view.count.pinned ? "Pinned machines" : "Required machines", value: view.count.text.replace(/^×/, "x") }] : []),
+        ...(view.count
+          ? [
+              {
+                label: view.count.pinned ? "Pinned machines" : "Required machines",
+                value: view.count.text.replace(/^×/, "x"),
+              },
+            ]
+          : []),
       ],
-      notes: [{ text: "Runs its recipes one at a time; each row says how its share goes.", tone: "muted" }],
-      actions: view.hasPicker ? [{ input: "left", label: "Machines that run them all" }, { input: "wheel", label: "Next machine" }] : [],
+      notes: [
+        {
+          text: "Runs its recipes one at a time; each row says how its share goes.",
+          tone: "muted",
+        },
+      ],
+      actions: view.hasPicker
+        ? [
+            { input: "left", label: "Machines that run them all" },
+            { input: "wheel", label: "Next machine" },
+          ]
+        : [],
     };
   }
   if (view.kind === "custom-rate") {
@@ -693,7 +866,12 @@ function specialNameTip(view: SpecialView): TipSpec {
     return {
       id: `${view.nodeId}|name`,
       title: view.name,
-      notes: [{ text: "Empties cells into their fluid, or fills them, free and at once. It keeps up with the plan.", tone: "muted" }],
+      notes: [
+        {
+          text: "Empties cells into their fluid, or fills them, free and at once. It keeps up with the plan.",
+          tone: "muted",
+        },
+      ],
     };
   }
   return { id: `${view.nodeId}|name`, title: view.name, sub: "Generator" };

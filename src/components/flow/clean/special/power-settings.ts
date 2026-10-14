@@ -30,13 +30,19 @@ function rawOf(values: Record<string, string> | undefined, id: string): string |
   return raw === undefined || raw === "" ? undefined : raw;
 }
 
-function currentNumber(setting: Extract<PowerSetting, { type: "number" }>, raw: string | undefined): number {
+function currentNumber(
+  setting: Extract<PowerSetting, { type: "number" }>,
+  raw: string | undefined,
+): number {
   const parsed = Number(raw);
   if (raw === undefined || !Number.isFinite(parsed)) return setting.defaultValue;
   return Math.min(setting.max, Math.max(setting.min, parsed));
 }
 
-function currentToggle(setting: Extract<PowerSetting, { type: "toggle" }>, raw: string | undefined): boolean {
+function currentToggle(
+  setting: Extract<PowerSetting, { type: "toggle" }>,
+  raw: string | undefined,
+): boolean {
   return raw === undefined ? setting.defaultOn : raw === "1" || raw === "true";
 }
 
@@ -61,7 +67,8 @@ export function powerSettingRows(
   return source.settings.map((setting): PowerSettingRow => {
     const raw = rawOf(values, setting.id);
     const gate = setting.enabledWhen;
-    const enabled = gate === undefined || powerSettingValue(source, values, gate.settingId) === gate.equals;
+    const enabled =
+      gate === undefined || powerSettingValue(source, values, gate.settingId) === gate.equals;
     if (setting.type === "select") {
       const key = selectValue(setting, raw);
       const option = setting.options.find((entry) => entry.key === key);

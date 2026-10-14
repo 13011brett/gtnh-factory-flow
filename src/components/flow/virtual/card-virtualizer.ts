@@ -418,10 +418,15 @@ export class CardVirtualizer {
 
   /** The ids whose box meets the camera grown by `farMargin` (the glance step shows its faces the same way). */
   private visibleNow(): Set<string> {
+    return this.idsMeeting(this.config.farMargin);
+  }
+
+  /** The ids whose box meets the camera rectangle grown by `margin` of its size. */
+  idsMeeting(margin: number): Set<string> {
     const out = new Set<string>();
     const view = this.view;
     if (!view) return out;
-    const reach = grow(view, this.config.farMargin);
+    const reach = grow(view, margin);
     const x0 = Math.floor(reach.x / VIRTUAL_CELL);
     const x1 = Math.floor((reach.x + reach.w) / VIRTUAL_CELL);
     const y0 = Math.floor(reach.y / VIRTUAL_CELL);

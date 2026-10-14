@@ -45,3 +45,18 @@
   opacity: 0.55;
   visibility: visible;
 }
+
+/*
+ * The glance count's size follows the zoom (the mod holds it at a constant size on screen). clean.css sizes it with
+ * font-size and offsets that read --board-zoom, so every zoom step re-laid out the text of every shell on screen:
+ * 40 ms of forced layout a step at a few hundred shells. The same size as a transform from the same corner, which
+ * only repaints. (Shells are all there is at the glance step.)
+ */
+.factory-flow-board[data-detail-level="glance"] .cc-card[data-shell] > .cc-glance::after {
+  right: 2px;
+  bottom: 2px;
+  font-size: 20px;
+  transform-origin: right bottom;
+  transform: translate(calc(-6px / var(--board-zoom, 1)), calc(-4px / var(--board-zoom, 1)))
+    scale(min(calc(1 / var(--board-zoom, 1)), 4.5));
+}

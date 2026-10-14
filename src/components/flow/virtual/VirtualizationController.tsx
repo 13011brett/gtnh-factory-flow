@@ -116,13 +116,28 @@ export const VirtualizationController = memo(function VirtualizationController({
         if (id && child instanceof HTMLElement) wrapperById.set(id, child);
       }
     }
-    function* visibleWrappers(): Generator<HTMLElement> {
-      for (const id of boardVirtualizer.visibleIds()) {
+    // The glance faces need the zoom variable only where they can be seen: the screen and a hair past it, not the
+    // whole band the shells are kept shown in. A wrapper that comes onto the screen takes it as it arrives.
+    const SCREEN_MARGIN = 0.05;
+    let onScreen: ReadonlySet<string> = new Set();
+    function* screenWrappers(): Generator<HTMLElement> {
+      onScreen = boardVirtualizer.idsMeeting(SCREEN_MARGIN);
+      for (const id of onScreen) {
         const element = wrapperById.get(id);
         if (element && !element.hasAttribute(FAR_ATTRIBUTE)) yield element;
       }
     }
-    setZoomTargets(() => visibleWrappers());
+    setZoomTargets(() => screenWrappers());
+    const arrive = () => {
+      if (!boardVirtualizer.isGlance()) return;
+      const now = boardVirtualizer.idsMeeting(SCREEN_MARGIN);
+      for (const id of now) {
+        if (onScreen.has(id)) continue;
+        const element = wrapperById.get(id);
+        if (element && !element.hasAttribute(FAR_ATTRIBUTE)) applyZoomTo(element);
+      }
+      onScreen = now;
+    };
     // A wrapper that appears while its card is far (an undo far away) is hidden at once.
     const wrapperObserver = nodesLayer
       ? new MutationObserver((records) => {
@@ -150,6 +165,7 @@ export const VirtualizationController = memo(function VirtualizationController({
       const started = performance.now();
       const again = boardVirtualizer.step(started);
       applyOthers();
+      arrive();
       const took = performance.now() - started;
       stats.pumps += 1;
       stats.stepMs += took;

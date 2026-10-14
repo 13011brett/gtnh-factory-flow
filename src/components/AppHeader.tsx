@@ -16,9 +16,9 @@ import { AppIdentity } from "./AppIdentity";
 import { DesignTabs } from "./DesignTabs";
 import { AppMenu } from "./AppMenu";
 import { BoardActions } from "./BoardActions";
-import { ExportImageDialog } from "./export/ExportImageDialog";
+import { ModScreenshot } from "./chrome/ModScreenshot";
 import { DevMenu } from "./DevMenu";
-import { SettingsDialog } from "./SettingsDialog";
+import { ModSettings } from "./chrome/ModSettings";
 import { MachineListDialog } from "./MachineListDialog";
 import { HeaderLinks, SupportButton } from "./HeaderLinks";
 import { ModBar } from "./chrome/ModBar";
@@ -83,9 +83,9 @@ export function AppHeader({ onLoadDatasetVersion }: AppHeaderProps) {
       <ModAnnouncement />
       {isDevMenuOpen ? <DevMenu onClose={() => setDevMenuOpen(false)} /> : null}
       {isShareOpen ? <SharePlanDialog onClose={() => setShareOpen(false)} /> : null}
-      {isExportOpen ? <ExportImageDialog onClose={() => setExportOpen(false)} /> : null}
+      {isExportOpen ? <ModScreenshot onClose={() => setExportOpen(false)} /> : null}
       {isSettingsOpen ? (
-        <SettingsDialog
+        <ModSettings
           onClose={() => setSettingsOpen(false)}
           onOpenMachineList={() => setMachineListOpen(true)}
         />

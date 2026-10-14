@@ -26,9 +26,9 @@ import { useFactoryStore } from "@/store/factory-store";
 import { LibraryDetail, previewUrlFor } from "./LibraryDetail";
 import { ArmedMenuItem, LibraryMenu, MenuItem, MenuRule } from "./library-menu";
 import { LibraryTile, TagEditor } from "./LibraryTile";
-import { SetupsFilterBar, useSetupFilters } from "./SetupsFilterBar";
+import { SetupsFilterBar, useSetupFilters, type SetupFilters } from "./SetupsFilterBar";
 
-const SETUP_SORTS: Array<{ value: CommunityPlanSort; label: string }> = [
+export const SETUP_SORTS: Array<{ value: CommunityPlanSort; label: string }> = [
   { value: "active", label: "Recently active" },
   { value: "new", label: "Newest" },
   { value: "top", label: "Top voted" },
@@ -84,13 +84,23 @@ type Armed = { id: string; what: "takedown" | "overwrite" };
 export function SetupsGrid({
   scope,
   presetQuery,
+  filters: outerFilters,
+  bare = false,
+  onTotal,
 }: {
   scope: SetupsScope | "saved";
   presetQuery?: string;
+  /** The library's header owns the search and the dials (the mod's header row): they come in here. */
+  filters?: SetupFilters;
+  /** No filter bar of its own; the header above carries it. */
+  bare?: boolean;
+  /** Told how many setups the shelf found. */
+  onTotal?: (total: number) => void;
 }) {
   const savedIds = useSavedSetups();
   const { user, isLoading: isAuthLoading } = useCommunityUser();
-  const filters = useSetupFilters("active");
+  const ownFilters = useSetupFilters("active");
+  const filters = outerFilters ?? ownFilters;
   const { query, setQuery, maxTier, setMaxTier, debouncedMaxEuT, makesKeys, takesKeys } = filters;
   const sort = filters.sort as CommunityPlanSort;
   /** The public list narrowed to the account's own posts. */
@@ -219,6 +229,10 @@ export function SetupsGrid({
   const needsAccount = scope === "mine" && !username;
   const isLoading = !needsAccount && (!isCurrent || remembered.page !== activePage);
   const hasMore = isCurrent && remembered.plans.length < remembered.total;
+  const shelfTotal = isCurrent ? remembered.total : undefined;
+  useEffect(() => {
+    if (shelfTotal !== undefined) onTotal?.(shelfTotal);
+  }, [shelfTotal, onTotal]);
 
   // Infinite scroll: when the sentinel under the last row is in view and the
   // requested page has LANDED, ask for the next. Asking while a page is still
@@ -503,6 +517,7 @@ export function SetupsGrid({
       ) : (
         <>
       {/* Two rows: what you are looking for, then what it must be. */}
+      {bare ? null : (
       <SetupsFilterBar
         filters={filters}
         placeholder={
@@ -521,6 +536,7 @@ export function SetupsGrid({
         }
         itemFilter={scope !== "saved"}
       />
+      )}
 
       <div
         className="min-h-0 flex-1 overflow-y-auto px-4 py-3 compact:px-2"

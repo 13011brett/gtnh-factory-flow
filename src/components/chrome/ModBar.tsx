@@ -11,6 +11,8 @@ import { isPowerDisplayUnit, type RateUnit } from "@/lib/model/rate-unit";
 import { playBoardSound } from "@/lib/board-sounds";
 import { useWorkspaceView, writeWorkspaceView } from "@/lib/workspace-view";
 import { useFactoryStore } from "@/store/factory-store";
+import { useDesignStore } from "@/store/design-store";
+import { stampOpened } from "@/lib/library/last-open";
 import { ensureInteractionHost } from "@/components/flow/clean/interaction";
 import { tipAttrs } from "@/components/flow/clean/interaction";
 import { isEditableKeyboardTarget } from "@/components/flow/keyboard";
@@ -171,6 +173,11 @@ export interface ModBarProps {
 export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMenu, unreadNotes }: ModBarProps) {
   useHistoryShortcuts();
   useEffect(() => ensureInteractionHost(), []);
+  // The library's "last open" and its most-recent-first order.
+  const activeDesignId = useDesignStore((state) => state.activeDesignId);
+  useEffect(() => {
+    if (activeDesignId) stampOpened(activeDesignId);
+  }, [activeDesignId]);
   const canUndo = useFactoryStore((state) => state.undoHistory.length > 0);
   const canRedo = useFactoryStore((state) => state.redoHistory.length > 0);
   const undo = useFactoryStore((state) => state.undo);

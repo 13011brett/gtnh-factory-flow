@@ -13,6 +13,8 @@ export type VoltageTierName = Exclude<MachineTier, "DEMO">;
  */
 export interface DesignStats {
   cards: number;
+  /** How many of those are drawers (the rest are machine cards); absent in stats saved before it was kept. */
+  drawers?: number;
   machines: number;
   tier?: VoltageTierName;
   tierIndex: number;
@@ -53,6 +55,7 @@ export function computeDesignStats(
   }
   const stats: DesignStats = {
     cards: project.nodes.length + (project.storages?.length ?? 0),
+    drawers: project.storages?.length ?? 0,
     machines,
     tierIndex,
   };

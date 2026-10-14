@@ -44,3 +44,11 @@ if (which === "column") {
   await page.screenshot({ path: OUT + "fixb-column-menu.png", clip: { x: 1300, y: 100, width: 620, height: 500 } });
   await browser.close();
 }
+if (which === "welcomepage") {
+  const { browser, page } = await open();
+  await page.waitForTimeout(2000);
+  await page.getByRole("button", { name: "Dismiss" }).click().catch(() => {});
+  await page.waitForTimeout(500);
+  await page.screenshot({ path: OUT + "fixb-welcomepage.png" });
+  await browser.close();
+}

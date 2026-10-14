@@ -50,7 +50,6 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
   const [renaming, setRenaming] = useState<string>();
   const [fade, setFade] = useState({ left: false, right: false });
   const stripRef = useRef<HTMLDivElement>(null);
-  const planFileRef = useRef<HTMLInputElement>(null);
   const canClose = designs.length + publicViews.length > 1;
   const closeMenu = useCallback(() => setMenu(undefined), []);
 
@@ -124,7 +123,7 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
           },
         },
         { label: "Open a plan...", detail: "My plans", onSelect: () => openLibrary({ kind: "all" }) },
-        { label: "Open plan file...", detail: ".json", onSelect: () => planFileRef.current?.click() },
+        { label: "Open plan file...", detail: ".json", onSelect: () => document.querySelector<HTMLInputElement>("[data-plan-file-input]")?.click() },
         { label: "Paste plan", detail: "a plan link, code or file", onSelect: onPaste },
         { label: "Browse library", detail: "public plans", onSelect: () => openLibrary({ kind: "public" }) },
       ];
@@ -306,7 +305,6 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
         +
       </div>
       <input
-        ref={planFileRef}
         type="file"
         accept="application/json,.json"
         className="hidden"

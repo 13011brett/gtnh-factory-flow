@@ -139,7 +139,7 @@ textarea.pn-field {
 
 /* A key: the clean card's key, flat; the primary one is the cyan Send. */
 .pn-key,
-.pn-skin button[class*="border-line"]:not([class*="!h-"]),
+.pn-skin button[class*="border-line"]:not([class*="!h-"]):not(.group),
 .pn-skin button[class*="bg-cyan"] {
   display: inline-flex;
   align-items: center;
@@ -161,11 +161,11 @@ textarea.pn-field {
     inset -1px -1px var(--pn-key-lo);
 }
 .pn-key:hover,
-.pn-skin button[class*="border-line"]:not([class*="!h-"]):hover {
+.pn-skin button[class*="border-line"]:not([class*="!h-"]):not(.group):hover {
   background: var(--pn-key-hover);
 }
 .pn-key:disabled,
-.pn-skin button[class*="border-line"]:not([class*="!h-"]):disabled {
+.pn-skin button[class*="border-line"]:not([class*="!h-"]):not(.group):disabled {
   color: var(--pn-dim);
   cursor: default;
   opacity: 1;
@@ -383,4 +383,53 @@ textarea.pn-field {
 }
 .pn-dim {
   color: var(--pn-dim);
+}
+
+/* Panels laid over with the skin keep their tiles and backdrops dark and flat. */
+.pn-skin [class*="bg-[#"] {
+  background-color: var(--pn-surface);
+}
+.pn-skin button.group {
+  border: 1px solid var(--pn-edge);
+  border-radius: 0;
+}
+.pn-skin button.group:hover {
+  background-color: var(--pn-key-hover);
+  border-color: var(--pn-key-hi);
+}
+
+/*
+ * The recipe search overlay (a full window over the board): the mod's face and flat keys over its Tailwind classes.
+ * Typefaces, corners and weights only; its layout, sizes and colours stay as the recipe cards need them.
+ */
+.rs-mod,
+.rs-mod * {
+  font-family: var(--font-minecraft), monospace;
+  border-radius: 0;
+  letter-spacing: 0;
+  -webkit-font-smoothing: none;
+}
+.rs-mod [class*="font-semibold"],
+.rs-mod [class*="font-bold"],
+.rs-mod [class*="font-black"],
+.rs-mod [class*="font-medium"] {
+  font-weight: 400;
+}
+.rs-mod [class*="shadow-"]:not(section) {
+  box-shadow: none;
+}
+.rs-mod button,
+.rs-mod input,
+.rs-mod select {
+  font-family: inherit;
+}
+.rs-mod input,
+.rs-mod select {
+  background-color: var(--pn-well);
+  border: 1px solid var(--pn-edge);
+  color: var(--pn-ink);
+}
+.rs-mod input:focus {
+  border-color: var(--pn-key-hi);
+  outline: none;
 }

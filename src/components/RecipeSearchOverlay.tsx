@@ -22,6 +22,8 @@ import {
   useRef,
   useState,
 } from "react";
+import "./chrome/mod-panel.css";
+import { ModPick } from "./chrome/ModPick";
 import { createPortal } from "react-dom";
 import type {
   MouseEvent as ReactMouseEvent,
@@ -992,25 +994,20 @@ export function RecipeSearchOverlay({
     </label>
   );
   const tierSelect = (
-    <select
-      value={maxTier}
-      onChange={(event) => {
-        playBoardSound("tick");
-        onMaxTierChange(event.target.value as TierFilter);
-      }}
-      aria-label="Maximum machine tier"
-      className={[
-        "shrink-0 border-2 border-[var(--mc-33)] bg-[#17191d] px-1.5 text-sm text-neutral-100 outline-none shadow-[inset_2px_2px_0_#30343b,inset_-2px_-2px_0_#050607]",
-        compact ? "h-7 w-[92px] text-[12px]" : "h-9 w-28",
-      ].join(" ")}
-    >
-      <option value="all">{compact ? "Any tier" : "All tiers"}</option>
-      {GT_VOLTAGE_TIERS.map((entry) => (
-        <option key={entry.tier} value={entry.tier}>
-          ≤ {entry.tier}
-        </option>
-      ))}
-    </select>
+    <div className={["shrink-0", compact ? "w-[92px]" : "w-28"].join(" ")}>
+      <ModPick
+        value={maxTier}
+        onChange={(tier) => {
+          playBoardSound("tick");
+          onMaxTierChange(tier);
+        }}
+        label="Maximum machine tier"
+        options={[
+          { value: "all" as TierFilter, label: compact ? "Any tier" : "All tiers" },
+          ...GT_VOLTAGE_TIERS.map((entry) => ({ value: entry.tier as TierFilter, label: `≤ ${entry.tier}` })),
+        ]}
+      />
+    </div>
   );
   const closeButton = (
     <button
@@ -1054,7 +1051,7 @@ export function RecipeSearchOverlay({
           backdrop they look like. */}
       <section
         ref={panelRef}
-        className="pointer-events-auto relative flex flex-col font-mono"
+        className="rs-mod pointer-events-auto relative flex flex-col font-mono"
         aria-label="Recipe search"
         style={{
           width: sheet ? "100%" : `min(${layout.width}px, 100%)`,

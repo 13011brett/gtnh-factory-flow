@@ -373,7 +373,7 @@ describe("Build and Solve plans: what changes and what does not", () => {
   it("a converted Build or Solve plan always says what came over; an empty one says nothing", () => {
     const notice = openAsPlan(chain()).notice;
     expect(notice?.text).toBe("Converted from a Build plan.");
-    expect(notice?.details).toContain("2 cards pinned at their count.");
+    expect(notice?.details).toContain("2 cards pinned at their counts.");
     expect(openAsPlan(chain({ solveMode: true })).notice?.text).toBe("Converted from a Solve plan.");
     expect(openAsPlan({ ...chain(), nodes: [], edges: [], storages: [] }).notice).toBeUndefined();
   });

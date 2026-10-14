@@ -136,7 +136,7 @@ export function tierTip(view: CleanCardView): TipSpec {
 
 /** The power input panel of the classic card, on the chips and the power row of a machine with a hatch. */
 export function powerPanelTip(view: CleanCardView, part: "tier" | "amps" | "power"): TipSpec {
-  return { id: `${view.nodeId}|${part}`, title: "Power input", panel: { kind: "power", nodeId: view.nodeId } };
+  return { id: `${view.nodeId}|${part}`, title: "Power input", panel: { kind: "power", nodeId: view.nodeId, part } };
 }
 
 export function powerTip(view: CleanCardView): TipSpec {

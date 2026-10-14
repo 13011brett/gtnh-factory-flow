@@ -22,6 +22,8 @@ interface Shown {
   /** Real (unzoomed) pointer position. */
   x: number;
   y: number;
+  /** The card the tip is about (real pixels): the power panel sits against it, as the mod's does. */
+  card?: { left: number; right: number; top: number; bottom: number };
 }
 
 let shown: Shown | null = null;
@@ -80,7 +82,10 @@ function fire(): void {
   const element = targetAt(lastX, lastY);
   if (!element || element.getAttribute("data-tip-id") !== tracker.target() || tipBlocked(element)) return;
   const spec = readTip(element);
-  if (spec) publish({ spec, x: lastX, y: lastY });
+  if (spec) {
+    const card = spec.panel ? element.closest("[data-node-glance-root]")?.getBoundingClientRect() : undefined;
+    publish({ spec, x: lastX, y: lastY, card: card && { left: card.left, right: card.right, top: card.top, bottom: card.bottom } });
+  }
 }
 
 function schedule(): void {
@@ -156,6 +161,17 @@ function PanelView() {
     if (x + w > vw - 4) x = state.x / scale - 12 - w;
     let y = state.y / scale + 12;
     if (y + h > vh - 4) y = state.y / scale - 12 - h;
+    if (state.card && state.spec.panel) {
+      // Above the card, right edges aligned (the guide to the chips beside the panel, kept on screen); below it when
+      // there is no room above; failing both, by the pointer so it stays in sight.
+      const guide = element.lastElementChild instanceof HTMLElement ? element.lastElementChild.offsetWidth + 4 : 0;
+      x = Math.max(2, Math.min(state.card.right / scale - (w - guide), vw - w - 4));
+      y = state.card.top / scale - 6 - h;
+      if (y < 2) {
+        const under = state.card.bottom / scale + 6;
+        y = under + h <= vh ? under : Math.max(2, Math.min(state.y / scale - h - 12, vh - h - 4));
+      }
+    }
     element.style.left = `${Math.max(4, x)}px`;
     element.style.top = `${Math.max(4, y)}px`;
     element.style.visibility = "visible";

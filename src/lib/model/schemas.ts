@@ -580,6 +580,11 @@ export const factoryProjectSchema = z.object({
     )
     .refine((leftovers) => Object.keys(leftovers).length <= 1024, "Too many leftovers.")
     .optional(),
+  // Plan mode's setting pins: machine name -> the setting keys its cards show as chips.
+  settingPins: z
+    .record(z.string().min(1).max(256), z.array(z.string().min(1).max(128)).max(64))
+    .refine((pins) => Object.keys(pins).length <= 512, "Too many pinned machines.")
+    .optional(),
   // Pool mode's cell-to-fluid ratios, litres per filled cell by cell id.
   poolCellRatios: z.record(z.string(), z.number().positive()).optional(),
   recipes: z.array(recipeSchema),

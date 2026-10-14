@@ -1,10 +1,7 @@
 "use client";
 
 import { forwardRef, type CSSProperties } from "react";
-import { PowerControlsGuide, PowerReadout } from "../../HatchPowerControls";
-import { tooltipMode } from "../../recipe-tooltip-data";
-import { applyRecipeInputOverrides } from "@/lib/model";
-import { useFactoryStore } from "@/store/factory-store";
+import { PowerInputPanel } from "../menus/PowerInputPanel";
 import { splitGold, type TipInput, type TipSpec } from "./tip-spec";
 import "./interaction.css";
 
@@ -45,33 +42,6 @@ function Gold({ text }: { text: string }) {
   );
 }
 
-/** The power input panel of the classic card (overclocks, next improvement, demand), for a card's chips and power row. */
-function PowerPanel({ nodeId }: { nodeId: string }) {
-  const project = useFactoryStore((state) => state.project);
-  const lastResult = useFactoryStore((state) => state.lastResult);
-  const node = project.nodes.find((entry) => entry.id === nodeId);
-  const recipe = project.recipes.find((entry) => entry.id === node?.recipeId);
-  if (!node || !recipe) return null;
-  const nodeRecipe = applyRecipeInputOverrides(recipe, node);
-  const result = lastResult?.nodes[nodeId];
-  return (
-    <div className="tp-power">
-      <div className="tp-power-body">
-        <PowerReadout
-          recipe={nodeRecipe}
-          node={node}
-          mode={tooltipMode(project)}
-          plannedEuT={result?.enabled && result.theoreticalMachinesRequired > 0 ? result.euT : undefined}
-          utilization={result?.utilization}
-        />
-      </div>
-      <div className="tp-power-guide">
-        <PowerControlsGuide raw={node.powerInputMode === "eut"} />
-      </div>
-    </div>
-  );
-}
-
 export interface TipPanelProps {
   spec: TipSpec;
   style?: CSSProperties;
@@ -79,12 +49,15 @@ export interface TipPanelProps {
 
 /** The clean tooltip skin (spec 10.2) around title, rows, notes, rule and actions. */
 export const TipPanel = forwardRef<HTMLDivElement, TipPanelProps>(function TipPanel({ spec, style }, ref) {
+  // The power input panel is the mod's own (menus/PowerInputPanel), with the guide beside it.
+  if (spec.panel?.kind === "power") {
+    return <PowerInputPanel ref={ref} nodeId={spec.panel.nodeId} part={spec.panel.part} style={style} />;
+  }
   return (
     <div ref={ref} className="tp ui-zoom" data-clean-tip="" data-tip-panel={spec.panel ? spec.panel.kind : undefined} style={style}>
       <div className="tp-title">{spec.title}</div>
       {spec.sub ? <div className="tp-sub">{spec.sub}</div> : null}
-      {spec.panel?.kind === "power" ? <PowerPanel nodeId={spec.panel.nodeId} /> : null}
-      {spec.rows?.map((row, index) => (
+            {spec.rows?.map((row, index) => (
         <div key={index} className="tp-row">
           <span className="tp-label">{row.label}</span>
           <span className="tp-value" data-tone={row.tone && row.tone !== "plain" ? row.tone : undefined}>

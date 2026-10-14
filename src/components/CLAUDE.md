@@ -75,8 +75,8 @@ The board has its own notes in `flow/CLAUDE.md`, the Pool worksheet in `pool/CLA
 - Rendered item textures keep the art in the middle half of the image; draw them at 2x
   the box.
 - `DesignTabs` effects that grab refs must depend on `isHydrated`.
-- Sounds (`src/lib/board-sounds.ts`) play on the canvas, recipe search, Pool worksheet and
-  Library, all quiet, through one engine and its mute/volume. Firefox flushes audio at the
-  end of a task: play a sound before heavy work and it is clipped.
+- Sounds are the in-game planner's own files played by its rules (`src/lib/sound/`, its
+  `CLAUDE.md` has what plays where). Firefox flushes audio at the end of a task, so the
+  player schedules from a task of its own there.
 - The Welcome tab (`welcome/`, state in `src/lib/welcome/welcome-tab.ts`) keeps its
   backdrop paused while hidden.

@@ -223,7 +223,13 @@ interface Voice {
   cancelled: boolean;
 }
 
-function startVoice(url: string, volume: number, pitch: number): Voice {
+/**
+ * How far ahead the click is scheduled: a sound that says more usually lands a task after it (the edit's own sound),
+ * and stopping a click that has not started yet keeps even its first milliseconds out.
+ */
+const CLICK_AHEAD_S = 0.02;
+
+function startVoice(url: string, volume: number, pitch: number, ahead = 0): Voice {
   const voice: Voice = { cancelled: false };
   const asked = performance.now();
   const go = (buffer: AudioBuffer | null) => {
@@ -240,7 +246,7 @@ function startVoice(url: string, volume: number, pitch: number): Voice {
       source.connect(gain);
       gain.connect(ctx.destination);
       source.onended = () => gain.disconnect();
-      source.start();
+      source.start(ahead > 0 ? ctx.currentTime + ahead : 0);
       voice.source = source;
     };
     if (ctx.state !== "running") {
@@ -381,7 +387,7 @@ export function playSfx(name: SfxName, volume = 1, pitch = 1, vary = true): SfxP
   const loud = Math.pow(10, ((random() * 2 - 1) * LOUDNESS_DB) / 20);
   const take = deal(state) + 1;
   const level = Math.min(1, SFX_BASE * gain * volume * duck * loud);
-  const voice = startVoice(sfxUrl(name, take), level, p);
+  const voice = startVoice(sfxUrl(name, take), level, p, name === "ui.click" ? CLICK_AHEAD_S : 0);
   if (name === "ui.click") {
     lastClick = voice;
     lastClickAt = now;

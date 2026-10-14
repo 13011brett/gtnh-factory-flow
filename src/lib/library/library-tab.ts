@@ -2,6 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import { leaveWelcomeTab } from "@/lib/welcome/welcome-tab";
+import { playSfx } from "@/lib/sound/sfx";
 
 /**
  * The Library: everything you have, and everything the network has.
@@ -108,6 +109,8 @@ export function readLibraryTabState(): LibraryTabState {
  * Exactly one of Welcome and the library can be up, so Welcome steps down.
  */
 export function openLibrary(view?: LibraryView) {
+  // The library swapping in for the board turns a page, as the mod's.
+  if (!getSnapshot().active) playSfx("ui.page");
   leaveWelcomeTab();
   write({ active: true, ...(view ? { view } : {}) });
 }
@@ -122,5 +125,6 @@ export function leaveLibrary() {
   if (!getSnapshot().active) {
     return;
   }
+  playSfx("ui.page");
   write({ active: false });
 }

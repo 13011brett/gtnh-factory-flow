@@ -18,10 +18,10 @@ describe("the settings box's choices", () => {
   it("maps sound on and its volume to the nearest choice", () => {
     expect(soundIndexOf(false, 0.5)).toBe(0);
     expect(soundIndexOf(true, SOUND_VOLUME[1])).toBe(1);
-    expect(soundIndexOf(true, 0.5)).toBe(2);
-    expect(soundIndexOf(true, 1)).toBe(3);
+    expect(soundIndexOf(true, 1)).toBe(2);
+    expect(soundIndexOf(true, 1.7)).toBe(3);
     // The default volume is Normal.
-    expect(soundIndexOf(true, 0.45)).toBe(2);
+    expect(soundIndexOf(true, 0.9)).toBe(2);
   });
 
   it("lists See-through from 0% to 100% in fives", () => {

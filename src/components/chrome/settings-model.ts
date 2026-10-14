@@ -19,9 +19,9 @@ export function sizePercentOf(index: number): number {
   return Math.max(UI_SCALE_MIN_PERCENT, Math.min(UI_SCALE_MAX_PERCENT, percent));
 }
 
-/** The mod's Sounds choices; Off silences, the rest are the master volume. */
+/** The mod's Sounds choices and their gains (`PlannerSettings.SOUND_GAINS`); Off silences. */
 export const SOUND_NAMES = ["Off", "Quiet", "Normal", "Loud"] as const;
-export const SOUND_VOLUME: readonly number[] = [0, 0.25, 0.5, 0.85];
+export const SOUND_VOLUME: readonly number[] = [0, 0.5, 1, 1.7];
 
 export function soundIndexOf(enabled: boolean, volume: number): number {
   if (!enabled) return 0;

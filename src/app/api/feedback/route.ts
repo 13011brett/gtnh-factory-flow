@@ -4,7 +4,7 @@ import { encodePlanCode, planCodeLink } from "@/lib/import-export/plan-code";
 import { isCommunityConfigured } from "@/lib/server/community";
 import {
   FEEDBACK_MAX_BYTES,
-  FEEDBACK_REPO,
+  feedbackRepo,
   type FeedbackLinks,
   issueBody,
   issueLabels,
@@ -96,7 +96,7 @@ export async function POST(request: Request) {
     }
 
     const { body, plansComment } = issueBody(report, links);
-    const issue = await openIssue(token, process.env.GITHUB_FEEDBACK_REPO || FEEDBACK_REPO, {
+    const issue = await openIssue(token, feedbackRepo(report.origin), {
       title: issueTitle(report),
       body,
       labels: issueLabels(report),

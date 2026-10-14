@@ -164,7 +164,7 @@ The board must stay smooth with 100+ cards on weak PCs.
   node wrapper transforms.
 - Card pictures: structure renders in `public/power-art` beat dataset icons, and can be
   edited in place (dataset icons are immutable).
-- Sounds (`src/lib/board-sounds.ts`): ramp 10 ms or more, resume the context before
-  scheduling, keep the output hot (inaudible keep-alive), overload protection stateless
-  (tanh soft-clip, never a compressor); plan arrivals call `quietBoardSoundsFor`; judge
-  "the plan changed" by `projectSoundFingerprint`, never object identity.
+- Sounds (`src/lib/sound/`, the mod's files and rules; its `CLAUDE.md` has the table): edits
+  sound from the plan diff, the hand from page events; an action with its own sound claims
+  the edit (`playEditSfx`); plan arrivals call `quietBoardSoundsFor`; judge "the plan
+  changed" by `projectSoundFingerprint`, never object identity.

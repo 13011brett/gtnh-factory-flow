@@ -69,9 +69,6 @@ export function ChromeMenu({
     onClose,
     insideSelector: `[${MENU_ANCHOR_ATTR}]`,
   });
-  useEffect(() => {
-    playBoardSound("pageOpen");
-  }, []);
   // Keyboard: focus moves into the menu (the first row), and goes back to the key that opened it on close.
   useEffect(() => {
     const previous = document.activeElement instanceof HTMLElement ? document.activeElement : null;

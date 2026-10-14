@@ -91,6 +91,8 @@ describe("the feedback route", () => {
     const sent = await send(web);
     expect(sent.status).toBe(201);
     expect(vi.mocked(openIssue).mock.calls[0]![2].labels).toEqual(["from web", "enhancement"]);
+    // The web planner's reports open on the website's repo, the game's on the mod's.
+    expect(vi.mocked(openIssue).mock.calls[0]![1]).toBe("jackwrichards/gtnh-factory-flow");
     vi.mocked(openIssue).mockClear();
     // The web's origin with the game's device id and a Java, and the game's shape claiming the web's origin.
     expect((await send({ ...web, deviceId: report.deviceId })).status).toBe(400);

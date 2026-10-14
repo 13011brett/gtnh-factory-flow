@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, type RefObject } from "react";
 import { subscribeBoardCameraMove } from "@/lib/board-camera-signal";
+import { playSfx } from "@/lib/sound/sfx";
 
 /**
  * How every dropdown in the app closes. One rule for all menus, pickers,
@@ -19,6 +20,9 @@ import { subscribeBoardCameraMove } from "@/lib/board-camera-signal";
  *   NEAREST the mouse has come since the panel opened, so a panel that opens
  *   away from the pointer can be walked to; a `fadeKeep` element (the card a
  *   menu hangs from) counts as over it.
+ *
+ * Opening plays the mod's popup sound and a press outside or Escape its fold-away (picking a row sounds as what it
+ * does); `silent` leaves both to the caller.
  *
  * Capture phase throughout: the board's pan handler and the search's panels
  * stop pointer events on their way up, so a bubbling listener would miss them.
@@ -45,6 +49,8 @@ export interface DropdownDismissOptions {
    * does not fade the menu.
    */
   fadeKeep?: () => Element | null | undefined;
+  /** No open and close sounds (the caller has its own). */
+  silent?: boolean;
 }
 
 /** Pixels of free travel outside the panel before the fade begins. */
@@ -89,7 +95,7 @@ function distanceToElement(x: number, y: number, element: Element): number {
 }
 
 export function useDropdownDismiss(open: boolean, options: DropdownDismissOptions): void {
-  const { fade, fadeAfterReach, ignoreCameraMove, insideSelector } = options;
+  const { fade, fadeAfterReach, ignoreCameraMove, insideSelector, silent } = options;
   const refs = options.refs;
   // Held in a ref: callers pass inline closures, and re-subscribing on every
   // render would reset a fading panel's opacity mid-fade.
@@ -118,6 +124,11 @@ export function useDropdownDismiss(open: boolean, options: DropdownDismissOption
     // runs from THERE, so a panel that opens away from the pointer can be
     // walked to, and only walking back away from it fades it.
     let closest = Number.POSITIVE_INFINITY;
+    if (!silent) playSfx("ui.open");
+    const dismiss = () => {
+      if (!closed && !silent) playSfx("ui.close");
+      close();
+    };
     const close = () => {
       if (closed) return;
       closed = true;
@@ -128,12 +139,12 @@ export function useDropdownDismiss(open: boolean, options: DropdownDismissOption
     };
 
     const onPointerDown = (event: PointerEvent) => {
-      if (!isInside(event.target, opts)) close();
+      if (!isInside(event.target, opts)) dismiss();
     };
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         event.stopPropagation();
-        close();
+        dismiss();
       }
     };
     const onWheel = (event: WheelEvent) => {
@@ -216,5 +227,5 @@ export function useDropdownDismiss(open: boolean, options: DropdownDismissOption
     };
     // The refs array is rebuilt per render; its members are stable refs.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, fade, fadeAfterReach, ignoreCameraMove, insideSelector, ...refs]);
+  }, [open, fade, fadeAfterReach, ignoreCameraMove, insideSelector, silent, ...refs]);
 }

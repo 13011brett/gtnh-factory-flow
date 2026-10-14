@@ -30,6 +30,7 @@ import { OptionListMenu } from "./menus/OptionListMenu";
 import { SettingsSheet } from "./menus/SettingsSheet";
 import { useDeviceSettings } from "@/lib/device-settings";
 import { anchorOf, type MenuAnchor } from "./menus/MenuPortal";
+import { cloneWithSound } from "@/lib/sound/sfx";
 import { countRowsTip, machineNameTip, powerRowTip, stripTip, tierChipTip, useCardTipFacts } from "./menus/card-tips";
 import { recipeHeatNeed, settingControls, settingPatch, steppedOption, type SettingControl } from "./menus/settings-model";
 
@@ -795,7 +796,7 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
           <div role="menu" aria-label={menu.kind === "actions" ? "Card actions" : "Machine settings"} className="text-[13px] leading-[18px]">
             {(menu.kind === "actions"
               ? [
-                  { label: "Clone node", icon: Copy, run: () => duplicateNode(node.id) },
+                  { label: "Clone node", icon: Copy, run: () => cloneWithSound(duplicateNode, node.id) },
                   { label: "Replace the recipe", icon: RefreshCw, run: () => beginRecipeRefactor(node.id) },
                   { label: "Add another recipe", icon: Plus, run: () => browseMachineRecipes(node.id) },
                   { label: "Delete node", icon: Trash2, run: () => deleteNode(node.id) },

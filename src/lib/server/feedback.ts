@@ -22,8 +22,16 @@ const LINK_MAX = 8000;
 /** GitHub refuses an issue body over 65,536 characters; the plans move to a comment past this. */
 const BODY_MAX = 60_000;
 
-/** Where reports go and how each kind is labelled there. */
+/** Where reports go and how each kind is labelled there: the game's to the mod's repo, the web planner's to the website's. */
 export const FEEDBACK_REPO = "jackwrichards/gtnh-planner-mod";
+export const FEEDBACK_WEB_REPO = "jackwrichards/gtnh-factory-flow";
+
+/** The repo a report opens its issue on (`GITHUB_FEEDBACK_REPO` and `GITHUB_FEEDBACK_WEB_REPO` override). */
+export function feedbackRepo(origin: "game" | "web" | undefined, env: Record<string, string | undefined> = process.env): string {
+  return origin === "web"
+    ? env.GITHUB_FEEDBACK_WEB_REPO || FEEDBACK_WEB_REPO
+    : env.GITHUB_FEEDBACK_REPO || FEEDBACK_REPO;
+}
 export const FROM_GAME_LABEL = "from game";
 export const FROM_WEB_LABEL = "from web";
 const KIND_LABELS = { bug: "bug", idea: "enhancement", help: "question" } as const;

@@ -13,6 +13,8 @@ let frame = 0;
 
 function flush() {
   frame = 0;
+  // (jsdom has no Web Animations.)
+  if (typeof document.getAnimations !== "function") return;
   for (const animation of document.getAnimations()) {
     const name = (animation as CSSAnimation).animationName;
     if (name && PULSES.has(name) && animation.startTime !== 0) animation.startTime = 0;

@@ -67,3 +67,14 @@ Every save goes through `persistCanvas` in design-store.ts:
 
 `browseResource`, `browseBack` / `browseForward`, `recipeBrowserMachinePin`,
 `beginRecipeRefactor` live in factory-store; the rules are in `src/components/CLAUDE.md`.
+
+## One mode
+
+There is one board mode, plan mode. Every plan lands through the store (`markHydratedProject`,
+`loadViewedProject`, `setProject`), and `normalizeLoadedProject` ends in `openAsPlan`
+(`src/lib/solver/plan/to-plan.ts`): Build and Solve plans by `convertBuildToPlan`, Pool plans wired per resource first
+(`pool-to-plan.ts`, with a `planNotice` for the player). The parsers (JSON, plan links, community posts) keep the saved
+mode on purpose, so the one conversion at landing can also say what it lost. A load never writes: storage keeps the old
+shape until the player's first edit saves the converted plan (both `planMode` and `solveMode` are written, so older
+builds open it as Solve). Tests of the old Build/Solve/Pool code call `allowLegacyModesForTests()`.
+Server stats convert the same way (`normalizeLoadedProject` in the community routes).

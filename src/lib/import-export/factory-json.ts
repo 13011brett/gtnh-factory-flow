@@ -11,6 +11,12 @@ export class FactoryJsonError extends Error {
   }
 }
 
+/**
+ * A plan's JSON as a project. It keeps the mode the plan was saved in: every
+ * plan that arrives lands on the board through the store (`markHydratedProject`,
+ * `loadViewedProject`), and that is where it becomes a plan-mode project, so
+ * the one conversion also gets to tell the player what it could not carry over.
+ */
 export function parseFactoryProjectJson(source: string, options?: LoadOptions): FactoryProject {
   let raw: unknown;
 
@@ -23,7 +29,7 @@ export function parseFactoryProjectJson(source: string, options?: LoadOptions): 
   }
 
   try {
-    return normalizeLoadedProject(factoryProjectSchema.parse(raw), options);
+    return normalizeLoadedProject(factoryProjectSchema.parse(raw), { keepMode: true, ...options });
   } catch (error) {
     if (error instanceof ZodError) {
       const issues = error.issues

@@ -32,7 +32,6 @@ import {
   splitSectionHandleId,
 } from "@/lib/model/shared-machine";
 import {
-  normalizeLoadedProject,
   normalizeLoadedProjectWithNotice,
   type LoadOptions,
 } from "@/lib/model/project-normalize";
@@ -1026,7 +1025,8 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
     const { project: nextProject, notice } = normalizeLoadedProjectWithNotice(project);
     write({
       isReadOnly: true,
-      planNotice: notice ?? null,
+      // Only a conversion speaks here; the design store clears it when another plan lands.
+      ...(notice ? { planNotice: notice } : {}),
       project: nextProject,
       lastResult: solveBooks(nextProject),
       undoHistory: [], redoHistory: [],
@@ -1129,7 +1129,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
     const { project: loaded, notice } = normalizeLoadedProjectWithNotice(project, options);
     const nextProject = touchProject(loaded);
     set({
-      planNotice: notice ?? null,
+      ...(notice ? { planNotice: notice } : {}),
       project: nextProject,
       selectedNodeId: nextProject.nodes[0]?.id,
       selectedRecipeId: nextProject.nodes[0]?.recipeId ?? nextProject.recipes[0]?.id,
@@ -1145,7 +1145,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
     const { project: nextProject, notice } = normalizeLoadedProjectWithNotice(project);
     write({
       isReadOnly: false,
-      planNotice: notice ?? null,
+      ...(notice ? { planNotice: notice } : {}),
       project: nextProject,
       selectedNodeId: nextProject.nodes[0]?.id,
       selectedRecipeId: nextProject.nodes[0]?.recipeId ?? nextProject.recipes[0]?.id,

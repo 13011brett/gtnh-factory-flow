@@ -234,6 +234,7 @@ function landOnDesign(
   rest?: Partial<DesignStore>,
 ) {
   beginDesignCameraHandover();
+  useFactoryStore.getState().dismissPlanNotice();
   writeActiveDesignId(record.id);
   set({ ...rest, activeDesignId: record.id, publicView: undefined });
   showProject(record.project, record.id);
@@ -246,6 +247,7 @@ function landOnDesign(
  * it under so it cannot be written anywhere.
  */
 function landOnNothing(set: (partial: Partial<DesignStore>) => void, rest?: Partial<DesignStore>) {
+  useFactoryStore.getState().dismissPlanNotice();
   writeActiveDesignId(undefined);
   set({ ...rest, activeDesignId: undefined });
   openLibrary();
@@ -428,6 +430,7 @@ export const useDesignStore = create<DesignStore>((set, get) => ({
     // No design record is created, and autosave has no design to write into.
     const view = { id: post.id, name: post.name, authorName: post.authorName, project };
     set({ activeDesignId: undefined, publicView: view, publicViews: get().publicViews.some((entry) => entry.id === post.id) ? get().publicViews.map((entry) => entry.id === post.id ? view : entry) : [...get().publicViews, view] });
+    useFactoryStore.getState().dismissPlanNotice();
     useFactoryStore.getState().loadViewedProject(project);
     applyPlanView(project.view, "board");
     leaveWelcomeTab();

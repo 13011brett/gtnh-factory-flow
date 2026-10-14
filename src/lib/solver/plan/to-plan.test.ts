@@ -18,6 +18,7 @@ import { customRecipe, drawer, node, recipe, wire } from "./adapter/test-kit";
 import { openAsPlan, toPlanProject } from "./to-plan";
 import { wirePoolProject } from "./pool-to-plan";
 import { planClipboard } from "./convert";
+import { useFactoryStore } from "@/store/factory-store";
 import { listNodeSections } from "@/lib/model/shared-machine";
 
 beforeAll(async () => {
@@ -407,14 +408,25 @@ describe("the funnel", () => {
     expect(again.project.edges.length).toBe(plan.edges.length);
   });
 
-  it("JSON, plan links and imports (parseFactoryProjectJson) open every old mode as a plan", () => {
+  it("JSON, plan links and imports parse as saved and become plans when they land on the board", () => {
     for (const mode of [{}, { solveMode: true }, { solveMode: true, poolMode: true }]) {
       const text = JSON.stringify({ ...poolPlan(), solveMode: undefined, poolMode: undefined, ...mode });
-      const project = parseFactoryProjectJson(text);
-      expect(project.planMode).toBe(true);
-      expect(project.solveMode).toBe(true);
-      expect(project.poolMode).toBeUndefined();
+      const parsed = parseFactoryProjectJson(text);
+      expect(parsed.planMode).toBeUndefined();
+      useFactoryStore.getState().markHydratedProject(parsed);
+      const landed = useFactoryStore.getState().project;
+      expect(landed.planMode).toBe(true);
+      expect(landed.solveMode).toBe(true);
+      expect(landed.poolMode).toBeUndefined();
     }
+  });
+
+  it("a community post opens the same way (loadViewedProject)", () => {
+    const parsed = parseFactoryProjectJson(JSON.stringify(poolPlan()));
+    useFactoryStore.getState().loadViewedProject(parsed);
+    expect(useFactoryStore.getState().project.planMode).toBe(true);
+    expect(useFactoryStore.getState().planNotice?.origin).toBe("pool");
+    useFactoryStore.setState({ isReadOnly: false });
   });
 
   it("a pasted clipboard from an older board loses its buffers, ratios, pool sides and groups", () => {
@@ -436,6 +448,18 @@ describe("the funnel", () => {
     expect(pasted.edges[0]!.ratioWeight).toBeUndefined();
     expect(pasted.nodes[0]!.productionGroupId).toBeUndefined();
     expect(pasted.productionGroups).toBeUndefined();
+  });
+});
+
+describe("the notice", () => {
+  it("survives the converted plan being hydrated again (a recipe refresh) until dismissed", () => {
+    const store = useFactoryStore.getState();
+    store.markHydratedProject(poolPlan());
+    expect(useFactoryStore.getState().planNotice?.origin).toBe("pool");
+    useFactoryStore.getState().markHydratedProject(useFactoryStore.getState().project);
+    expect(useFactoryStore.getState().planNotice?.origin).toBe("pool");
+    useFactoryStore.getState().dismissPlanNotice();
+    expect(useFactoryStore.getState().planNotice).toBeNull();
   });
 });
 

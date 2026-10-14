@@ -255,9 +255,11 @@ import {
   type ResourceHandleSide,
   sectionHandleId,
 } from "./resource-handles";
-import { getSharedMachineHandlers, listNodeSections, sectionNodeView, splitSectionHandleId } from "@/lib/model/shared-machine";
-import { isPowerRecipe } from "@/lib/power/power-recipe";
-import { isCropFarmRecipe } from "@/lib/model/passive-production";
+import { listNodeSections, sectionNodeView, splitSectionHandleId } from "@/lib/model/shared-machine";
+import { CleanVerdictLine } from "./clean/interaction/CleanVerdictLine";
+import { COMBINE_DEPS } from "./clean/interaction/combine-deps";
+import { canCombineSelection, COMBINE_TIP } from "./clean/interaction/selection";
+import { tipAttrs } from "./clean/interaction/tip-spec";
 import {
   isEdgeStarved,
 } from "./edge-labels";
@@ -4822,31 +4824,10 @@ export function FactoryFlow() {
   // fold into one card. Only recipe cards count (no drawers, boards or
   // notes in the selection), none may own its recipe, and one machine must
   // run every recipe across them.
-  const selectionCanCombine = useMemo(() => {
-    if (selectedNodeIds.length < 2) {
-      return false;
-    }
-    const chosen = new Set(selectedNodeIds);
-    const cards = project.nodes.filter((node) => chosen.has(node.id));
-    if (cards.length !== selectedNodeIds.length) {
-      return false;
-    }
-    const recipesById = new Map(project.recipes.map((recipe) => [recipe.id, recipe]));
-    let handlers: ReturnType<typeof getSharedMachineHandlers> | undefined;
-    for (const card of cards) {
-      const recipe = recipesById.get(card.recipeId);
-      if (!recipe || isPowerRecipe(recipe) || isCropFarmRecipe(recipe) || isCustomRateRecipe(recipe)) {
-        return false;
-      }
-      const own = getSharedMachineHandlers(card, recipesById);
-      const ids = new Set(own.map((handler) => handler.id));
-      handlers = handlers ? handlers.filter((handler) => ids.has(handler.id)) : own;
-      if (handlers.length === 0) {
-        return false;
-      }
-    }
-    return true;
-  }, [project.nodes, project.recipes, selectedNodeIds]);
+  const selectionCanCombine = useMemo(
+    () => canCombineSelection(project, selectedNodeIds, COMBINE_DEPS),
+    [project, selectedNodeIds],
+  );
   const combineSelectedMachines = useCallback((): boolean => {
     const hostId = combineNodesIntoMachine(selectedNodeIds);
     if (!hostId) {
@@ -6270,6 +6251,8 @@ export function FactoryFlow() {
         connectionLineStyle={connectionLineStyle}
         connectionMode={ConnectionMode.Loose}
         connectionRadius={18}
+        // A press moves a card only past 3 px (the mod's click slop); within it, it is a click.
+        nodeDragThreshold={3}
         elevateNodesOnSelect={false}
         edgesReconnectable={false}
         // Delete/Backspace go through the board's own keydown handler and the
@@ -6784,7 +6767,7 @@ const SelectionActionsBar = memo(function SelectionActionsBar({
         <button
           type="button"
           onClick={onCombine}
-          title="One machine runs all of these recipes"
+          {...tipAttrs(COMBINE_TIP)}
           className="flex h-9 items-center gap-1.5 whitespace-nowrap border-2 border-[var(--selection)] bg-[#0b5563] px-3 font-mono text-[12px] font-bold text-white shadow-[inset_2px_2px_0_var(--selection-soft),inset_-2px_-2px_0_#063640] hover:brightness-110"
         >
           <Combine className="h-4 w-4" />
@@ -9539,6 +9522,17 @@ function ResourceConnectionLine({
   // nothing new happens, and the doomed wire's own flashing says it.
   if (deleting) {
     return <g className="react-flow__connection" />;
+  }
+  // The plan-mode board draws the mod's line: 3 px, three orthogonal segments.
+  if (useFactoryStore.getState().project.planMode) {
+    return (
+      <CleanVerdictLine
+        from={{ x: fromX, y: fromY, position: fromPosition }}
+        to={{ x: endX, y: endY }}
+        pointer={{ x: toX, y: toY }}
+        verdict={verdict}
+      />
+    );
   }
   const color = verdict === "connect" ? "#22c55e" : verdict === "spawn" ? "#22c55e" : "#ef4444";
   const dashed = verdict === "spawn" || verdict === "dead";

@@ -1,0 +1,310 @@
+/*
+ * Interactions of the clean look: the tooltip skin, the wire-in-hand glow, the
+ * port rate controls. Plain unlayered CSS on data attributes (React rewrites
+ * className on the board). Tokens come from clean.css (:root).
+ */
+
+/* ---- Tooltip (spec 10.2) --------------------------------------------------- */
+
+.tp {
+  position: fixed;
+  z-index: 9999;
+  box-sizing: border-box;
+  width: max-content;
+  max-width: 300px;
+  padding: 8px 10px;
+  background: #26282d;
+  color: #f5f5f5;
+  font-family: var(--app-font, ui-sans-serif, system-ui, sans-serif);
+  font-size: 13px;
+  line-height: 18px;
+  pointer-events: none;
+  box-shadow:
+    0 0 0 1px #111317,
+    inset 1px 1px 0 #4a4c54,
+    inset -1px -1px 0 #17191d,
+    2px 3px 6px rgba(0, 0, 0, 0.2);
+}
+.tp-title {
+  font-weight: 600;
+  color: #f5f5f5;
+}
+.tp-sub {
+  color: #a3a3a3;
+}
+.tp-row {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 4px;
+}
+.tp-row + .tp-row {
+  margin-top: 0;
+}
+.tp-label {
+  color: #a3a3a3;
+}
+.tp-value {
+  color: #f5f5f5;
+  font-variant-numeric: tabular-nums;
+}
+.tp-value[data-tone="red"],
+.tp-note[data-tone="red"] {
+  color: var(--cc-red);
+}
+.tp-value[data-tone="warn"],
+.tp-note[data-tone="warn"] {
+  color: #ffd236;
+}
+.tp-value[data-tone="muted"],
+.tp-note[data-tone="muted"] {
+  color: #a3a3a3;
+}
+.tp-note {
+  margin-top: 4px;
+  color: #e5e5e5;
+}
+.tp-gold {
+  color: var(--cc-gold);
+}
+.tp-rule {
+  height: 1px;
+  margin: 6px 0 4px;
+  background: #3a3b40;
+}
+.tp-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 2px 10px;
+}
+.tp-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: #e5e5e5;
+}
+.tp-icon {
+  flex: none;
+}
+.tp[data-tip-panel="power"] {
+  max-width: none;
+}
+.tp[data-tip-panel="power"] > .tp-title {
+  display: none;
+}
+.tp-power {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+}
+.tp-power-guide {
+  padding-left: 10px;
+  border-left: 1px solid #3a3b40;
+}
+
+/* ---- Port rate controls (spec 2.5): the rule key and rate box of an unwired port --------- */
+
+.cc-row[data-port][data-wired="false"]:not([data-forced]):not([data-carried]) {
+  justify-content: flex-start;
+  gap: 0;
+  padding-top: 1px;
+}
+.cc-row[data-port][data-wired="false"]:not([data-forced]):not([data-carried]) .cc-num {
+  height: 15px;
+  line-height: 15px;
+}
+.cc-row[data-open] .cc-prk,
+.cc-row[data-open] .cc-prb {
+  bottom: 0;
+}
+.cc-row[data-carried] .cc-prk,
+.cc-row[data-carried] .cc-prb {
+  display: none;
+}
+.cc-prk,
+.cc-prb {
+  position: absolute;
+  bottom: 2px;
+  z-index: 31;
+  box-sizing: border-box;
+  height: 12px;
+  cursor: pointer;
+  user-select: none;
+}
+.cc-prk {
+  width: 12px;
+  background: #34373e;
+  box-shadow:
+    inset 0 0 0 1px #111317,
+    inset 0 1px 0 rgba(255, 255, 255, 0.12);
+}
+.cc-prk:hover {
+  background: #454952;
+}
+.cc-prk::before {
+  content: "~";
+  position: absolute;
+  inset: 0;
+  font-size: 9px;
+  line-height: 12px;
+  text-align: center;
+  color: var(--cc-muted);
+}
+.cc-prk[data-mode="exact"]::before {
+  content: "=";
+  color: var(--cc-gold);
+}
+.cc-prb {
+  width: 56px;
+  border: 1px solid #5a5e68;
+  background: #0f1114;
+  box-shadow: inset 0 1px 0 rgba(0, 0, 0, 0.7);
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 10px;
+  text-align: center;
+  color: #6f737c;
+  cursor: text;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.cc-prb:hover,
+.cc-prb[data-editing] {
+  border-color: var(--cc-gold);
+  background: #15171c;
+}
+.cc-prb[data-set] {
+  color: var(--cc-gold);
+}
+.cc-prb[data-set]::after {
+  content: attr(data-unit);
+  margin-left: 2px;
+  color: #8a8e97;
+}
+.cc-prb[data-prompt] {
+  animation: cc-prompt var(--cc-prompt, 1s) steps(1, end) infinite;
+}
+.cc-prb input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--cc-gold);
+  font: inherit;
+  text-align: center;
+}
+.cc-prk[data-side="input"] {
+  left: 40px;
+}
+.cc-prb[data-side="input"] {
+  left: 54px;
+}
+.cc-prk[data-side="output"] {
+  right: 40px;
+}
+.cc-prb[data-side="output"] {
+  right: 54px;
+}
+.cc-row[data-open] .cc-prk[data-side="input"] {
+  left: 44px;
+}
+.cc-row[data-open] .cc-prb[data-side="input"] {
+  left: 58px;
+}
+.cc-row[data-open] .cc-prk[data-side="output"] {
+  right: 44px;
+}
+.cc-row[data-open] .cc-prb[data-side="output"] {
+  right: 58px;
+}
+@media (prefers-reduced-motion: reduce) {
+  .cc-prb[data-prompt] {
+    animation: none;
+    color: var(--cc-prompt-off);
+  }
+}
+
+/* ---- Wire in hand (spec 5) -------------------------------------------------- */
+/* The board marks every card that would take the dragged resource data-drop-fit="yes"; accept.ts marks the
+   port rows (data-accepts) and, under the pointer, the card and port it would land on (data-snapped). */
+
+.factory-flow-board .react-flow__node[data-drop-fit]:has(.cc-card)::after {
+  display: none;
+}
+.react-flow__node[data-drop-fit="yes"] .cc-card:not([data-origin])::after,
+.cc-card[data-snapped]::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 4;
+  pointer-events: none;
+  background: rgba(74, 222, 128, 0.06);
+  box-shadow:
+    0 0 0 1px rgba(74, 222, 128, 0.75),
+    0 0 0 2px rgba(74, 222, 128, 0.144),
+    0 0 0 3px rgba(74, 222, 128, 0.108),
+    0 0 0 4px rgba(74, 222, 128, 0.072),
+    0 0 0 5px rgba(74, 222, 128, 0.036);
+  animation: cc-accept var(--cc-accept-pulse, 1.43s) ease-in-out infinite;
+}
+.react-flow__node[data-drop-fit="yes"] .cc-card[data-snapped]::after,
+.cc-card[data-snapped]::after {
+  background: rgba(74, 222, 128, 0.1);
+  box-shadow:
+    0 0 0 2px #4ade80,
+    0 0 0 3px rgba(74, 222, 128, 0.224),
+    0 0 0 4px rgba(74, 222, 128, 0.168),
+    0 0 0 5px rgba(74, 222, 128, 0.112),
+    0 0 0 6px rgba(74, 222, 128, 0.056);
+  animation: none;
+  opacity: 1;
+}
+.cc-row[data-port][data-accepts]::before {
+  content: "";
+  display: block;
+  position: absolute;
+  inset: 0;
+  height: auto;
+  z-index: 1;
+  pointer-events: none;
+  background: rgba(74, 222, 128, 0.1);
+  box-shadow:
+    inset 0 0 0 1px rgba(74, 222, 128, 0.75),
+    inset 0 0 0 2px rgba(74, 222, 128, 0.18),
+    inset 0 0 0 3px rgba(74, 222, 128, 0.12),
+    inset 0 0 0 4px rgba(74, 222, 128, 0.06);
+  animation: cc-accept var(--cc-accept-pulse, 1.43s) ease-in-out infinite;
+}
+.cc-row[data-port][data-accepts][data-snapped]::before {
+  background: rgba(74, 222, 128, 0.16);
+  box-shadow:
+    inset 0 0 0 1px #4ade80,
+    inset 0 0 0 2px rgba(74, 222, 128, 0.225),
+    inset 0 0 0 3px rgba(74, 222, 128, 0.15),
+    inset 0 0 0 4px rgba(74, 222, 128, 0.075);
+  animation: none;
+  opacity: 1;
+}
+@keyframes cc-accept {
+  0%,
+  50%,
+  100% {
+    opacity: 0.65;
+  }
+  25% {
+    opacity: 1;
+  }
+  75% {
+    opacity: 0.3;
+  }
+}
+@media (prefers-reduced-motion: reduce) {
+  .react-flow__node[data-drop-fit="yes"] .cc-card::after,
+  .cc-row[data-port][data-accepts]::before {
+    animation: none;
+  }
+}

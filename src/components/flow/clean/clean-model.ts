@@ -66,6 +66,8 @@ export interface CleanPortView {
   zero: boolean;
   /** The rate on this port is one the player set. */
   gold: boolean;
+  /** That rate, per second (`FactoryNode.portRates`), when set. */
+  rate?: number;
   /** Number and unit do not fit the words column at figure size. */
   numberSmall: boolean;
   /** The name does not fit one line at its normal size. */
@@ -254,6 +256,7 @@ export function buildPortView(
     title: chanceText ? `${port.displayName} (${chanceText} chance)` : port.displayName,
     zero: !(port.currentPerSecond > 0),
     gold: node.portRates?.[port.handleId] !== undefined,
+    rate: node.portRates?.[port.handleId],
     numberSmall: measureText(number, 14, 600) + 2 + measureText(unit, 9, 500) > WORDS,
     nameSmall: measureText(port.displayName, 9, 500) > WORDS,
     nameClipped: measureText(port.displayName, 7.5, 500) > WORDS,

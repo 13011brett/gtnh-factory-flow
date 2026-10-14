@@ -14,6 +14,7 @@ import { createPortal } from "react-dom";
 import { getUiScale } from "@/lib/ui-scale";
 import { isTouchPointer } from "@/lib/pointer-kind";
 import { TOOLTIP_PANEL_CLASS } from "./tooltip-style";
+import { restLeave, restRemaining } from "@/components/flow/clean/interaction/rest-gate";
 
 /**
  * What is under the pointer once a wheel or scroll has settled, or undefined
@@ -65,6 +66,7 @@ export function MinecraftTooltip({
   const panelRef = useRef<HTMLDivElement | null>(null);
   const anchorRef = useRef<DOMRect | undefined>(undefined);
   const rootRef = useRef<HTMLSpanElement | null>(null);
+  const restTimerRef = useRef<number | undefined>(undefined);
 
   const readAnchorRect = useCallback(() => {
     const root = rootRef.current;
@@ -185,6 +187,27 @@ export function MinecraftTooltip({
       return;
     }
 
+    // Plan-mode boards: a tip shows once the pointer has rested on its thing for 0.8 s.
+    if (position === undefined) {
+      const waitLeft = restRemaining(rootRef.current);
+      if (waitLeft > 0) {
+        pointerRef.current = { x: event.clientX, y: event.clientY };
+        if (placement !== "pointer" && event.type === "mouseenter") {
+          anchorRef.current = readAnchorRect();
+        }
+        if (restTimerRef.current === undefined) {
+          restTimerRef.current = window.setTimeout(() => {
+            restTimerRef.current = undefined;
+            const pointer = pointerRef.current;
+            if (!pointer) return;
+            if (placement !== "pointer" && !anchorRef.current) anchorRef.current = readAnchorRect();
+            setPosition(clampToViewport(pointer.x, pointer.y));
+          }, waitLeft + 1);
+        }
+        return;
+      }
+    }
+
     // Clamp to the measured panel so wide or tall tooltips stay fully on
     // screen; before the first paint we fall back to a generous estimate,
     // and the layout effect below re-clamps against the real size before
@@ -220,6 +243,11 @@ export function MinecraftTooltip({
 
   const clearTooltip = useCallback(() => {
     pendingPositionRef.current = undefined;
+    if (restTimerRef.current !== undefined) {
+      window.clearTimeout(restTimerRef.current);
+      restTimerRef.current = undefined;
+    }
+    restLeave();
     if (frameRef.current !== undefined) {
       window.cancelAnimationFrame(frameRef.current);
       frameRef.current = undefined;

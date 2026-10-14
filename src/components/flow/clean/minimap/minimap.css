@@ -1,0 +1,237 @@
+/*
+ * The minimap and its settings. The mod's frame: a backing of #141414 at 69%, a 1 px ring #3C3E45 and an inner
+ * ring #1D1F23 (both at 69%) drawn OUTSIDE the backing, side by side, so the see-through stays even.
+ * Controls are div role=button (globals.css forces `font: inherit` on buttons); state on data attributes.
+ */
+
+.mm {
+  --mm-ink: #e8e9ee;
+  --mm-muted: #9a9ca4;
+  --mm-gold: #ffd257;
+  --mm-surface: #23252a;
+  --mm-edge: #34363c;
+  position: absolute;
+  z-index: 35;
+  box-sizing: content-box;
+  background: rgba(20, 20, 20, 0.69);
+  box-shadow:
+    0 0 0 1px rgba(29, 31, 35, 0.69),
+    0 0 0 2px rgba(60, 62, 69, 0.69);
+  font-family: var(--font-minecraft), monospace;
+  color: var(--mm-ink);
+  user-select: none;
+  touch-action: none;
+}
+.mm[data-shape="circle"] {
+  border-radius: 50%;
+}
+.mm[data-corner="top-left"] {
+  top: 64px;
+  left: 14px;
+}
+.mm[data-corner="top-right"] {
+  top: 64px;
+  right: 14px;
+}
+.mm[data-corner="bottom-left"] {
+  bottom: 64px;
+  left: 14px;
+}
+.mm[data-corner="bottom-right"] {
+  bottom: 64px;
+  right: 14px;
+}
+
+.mm-canvas {
+  display: block;
+  cursor: grab;
+}
+.mm-canvas:active {
+  cursor: grabbing;
+}
+
+/* The plan's name, on a 69% black strip: top left of the square, under the circle. */
+.mm-title {
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  max-width: calc(100% - 28px);
+  padding: 1px 4px;
+  background: rgba(0, 0, 0, 0.69);
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--mm-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  pointer-events: none;
+}
+.mm-title[data-circle] {
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.mm-gear {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 18px;
+  height: 18px;
+  display: none;
+  cursor: pointer;
+  background: rgba(0, 0, 0, 0.69)
+    url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path fill='%23e8e9ee' d='M7 1h2l.4 1.9 1.3.6 1.6-1.1 1.4 1.4-1.1 1.6.6 1.3L15 7v2l-1.9.4-.6 1.3 1.1 1.6-1.4 1.4-1.6-1.1-1.3.6L9 15H7l-.4-1.9-1.3-.6-1.6 1.1-1.4-1.4 1.1-1.6-.6-1.3L1 9V7l1.9-.4.6-1.3-1.1-1.6 1.4-1.4 1.6 1.1 1.3-.6zM8 5.5A2.5 2.5 0 1 0 8 10.5 2.5 2.5 0 0 0 8 5.5z'/></svg>")
+    center / 12px 12px no-repeat;
+}
+.mm:hover .mm-gear,
+.mm-gear:focus-visible {
+  display: block;
+}
+.mm-gear:hover {
+  background-color: rgba(60, 62, 69, 0.9);
+}
+
+/* The settings popover and the rows (also used inside the settings dialog). */
+.mm-panel {
+  position: absolute;
+  z-index: 2;
+  width: 340px;
+  background: var(--mm-surface);
+  border: 1px solid var(--mm-edge);
+  box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.45);
+  font-size: 12px;
+}
+.mm[data-corner$="right"] .mm-panel {
+  right: calc(100% + 10px);
+}
+.mm[data-corner$="left"] .mm-panel {
+  left: calc(100% + 10px);
+}
+.mm[data-corner^="bottom"] .mm-panel {
+  bottom: 0;
+}
+.mm[data-corner^="top"] .mm-panel {
+  top: 0;
+}
+.mm-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 26px;
+  padding: 0 8px;
+  border-bottom: 1px solid #2c2e34;
+  font-size: 13px;
+}
+.mm-panel-x {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  background:
+    linear-gradient(45deg, transparent 45%, var(--mm-muted) 45% 55%, transparent 55%),
+    linear-gradient(-45deg, transparent 45%, var(--mm-muted) 45% 55%, transparent 55%);
+}
+.mm-panel-x:hover {
+  filter: brightness(1.5);
+}
+
+.mm-rows {
+  display: flex;
+  flex-direction: column;
+  padding: 2px 10px 6px;
+  color: var(--mm-ink);
+  font-family: var(--font-minecraft), monospace;
+  font-size: 12px;
+}
+.mm-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 32px;
+  border-top: 1px solid #2c2e34;
+}
+.mm-row:first-child {
+  border-top: 0;
+}
+.mm-row-name {
+  flex: 1;
+  white-space: nowrap;
+}
+.mm-row-aside {
+  color: var(--mm-muted);
+}
+.mm-row-value {
+  width: 34px;
+  text-align: right;
+}
+.mm-kbd {
+  color: var(--mm-muted);
+  font-family: inherit;
+  font-size: 11px;
+}
+
+.mm-switch {
+  position: relative;
+  width: 44px;
+  height: 22px;
+  background: #34363c;
+  cursor: pointer;
+}
+.mm-switch::after {
+  content: "";
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  width: 16px;
+  height: 16px;
+  background: #cfd0d6;
+}
+.mm-switch[data-on] {
+  background: #3d9b78;
+}
+.mm-switch[data-on]::after {
+  left: 25px;
+}
+
+.mm-seg {
+  display: flex;
+  border: 1px solid #34363c;
+}
+.mm-seg-item {
+  padding: 3px 9px;
+  color: var(--mm-muted);
+  cursor: pointer;
+}
+.mm-seg-item:hover {
+  color: var(--mm-ink);
+}
+.mm-seg-item[data-on] {
+  background: #484b53;
+  color: var(--mm-ink);
+}
+
+.mm-corners {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2px;
+  width: 44px;
+  height: 30px;
+  padding: 2px;
+  background: #1a1b1f;
+  border: 1px solid #34363c;
+}
+.mm-corner {
+  background: #34363c;
+  cursor: pointer;
+}
+.mm-corner:hover {
+  background: #484b53;
+}
+.mm-corner[data-on] {
+  background: var(--mm-gold);
+}
+
+.mm-slider {
+  width: 130px;
+  accent-color: #cfd0d6;
+}

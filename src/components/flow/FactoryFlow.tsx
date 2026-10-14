@@ -224,6 +224,11 @@ import { StorageNodeSwitch } from "./clean/drawer/CleanStorageNode";
 import { CleanDrawerFace } from "./clean/drawer/CleanDrawer";
 import { PlanNoticeSwitch, PlanTopNotices } from "./clean/rail/NoticeBar";
 import { registerBoardCommands, reportArrange } from "../chrome/board-commands";
+import { BoardMinimap } from "./clean/minimap/BoardMinimap";
+import { registerMinimapRoutes } from "./clean/minimap/minimap-feed";
+import { FeedbackHost } from "./clean/feedback/FeedbackPanel";
+import { TourBridge, TourHost, TourOffer } from "./clean/tour";
+import { SeeThroughController } from "./clean/seethrough/SeeThroughController";
 import { GT_NODE_COLORS, GT_NODE_COLOR_PALETTE, flowRampColor } from "./node-colors";
 import {
   CANVAS_PATTERNS,
@@ -1323,6 +1328,16 @@ function ensureGridSolve() {
       requests,
       tuning,
     };
+    // The minimap reads the same installed routes (clean/minimap).
+    registerMinimapRoutes(() => ({
+      signature: gridSolveSignature,
+      routes: publishedGridRouteEdges.flatMap((input) => {
+        const entry = directRouteCache.get(input.edgeId);
+        return entry
+          ? [{ edgeId: input.edgeId, points: entry.route.points, width: Math.min(input.routingWidth, LANE_CAPACITY) }]
+          : [];
+      }),
+    }));
     // Read the installed geometry on demand, never re-solve a benchmark's
     // approximation. The signature gate lets probes wait for the worker.
     registerBoardScoreReader(() => {
@@ -6360,6 +6375,9 @@ export function FactoryFlow() {
           />
         )}
         <BoardFloors />
+        <SeeThroughController />
+        <BoardMinimap hidden={isCompact} />
+        <TourBridge />
         <VoidDropGhost />
         {annotationDraft && annotationTool ? (
           <AnnotationDraftPreview
@@ -6488,6 +6506,9 @@ export function FactoryFlow() {
         <RecipeAddChips />
       </div>
       {isProjectImporting ? <FlowLoadingOverlay /> : null}
+      <FeedbackHost />
+      <TourHost />
+      <TourOffer />
     </div>
   );
 }

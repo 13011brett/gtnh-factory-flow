@@ -1,0 +1,29 @@
+/*
+ * See-through (Paper strength): the board's paper, grain and dots and the overview rail's fill fade toward the
+ * page behind them; cards, wires, text, keys and popups stay solid. Driven by --board-bg-alpha and
+ * --rail-bg-alpha (SeeThroughController); both are unset at 0%, so nothing here applies until the slider moves.
+ */
+
+:root[data-see-through] .factory-flow-board {
+  background-color: color-mix(in srgb, var(--canvas, #141414) calc(var(--board-bg-alpha) * 100%), transparent) !important;
+  background-image: none !important;
+}
+
+/* The dots, rulings and grain live in flow space under the wires (board-pattern.tsx: z -11 and -12). */
+:root[data-see-through] .factory-flow-board .react-flow__viewport > div[style*="z-index: -11"],
+:root[data-see-through] .factory-flow-board .react-flow__viewport > div[style*="z-index: -12"] {
+  opacity: var(--board-bg-alpha) !important;
+}
+
+/* The overview rail: its body and bars, never fainter than the floor. */
+:root[data-see-through] .rail-root {
+  background: color-mix(in srgb, #202226 calc(var(--rail-bg-alpha) * 100%), transparent);
+  border-right-color: color-mix(in srgb, #0c0d10 calc(var(--board-bg-alpha) * 100%), transparent);
+}
+:root[data-see-through] .rail-root .rail-head,
+:root[data-see-through] .rail-root .rail-sec {
+  background: color-mix(in srgb, #2a2d33 calc(var(--rail-bg-alpha) * 100%), transparent);
+}
+:root[data-see-through] .rail-root .rail-sec:hover {
+  background: color-mix(in srgb, #30333a calc(var(--rail-bg-alpha) * 100%), transparent);
+}

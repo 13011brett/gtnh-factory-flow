@@ -15,7 +15,7 @@ beforeAll(() => {
   } as unknown as typeof ResizeObserver;
 });
 
-const added = { custom: vi.fn(), tank: vi.fn(), source: vi.fn() };
+const added = { custom: vi.fn(), tank: vi.fn(), crop: vi.fn(), source: vi.fn() };
 beforeEach(() => {
   for (const fn of Object.values(added)) fn.mockClear();
   useFactoryStore.setState({
@@ -23,6 +23,7 @@ beforeEach(() => {
     addCustomRateNode: added.custom,
     addPowerSourceNode: added.source as never,
     addFluidTankNode: added.tank,
+    addCropFarmNode: added.crop,
   } as never);
 });
 afterEach(() => {
@@ -49,8 +50,8 @@ describe("the non-recipe machines picker", () => {
     expect(columns[3]).toEqual(["ENGINES", "SOLAR"]);
     expect(columns[4]).toEqual(["REACTORS", "ENDGAME"]);
     const other = document.querySelector(".mp-col")!.querySelectorAll(".mp-group")[0];
-    expect([...other.querySelectorAll(".mp-tile")].map((tile) => tile.getAttribute("data-source"))).toEqual(["custom-rate", "fluid-tank"]);
-    expect(other.querySelector(".mp-brass i")?.textContent).toBe("2");
+    expect([...other.querySelectorAll(".mp-tile")].map((tile) => tile.getAttribute("data-source"))).toEqual(["custom-rate", "fluid-tank", "crop-farm"]);
+    expect(other.querySelector(".mp-brass i")?.textContent).toBe("3");
   });
 
   it("picking Custom Rate adds the custom rate card and closes the picker", () => {
@@ -66,13 +67,20 @@ describe("the non-recipe machines picker", () => {
     expect(added.tank).toHaveBeenCalledTimes(1);
   });
 
+  it("picking Crop Farm asks the store for a crop farm and closes the picker", () => {
+    render(<ModPowerPicker />);
+    fireEvent.click(document.querySelector('[data-source="crop-farm"]')!);
+    expect(added.crop).toHaveBeenCalledTimes(1);
+    expect(useFactoryStore.getState().powerMenuOpen).toBe(false);
+  });
+
   it("typing searches the machines and what they burn, laid out down the columns", () => {
     render(<ModPowerPicker />);
     fireEvent.change(screen.getByPlaceholderText("Machine, fuel, or product..."), { target: { value: "benzene" } });
     expect(document.querySelector(".mp-results")).toBeTruthy();
     expect(document.querySelectorAll(".mp-tile").length).toBeGreaterThan(0);
     expect(document.querySelector(".mp-via")?.textContent).toMatch(/^(Takes|Makes) /);
-    const tile = document.querySelector(".mp-tile:not([data-source^='custom']):not([data-source^='fluid'])")!;
+    const tile = document.querySelector(".mp-tile:not([data-source^='custom']):not([data-source^='fluid']):not([data-source^='crop'])")!;
     fireEvent.click(tile);
     expect(added.source).toHaveBeenCalledTimes(1);
   });
@@ -88,7 +96,7 @@ describe("the non-recipe machines picker", () => {
     fireEvent.click(screen.getByText("All types"));
     fireEvent.click(screen.getByText("Other"));
     expect(titles()).toEqual(["OTHER"]);
-    expect(document.querySelectorAll(".mp-tile")).toHaveLength(2);
+    expect(document.querySelectorAll(".mp-tile")).toHaveLength(3);
   });
 
   it("Escape closes it", () => {

@@ -25,14 +25,13 @@ import {
 import { useFactoryStore } from "@/store/factory-store";
 import { POWER_EU_CLAUSE_ID } from "@/lib/power/power-search";
 import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
-import { useIsCompactViewport } from "@/lib/compact-view";
 import { isEchoOfTouch } from "@/lib/pointer-kind";
 import { isFromBrowseMenu, useBrowseMenu } from "./browse-menu";
 import { ChromeMenu, chromeAnchorOf, MENU_ANCHOR_ATTR, type ChromeAnchor } from "./chrome/ChromeMenu";
 import "./chrome/mod-panel.css";
 import "./nei/nei.css";
 import { isEditableKeyboardTarget } from "./flow/keyboard";
-import { McFloatingTip, modDisplayName, type McTipLine } from "./nei/McTip";
+import { itemTipLines, McFloatingTip, type McTipLine } from "./nei/McTip";
 import { isSwatchFluid, ResourceIcon, spriteArtPixels } from "./nei/ResourceIcon";
 
 /**
@@ -435,19 +434,13 @@ function resourceFilterSource(filter: ResourceFilterMode): "plants" | "bees" | u
  * italics.
  */
 function resourceTooltipLines(resource: IndexedResource): McTipLine[] {
-  const name = resource.id === POWER_EU_CLAUSE_ID ? "Power (EU/t)" : resourceLabel(resource);
-  const lines: McTipLine[] = [{ text: name, tone: "name" }];
-  for (const line of resource.tooltip ?? []) {
-    if (line.trim() && line !== name) lines.push({ text: line });
-  }
-  if (resource.recipeCount > 0) {
-    lines.push({ text: `${resource.recipeCount} recipes` });
-  }
-  const mod = getResourceModLabel(resource);
-  if (mod !== "fluids" && mod !== "other") {
-    lines.push({ text: modDisplayName(mod), tone: "mod" });
-  }
-  return lines;
+  const power = resource.id === POWER_EU_CLAUSE_ID;
+  return itemTipLines({
+    name: power ? "Power (EU/t)" : resourceLabel(resource),
+    id: power ? "" : resource.id,
+    tooltip: resource.tooltip,
+    extra: resource.recipeCount > 0 ? [`${resource.recipeCount} recipes`] : undefined,
+  });
 }
 
 /** Mod is the id prefix ("gregtech:..."); bare fluid ids group as "fluids". */

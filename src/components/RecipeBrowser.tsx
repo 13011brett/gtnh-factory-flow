@@ -814,7 +814,7 @@ export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
           activeResource={activeResource}
           onBrowse={browseResource}
           // NEI's field sits at the bottom middle of the screen; on a phone, at the drawer's foot.
-          searchAt={isCompact ? "bottom" : boardCovered ? "none" : "dock"}
+          searchAt={isCompact ? "bottom" : boardCovered || activeResource ? "none" : "dock"}
           leading={
             /* Folds this column away (the overview's fold key, facing the board); on a phone it closes the drawer. */
             <RailKey

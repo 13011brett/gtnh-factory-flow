@@ -106,3 +106,23 @@ export function modDisplayName(prefix: string): string {
   if (known) return known;
   return prefix ? prefix.charAt(0).toUpperCase() + prefix.slice(1) : prefix;
 }
+
+/**
+ * An item's or fluid's tooltip, as the game and NEI write it: the name in white, the grey lines under it, and the
+ * mod's name last in blue italics (from the id's prefix; a bare fluid id names no mod).
+ */
+export function itemTipLines(item: {
+  name: string;
+  id: string;
+  tooltip?: readonly string[];
+  extra?: readonly string[];
+}): McTipLine[] {
+  const lines: McTipLine[] = [{ text: item.name, tone: "name" }];
+  for (const line of item.tooltip ?? []) {
+    if (line.trim() && line !== item.name) lines.push({ text: line });
+  }
+  for (const line of item.extra ?? []) lines.push({ text: line });
+  const colon = item.id.indexOf(":");
+  if (colon > 0) lines.push({ text: modDisplayName(item.id.slice(0, colon)), tone: "mod" });
+  return lines;
+}

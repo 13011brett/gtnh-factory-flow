@@ -1,0 +1,74 @@
+{
+ "world-minimap-corner-and-keys-strip-full": [
+  "NO EQUIVALENT",
+  "In-world minimap and keys strip while playing: the website has no world."
+ ],
+ "world-overlay-focused-card-with-labels-crop": [
+  "NO EQUIVALENT",
+  "Cards placed over machines in the world."
+ ],
+ "world-overlay-labels-and-wire-tags-crop": [
+  "NO EQUIVALENT",
+  "Labels and wire tags in the world."
+ ],
+ "world-overlay-placed-cards-default": [
+  "NO EQUIVALENT",
+  "Placed cards over the world."
+ ],
+ "minimap-centered-ref-chain-full": [
+  "NO EQUIVALENT",
+  "The mod's in-world minimap drawn mid screen; the website's board minimap is a different panel (see the full-board pairs, bottom right)."
+ ],
+ "minimap-centered-ref-chain-crop": [
+  "NO EQUIVALENT",
+  "Same as minimap-centered-ref-chain-full."
+ ],
+ "card-place-menu-open": [
+  "NO EQUIVALENT",
+  "Place in the world / Pin to the screen: no world on the website (the card has no place key)."
+ ],
+ "note-sticky-idle": [
+  "DIFFERS",
+  "Web note is larger (about 220x140 on screen against the mod's 160x104) and shows its delete and size keys at rest; the mod's idle note shows no keys and a faint 'Double-click to write'."
+ ],
+ "note-sticky-writing": [
+  "DIFFERS",
+  "Web shows no keys while writing (the mod shows delete top left and -/+ top right); web note larger; text and colours match."
+ ],
+ "note-sticky-hover-keys": [
+  "DIFFERS",
+  "Hovering the web note shows neither the keys nor the mod's tip (Sticky note / Click: write, Move / Colour, text size, delete)."
+ ],
+ "note-sticky-right-click-menu": [
+  "DIFFERS",
+  "Same five entries and '14 px'; the web menu is drawn larger and its Delete row is set apart by a gap the mod does not have."
+ ],
+ "note-sticky-colour-picker": [
+  "DIFFERS",
+  "Web adds a 'COLOUR' header and a check mark on the current colour; the mod's list is headed 'Colour' in the same row style and has no check."
+ ],
+ "board-context-menu-empty-board": [
+  "DIFFERS",
+  "Web menu has a second entry 'New product drawer'; the mod's has only 'Add a sticky note'. Web text smaller."
+ ],
+ "overview-filter-typed": [
+  "MATCH",
+  "Same rows, counts (0 / 6, 2 / 14, 0 / 2, 0 / 3), 'No matches.', black filter field. Web type a touch thinner (Monocraft vs the game font)."
+ ],
+ "tour-offer-first-run": [
+  "MATCH",
+  "Same box, gold frame, title, three-minute line and both keys; placed mid board in both."
+ ],
+ "tour-step-1-after-next": [
+  "DIFFERS",
+  "After Next from step 1 the mod shows the WASD / Page Up callout beside the card; the website shows no callout near its card (its callout sits top right, small). Board drawn at about half the mod's screen size at the tour's zoom."
+ ],
+ "tour-step-2-after-next": [
+  "DIFFERS",
+  "Mod: 'Middle mouse to pan, Scroll to zoom, Left click...'. Web at the same step: 'This is a recipe in a plan...' under the card: the website's script runs one step behind the mod's here."
+ ],
+ "tour-step-3-after-next": [
+  "DIFFERS",
+  "Mod: 'You can pin a number and it calculates the other numbers' under a card pinned x28. Web: the WASD callout and an unpinned card: steps out of step with the mod's script."
+ ]
+}

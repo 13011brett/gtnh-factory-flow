@@ -8,6 +8,7 @@
 // zoom 0.5 is 320 screen px, the website's at zoom 1). "board": a board crop is compared as run.mjs does, one mod GUI px
 // to one css px (cards both 320), at the mod's zoom.
 import fs from "node:fs";
+import zlib from "node:zlib";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { boot, loadPlan, panTo, rectOf, setZoom, DSF } from "./lib/app.mjs";
@@ -63,6 +64,7 @@ const entries = [
   { ref: "board-full-forced-in-import-default", plan: forcedPlan, full: true, setup: async ({ page, ids }) => frame(page, ids.dt, 0.5, 592, 120) },
   { ref: "board-full-notices-warnings-default", plan: noticePlan, full: true, setup: async ({ page, ids }) => frame(page, ids.dt, 0.5, 592, 120) },
   { ref: "board-full-zoomed-out-glance-view-arranged", plan: chainVcm, full: true, setup: async ({ page, ids }) => frame(page, ids.dt, 0.38, 560, 200) },
+  { ref: "board-full-large-plan-solved-glance-default", plan: EMPTY, full: true, setup: async ({ page }) => { await importPlanFile(page, "factory-flow/titanium-line-posted-alpha5.json"); await fit(page); await idle(page); } },
   { ref: "settings-panel-open-full-screen", plan: refChain, full: true, setup: async ({ page, ids }) => { await frame(page, ids.dt, 0.5, 592, 120); await key(page, "settings").click(); await wait(page); } },
   {
     ref: "board-full-tour-plan-solved-with-forced-block-default",
@@ -110,22 +112,22 @@ const entries = [
     clip: async ({ page }) => centreOn(page, "[role=dialog]"),
     note: name === "in-the-world" || name === "pin-list" || name === "keys" ? "no-section" : undefined,
   })),
-  { ref: "library-view-my-plans-shelf", plan: refChain, setup: async ({ page }) => { await key(page, "library").click(); await wait(page, 2000); }, clip: [0, 40] },
-  { ref: "library-view-public-setups-shelf", plan: refChain, setup: async ({ page }) => { await key(page, "library").click(); await wait(page, 2000); await page.getByText(/public setups/i).first().click().catch(() => {}); await wait(page, 2000); }, clip: [0, 40] },
+  { ref: "library-view-my-plans-shelf", plan: refChain, setup: async ({ page }) => { await key(page, "library").click(); await wait(page, 2000); }, clip: railTop },
+  { ref: "library-view-public-setups-shelf", plan: refChain, setup: async ({ page }) => { await key(page, "library").click(); await wait(page, 2000); await page.getByText(/public setups/i).first().click().catch(() => {}); await wait(page, 2000); }, clip: railTop },
   // ---- the rail ----
-  { ref: "overview-rail-folded", plan: drawerPlan, setup: async ({ page, ids }) => { await frame(page, ids.dt, 0.5, 592, 120); await page.locator(".rail-key-fold").click(); await wait(page); }, clip: [0, 40] },
-  { ref: "overview-rail-unfolded-again", plan: drawerPlan, setup: async ({ page }) => { await page.locator(".rail-key-fold").click(); await wait(page, 500); await page.locator(".rail-strip").click(); await wait(page); }, clip: [0, 40] },
-  { ref: "overview-filter-typed", plan: drawerPlan, setup: async ({ page }) => { await page.locator(".rail-filter").fill("pro"); await wait(page); }, clip: [0, 40] },
-  { ref: "overview-input-row-hover", plan: drawerPlan, setup: async ({ page, ids }) => { await frame(page, ids.dt, 0.5, 592, 80 + 40); await hover(page, page.locator(".rail-row", { hasText: "Sulfuric Acid" })); }, clip: [0, 40] },
-  { ref: "overview-row-hover-scope-propene", plan: drawerPlan, setup: async ({ page, ids }) => { await frame(page, ids.dt, 0.5, 592, 120); await hover(page, page.locator(".rail-row", { hasText: "Propene" })); }, clip: [0, 40] },
-  { ref: "overview-row-hover-scope-machine-line", plan: drawerPlan, setup: async ({ page, ids }) => { await frame(page, ids.dt, 0.5, 592, 120); await hover(page, page.locator(".rail-machine .rail-row").first()); }, clip: [0, 40] },
-  { ref: "overview-row-tooltip-palladium", plan: drawerPlan, setup: async ({ page }) => hover(page, page.locator(".rail-row", { hasText: "Palladium" })), clip: [0, 40] },
+  { ref: "overview-rail-folded", plan: drawerPlan, setup: async ({ page, ids }) => { await frame(page, ids.dt, 0.5, 592, 120); await page.locator(".rail-key-fold").click(); await wait(page); }, clip: railTop },
+  { ref: "overview-rail-unfolded-again", plan: drawerPlan, setup: async ({ page }) => { await page.locator(".rail-key-fold").click(); await wait(page, 500); await page.locator(".rail-strip").click(); await wait(page); }, clip: railTop },
+  { ref: "overview-filter-typed", plan: drawerPlan, setup: async ({ page }) => { await page.locator(".rail-filter").fill("pro"); await wait(page); }, clip: railTop },
+  { ref: "overview-input-row-hover", plan: drawerPlan, setup: async ({ page, ids }) => { await frame(page, ids.dt, 0.5, 592, 80 + 40); await hover(page, page.locator(".rail-row", { hasText: "Sulfuric Acid" })); }, clip: railTop },
+  { ref: "overview-row-hover-scope-propene", plan: drawerPlan, setup: async ({ page, ids }) => { await frame(page, ids.dt, 0.5, 592, 120); await hover(page, page.locator(".rail-row", { hasText: "Propene" })); }, clip: railTop },
+  { ref: "overview-row-hover-scope-machine-line", plan: drawerPlan, setup: async ({ page, ids }) => { await frame(page, ids.dt, 0.5, 592, 120); await hover(page, page.locator(".rail-machine .rail-row").first()); }, clip: railTop },
+  { ref: "overview-row-tooltip-palladium", plan: drawerPlan, setup: async ({ page }) => hover(page, page.locator(".rail-row", { hasText: "Palladium" })), clip: railTop },
   { ref: "overview-set-rate-popup", plan: drawerPlan, setup: async ({ page }) => { await page.locator(".rail-row", { hasText: "Hydrogen" }).locator(".rail-box, [class*=box]").first().click(); await wait(page); }, clip: [0, 120] },
-  { ref: "overview-port-pinned-row-with-card-rate-set", plan: { ...drawerPlan, nodes: drawerPlan.nodes.map((n) => (n.key === "nb" ? { ...n, portRates: { "input:fluid:nitricacid": 1 } } : n)) }, setup: async ({ page }) => idle(page), clip: [0, 40] },
+  { ref: "overview-port-pinned-row-with-card-rate-set", plan: { ...drawerPlan, nodes: drawerPlan.nodes.map((n) => (n.key === "nb" ? { ...n, portRates: { "input:fluid:nitricacid": 1 } } : n)) }, setup: async ({ page }) => idle(page), clip: railTop },
   { ref: "tip-overview-row-rule-key", plan: drawerPlan, setup: async ({ page }) => hover(page, page.locator(".rail-row", { hasText: "Aniline" }).locator(".rail-rule, [class*=rule], [class*=key]").first()), clip: [0, 300] },
   { ref: "tip-overview-machine-line-chip", plan: drawerPlan, setup: async ({ page }) => hover(page, page.locator(".rail-machine .rail-tier").first()), clip: [0, 600] },
   { ref: "notices-bar-two-warnings-show-me", plan: noticePlan, setup: async ({ page }) => idle(page), clip: async ({ page }) => { const b = await page.locator(".rail-notices, .rail-notice").first().boundingBox(); return [b ? b.x - 4 : 400, b ? b.y - 4 : 60]; } },
-  { ref: "overview-forced-block-split-auto-sliders", plan: EMPTY, setup: async ({ page }) => { await page.evaluate(() => window.__tour.jump(26)); await wait(page, 7000); await page.evaluate(() => window.__tour.leave()); await wait(page, 1500); await idle(page); }, clip: async ({ page }) => { const b = await page.locator(".rail-spare").first().boundingBox(); return b ? [0, b.y - 10] : [0, 300]; } },
+  { ref: "overview-forced-block-split-auto-sliders", plan: EMPTY, setup: async ({ page }) => { await importPlanFile(page, "factory-flow/alumina-line-shared-reactor.json"); await idle(page); }, clip: async ({ page }) => { const b = await page.locator(".rail-spare").first().boundingBox(); return b ? [0, b.y - 10] : [0, 300]; } },
   // ---- board context menu, notes ----
   { ref: "board-context-menu-empty-board", plan: refChain, setup: async ({ page }) => { await page.mouse.click(1300, 500, { button: "right" }); await wait(page); }, clip: [1300 - 300, 500 - 200], scale: "screen" },
   {
@@ -201,6 +203,24 @@ function boardEntries() {
     { ref: "glance-view-hover-reveal-distillation", plan: refChain, board: ["dt", 0.33, 536, 40], setup: async ({ page, ids }) => hover(page, page.locator(`.react-flow__node[data-id="${ids.dt}"]`)) },
     { ref: "board-show-me-framed-light-fuel-drawer", plan: noticePlan, setup: async ({ page }) => { await page.locator(".rail-notice-show").first().click(); await wait(page, 1500); await idle(page); }, clip: [360, 40] },
   ];
+}
+
+/** Opens one of the mod's test plans (Factory Flow JSON) through the + menu's Paste plan, as a plan code. */
+async function importPlanFile(page, rel) {
+  const FX = "C:/Users/jack/gtnh-planner-mod/.claude/worktrees/website-mod-backport-research-c84135/src/test/resources/";
+  const code = "gtnh1." + zlib.deflateRawSync(Buffer.from(fs.readFileSync(FX + rel, "utf8"))).toString("base64url");
+  await page.getByLabel("New plan", { exact: true }).first().click();
+  await page.getByText("Paste plan").click();
+  await page.locator("textarea").first().fill(code);
+  await page.getByRole("button", { name: "Open", exact: true }).click();
+  await wait(page, 8000);
+  await page.getByRole("button", { name: "Not now" }).click().catch(() => {});
+}
+
+/** The ref's crops start under the mod's top bar, at the rail's top: the web window starts at its rail's top. */
+async function railTop({ page }) {
+  const b = await page.locator(".rail-root, .rail-strip").first().boundingBox();
+  return [0, b ? b.y : 40];
 }
 
 /** A window of the ref's size (or w x h) centred on the first match of `sel`. */

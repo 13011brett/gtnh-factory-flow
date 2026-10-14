@@ -690,7 +690,7 @@ input.rail-box-edit {
   overflow: hidden;
   white-space: nowrap;
   text-overflow: ellipsis;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 16px;
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 12px), transparent);
   mask-image: linear-gradient(to right, #000 calc(100% - 12px), transparent);
@@ -703,7 +703,7 @@ input.rail-box-edit {
 .rail-notice-show {
   flex: none;
   margin-left: 10px;
-  font-size: 12px;
+  font-size: 14px;
   line-height: 16px;
   color: #22d3ee;
   text-decoration: underline;

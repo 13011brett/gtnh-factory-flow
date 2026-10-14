@@ -129,7 +129,10 @@ function tipElement(from: Element | null | undefined): Element | null {
 }
 
 function targetAt(x: number, y: number): Element | null {
-  return tipElement(document.elementFromPoint?.(x, y));
+  // A port's wiring handle blankets its whole row; what it covers (a forced row under the port) keeps its own tip.
+  const stack = document.elementsFromPoint?.(x, y) ?? [];
+  const under = stack.find((element) => !element.hasAttribute("data-resource-handle"));
+  return tipElement(under ?? document.elementFromPoint?.(x, y));
 }
 
 function fire(): void {

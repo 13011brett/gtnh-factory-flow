@@ -51,8 +51,9 @@ export async function pickRecipe(page, spec) {
       maxTier: "UXV",
       offset: "0",
       limit: "60",
-      allMaps: "1",
+      ...(spec.recipeMap ? {} : { allMaps: "1" }),
     });
+    if (spec.recipeMap) qs.set("recipeMap", spec.recipeMap);
     if (spec.res) {
       qs.set("resourceKind", spec.res[0]);
       qs.set("resourceId", spec.res[1]);

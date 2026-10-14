@@ -1,0 +1,281 @@
+/*
+ * The cards the plain clean card cannot be: shared machines, generators and the two holders. Everything here
+ * rides on clean.css's classes (cc-card, cc-head, cc-rail, cc-row, cc-pic, cc-strip); this file adds only what is
+ * new. Plain unlayered CSS on data attributes, loaded after clean.css.
+ */
+
+/* ---- Name tones ---------------------------------------------------------- */
+
+.cc-name[data-tone="power"] {
+  color: #fef3c7;
+}
+.cc-name[data-tone="holder"] {
+  color: #aebceb;
+}
+
+/* ---- The EU row: the bolt in its dark amber box, the mod's `euIcon` ------------ */
+
+.cc-card .cc-bolt {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 11' shape-rendering='crispEdges' fill='%23FBBF24'%3E%3Crect x='4' y='0' width='3' height='1'/%3E%3Crect x='3' y='1' width='3' height='1'/%3E%3Crect x='3' y='2' width='2' height='1'/%3E%3Crect x='2' y='3' width='3' height='1'/%3E%3Crect x='1' y='4' width='6' height='1'/%3E%3Crect x='0' y='5' width='6' height='1'/%3E%3Crect x='3' y='6' width='2' height='1'/%3E%3Crect x='2' y='7' width='2' height='1'/%3E%3Crect x='2' y='8' width='1' height='1'/%3E%3Crect x='1' y='9' width='1' height='1'/%3E%3Crect x='1' y='10' width='1' height='1'/%3E%3C/svg%3E") center / 14px 22px no-repeat,
+    #2a2210;
+  box-shadow: inset 0 0 0 1px #6b5418;
+}
+.cc-row[data-side="output"] > .cc-bolt {
+  left: auto;
+  right: 4px;
+}
+.cc-row[data-open] > .cc-bolt {
+  display: none;
+}
+
+/* ---- Shared machine: a rule over every recipe ---------------------------- */
+
+.cs-card {
+  grid-template-rows: 40px;
+}
+
+.cs-rule {
+  position: relative;
+  grid-column: 1 / -1;
+  box-sizing: border-box;
+  height: 20px;
+  margin: 0 -4px;
+  padding: 0 8px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  line-height: 14px;
+  white-space: nowrap;
+}
+.cs-rule:not([data-first]) {
+  margin-top: 10px;
+}
+.cs-rule::before {
+  content: "";
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  top: 0;
+  height: 1px;
+  background: var(--cc-hair);
+  pointer-events: none;
+}
+.cs-rule[data-first]::before {
+  display: none;
+}
+.cs-pct {
+  color: var(--cc-ink);
+  font-weight: 500;
+}
+.cs-word {
+  color: var(--cc-muted);
+  font-weight: 500;
+}
+.cs-circ {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  height: 20px;
+}
+.cs-circuit {
+  width: 20px !important;
+  height: 20px !important;
+}
+.cs-rule > .cs-rk:first-of-type,
+.cs-word + .cs-rk:first-of-type {
+  margin-left: auto;
+}
+.cs-circ + .cs-rk:first-of-type {
+  margin-left: 0;
+}
+
+/* A rule key: 16 square, a glyph in --cc-muted, white on a faint plate while pressed or hovered. */
+.cs-rk {
+  position: relative;
+  flex: none;
+  width: 16px;
+  height: 16px;
+  box-sizing: border-box;
+  color: var(--cc-muted);
+  cursor: pointer;
+}
+.cs-rk[data-kind="off"] {
+  margin-left: 2px;
+}
+.cs-rk:hover:not([data-disabled]) {
+  color: #fff;
+  background: rgba(255, 255, 255, 0.1);
+}
+.cs-rk[data-disabled] {
+  opacity: 0.3;
+  cursor: default;
+}
+.cs-rk::before {
+  content: "";
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 10px;
+  height: 10px;
+  background: currentColor;
+  -webkit-mask: var(--cs-glyph) center / contain no-repeat;
+  mask: var(--cs-glyph) center / contain no-repeat;
+}
+.cs-rk[data-kind="up"] {
+  --cs-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1 7 5 3l4 4z'/%3E%3C/svg%3E");
+}
+.cs-rk[data-kind="down"] {
+  --cs-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1 3 5 7l4-4z'/%3E%3C/svg%3E");
+}
+.cs-rk[data-kind="off"] {
+  --cs-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 1.5l7 7M8.5 1.5l-7 7' stroke='black' stroke-width='1.6' fill='none'/%3E%3C/svg%3E");
+}
+
+.cs-none {
+  height: 40px;
+  line-height: 40px;
+  text-align: center;
+  font-size: 11px;
+  color: rgba(154, 156, 164, 0.7);
+  user-select: none;
+}
+
+/* The picture sits at the top of the card, beside the first recipe, not stretched over them all. */
+.cs-card[data-kind="shared"] .cs-pic {
+  align-self: start;
+  height: 100px;
+  min-height: 0;
+}
+
+/* ---- Holders ------------------------------------------------------------- */
+
+.cs-sockets {
+  min-width: 0;
+  padding: 4px 2px 0;
+  box-sizing: border-box;
+}
+.cs-sockets[data-side="input"] {
+  grid-column: 1;
+}
+.cs-sockets[data-side="output"] {
+  grid-column: 3;
+}
+.cs-socket {
+  position: relative;
+  box-sizing: border-box;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px dashed #6a6d78;
+  color: var(--cc-muted);
+  font-size: 10px;
+  font-weight: 500;
+  letter-spacing: 0;
+  white-space: nowrap;
+  cursor: crosshair;
+}
+.cs-socket:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+.cs-socket-word {
+  pointer-events: none;
+}
+.cs-socket-hint {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  margin-top: 6px;
+  text-align: center;
+  font-size: 10px;
+  color: #6a6d78;
+  pointer-events: none;
+}
+/* A wire in hand that the card would take: the sockets light gold. */
+.cs-card[data-empty] .cs-socket {
+  transition: none;
+}
+.react-flow__node[data-drop-fit="yes"] .cs-socket {
+  background: rgba(255, 210, 87, 0.19);
+  border-color: var(--cc-gold);
+  color: var(--cc-gold);
+}
+
+.cs-pic[data-holder] {
+  min-height: 80px;
+}
+.cs-gauge {
+  display: block;
+  width: 36px;
+  height: 32px;
+  margin-top: 14px;
+  image-rendering: pixelated;
+  background-size: 36px 32px;
+  background-repeat: no-repeat;
+  pointer-events: none;
+}
+.cs-card[data-kind="tank"] .cc-machine {
+  margin-top: 4px;
+}
+
+/* ---- Warnings under the strip: a generator the settings cannot run ----------- */
+
+.cs-warns {
+  grid-column: 1 / -1;
+  margin: 0 -4px;
+  padding: 0 8px 8px;
+  font-size: 11px;
+  line-height: 14px;
+  color: var(--cc-amber);
+}
+.cs-warns p {
+  margin: 0;
+}
+
+/* ---- Crops ----------------------------------------------------------------- */
+
+.cc-key[data-glyph="sprout"] {
+  --cc-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 20h10'/%3E%3Cpath d='M10 20c5.5-2.5.8-6.4 3-10'/%3E%3Cpath d='M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z'/%3E%3Cpath d='M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z'/%3E%3C/svg%3E");
+}
+.cs-pick {
+  grid-column: 1 / -1;
+  box-sizing: border-box;
+  height: 80px;
+  margin: 0 20px 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px dashed #6a6d78;
+  color: var(--cc-ink);
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  user-select: none;
+}
+.cs-pick:hover {
+  background: rgba(255, 255, 255, 0.15);
+}
+.cs-pick-icon {
+  width: 20px;
+  height: 20px;
+  background: var(--cc-ok);
+  -webkit-mask: var(--cc-glyph) center / contain no-repeat;
+  mask: var(--cc-glyph) center / contain no-repeat;
+  --cc-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 20h10'/%3E%3Cpath d='M10 20c5.5-2.5.8-6.4 3-10'/%3E%3Cpath d='M9.5 9.4c1.1.8 1.8 2.2 2.3 3.7-2 .4-3.5.4-4.8-.3-1.2-.6-2.3-1.9-3-4.2 2.8-.5 4.4 0 5.5.8z'/%3E%3Cpath d='M14.1 6a7 7 0 0 0-1.1 4c1.9-.1 3.3-.6 4.3-1.4 1-1 1.6-2.3 1.7-4.6-2.7.1-4 1-4.9 2z'/%3E%3C/svg%3E");
+}
+
+/* ---- EU's picture on a drawer: the bolt in its dark amber box, as on a card's row ---------------- */
+
+.cd-icon.cd-eu {
+  box-sizing: border-box;
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 7 11' shape-rendering='crispEdges' fill='%23FBBF24'%3E%3Crect x='4' y='0' width='3' height='1'/%3E%3Crect x='3' y='1' width='3' height='1'/%3E%3Crect x='3' y='2' width='2' height='1'/%3E%3Crect x='2' y='3' width='3' height='1'/%3E%3Crect x='1' y='4' width='6' height='1'/%3E%3Crect x='0' y='5' width='6' height='1'/%3E%3Crect x='3' y='6' width='2' height='1'/%3E%3Crect x='2' y='7' width='2' height='1'/%3E%3Crect x='2' y='8' width='1' height='1'/%3E%3Crect x='1' y='9' width='1' height='1'/%3E%3Crect x='1' y='10' width='1' height='1'/%3E%3C/svg%3E") center / 14px 22px no-repeat,
+    #2a2210;
+  box-shadow: inset 0 0 0 1px #6b5418;
+}

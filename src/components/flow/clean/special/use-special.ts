@@ -1,0 +1,642 @@
+"use client";
+
+import { useMemo } from "react";
+import type { FactoryNode, Recipe } from "@/lib/model/types";
+import {
+  applyMachineHandlerToRecipe,
+  applyRecipeInputOverrides,
+  formatCompact,
+  formatPowerValue,
+  getSelectedMachineHandler,
+  isSteamMachineHandler,
+} from "@/lib/model";
+import { powerDisplayFromEuT, powerDisplaySuffix, rateMultiplierForKind, rateSuffixForKind } from "@/lib/model/rate-unit";
+import { getRecipeProgrammedCircuit } from "@/lib/model/programmed-circuit";
+import { getCustomRateDial, getCustomRateSlot, CUSTOM_RATE_ANY_RESOURCE_ID } from "@/lib/model/custom-rate";
+import { getFluidTankSlot, FLUID_TANK_NAME } from "@/lib/model/fluid-tank";
+import {
+  CROP_FARM_PLACEHOLDER_RECIPE_ID,
+  CROP_HARVESTER_INDUSTRIAL_FARM_ID,
+  CROP_MANAGER_TIER_CONTROL_ID,
+  CROP_SEED_BED_TIER_CONTROL_ID,
+  cropsNhEnvironmentFromTiers,
+  cropsNhFarmEut,
+  cropsNhHarvestTicks,
+  cropsNhHarvesterFromTiers,
+  cropsNhHarvesterMachineCount,
+  cropsNhIsHandPicked,
+  cropsNhManagerEuPerHarvest,
+  getCropsNhStats,
+  getRecipeMachineConfigTierControls,
+  isCropFarmRecipe,
+  isCropProductionRecipe,
+} from "@/lib/model";
+import { getSharedMachineHandlers, listNodeSections, sectionNodeId, sectionHandleId } from "@/lib/model/shared-machine";
+import { applyMachineOutputMultipliers } from "@/lib/solver/machine-effects";
+import { getOverclockedRecipeStats } from "@/lib/solver/overclock";
+import { getNodePowerReport, getNodeSteamReport, hasPowerReport } from "@/lib/solver/power-report";
+import { parsePortKey } from "@/lib/solver/plan/port-key";
+import { getPowerSource } from "@/lib/power/registry";
+import { getPowerStructureArt } from "@/lib/power/structure-art";
+import { getPowerMachineIcon } from "@/lib/power/planner-data";
+import { useFactoryStore } from "@/store/factory-store";
+import { useWorkspaceView } from "@/lib/workspace-view";
+import { buildRailPorts, deriveNodeVerdict } from "../../node-verdict";
+import { makeResourceHandleId } from "../../resource-handles";
+import { useRecipeMapIcons, type MachineHandlerIcon } from "../../machine-icons";
+import type { RecipeNodeData } from "../../RecipeNode";
+import {
+  buildPortView,
+  formatSolvedMachines,
+  layoutStrip,
+  useCleanCardModel,
+  type CleanCardContext,
+  type CleanCardActions,
+  type CleanCardView,
+} from "../clean-model";
+import { CC_GEOMETRY } from "../tokens";
+import { measureText } from "../text-measure";
+import {
+  isTierSelect,
+  powerSettingRows,
+  powerStripRows,
+  powerTierChip,
+  steppedPowerValue,
+  type PowerSettingRow,
+} from "./power-settings";
+import { sectionShare, type SpecialChip, type SpecialSection, type SpecialView } from "./special-model";
+
+/** What a special card does beyond the plain card's actions. */
+export interface SpecialActions extends CleanCardActions {
+  stepChip: (id: string, direction: -1 | 1) => void;
+  moveSection: (section: number, direction: -1 | 1) => void;
+  removeSection: (section: number) => void;
+}
+
+/** The menus' inputs: the gear's rows, and the readings a generator keeps in it. */
+export interface SpecialContext extends CleanCardContext {
+  readings: Array<{ label: string; value: string }>;
+}
+
+export interface SpecialModel {
+  view: SpecialView;
+  actions: SpecialActions;
+  context: SpecialContext;
+}
+
+function isLocked(): boolean {
+  const s = useFactoryStore.getState();
+  return s.isReadOnly || s.checklistMode;
+}
+
+/** The name's size: 14, 13, 12, then 9, to fit what the head leaves it. */
+export function fitNameSize(name: string, opts: { chips: number; picker: boolean }): number {
+  const G = CC_GEOMETRY;
+  const chipsLeft = G.cardWidth - 8 - opts.chips * G.chipWidth - Math.max(0, opts.chips - 1) * 2;
+  const room = Math.max(40, chipsLeft - 8 - 68 - (opts.picker ? 15 : 0));
+  return [14, 13, 12].find((size) => measureText(name, size, 500) <= room) ?? 9;
+}
+
+/** The card's count when nothing in the plan ties it to a number (the plan's `unanchored` and `unneeded`). */
+export function countView(
+  node: Pick<FactoryNode, "id" | "solvePin">,
+  needed: number,
+  plan: { unanchored: readonly string[]; unneeded: readonly string[] } | undefined,
+  opts?: { noTimes?: boolean; title?: string; pinnedTitle?: string },
+): CleanCardView["count"] & { unset: boolean } {
+  const pin = node.solvePin;
+  const pinned = pin !== undefined && pin > 0;
+  const unset = plan !== undefined && !pinned && (plan.unanchored.includes(node.id) || plan.unneeded.includes(node.id));
+  const value = pinned ? pin : needed;
+  return {
+    text: `${opts?.noTimes ? "" : "×"}${formatSolvedMachines(value)}`,
+    pinned,
+    zero: !pinned && needed <= 0.0000005,
+    note: (pinned ? "(pinned)" : unset ? "(set count)" : "") as "" | "(pinned)" | "(set count)",
+    value,
+    title: pinned
+      ? (opts?.pinnedTitle ?? "Pinned count. Click to change it, clear the field to let the plan decide.")
+      : (opts?.title ?? "How many of this machine the plan needs. Click to pin a count."),
+    unset,
+  };
+}
+
+/** The machine item the plain card draws when its machine has no render of its own. */
+function iconOf(context: CleanCardContext): SpecialView["icon"] {
+  const icon = context.machineIcon;
+  if (!icon || !(icon.iconPath || icon.iconAtlas)) return undefined;
+  return { id: icon.id, displayName: icon.displayName ?? icon.id, iconPath: icon.iconPath, iconAtlas: icon.iconAtlas, dominantColor: icon.dominantColor };
+}
+
+function section0(base: { view: CleanCardView }): SpecialSection {
+  return { section: 0, inputs: base.view.inputs, outputs: base.view.outputs };
+}
+
+// ---------------------------------------------------------------- shared machine
+
+/**
+ * A card running several recipes on one machine. Section 0 is the plain card's own view; every other section reads
+ * its own solve node (`card#rN`), its ports wearing the section's prefix, and the wires that land on them follow.
+ */
+export function useSharedCardModel(data: RecipeNodeData, selected: boolean): SpecialModel {
+  const base = useCleanCardModel(data, selected);
+  const { projectNode, recipe, result } = data;
+  const averageDraw = useWorkspaceView().averageMachineDraw;
+  const liveRecipes = useFactoryStore((state) => state.project.recipes);
+  const updateNode = useFactoryStore((state) => state.updateNode);
+  const removeRecipeSection = useFactoryStore((state) => state.removeRecipeSection);
+  const moveRecipeSection = useFactoryStore((state) => state.moveRecipeSection);
+  const { project: liveProject, lastResult } = useFactoryStore.getState();
+  const plan = lastResult?.plan;
+
+  const extras = useMemo(
+    () =>
+      listNodeSections(projectNode)
+        .slice(1)
+        .map(({ section, node }) => {
+          const sectionRecipe = liveRecipes.find((entry) => entry.id === node.recipeId);
+          if (!sectionRecipe) return undefined;
+          const nodeRecipe = applyRecipeInputOverrides(sectionRecipe, node);
+          const effective = applyMachineHandlerToRecipe(nodeRecipe, node);
+          const stats = getOverclockedRecipeStats(nodeRecipe, node);
+          const adjusted = applyMachineOutputMultipliers(effective, node, stats.tier);
+          return {
+            section,
+            node,
+            display: { ...effective, ...adjusted, ...stats } as Recipe,
+            ...sectionPower(sectionRecipe, node),
+          };
+        })
+        .filter((entry): entry is NonNullable<typeof entry> => entry !== undefined),
+    [liveRecipes, projectNode],
+  );
+
+  // The forced entries of every section, filed under the card and the section's prefixed handle.
+  const forcedAt = new Map<string, number>();
+  for (const entry of plan?.forced ?? []) {
+    const parsed = parsePortKey(entry.portKey);
+    if (!parsed) continue;
+    const owner = entry.nodeId.split("#r")[0]!;
+    if (owner !== projectNode.id) continue;
+    const at = entry.nodeId.indexOf("#r");
+    const section = at < 0 ? 0 : Number(entry.nodeId.slice(at + 2));
+    forcedAt.set(`${projectNode.id}|${parsed.side}|${sectionHandleId(section, parsed.handle)}`, entry.perSecond);
+  }
+
+  const sections: SpecialSection[] = [section0(base)];
+  const machinesBySection: number[] = [result?.theoreticalMachinesRequired ?? 0];
+  const usageBySection: number[] = [Math.min(1, result?.utilization ?? 0)];
+  const circuits = [base.view.circuit, ...extras.map((entry) => getRecipeProgrammedCircuit(entry.display))];
+  for (const entry of extras) {
+    const id = sectionNodeId(projectNode.id, entry.section);
+    const verdict = deriveNodeVerdict(liveProject, lastResult, id);
+    const rails = buildRailPorts(liveProject, lastResult, id, entry.display, verdict, { handleSection: entry.section });
+    const sectionResult = lastResult?.nodes[id];
+    machinesBySection.push(sectionResult?.theoreticalMachinesRequired ?? 0);
+    usageBySection.push(Math.min(1, sectionResult?.utilization ?? 0));
+    sections.push({
+      section: entry.section,
+      inputs: rails.inputs.map((port) => buildPortView(projectNode.id, port, projectNode, forcedAt)),
+      outputs: rails.outputs.map((port) => buildPortView(projectNode.id, port, projectNode, forcedAt)),
+    });
+  }
+  // Section 0's forced rows were keyed for the plain card; re-key the ones filed under the section prefix.
+  const total = machinesBySection.reduce((sum, n) => sum + n, 0);
+  const last = sections.length - 1;
+  for (const entry of sections) {
+    const share = sectionShare(machinesBySection[entry.section] ?? 0, total);
+    entry.rule = {
+      section: entry.section,
+      pct: share.pct,
+      word: share.unused ? "UNUSED" : `×${formatSolvedMachines(machinesBySection[entry.section] ?? 0)}`,
+      unused: share.unused,
+      circuit: circuits[entry.section],
+      canUp: entry.section > 0,
+      canDown: entry.section < last,
+    };
+  }
+
+  // The card's one power row, as the mod bills it: each recipe's draw a machine at its own solved machines (whole
+  // machines when the board shows peaks).
+  const own = sectionPower(recipe, projectNode);
+  const parts = [own, ...extras];
+  const wholeOrSolved = (n: number) => (averageDraw ? n : Math.ceil(n - 1e-9));
+  const euT = parts.reduce((sum, part, i) => sum + (part.powerReport?.drawEuT ?? 0) * wholeOrSolved(machinesBySection[i] ?? 0), 0);
+  const stalled = parts.some((part) => part.powerReport !== undefined && part.powerReport.state !== "ok");
+  const litres = parts.reduce(
+    (sum, part, i) => sum + (part.steamReport ? part.steamReport.drawSteamPerTick * 20 * wholeOrSolved(machinesBySection[i] ?? 0) : 0),
+    0,
+  );
+  const anyEu = parts.some((part) => part.powerReport);
+  const anySteam = !anyEu && parts.some((part) => part.steamReport);
+  const power: SpecialView["power"] = anyEu
+    ? {
+        number: stalled ? "TIER!" : formatPowerValue(powerDisplayFromEuT(euT)),
+        unit: stalled ? "" : powerDisplaySuffix(),
+        name: "Power",
+        stalled,
+        title: stalled
+          ? "A recipe on this machine is above its tier."
+          : "What the machine draws: the hungriest recipe at its peak, every recipe by its share on average.",
+      }
+    : anySteam
+      ? { number: formatCompact(litres), unit: "L/s", name: "Steam", stalled: false, title: "Steam this machine burns" }
+      : undefined;
+
+  const needed = machinesBySection.reduce((sum, n) => sum + n, 0);
+  const count = countView(projectNode, needed, plan);
+  const handlers = useMemo(
+    () => getSharedMachineHandlers(projectNode, (id) => (id === recipe.id ? recipe : liveRecipes.find((entry) => entry.id === id))),
+    [liveRecipes, projectNode, recipe],
+  );
+  const hasPicker = handlers.length > 1;
+  const name = base.view.name;
+  const nameSize = fitNameSize(name, { chips: (base.view.tier ? 1 : 0) + (base.view.amps ? 1 : 0), picker: hasPicker });
+
+  const view: SpecialView = {
+    kind: "shared",
+    nodeId: projectNode.id,
+    name,
+    nameSize,
+    nameTone: "ink",
+    hasPicker,
+    tier: base.view.tier,
+    amps: base.view.amps,
+    sections,
+    power,
+    art: base.view.art,
+    glanceArt: base.view.glanceArt,
+    icon: iconOf(base.context),
+    count,
+    chips: base.view.chips,
+    stripHeight: base.view.stripHeight,
+    warnings: [],
+    selected,
+    cannotRun: base.view.cannotRun,
+    unset: count.unset,
+    handleIds: sections.flatMap((entry) => [
+      ...entry.inputs.filter((p) => !p.port.free).map((p) => p.handleId),
+      ...entry.outputs.map((p) => p.handleId),
+    ]),
+  };
+
+  const actions: SpecialActions = {
+    ...base.actions,
+    stepChip: base.actions.stepSetting,
+    moveSection: (section, direction) => {
+      if (!isLocked()) moveRecipeSection(projectNode.id, section, direction);
+    },
+    removeSection: (section) => {
+      if (!isLocked()) removeRecipeSection(projectNode.id, section);
+    },
+    setCount: (value) => {
+      if (isLocked()) return;
+      updateNode(projectNode.id, { solvePin: value });
+    },
+  };
+  const context: SpecialContext = {
+    ...base.context,
+    machineHandlers: handlers,
+    handleIds: view.handleIds,
+    readings: [],
+  };
+  return { view, actions, context };
+}
+
+/** One recipe's power or steam report at its node's settings. */
+function sectionPower(recipe: Recipe, node: FactoryNode) {
+  const nodeRecipe = applyRecipeInputOverrides(recipe, node);
+  const effective = applyMachineHandlerToRecipe(nodeRecipe, node);
+  const drawsEu = effective.eut > 0 && !isSteamMachineHandler(getSelectedMachineHandler(recipe, node));
+  return {
+    powerReport: drawsEu && hasPowerReport(nodeRecipe) ? getNodePowerReport(nodeRecipe, node) : undefined,
+    steamReport: !drawsEu ? getNodeSteamReport(nodeRecipe, node) : undefined,
+  };
+}
+
+// ---------------------------------------------------------------- generator
+
+export function usePowerCardModel(data: RecipeNodeData, selected: boolean): SpecialModel {
+  const base = useCleanCardModel(data, selected);
+  const { projectNode, recipe } = data;
+  const info = recipe.power!;
+  const source = getPowerSource(info.sourceId);
+  const setPowerSetting = useFactoryStore((state) => state.setPowerSetting);
+  const values = projectNode.machineConfigTiers;
+
+  const rows: PowerSettingRow[] = source ? powerSettingRows(source, values) : [];
+  const tier = source ? powerTierChip(source, values) : undefined;
+  const stripRows = powerStripRows(rows);
+  const strip = layoutStrip(
+    stripRows.map((row) => ({
+      id: row.id,
+      label: row.label,
+      value: row.value,
+      title: `${row.label}: ${row.value}`,
+    })),
+  );
+  const chips: SpecialChip[] = strip.chips.map((chip) => {
+    const row = stripRows.find((entry) => entry.id === chip.id)!;
+    return row.setting.type === "number"
+      ? { ...chip, edit: { text: row.value.split(" ")[0]!, commit: (text) => commitNumber(row, text) } }
+      : chip;
+  });
+  const commitNumber = (row: PowerSettingRow, text: string) => {
+    if (isLocked() || row.setting.type !== "number") return;
+    const parsed = Number(text.replace(/,/g, "").trim());
+    if (!Number.isFinite(parsed)) return;
+    const value = Math.min(row.setting.max, Math.max(row.setting.min, parsed));
+    setPowerSetting(projectNode.id, row.id, String(value));
+  };
+
+  const name = recipe.machineType || base.view.name;
+  const icon = getPowerMachineIcon(info.sourceId);
+  const art = getPowerStructureArt(info.sourceId);
+  const needed = data.result?.theoreticalMachinesRequired ?? 0;
+  const plan = useFactoryStore.getState().lastResult?.plan;
+  const count = countView(projectNode, needed, plan);
+  const draws = info.euPerTick < 0;
+  void draws;
+
+  const view: SpecialView = {
+    kind: "power",
+    nodeId: projectNode.id,
+    name,
+    nameSize: fitNameSize(name, { chips: tier ? 1 : 0, picker: false }),
+    nameTone: "power",
+    hasPicker: false,
+    tier: tier ? { label: tier.label, fixed: tier.fixed, title: tier.fixed ? `Unlocks at ${tier.label}` : `Tier ${tier.label}. Click up, right click down.` } : undefined,
+    sections: [section0(base)],
+    art,
+    glanceArt: art ?? icon?.iconPath,
+    icon: icon ? { id: icon.id, displayName: icon.displayName ?? icon.id, iconPath: icon.iconPath, dominantColor: icon.dominantColor } : undefined,
+    count,
+    chips,
+    stripHeight: strip.height,
+    warnings: info.warnings ?? [],
+    selected,
+    cannotRun: false,
+    unset: count.unset,
+    handleIds: base.context.handleIds,
+  };
+
+  const actions: SpecialActions = {
+    ...base.actions,
+    stepTier: (direction) => {
+      if (isLocked() || !source || !tier || tier.fixed) return;
+      const row = rows.find((entry) => isTierSelect(entry.setting));
+      const next = row ? steppedPowerValue(row, direction) : undefined;
+      if (next !== undefined) setPowerSetting(projectNode.id, "tier", next);
+    },
+    stepChip: (id, direction) => {
+      const row = rows.find((entry) => entry.id === id);
+      if (isLocked() || !row || !row.enabled) return;
+      const next = steppedPowerValue(row, direction);
+      if (next !== undefined) setPowerSetting(projectNode.id, id, next);
+    },
+    stepSetting: (id, direction) => actions.stepChip(id, direction),
+    moveSection: () => undefined,
+    removeSection: () => undefined,
+  };
+  const context: SpecialContext = {
+    ...base.context,
+    machineHandlers: [],
+    settings: rows
+      .filter((row) => !isTierSelect(row.setting))
+      .map((row) => ({ id: row.id, label: row.label, value: row.value, steps: row.steps && row.enabled })),
+    readings: info.stats,
+  };
+  return { view, actions, context };
+}
+
+// ---------------------------------------------------------------- crops
+
+/**
+ * A crop card: the plain card with a crop's own parts. Its count is crops planted (no times sign, a line saying
+ * so), its harvester's voltage is the tier chip, its draw is a power row, and a farm picks its crop from a key in
+ * the head (a dashed box in place of the rails until it has one).
+ */
+export function useCropCardModel(data: RecipeNodeData, selected: boolean): SpecialModel {
+  const base = useCleanCardModel(data, selected);
+  const { projectNode, recipe, result } = data;
+  const averageDraw = useWorkspaceView().averageMachineDraw;
+  const updateNode = useFactoryStore((state) => state.updateNode);
+  const plan = useFactoryStore.getState().lastResult?.plan;
+
+  const farm = isCropFarmRecipe(recipe);
+  const placeholder = recipe.id === CROP_FARM_PLACEHOLDER_RECIPE_ID || (farm && recipe.outputs.length === 0);
+  const effective = useMemo(
+    () => applyMachineHandlerToRecipe(applyRecipeInputOverrides(recipe, projectNode), projectNode),
+    [recipe, projectNode],
+  );
+  const controls = useMemo(() => getRecipeMachineConfigTierControls(effective, projectNode), [effective, projectNode]);
+  const tierControl = controls.find(
+    (control) => control.id === CROP_MANAGER_TIER_CONTROL_ID || control.id === CROP_SEED_BED_TIER_CONTROL_ID,
+  );
+
+  const needed = result?.theoreticalMachinesRequired ?? 0;
+  const crops = Math.max(0, Math.round(needed));
+  const baseCount = countView(projectNode, needed, plan, { noTimes: true });
+  // Under the count: what it counts.
+  const note = baseCount.pinned
+    ? "crops, pinned"
+    : baseCount.unset
+      ? "(set count)"
+      : Math.round(needed) === 1
+        ? "crop planted"
+        : "crops planted";
+  const count = {
+    ...baseCount,
+    note: note as never,
+    title: baseCount.pinned
+      ? "Pinned crops. Click to change it, clear the field to let the plan decide."
+      : "How many crops the plan plants. Click to pin a number.",
+  };
+
+  // The harvester's draw: the Industrial Farm burns whole farms, the Crop Manager spends per harvest. Zero by hand.
+  const drawEuT = (() => {
+    if (!isCropProductionRecipe(effective) || placeholder) return 0;
+    const stats = getCropsNhStats(effective);
+    const setup = cropsNhHarvesterFromTiers(
+      projectNode.machineConfigTiers,
+      projectNode.machineHandlerId,
+      stats?.minSeedBedTier,
+      stats?.subSoil !== undefined,
+    );
+    if (cropsNhIsHandPicked(setup)) return 0;
+    if (setup.id === CROP_HARVESTER_INDUSTRIAL_FARM_ID) {
+      return cropsNhFarmEut(setup) * cropsNhHarvesterMachineCount(setup, crops);
+    }
+    if (!stats) return 0;
+    const ticks = cropsNhHarvestTicks(stats, cropsNhEnvironmentFromTiers(projectNode.machineConfigTiers));
+    return Number.isFinite(ticks) && ticks > 0 ? (cropsNhManagerEuPerHarvest(setup) * crops) / ticks : 0;
+  })();
+  const usage = Math.min(1, Math.max(0, result?.utilization ?? 1));
+  const drawScale = averageDraw ? usage : usage > 0 ? 1 : 0;
+  const power: SpecialView["power"] =
+    drawEuT > 0
+      ? {
+          number: formatPowerValue(powerDisplayFromEuT(drawEuT * drawScale)),
+          unit: powerDisplaySuffix(),
+          name: "Power",
+          stalled: false,
+          title: "What the harvester draws.",
+        }
+      : undefined;
+
+  const tierIndex = tierControl
+    ? Math.max(0, tierControl.tiers.findIndex((tier) => tier.key === tierControl.current.key))
+    : 0;
+  const stepTier = (direction: -1 | 1) => {
+    if (isLocked() || !tierControl) return;
+    const next = tierControl.tiers[Math.max(0, Math.min(tierControl.tiers.length - 1, tierIndex + direction))];
+    if (next && next.key !== tierControl.current.key) {
+      updateNode(projectNode.id, {
+        machineConfigTiers: { ...(projectNode.machineConfigTiers ?? {}), [tierControl.id]: next.key },
+      });
+    }
+  };
+
+  const name = placeholder ? "Pick a crop..." : base.view.name;
+  const hasPicker = base.view.hasPicker && !placeholder;
+  const view: SpecialView = {
+    kind: "crop",
+    nodeId: projectNode.id,
+    name,
+    nameSize: fitNameSize(name, { chips: tierControl ? 1 : 0, picker: hasPicker }),
+    nameTone: "ink",
+    hasPicker,
+    tier: tierControl
+      ? {
+          label: tierControl.current.label,
+          fixed: false,
+          title: tierControl.label + ": " + tierControl.current.label + ". Click up, right click down.",
+        }
+      : undefined,
+    sections: placeholder ? [{ section: 0, inputs: [], outputs: [] }] : [section0(base)],
+    power,
+    pick: placeholder,
+    cropKey: farm && !placeholder,
+    art: base.view.art,
+    glanceArt: base.view.glanceArt,
+    icon: iconOf(base.context),
+    count: placeholder ? undefined : count,
+    chips: base.view.chips,
+    stripHeight: base.view.stripHeight,
+    warnings: [],
+    selected,
+    cannotRun: false,
+    unset: placeholder ? false : baseCount.unset,
+    handleIds: placeholder ? [] : base.context.handleIds,
+  };
+  const context: SpecialContext = { ...base.context, readings: [] };
+  const actions: SpecialActions = {
+    ...base.actions,
+    stepTier,
+    stepChip: base.actions.stepSetting,
+    moveSection: () => undefined,
+    removeSection: () => undefined,
+  };
+  return { view, actions, context };
+}
+
+// ---------------------------------------------------------------- holders
+
+export function useHolderCardModel(data: RecipeNodeData, selected: boolean, kind: "custom-rate" | "tank"): SpecialModel {
+  const base = useCleanCardModel(data, selected);
+  const { projectNode, recipe } = data;
+  const setCustomRateConfig = useFactoryStore((state) => state.setCustomRateConfig);
+  useFactoryStore((state) => state.rateUnit);
+  const mapIcons = useRecipeMapIcons();
+
+  const slot = kind === "custom-rate" ? getCustomRateSlot(recipe) : getFluidTankSlot(recipe);
+  const empty = !slot;
+  const plan = useFactoryStore.getState().lastResult?.plan;
+  const needed = data.result?.theoreticalMachinesRequired ?? 0;
+  const count = kind === "tank" ? undefined : countView(projectNode, needed, plan);
+
+  const name = kind === "tank" ? FLUID_TANK_NAME : "Custom Rate";
+  const sockets: SpecialView["sockets"] = empty
+    ? {
+        take: kind === "tank" ? "TAKE CELL/FLUID" : "DRAIN ANY",
+        give: kind === "tank" ? "GIVE CELL/FLUID" : "SUPPLY ANY",
+        takeHandle: makeResourceHandleId("input", { kind: "item", id: CUSTOM_RATE_ANY_RESOURCE_ID }),
+        giveHandle: makeResourceHandleId("output", { kind: "item", id: CUSTOM_RATE_ANY_RESOURCE_ID }),
+      }
+    : undefined;
+
+  // The custom rate's dial: mode and rate, on chips like every other setting.
+  const chips: SpecialChip[] = [];
+  let stripHeight = 0;
+  if (kind === "custom-rate") {
+    const dial = getCustomRateDial(projectNode, recipe);
+    const factKind = (getCustomRateSlot(recipe)?.resource.kind ?? "item") as string;
+    const multiplier = rateMultiplierForKind(factKind);
+    const step = 1000 / Math.min(multiplier, 1);
+    const shown = String(Math.round(dial.perSecond * multiplier * step) / step);
+    const laid = layoutStrip([
+      { id: "mode", label: "Mode", value: dial.mode === "supply" ? "Supply" : "Request", title: "Which way the card faces." },
+      { id: "rate", label: `Rate (${rateSuffixForKind(factKind).trim() || "/s"})`, value: shown, title: "The rate it holds." },
+    ]);
+    stripHeight = laid.height;
+    for (const chip of laid.chips) {
+      chips.push(
+        chip.id === "rate"
+          ? {
+              ...chip,
+              edit: {
+                text: shown,
+                commit: (text) => {
+                  if (isLocked()) return;
+                  const parsed = Number.parseFloat(text.replace(/,/g, "").trim());
+                  if (Number.isFinite(parsed) && parsed >= 0) setCustomRateConfig(projectNode.id, { perSecond: parsed / multiplier });
+                },
+              },
+            }
+          : chip,
+      );
+    }
+  }
+
+  const iconKey = kind === "tank" ? "Tank" : undefined;
+  const mapIcon = iconKey ? (mapIcons.get(iconKey) as MachineHandlerIcon | undefined) : undefined;
+  const sections: SpecialSection[] = empty ? [{ section: 0, inputs: [], outputs: [] }] : [section0(base)];
+
+  const view: SpecialView = {
+    kind,
+    nodeId: projectNode.id,
+    name,
+    nameSize: fitNameSize(name, { chips: 0, picker: false }),
+    nameTone: "holder",
+    hasPicker: false,
+    sections,
+    sockets,
+    glyph: kind === "custom-rate" ? "gauge" : undefined,
+    icon: mapIcon ? { id: mapIcon.id, displayName: mapIcon.displayName ?? FLUID_TANK_NAME, iconPath: mapIcon.iconPath, dominantColor: mapIcon.dominantColor } : undefined,
+    glanceArt: mapIcon?.iconPath,
+    count,
+    chips,
+    stripHeight,
+    warnings: [],
+    selected,
+    cannotRun: false,
+    unset: count?.unset ?? false,
+    handleIds: empty ? [sockets!.takeHandle, sockets!.giveHandle] : base.context.handleIds,
+  };
+
+  const actions: SpecialActions = {
+    ...base.actions,
+    stepChip: (id, direction) => {
+      if (isLocked()) return;
+      if (id === "mode" && kind === "custom-rate") {
+        const dial = getCustomRateDial(projectNode, recipe);
+        setCustomRateConfig(projectNode.id, { mode: dial.mode === "supply" ? "request" : "supply" });
+        void direction;
+      }
+    },
+    moveSection: () => undefined,
+    removeSection: () => undefined,
+  };
+  const context: SpecialContext = { ...base.context, machineHandlers: [], settings: [], readings: [] };
+  return { view, actions, context };
+}

@@ -1,6 +1,6 @@
 "use client";
 
-import { Gauge, Sprout, Zap } from "lucide-react";
+import { Gauge, Sprout, Zap, Container } from "lucide-react";
 import type { ReactNode } from "react";
 import { useFactoryStore } from "@/store/factory-store";
 
@@ -15,6 +15,7 @@ export function SpawnKeys({ leading }: { leading?: ReactNode }) {
   const openPowerMenu = useFactoryStore((state) => state.openPowerMenu);
   const addCustomRateNode = useFactoryStore((state) => state.addCustomRateNode);
   const addCropFarmNode = useFactoryStore((state) => state.addCropFarmNode);
+  const addFluidTankNode = useFactoryStore((state) => state.addFluidTankNode);
   // The columns' own hide keys' dress (the right column's "Hide" key): no
   // ground of their own, the column's border, a plain lift on hover - keys that act,
   // a step apart from the filter chips under them, which only narrow.
@@ -43,6 +44,16 @@ export function SpawnKeys({ leading }: { leading?: ReactNode }) {
       >
         <Gauge className="h-3 w-3 shrink-0" />
         Custom
+      </button>
+      <button
+        type="button"
+        onClick={addFluidTankNode}
+        className={key}
+        title="Add a fluid tank: empties cells into their fluid and fills them"
+        aria-label="Add fluid tank"
+      >
+        <Container className="h-3 w-3 shrink-0" />
+        Tank
       </button>
       <button
         type="button"

@@ -16,7 +16,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { makeResourceKey } from "@/lib/model";
-import type { FactoryStorage } from "@/lib/model/types";
+import type { FactoryStorage, ResourceAmount } from "@/lib/model/types";
 import type { StorageRole } from "@/lib/model/storage-role";
 import { rateMultiplierForKind } from "@/lib/model/rate-unit";
 import { resourceLabel } from "@/lib/model/resources";
@@ -133,6 +133,28 @@ function RuleMenu({
       ))}
     </div>,
     document.body,
+  );
+}
+
+/** The drawer's picture: the resource's art, or for EU (which has none) the bolt in its dark amber box, as on a card's row. */
+function DrawerIcon({
+  storage,
+  alternatives,
+}: {
+  storage: FactoryStorage;
+  alternatives: ResourceAmount["alternatives"];
+}) {
+  if (storage.kind === "power") return <span className="cd-icon cd-eu" aria-hidden />;
+  return (
+    <ResourceIcon
+      resource={{ ...storage, id: storage.resourceId, amount: 1, alternatives }}
+      showAmount={false}
+      bare
+      tooltip={false}
+      showConsumedState={false}
+      iconPixelSize={iconPixelSize(ICON_PX, storage)}
+      className="cd-icon"
+    />
   );
 }
 
@@ -399,20 +421,7 @@ export function CleanDrawer({
         <div className="cd-fill" aria-hidden>
           <div className="cd-bar" title={view.tips.bar} />
         </div>
-        <ResourceIcon
-          resource={{
-            ...storage,
-            id: storage.resourceId,
-            amount: 1,
-            alternatives: category?.alternatives,
-          }}
-          showAmount={false}
-          bare
-          tooltip={false}
-          showConsumedState={false}
-          iconPixelSize={iconPixelSize(ICON_PX, storage)}
-          className="cd-icon"
-        />
+        <DrawerIcon storage={storage} alternatives={category?.alternatives} />
         <div
           role="button"
           tabIndex={0}
@@ -626,20 +635,7 @@ export function CleanDrawerFace({
         <div className="cd-bar" />
       </div>
       <div className="cd-body">
-        <ResourceIcon
-          resource={{
-            ...storage,
-            id: storage.resourceId,
-            amount: 1,
-            alternatives: category?.alternatives,
-          }}
-          showAmount={false}
-          bare
-          tooltip={false}
-          showConsumedState={false}
-          iconPixelSize={iconPixelSize(ICON_PX, storage)}
-          className="cd-icon"
-        />
+        <DrawerIcon storage={storage} alternatives={category?.alternatives} />
         <span className="cd-num" data-unit={view.unit} data-zero="">
           {view.number}
         </span>

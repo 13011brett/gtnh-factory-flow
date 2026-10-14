@@ -52,11 +52,34 @@ export function tileVisible(view: MapView, tile: Tile): boolean {
 }
 
 let ctxFont = "monospace";
+/** The pill's font is set once a draw, and a figure's width is measured once (a map of 1,500 tiles drew 10 ms a camera step). */
+let pillFontSet = false;
+const pillWidths = new Map<string, number>();
+/** The mixes of a tile's tint are a few colours over and over: computed once each, not per tile per frame. */
+const mixes = new Map<string, string>();
+function mix(color: string, toward: string, amount: number): string {
+  const key = `${color}|${toward}|${amount}`;
+  let out = mixes.get(key);
+  if (out === undefined) {
+    out = mixHex(color, toward, amount);
+    if (mixes.size > 2000) mixes.clear();
+    mixes.set(key, out);
+  }
+  return out;
+}
 
 /** A figure in a dark pill in a tile's corner, left out when the tile is too small for it (the mod's rule). */
 function pill(ctx: CanvasRenderingContext2D, text: string, x: number, y: number, w: number, h: number, color: string) {
-  ctx.font = `10px ${ctxFont}`;
-  const tw = ctx.measureText(text).width;
+  if (!pillFontSet) {
+    ctx.font = `10px ${ctxFont}`;
+    pillFontSet = true;
+  }
+  let tw = pillWidths.get(text);
+  if (tw === undefined) {
+    tw = ctx.measureText(text).width;
+    if (pillWidths.size > 5000) pillWidths.clear();
+    pillWidths.set(text, tw);
+  }
   if (tw + 4 > w - 2 || h < 14) return;
   const px = x + w - 2 - tw - 2;
   const py = y + h - 2 - 10;
@@ -73,7 +96,9 @@ export function drawMinimap(
   view: MapView,
   opts: DrawOptions,
 ): void {
+  if (ctxFont !== opts.font) pillWidths.clear();
   ctxFont = opts.font;
+  pillFontSet = false;
   const { size, circle, zoom } = view;
   ctx.clearRect(0, 0, size, size);
   ctx.save();
@@ -111,7 +136,7 @@ export function drawMinimap(
     const w = tile.w * zoom;
     const h = tile.h * zoom;
     if (tile.kind === "note") {
-      ctx.fillStyle = mixHex(tile.tint, "#141414", 0.25);
+      ctx.fillStyle = mix(tile.tint, "#141414", 0.25);
       ctx.fillRect(x, y, w, h);
       continue;
     }
@@ -122,9 +147,9 @@ export function drawMinimap(
       continue;
     }
     // The mod's tile: edge mixed 55% to #262B34, inner 26% to #07090C.
-    ctx.fillStyle = mixHex(tile.tint, "#262B34", 0.55);
+    ctx.fillStyle = mix(tile.tint, "#262B34", 0.55);
     ctx.fillRect(x, y, w, h);
-    ctx.fillStyle = mixHex(tile.tint, "#07090C", 0.26);
+    ctx.fillStyle = mix(tile.tint, "#07090C", 0.26);
     ctx.fillRect(x + 1, y + 1, Math.max(0, w - 2), Math.max(0, h - 2));
     const side = tile.kind === "drawer" ? Math.min(h - 4, w * 0.5) : Math.min(w, h) - 6;
     if (side >= 6 && tile.art) {

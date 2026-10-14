@@ -9,6 +9,26 @@ import { CleanDrawer } from "./CleanDrawer";
 import { supportsCleanDrawer } from "./drawer-model";
 
 /**
+ * Which sides of each drawer are wired, for the whole edge list at once (bit 1 an edge into it, bit 2 one out of
+ * it). Every drawer asks this on every store update, which was a scan of every wire per drawer: 500 drawers and
+ * 2,400 wires were a million comparisons for each hover. The list is replaced on every edit, so it is the key.
+ */
+const wiredSides = new WeakMap<object, Map<string, number>>();
+function wiredSidesOf(edges: ReadonlyArray<{ source: string; target: string }>, id: string): number {
+  let index = wiredSides.get(edges);
+  if (!index) {
+    index = new Map();
+    for (const edge of edges) {
+      index.set(edge.target, (index.get(edge.target) ?? 0) | 1);
+      // (As the scan this replaces: an edge into the drawer from itself counts for the side in only.)
+      if (edge.source !== edge.target) index.set(edge.source, (index.get(edge.source) ?? 0) | 2);
+    }
+    wiredSides.set(edges, index);
+  }
+  return index.get(id) ?? 0;
+}
+
+/**
  * The drawer of every board: always the clean drawer (source, product, byproduct, trash, and EU as a source or
  * product). The classic card is no longer reachable from here. Registered as `storageNode` in FactoryFlow.
  */
@@ -18,14 +38,8 @@ function StorageNodeSwitchComponent(props: NodeProps<StorageFlowNode>) {
   // Read off this drawer's own wires, as the classic drawer does: the whole-board map would re-render every
   // drawer whenever any other drawer's wiring changed.
   const role = useFactoryStore((state): StorageRole => {
-    let hasIn = false;
-    let hasOut = false;
-    for (const edge of state.project.edges) {
-      if (edge.target === storage.id) hasIn = true;
-      else if (edge.source === storage.id) hasOut = true;
-      if (hasIn && hasOut) break;
-    }
-    return storageRoleFor(storage, hasIn, hasOut, state.project.poolMode === true);
+    const sides = wiredSidesOf(state.project.edges, storage.id);
+    return storageRoleFor(storage, (sides & 1) !== 0, (sides & 2) !== 0, state.project.poolMode === true);
   });
   if (supportsCleanDrawer(storage, role)) {
     return <CleanDrawer data={data} selected={selected === true} role={role} />;

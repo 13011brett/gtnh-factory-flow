@@ -16,7 +16,8 @@ describe("the rail's totals", () => {
     // The iron drawer is a source with a rule (at most 12); the log drawer is a source with nothing set.
     expect(rail.inputs.map((l) => l.label)).toEqual(["Iron Ingot", "Log"]);
     expect(rail.outputs.map((l) => l.label).sort()).toEqual(["Plank", "Steel Plate", "Steel Rod"]);
-    expect(rail.internal.map((l) => l.label)).toEqual(["Steel Plate"]);
+    // The cutter sits at zero: its nameplate rates in the result are not flows, so no plate stays inside.
+    expect(rail.internal.map((l) => l.label)).toEqual([]);
     const steel = rail.outputs.find((l) => l.label === "Steel Plate")!;
     // 6 made by the compressor, the spare cutter at zero uses none of it.
     expect(steel.amount).toBeGreaterThan(0);

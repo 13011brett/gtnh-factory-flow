@@ -147,7 +147,7 @@ it("preserves rates, rules and wires through JSON and mode switches; Build does 
   const p = fixture(false);
   p.storages![0].targetMode = "at-most";
   p.storages![1].targetPerSecond = 3;
-  const loaded = parseFactoryProjectJson(serializeFactoryProject(p));
+  const loaded = parseFactoryProjectJson(serializeFactoryProject(p), { keepMode: true });
   for (const poolMode of [true, false]) {
     loaded.poolMode = poolMode;
     expect(calculateThroughput(loaded).storages.ore.consumedPerSecond).toBeCloseTo(6);

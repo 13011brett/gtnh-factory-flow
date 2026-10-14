@@ -2,6 +2,10 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { captureBoardSelection, useFactoryStore } from "./factory-store";
 import { PROJECT_SCHEMA_VERSION, type FactoryProject } from "../lib/model/types";
 import { boardSelectionPayloadSchema } from "../lib/model/schemas";
+import { allowLegacyModesForTests } from "@/lib/model/project-normalize";
+
+// These tests exercise the old Build, Solve and Pool code, which the app no longer reaches.
+allowLegacyModesForTests();
 const empty = (): FactoryProject => ({
   schemaVersion: PROJECT_SCHEMA_VERSION,
   id: "group-store",

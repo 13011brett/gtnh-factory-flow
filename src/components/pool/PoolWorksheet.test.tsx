@@ -12,6 +12,10 @@ const dragSounds = () => vi.mocked(playBoardSound).mock.calls.map(([kind]) => ki
 import { useFactoryStore } from "@/store/factory-store";
 import { DEFAULT_WORKSPACE_VIEW, writeWorkspaceView } from "@/lib/workspace-view";
 import { PROJECT_SCHEMA_VERSION, type FactoryProject } from "@/lib/model/types";
+import { allowLegacyModesForTests } from "@/lib/model/project-normalize";
+
+// These tests exercise the old Build, Solve and Pool code, which the app no longer reaches.
+allowLegacyModesForTests();
 
 vi.mock("../ItemPickerPopover", () => ({
   ItemPickerPopover: ({

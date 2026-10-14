@@ -21,3 +21,13 @@ export function createEmptyProject(): FactoryProject {
     },
   };
 }
+
+/**
+ * A brand-new design. There is one mode, so it starts in plan mode, with both
+ * flags as plan mode always carries solve mode (an older build opens it as
+ * Solve). `createEmptyProject` stays the unmoded blank for code that builds
+ * scratch projects (blueprint stats, tests).
+ */
+export function createNewProject(): FactoryProject {
+  return { ...createEmptyProject(), planMode: true, solveMode: true };
+}

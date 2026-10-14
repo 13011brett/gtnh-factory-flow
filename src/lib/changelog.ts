@@ -40,6 +40,17 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.12.0",
+    date: "2026-10-14",
+    headline: "One way to plan",
+    notes: [
+      "Build, Solve and Pool are gone. Every plan now works the same way: set a count, a rate or a drawer, and the board works out the rest.",
+      "Plans you already have open as they were. Build plans keep their counts, Solve plans keep their rates, and Pool plans get a wire from every maker to every user of a resource.",
+      "A pool plan says so when it opens, because its shared pools became wires. Nothing is saved until you change something.",
+      "The machine list moved to Settings, and the Raw/Net switch, resource trends and the hide and star marks are gone with the old side panel.",
+    ],
+  },
+  {
     version: "3.11.1",
     date: "2026-10-12",
     headline: "Reports from the mod are checked",

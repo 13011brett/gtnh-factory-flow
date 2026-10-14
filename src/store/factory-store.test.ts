@@ -3,6 +3,10 @@ import { getStorageRole } from "@/lib/model/storage-role";
 import { PROJECT_SCHEMA_VERSION, type FactoryProject } from "@/lib/model/types";
 import { makeResourceHandleId } from "@/components/flow/resource-handles";
 import { captureBoardSelection, useFactoryStore } from "./factory-store";
+import { allowLegacyModesForTests } from "@/lib/model/project-normalize";
+
+// These tests exercise the old Build, Solve and Pool code, which the app no longer reaches.
+allowLegacyModesForTests();
 
 describe("factory resource links", () => {
   beforeEach(() => {

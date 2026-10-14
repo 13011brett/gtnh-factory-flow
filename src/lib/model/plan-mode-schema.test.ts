@@ -88,8 +88,10 @@ describe("plan mode fields survive every path", () => {
     expect(loaded.poolMode).toBeUndefined();
     expect(loaded.planMode).toBe(true);
     // A project not in plan mode is untouched.
+    // A pool project is converted: there is one mode.
     const classic = normalizeLoadedProject({ ...planProject(), planMode: undefined, poolMode: true });
-    expect(classic.poolMode).toBe(true);
+    expect(classic.poolMode).toBeUndefined();
+    expect(classic.planMode).toBe(true);
   });
 
   it("keeps the old shape: a project without the fields parses without them", () => {

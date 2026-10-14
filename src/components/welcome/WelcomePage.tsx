@@ -108,8 +108,8 @@ export function WelcomePage() {
             </div>
             <p className="max-w-[600px] text-[13px] leading-relaxed text-fg-subtle">
               Draw a GregTech: New Horizons factory as a flowchart. Every card is a
-              real recipe, every wire carries a real rate, and the board tells you
-              what starves, what clogs and what to build.
+              real recipe, every wire carries a real rate, and
+              the board counts the machines you need.
             </p>
             <div className="mt-1 flex flex-wrap gap-2">
               <PrimaryButton

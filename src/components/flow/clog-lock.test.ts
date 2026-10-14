@@ -392,6 +392,7 @@ describe("a fed card held by its second output", () => {
       JSON.parse(
         readFileSync(new URL("./__fixtures__/titanium-line-chembath.json", import.meta.url), "utf8"),
       ),
+      { keepMode: true },
     );
     const result = calculateThroughput(proj, { generatedAt: "fixed" });
     const reactor = "node-d4b08d48-73d7-436b-8690-ff146be3af9c";
@@ -424,6 +425,7 @@ describe("a fed card held by its second output", () => {
       JSON.parse(
         readFileSync(new URL("./__fixtures__/alumina-line-shared-reactor.json", import.meta.url), "utf8"),
       ),
+      { keepMode: true },
     );
     const result = calculateThroughput(proj, { generatedAt: "fixed" });
     const reactor = "node-5f49041d-0bc1-4ef6-8cea-ad435b3d2add";

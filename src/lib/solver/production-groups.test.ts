@@ -201,7 +201,7 @@ describe("production scopes", () => {
   it("preserves scopes/rules through JSON and repairs broken parents and memberships", () => {
     const p = fixture();
     p.productionGroups![0].resourceRules = { "item:x": "share" };
-    const restored = parseFactoryProjectJson(serializeFactoryProject(p));
+    const restored = parseFactoryProjectJson(serializeFactoryProject(p), { keepMode: true });
     expect(restored.productionGroups).toEqual(p.productionGroups);
     expect(count(calculateThroughput(restored), "producer")).toBeCloseTo(1);
     p.productionGroups = [

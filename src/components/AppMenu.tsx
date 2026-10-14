@@ -2,7 +2,7 @@
 
 import { useDropdownDismiss } from "@/lib/hooks/use-dropdown-dismiss";
 
-import { Menu, Settings, X } from "lucide-react";
+import { Menu, Settings, Store, X } from "lucide-react";
 import { useRef, useState } from "react";
 import { AccountMenu } from "./community/AccountMenu";
 import { SHOW_PACK_PICKER } from "./AppHeader";
@@ -18,6 +18,8 @@ interface AppMenuProps {
   onExportImage: () => void;
   /** Opens the settings dialog, also owned by the header. */
   onOpenSettings: () => void;
+  /** Opens the machine list sheet, also owned by the header. */
+  onOpenMachineList: () => void;
 }
 
 /**
@@ -31,6 +33,7 @@ export function AppMenu({
   onShare,
   onExportImage,
   onOpenSettings,
+  onOpenMachineList,
 }: AppMenuProps) {
   const [isOpen, setOpen] = useState(false);
   const sheetRef = useRef<HTMLDivElement>(null);
@@ -87,6 +90,19 @@ export function AppMenu({
                 <Settings className="h-3.5 w-3.5" aria-hidden />
               </span>
               <span className="truncate">Settings</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                onOpenMachineList();
+                setOpen(false);
+              }}
+              className="flex h-10 w-full items-center gap-2.5 rounded px-2 text-left text-sm text-fg-subtle hover:bg-surface-sunken"
+            >
+              <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+                <Store className="h-3.5 w-3.5" aria-hidden />
+              </span>
+              <span className="truncate">Machine list</span>
             </button>
             <MenuLinks onAction={() => setOpen(false)} />
             <div className="flex px-2 py-1">

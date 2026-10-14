@@ -276,8 +276,9 @@ export async function PUT(request: Request, { params }: { params: Promise<{ plan
         return NextResponse.json({ error: "Refusing to share an empty plan." }, { status: 400 });
       }
 
-      await ensurePlanEngine(project);
-      const stats = computeCommunityPlanStats(project, calculateThroughput(project));
+      const solved = normalizeLoadedProject(project);
+      await ensurePlanEngine(solved);
+      const stats = computeCommunityPlanStats(solved, calculateThroughput(solved));
       Object.assign(update, {
         plan: project,
         needs: stats.needs,

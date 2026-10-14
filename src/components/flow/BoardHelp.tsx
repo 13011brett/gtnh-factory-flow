@@ -113,32 +113,14 @@ const BUILD: HelpCard = {
   ],
 };
 
-/** The mode switch: one card per key, in the key's colour. */
-const BUILD_MODE: HelpCard = {
-  title: "Build",
+/** There is one mode: what the board does with the numbers you set. */
+const SOLVING: HelpCard = {
+  title: "How it solves",
   rows: [
-    { text: "Place *recipes* and connect their slots" },
-    { text: "Set *machine counts*; read actual rates" },
-    { text: "Hover a status for *flow limits*" },
-  ],
-};
-
-const SOLVE_MODE: HelpCard = {
-  title: "Solve",
-  rows: [
-    { text: "Connect recipes and set a *target*" },
+    { text: "Wire recipes and set a *count*, a *rate* or a *drawer*" },
     { text: "*Machine counts* are calculated" },
-    { text: "Target: *input/output rate* or *pinned count*" },
-  ],
-};
-
-const POOL_MODE: HelpCard = {
-  title: "Pool",
-  rows: [
-    { text: "Choose recipes and set a *target*" },
-    { text: "Counts and resource flow are *automatic*" },
-    { text: "Inputs with no producer are *imported*" },
-    { chip: "+", tone: "pool", text: "Add a rate: *positive output*, *negative input*" },
+    { text: "*Forced* rows show what leaves or enters at a port" },
+    { text: "A port with no wire is a *free end*" },
   ],
 };
 
@@ -180,13 +162,12 @@ const ON_A_CARD: HelpCard = {
 };
 
 const DRAWERS: HelpCard = {
-  title: "Drawers and tanks",
+  title: "Drawers",
   rows: [
-    { shape: "source", text: "*Source*: unlimited external supply" },
-    { shape: "product", text: "*Product*: requests full production" },
-    { shape: "byproduct", text: "*Byproduct*: collects only surplus" },
+    { shape: "source", text: "*Source*: supplies a resource, at a rate or without limit" },
+    { shape: "product", text: "*Product*: takes a resource out, at a rate or what is left" },
     { shape: "trash", text: "*Trash*: discards all arrivals" },
-    { shape: "buffer", text: "*Buffer*: pass-through and storage" },
+    { text: "Click the *rule key* to cycle: at least, exactly, at most, any" },
   ],
 };
 
@@ -238,16 +219,15 @@ const PLAN_TOTALS: HelpCard = {
     { chip: "INPUTS", tone: "need", text: "Required external supply" },
     { chip: "OUTPUTS", tone: "output", text: "Resources leaving the plan" },
     { chip: "INTERNAL", tone: "internal", text: "Made and used in the plan" },
-    { chip: "RAW/NET", text: "Total flows / net balance" },
   ],
 };
 
 const MACHINES: HelpCard = {
-  title: "Machines",
+  title: "Machine list",
   rows: [
-    { icon: Store, text: "Required *machines by tier*" },
+    { icon: Store, text: "In *Settings* (the menu on a phone)" },
+    { text: "Required *machines by tier*" },
     { chip: "PEAK/AVG", text: "Full-load / actual power" },
-    { chip: "USED", text: "Power use and generation" },
     { mouse: "left", text: "Click a row to *locate machines*" },
   ],
 };
@@ -269,10 +249,8 @@ const NOTICES: HelpCard = {
   title: "Plan diagnostics",
   rows: [
     { chip: "NOT WIRED UP", tone: "fine", text: "Slots need connections" },
-    { chip: "DEAD LOOP", tone: "bottleneck", text: "Cycle supply deficit" },
-    { chip: "CLOG LOCK", tone: "clogged", text: "Surplus blocks a cycle" },
-    { chip: "SOLVE MODE", tone: "solve", text: "Set rate / pin count" },
-    { chip: "POOL MODE", tone: "pool", text: "Add a product target" },
+    { chip: "SET COUNT", tone: "blocked", text: "Nothing sets a rate here yet" },
+    { chip: "FORCED", tone: "need", text: "Flow leaves or enters at a port" },
   ],
 };
 
@@ -305,29 +283,9 @@ const TOUCH_MOVES: HelpCard = {
   ],
 };
 
-/** The mode stack, in the order the switch reads. */
-const MODES: HelpCard[] = [BUILD_MODE, SOLVE_MODE, POOL_MODE];
-
-/**
- * The three modes as ONE card for the spread, hung right under the switch.
- * Three cards would take twice the centre column's height and leave no room
- * for the legends under it.
- */
-const MODES_CARD: HelpCard = {
-  title: "Build, Solve, Pool",
-  rows: [
-    { text: "*Build*: you set counts and wires" },
-    { text: "The board reports what flows" },
-    { text: "*Solve*: you wire and set a target" },
-    { text: "Machine counts are calculated" },
-    { text: "*Pool*: pick recipes, set a target" },
-    { text: "Counts, wires and imports are automatic" },
-  ],
-};
-
 /** Every card, in reading order, for the one-column formats. */
 const LINEAR: HelpCard[] = [
-  ...MODES,
+  SOLVING,
   LIBRARY,
   BUILD,
   TOOLS,
@@ -458,8 +416,7 @@ function boxesOverlap(a: Box, b: Box): boolean {
 /**
  * Where everything goes, from the measured rings.
  *
- * Board-left hangs under the build toolbar; the CENTRE hangs under the mode
- * switch with the modes card and the machine-card controls; the LEGENDS
+ * Board-left hangs under the build toolbar with the solving card; the LEGENDS
  * (drawers, board windows, notices) stand along the board's foot between
  * the corner stack and the framing dock, in as many lanes as fit; the
  * corner stack grows up from the "?" and its bottom card points down at the
@@ -468,10 +425,9 @@ function boxesOverlap(a: Box, b: Box): boolean {
  * browser column, the Library card first with an arrow across to the
  * Library pill; the inspector's totals card sits over its top and its
  * machines card over the machine list. A closed panel takes its own cards
- * with it. When the foot has no lane the legends hang under the centre;
- * when the centre has no lane of its own it takes the build toolbar's and
- * the Units card joins the corner stack. Stacks that would then land on
- * each other report `fits: false`.
+ * with it. When the foot has no lane the legends hang under the build
+ * toolbar's stack. Stacks that would then land on each other report
+ * `fits: false`.
  */
 function layoutGlance({ rects, button, vw, vh }: Measured): GlanceLayout {
   const rings: HelpRect[] = [];
@@ -481,7 +437,6 @@ function layoutGlance({ rects, button, vw, vh }: Measured): GlanceLayout {
 
   const build = rects.build;
   const toolRow = unionRects(rects.paint, rects.view);
-  const modeSwitch = rects.rules;
   const dock = rects.glance;
   const browser = rects.browser;
   const inspector = rects.inspector;
@@ -494,35 +449,11 @@ function layoutGlance({ rects, button, vw, vh }: Measured): GlanceLayout {
   const rightEdge = toolRow?.right ?? dock?.right ?? vw - 12;
   const rightColumnLeft = rightEdge - CARD_W;
   const buildLeft = build?.left ?? 12;
-  const switchCentre = modeSwitch ? (modeSwitch.left + modeSwitch.right) / 2 : undefined;
-
-  // THE CENTRE lane wants to sit under the switch; it may start no further
-  // left than the build column's right edge (WIDE) or, failing that, the
-  // build toolbar's own left (NARROW), and must end clear of the
-  // board-right column.
-  const laneRightLimit = rightColumnLeft - CARD_GAP - CARD_W;
-  const wideLeft =
-    switchCentre !== undefined
-      ? clamp(switchCentre - CARD_W / 2, buildLeft + CARD_W + CARD_GAP, laneRightLimit)
-      : undefined;
-  const wide =
-    wideLeft !== undefined &&
-    wideLeft >= buildLeft + CARD_W + CARD_GAP &&
-    wideLeft <= laneRightLimit;
-  const narrowLeft =
-    switchCentre !== undefined
-      ? clamp(switchCentre - CARD_W / 2, buildLeft, laneRightLimit)
-      : undefined;
-  const narrow =
-    !wide && narrowLeft !== undefined && narrowLeft >= buildLeft && narrowLeft <= laneRightLimit;
-  const centreLeft = wide ? wideLeft : narrow ? narrowLeft : undefined;
-  const centreTop = modeSwitch ? padRect(modeSwitch).bottom + CALLOUT_GAP : 0;
-  const centreCards = [MODES_CARD];
 
   // THE FOOT: two lanes between the corner stack and the dock stack, hung
   // from the plan bar: the machine-card controls and the legends (drawers,
   // board windows, notices), balanced by height. One lane stacks all four;
-  // no lane at all hangs them under the centre.
+  // no lane at all hangs them under the build toolbar's cards.
   const footCards = [ON_A_CARD, DRAWERS, BOARDS, NOTICES];
   const footBottom = planBar ? padRect(planBar).top - CALLOUT_GAP : vh - 12;
   const footLeftLimit = (button ? button.left + CARD_W : buildLeft) + CARD_GAP;
@@ -540,9 +471,6 @@ function layoutGlance({ rects, button, vw, vh }: Measured): GlanceLayout {
       : footLanes === 1
         ? [footCards]
         : [];
-  if (footLanes === 0 && centreLeft !== undefined) {
-    centreCards.push(...footCards);
-  }
   const footWidth = footStacks.length * CARD_W + (footStacks.length - 1) * CARD_GAP;
   const footLeft = clamp(
     (footLeftLimit + footRightLimit) / 2 - footWidth / 2,
@@ -550,21 +478,19 @@ function layoutGlance({ rects, button, vw, vh }: Measured): GlanceLayout {
     Math.max(footLeftLimit, footRightLimit - footWidth),
   );
 
-  // NARROW puts the centre lane over the build toolbar's lane, so the Units
-  // card moves to the corner stack.
-  const cornerCards = [...(narrow ? [BUILD] : []), MOVES, PLAN_CARD];
+  const cornerCards = [MOVES, PLAN_CARD];
 
-  if (build && !narrow) {
+  if (build) {
     const ring = padRect(build);
     rings.push(build);
     const top = ring.bottom + CALLOUT_GAP;
     // No browser column means no place for the Library card; it sits here,
-    // under the pill it describes. No centre lane at all means the centre
-    // cards stack here too.
+    // under the pill it describes.
     const cards = [
       ...(browser ? [] : [LIBRARY]),
       BUILD,
-      ...(modeSwitch && centreLeft === undefined ? centreCards : []),
+      SOLVING,
+      ...(footLanes === 0 ? footCards : []),
     ];
     columns.push({
       key: "board-left",
@@ -574,26 +500,6 @@ function layoutGlance({ rects, button, vw, vh }: Measured): GlanceLayout {
     boxes.push({ key: "board-left", left: build.left, top, bottom: top + estimateStackHeight(cards) });
     const x = clamp((ring.left + ring.right) / 2, build.left + 24, build.left + CARD_W - 24);
     arrows.push({ points: [{ x, y: top }, { x, y: ring.bottom }] });
-  }
-
-  if (modeSwitch) {
-    const ring = padRect(modeSwitch);
-    rings.push(modeSwitch);
-    if (centreLeft !== undefined) {
-      columns.push({
-        key: "centre",
-        style: { left: centreLeft, top: centreTop, width: CARD_W },
-        cards: centreCards,
-      });
-      boxes.push({
-        key: "centre",
-        left: centreLeft,
-        top: centreTop,
-        bottom: centreTop + estimateStackHeight(centreCards),
-      });
-      const x = clamp((ring.left + ring.right) / 2, centreLeft + 24, centreLeft + CARD_W - 24);
-      arrows.push({ points: [{ x, y: centreTop }, { x, y: ring.bottom }] });
-    }
   }
 
   footStacks.forEach((cards, index) => {

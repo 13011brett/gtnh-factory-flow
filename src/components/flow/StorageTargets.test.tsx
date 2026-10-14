@@ -6,6 +6,10 @@ import { TargetLine } from "./StorageNode";
 import { useFactoryStore } from "@/store/factory-store";
 import { PROJECT_SCHEMA_VERSION, type FactoryProject } from "@/lib/model/types";
 import { DEFAULT_WORKSPACE_VIEW, writeWorkspaceView } from "@/lib/workspace-view";
+import { allowLegacyModesForTests } from "@/lib/model/project-normalize";
+
+// These tests exercise the old Build, Solve and Pool code, which the app no longer reaches.
+allowLegacyModesForTests();
 
 function project(): FactoryProject {
   return {

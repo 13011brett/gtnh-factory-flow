@@ -83,7 +83,10 @@ export function convertBuildToPlanWithReport(project: FactoryProject): PlanConve
     }
     return pinNode(node, recipe, build, report);
   });
-  nodes = applyTargets(project, nodes, recipesById, report);
+  // Solve never read a card's target (Build's display arithmetic), so a stale one must not become a pin.
+  if (build) {
+    nodes = applyTargets(project, nodes, recipesById, report);
+  }
 
   const parkedStorages = build ? parkDormantRates(storages, edges, project, report) : storages;
 
@@ -277,4 +280,50 @@ function parkDormantRates(
     report.drawerRatesParked += 1;
     return { ...storage, targetMode: "ignore" as const };
   });
+}
+
+/**
+ * A clipboard or blueprint as the plan board takes it. What was copied on an
+ * older board may hold buffer drawers, ratio shares, pool sides and
+ * production groups; none exist in plan mode, so buffers become the direct
+ * wires they stood for (as `convertBuildToPlan` does) and the rest is
+ * dropped. Counts are not pinned: a pasted card is free, like any new card.
+ */
+export function planClipboard<
+  T extends {
+    nodes: FactoryNode[];
+    storages: FactoryStorage[];
+    edges: FactoryEdge[];
+    productionGroups?: unknown[];
+  },
+>(payload: T): T {
+  const scratch = {
+    nodes: payload.nodes,
+    storages: payload.storages,
+    edges: payload.edges,
+    recipes: [],
+  } as unknown as FactoryProject;
+  const report: PlanConversionReport = {
+    pinned: 0,
+    portRates: 0,
+    buffersExpanded: 0,
+    ratioBuffersFlattened: 0,
+    drawerRatesParked: 0,
+    droppedTargets: [],
+  };
+  const expanded = payload.storages.length > 0 ? expandBuffers(scratch, report) : undefined;
+  const storages = (expanded?.storages ?? payload.storages).map((storage) => {
+    const { poolSide: _side, productionGroupId: _group, ...rest } = storage;
+    void _side;
+    void _group;
+    return rest;
+  });
+  const nodes = payload.nodes.map((node) => {
+    if (node.productionGroupId === undefined) return node;
+    const { productionGroupId: _group, ...rest } = node;
+    void _group;
+    return rest;
+  });
+  const edges = expanded?.edges ?? payload.edges.map(stripRatio);
+  return { ...payload, nodes, storages, edges, productionGroups: undefined };
 }

@@ -8,7 +8,7 @@ import type { MinimapRoute } from "./minimap-feed";
  */
 
 export type TileKind = "card" | "drawer" | "note" | "board";
-export type DrawerKind = "source" | "product" | "trash";
+export type DrawerKind = "source" | "product" | "trash" | "buffer";
 
 export interface Tile {
   id: string;
@@ -86,6 +86,7 @@ export interface SceneInput {
 const NEUTRAL_TINT = "#8A93A6";
 const SOURCE_TINT = "#78B6F4";
 const PRODUCT_TINT = "#F59A5C";
+const BUFFER_TINT = "#2E9C8F";
 
 type Loose = Record<string, any>; // eslint-disable-line @typescript-eslint/no-explicit-any
 
@@ -145,7 +146,14 @@ export function buildScene(input: SceneInput): Scene {
         y: node.y,
         w: node.w,
         h: node.h,
-        tint: drawer === "source" ? SOURCE_TINT : drawer === "product" ? PRODUCT_TINT : NEUTRAL_TINT,
+        tint:
+          drawer === "source"
+            ? SOURCE_TINT
+            : drawer === "product"
+              ? PRODUCT_TINT
+              : drawer === "buffer"
+                ? BUFFER_TINT
+                : NEUTRAL_TINT,
         label: extras?.label ?? "",
         drawer,
         rate: extras?.rate,

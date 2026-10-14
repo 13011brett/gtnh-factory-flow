@@ -21,6 +21,8 @@ export const CC = {
   source: "#78B6F4",
   product: "#F59A5C",
   trash: "#8A93A6",
+  /** A buffer: teal, the one drawer inside the plan (the mod's `DrawerPaint.BUFFER_INK`). */
+  buffer: "#2E9C8F",
   idle: "#A8AFBB",
   accept: "#4ADE80",
   wireGo: "#22C55E",
@@ -93,10 +95,11 @@ export function tierChipColors(tier: string): TierChipColors | undefined {
 }
 
 /** The mixes drawers and forced rows share (spec section 1, computed not typed). */
-export type DrawerKind = "source" | "product" | "trash";
+export type DrawerKind = "source" | "product" | "trash" | "buffer";
 
 export function drawerMixes(kind: DrawerKind) {
-  const tint = kind === "source" ? CC.source : kind === "product" ? CC.product : CC.trash;
+  const tint =
+    kind === "source" ? CC.source : kind === "product" ? CC.product : kind === "buffer" ? CC.buffer : CC.trash;
   return {
     tint,
     edge: mixHex(tint, CC.edge, 0.55),

@@ -28,10 +28,21 @@ import {
   cropsNhHarvesterFromTiers,
   getBeeBaseProductionTerm,
   getBeeProductionTermModifier,
+  getBeeSpeedGeneValueByKey,
+  BEE_SPEED_GENE_CONTROL_ID,
+  isIndustrialApiaryMachineType,
   getCropsNhStats,
   isBeeFrameSlotControlId,
   isBeeProductionRecipe,
 } from "@/lib/model/passive-production";
+import {
+  BEE_INDUSTRIAL_BASE_EUT,
+  beeIndustrialEnergy,
+  beeIndustrialEuPerTick,
+  beeIndustrialRateFraction,
+  beeOutputMultiplier,
+  beeProductionWithFrames,
+} from "@/lib/model/bee-maths";
 import { getVoltageTierForEuT, getVoltageTierIndex } from "@/lib/model/tiers";
 import { getHeatDiscountMultiplier } from "./heat";
 import { getEffectiveVoltageOrdinal, getNodeRunTier, getPowerPoolEuT } from "./power";
@@ -147,7 +158,12 @@ export function getMachineOutputMultiplier(
   }
   if (isTgsRecipe(recipe)) {
     // MTETreeFarm: the tier multiplier, each mode's tool, a Forestry sapling's genes.
-    return getTgsOutputMultiplier(recipe as Partial<Recipe>, output, node.machineConfigTiers, getVoltageTierIndex(tier));
+    return getTgsOutputMultiplier(
+      recipe as Partial<Recipe>,
+      output,
+      node.machineConfigTiers,
+      getVoltageTierIndex(tier),
+    );
   }
   if (isVatRecipe(recipe)) {
     // MTEBioVat: the first fluid out times the output hatch's fill multiplier.
@@ -193,6 +209,10 @@ export function getMachineOutputMultiplier(
     .reduce((multiplier, control) => multiplier * (control.current.outputMultiplier ?? 1), 1);
 
   if (isBeeProductionRecipe(recipe)) {
+    const gameMultiplier = getBeeGameOutputMultiplier(recipe, node, output);
+    if (gameMultiplier !== undefined) {
+      return gameMultiplier;
+    }
     return (
       configMultiplier *
       getBeeClimateOutputMultiplier(recipe, node, output) *
@@ -202,6 +222,106 @@ export function getMachineOutputMultiplier(
   }
 
   return configMultiplier;
+}
+
+/**
+ * Items per base chance from the game's code (see bee-maths.ts): a chance goes through getFinalChance, a product is
+ * rolled twice, Forestry's housings at most once a roll. Undefined for the Mega Apiary (kept on the older scaling)
+ * and for an output whose base chance the recipe does not carry.
+ */
+function getBeeGameOutputMultiplier(
+  recipe: Pick<Recipe, "machineType" | "source" | "nei" | "machineConfigControls" | "metadata">,
+  node: Pick<FactoryNode, "machineConfigTiers">,
+  output: RecipeOutput,
+): number | undefined {
+  if (isMegaApiaryRecipe(recipe)) {
+    return undefined;
+  }
+  const chance = getBeeBaseChance(output);
+  if (chance === undefined) {
+    return undefined;
+  }
+  const climate = getBeeClimateOutputMultiplier(recipe, node, output);
+  if (climate === 0) {
+    return 0;
+  }
+  const controls = getRecipeMachineConfigTierControls(recipe, node);
+  const term = getBeeProductionTerm(recipe, controls);
+  if (term <= 0) {
+    return 0;
+  }
+  const industrial = isIndustrialApiaryMachineType(recipe.machineType);
+  const speedKey = controls.find((control) => control.id === BEE_SPEED_GENE_CONTROL_ID)?.current
+    .key;
+  let multiplier = beeOutputMultiplier(chance, getBeeSpeedGeneValueByKey(speedKey), term, {
+    specialty: isBeeSpecialtyOutput(output),
+    capped: !industrial,
+  });
+  if (industrial) {
+    const accel = controls.find((control) => control.id === BEE_INDUSTRIAL_SPEED_CONTROL_ID);
+    const lifespan = Number(recipe.metadata?.beeLifespan);
+    multiplier *= beeIndustrialRateFraction(
+      beeIndustrialSpeedExponent(accel?.current.key),
+      Number.isFinite(lifespan) && lifespan > 0 ? lifespan : undefined,
+    );
+  }
+  return multiplier;
+}
+
+function getBeeBaseChance(output: RecipeOutput): number | undefined {
+  if (typeof output.chance === "number" && output.chance > 0) {
+    return output.chance;
+  }
+  for (const line of output.tooltip ?? []) {
+    const match = /(?:product|specialty) chance:\s*([\d.]+)\s*%/i.exec(line);
+    if (match) {
+      const percent = Number(match[1]);
+      if (percent > 0) {
+        return percent / 100;
+      }
+    }
+  }
+  return undefined;
+}
+
+function isBeeSpecialtyOutput(output: RecipeOutput) {
+  return (
+    output.byproduct === true ||
+    (output.tooltip ?? []).some((line) => /specialty chance|needs preferred climate/i.test(line))
+  );
+}
+
+function beeIndustrialSpeedExponent(key: string | undefined) {
+  if (key === "speed-8-upgraded") {
+    return 8;
+  }
+  const match = /^speed-(\d)$/.exec(key ?? "");
+  return match ? Number(match[1]) : 0;
+}
+
+/** p + t: the housing's base term, the controls' modifiers, then the frames each against the sum so far. */
+function getBeeProductionTerm(
+  recipe: Pick<Recipe, "machineType">,
+  controls: ReturnType<typeof getRecipeMachineConfigTierControls>,
+) {
+  const hasUpgradedSpeed8 = controls.some(
+    (control) =>
+      control.id === BEE_INDUSTRIAL_SPEED_CONTROL_ID && control.current.key === "speed-8-upgraded",
+  );
+  const frames: string[] = [];
+  let term = getBeeBaseProductionTerm(recipe.machineType);
+  for (const control of controls) {
+    if (isBeeFrameSlotControlId(control.id)) {
+      frames.push(control.current.key);
+      continue;
+    }
+    if (hasUpgradedSpeed8 && control.id === BEE_INDUSTRIAL_PRODUCTION_CONTROL_ID) {
+      continue;
+    }
+    term += getBeeProductionTermModifier(control.id, control.current.key);
+  }
+  // Frames work on p, which is the term less Forestry's t of 1 (the Industrial Apiary takes none).
+  return beeProductionWithFrames(term - 1, frames) + 1;
 }
 
 function getBeeClimateOutputMultiplier(
@@ -447,6 +567,20 @@ export function getMachineEutMultiplier(
     (control) =>
       control.id === BEE_INDUSTRIAL_SPEED_CONTROL_ID && control.current.key === "speed-8-upgraded",
   );
+  if (isIndustrialApiaryMachineType(recipe.machineType)) {
+    // MTEIndustrialApiary: (int)(37 * energy * 2^speed) + 32 * 4^(speed - 1). The production upgrades keep their
+    // energy under the Upgraded Acceleration, whatever they do to the chance.
+    const speedKey = controls.find((control) => control.id === BEE_INDUSTRIAL_SPEED_CONTROL_ID)
+      ?.current.key;
+    const upgrades = Number(
+      controls.find((control) => control.id === BEE_INDUSTRIAL_PRODUCTION_CONTROL_ID)?.current.key,
+    );
+    const eut = beeIndustrialEuPerTick(
+      beeIndustrialSpeedExponent(speedKey),
+      beeIndustrialEnergy(Number.isFinite(upgrades) ? upgrades : 0, hasUpgradedSpeed8),
+    );
+    return (eut / BEE_INDUSTRIAL_BASE_EUT) * coilMultiplier;
+  }
   const configMultiplier = controls.reduce((multiplier, control) => {
     if (hasUpgradedSpeed8 && control.id === BEE_INDUSTRIAL_PRODUCTION_CONTROL_ID) {
       return multiplier;

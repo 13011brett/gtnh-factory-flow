@@ -46,6 +46,7 @@ import { applyRecipeInputOverrides, inputOverrideAmount } from "@/lib/model/reci
 import type { AlternativeCycleFace } from "@/lib/nei/alternative-cycle";
 import { createCropFarmPlaceholderRecipe, isCropFarmRecipe } from "@/lib/model/passive-production";
 import { buildPowerRecipe, isPowerRecipe } from "@/lib/power/power-recipe";
+import { powerCardForRecipe } from "@/lib/power/recipe-power";
 import { POWER_EU_CLAUSE_ID } from "@/lib/power/power-search";
 import {
   createCustomRatePlaceholderRecipe,
@@ -1642,7 +1643,17 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
     });
   },
   addNodeForRecipeObject: (recipe, resource, options) => {
-    set((state) => addRecipeNodeToState(state, recipe, resource, options));
+    set((state) => {
+      // A recipe whose machine is a power card here (kubatech's HTGR fuel pages) adds that card.
+      const power = powerCardForRecipe(recipe);
+      const powerRecipe = power && buildPowerRecipe(power.sourceId, power.settings, createId("recipe"));
+      return powerRecipe
+        ? addRecipeNodeToState(state, powerRecipe, undefined, {
+            focusCamera: options?.focusCamera,
+            machineConfigTiers: power.settings,
+          })
+        : addRecipeNodeToState(state, recipe, resource, options);
+    });
   },
   addConnectedNodeForRecipe: (recipeId, anchorNodeId, resource) => {
     set((state) => {

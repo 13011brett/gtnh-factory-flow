@@ -1,3 +1,4 @@
+import { solveBasis, type BasisRow } from "./exact-basis";
 import { solveLp, type LinearProgram, type LpSolution } from "./simplex";
 
 /**
@@ -20,7 +21,8 @@ interface HighsInstance {
     options?: Record<string, number | string | boolean>,
   ) => {
     Status: string;
-    Columns: Record<string, { Primal: number }>;
+    Columns: Record<string, { Primal: number; Status?: string }>;
+    Rows?: Array<{ Status?: string }>;
   };
 }
 
@@ -82,6 +84,14 @@ export function activeLpEngine(): "highs" | "simplex" {
  */
 export interface LpSolveOptions {
   maxMipNodes?: number;
+  /** Raw HiGHS options (presolve, tolerances, simplex strategy), for a second opinion on a doubtful answer. */
+  highsOptions?: Record<string, number | string | boolean>;
+  /**
+   * Recompute the vertex to full double precision from HiGHS' basis. The wrapper prints column values to six
+   * significant digits; callers that compare at 1e-6 or check conservation need more. Keeps HiGHS' numbers when the
+   * basis does not describe a vertex.
+   */
+  exactPrimal?: boolean;
 }
 
 export function hasIntegerColumns(lp: LinearProgram): boolean {
@@ -165,6 +175,7 @@ function solveWithHighs(
   lines[1] = ` obj: ${objTerms.length > 0 ? objTerms.join(" ") : "0 x0"}`;
   lines.push("Subject To");
   let rowIndex = 0;
+  const writtenRows: BasisRow[] = [];
   for (const originalRow of lp.equalities) {
     const row = scaledRow(originalRow);
     const terms: string[] = [];
@@ -177,6 +188,7 @@ function solveWithHighs(
       continue;
     }
     lines.push(` e${rowIndex}: ${terms.join(" ")} = ${format(row.rhs)}`);
+    writtenRows.push(originalRow);
     rowIndex += 1;
   }
   for (const originalRow of lp.upperBounds) {
@@ -191,6 +203,7 @@ function solveWithHighs(
       continue;
     }
     lines.push(` u${rowIndex}: ${terms.join(" ")} <= ${format(row.rhs)}`);
+    writtenRows.push(originalRow);
     rowIndex += 1;
   }
   // A column that no row or objective term names is not in the program HiGHS
@@ -221,7 +234,7 @@ function solveWithHighs(
   lines.push("End");
 
   const mip = generals.length > 0 || binaries.length > 0;
-  const highsOptions: Record<string, number | string | boolean> = {};
+  const highsOptions: Record<string, number | string | boolean> = { ...solveOptions.highsOptions };
   if (mip && solveOptions.maxMipNodes !== undefined) {
     highsOptions.mip_max_nodes = solveOptions.maxMipNodes;
   }
@@ -245,11 +258,39 @@ function solveWithHighs(
     // the whole number it meant.
     x[c] = isWhole(c) && Math.abs(value - Math.round(value)) < 1e-6 ? Math.round(value) + 0 : value;
   }
+  if (solveOptions.exactPrimal && !mip) {
+    refineWithBasis(solved, writtenRows, x);
+  }
   let objective = 0;
   for (let c = 0; c < n; c += 1) {
     objective += lp.maximize[c]! * x[c]!;
   }
   return { status: "optimal", x, objective };
+}
+
+/**
+ * Overwrites the basic columns of `x` with the exact solution of the basis system (see exact-basis.ts). Rows are the
+ * program's own (unscaled) rows; a row is tight when its status is not basic. Leaves `x` alone when the basis is not
+ * a square, non-singular vertex.
+ */
+function refineWithBasis(
+  solved: { Columns: Record<string, { Status?: string }>; Rows?: Array<{ Status?: string }> },
+  rows: BasisRow[],
+  x: number[],
+): void {
+  const solvedRows = solved.Rows;
+  if (!solvedRows || solvedRows.length !== rows.length) return;
+  const tight: BasisRow[] = [];
+  solvedRows.forEach((r, i) => {
+    if (r.Status !== "BS") tight.push(rows[i]!);
+  });
+  const basic: number[] = [];
+  for (let c = 0; c < x.length; c += 1) {
+    if (solved.Columns[`x${c}`]?.Status === "BS") basic.push(c);
+  }
+  const exact = solveBasis(tight, basic);
+  if (exact === null) return;
+  for (const [c, v] of exact) x[c] = v;
 }
 
 /** HiGHS accepts scientific notation; retain small nonzero coefficients. */

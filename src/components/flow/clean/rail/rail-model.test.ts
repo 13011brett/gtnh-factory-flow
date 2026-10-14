@@ -29,6 +29,16 @@ describe("the rail's totals", () => {
     });
   });
 
+  it("lists biggest first and keeps equal amounts in the order the plan met them (not alphabetical)", () => {
+    for (const mock of [mockUnneeded, mockForced, mockLeftovers]) {
+      const rail = model(mock);
+      for (const side of [rail.inputs, rail.outputs, rail.internal]) {
+        const amounts = side.map((l) => l.amount);
+        expect(amounts).toEqual([...amounts].sort((a, b) => b - a));
+      }
+    }
+  });
+
   it("shows a drawer with nothing typed as Any", () => {
     const rail = model(mockUnneeded);
     const log = rail.inputs.find((l) => l.label === "Log")!;

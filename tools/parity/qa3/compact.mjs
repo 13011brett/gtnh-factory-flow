@@ -1,0 +1,13 @@
+import fs from "node:fs";
+import { fresh, importText, toCode, OUT } from "./lib.mjs";
+const FX = "C:/Users/jack/gtnh-planner-mod/.claude/worktrees/website-mod-backport-research-c84135/src/test/resources/";
+const { browser, page, logs } = await fresh();
+await importText(page, toCode(fs.readFileSync(FX + "factory-flow/pa-cell-loop-plan.json", "utf8")));
+await page.waitForTimeout(6000);
+await page.getByRole("button", { name: "Not now" }).click().catch(()=>{});
+await page.setViewportSize({ width: 390, height: 844 });
+await page.waitForTimeout(2500);
+await page.screenshot({ path: OUT + "c-board.png" });
+console.log("scrollW", await page.evaluate(() => document.documentElement.scrollWidth), "compact attr", await page.evaluate(() => document.documentElement.hasAttribute("data-compact")));
+console.log(await page.evaluate(() => [...document.querySelectorAll("button,[role=button]")].filter(b=>{const r=b.getBoundingClientRect(); return r.width>0 && r.right<=390}).map(b => (b.getAttribute("aria-label")||b.textContent||"").trim().slice(0,22)).join(" | ")));
+await browser.close();

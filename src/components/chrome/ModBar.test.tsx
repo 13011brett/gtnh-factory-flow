@@ -5,10 +5,10 @@ import { useFactoryStore } from "@/store/factory-store";
 import { useDesignStore } from "@/store/design-store";
 import { writeWorkspaceView } from "@/lib/workspace-view";
 import { OPEN_FEEDBACK_EVENT } from "./chrome-events";
-import { dominantTier, ModBar } from "./ModBar";
+import { ModBar } from "./ModBar";
 import { registerBoardCommands } from "./board-commands";
 
-vi.mock("@/lib/compact-view", () => ({ isCompactViewport: () => false }));
+vi.mock("@/lib/compact-view", () => ({ isCompactViewport: () => false, useIsCompactViewport: () => false }));
 
 beforeAll(() => {
   (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -36,6 +36,19 @@ beforeEach(() => {
 afterEach(() => cleanup());
 
 describe("the mod's top bar", () => {
+  it("every key is in the Tab order (a disabled one is not) and Enter or Space presses it", () => {
+    renderBar();
+    for (const id of ["nonrecipe", "arrange", "fit", "rate", "power", "peak", "library", "share", "feedback", "settings", "help"]) {
+      expect(key(id).getAttribute("tabindex"), id).toBe("0");
+    }
+    expect(key("undo").getAttribute("tabindex")).toBe("-1");
+    key("rate").focus();
+    fireEvent.keyDown(key("rate"), { key: "Enter" });
+    expect(useFactoryStore.getState().rateUnit).toBe("minute");
+    fireEvent.keyDown(key("rate"), { key: " " });
+    expect(useFactoryStore.getState().rateUnit).toBe("hour");
+  });
+
   it("has the keys in the mod's order", () => {
     renderBar();
     const order = [...document.querySelectorAll("[data-mb]")].map((element) => element.getAttribute("data-mb"));
@@ -108,7 +121,7 @@ describe("the mod's top bar", () => {
     renderBar();
     fireEvent.click(key("share"));
     const rows = [...document.querySelectorAll('[role="menu"] [role="menuitem"] .mm-label')].map((element) => element.textContent);
-    expect(rows).toEqual(["Share to library...", "Copy plan code", "Screenshot..."]);
+    expect(rows).toEqual(["Share to library...", "Copy plan code", "Export plan file (.json)", "Screenshot..."]);
   });
 
   it("the Help key opens the tour, the controls list and the website's own links", () => {
@@ -149,13 +162,5 @@ describe("the mod's top bar", () => {
       expect(key(id).getAttribute("data-tip-id"), id).toBe(`bar|${id}`);
       expect(JSON.parse(key(id).getAttribute("data-tip")!).title.length).toBeGreaterThan(3);
     }
-  });
-});
-
-describe("the Amps key's tier", () => {
-  it("is the tier most machines run at", () => {
-    expect(dominantTier(["HV", "HV", "LV", "EV"])).toBe("HV");
-    expect(dominantTier([])).toBeUndefined();
-    expect(dominantTier(["nonsense", "DEMO"])).toBeUndefined();
   });
 });

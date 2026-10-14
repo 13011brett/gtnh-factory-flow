@@ -52,13 +52,29 @@ function subscribe(listener: () => void) {
 export function useBoardNotices(): BoardNotice[] {
   const project = useFactoryStore((state) => state.project);
   const result = useFactoryStore((state) => state.lastResult);
+  const conversion = useFactoryStore((state) => state.planNotice);
+  const dismissConversion = useFactoryStore((state) => state.dismissPlanNotice);
   const flashed = useSyncExternalStore(
     subscribe,
     () => flashSnapshot,
     () => undefined,
   );
   const solved = useMemo(() => buildNotices(project, result), [project, result]);
-  return useMemo(() => (flashed ? [flashed, ...solved] : solved), [flashed, solved]);
+  return useMemo(() => {
+    // What a conversion did to an older plan, on one line, until it is dismissed.
+    const converted: BoardNotice[] = conversion
+      ? [
+          {
+            id: "conversion",
+            severity: "info",
+            text: [conversion.text, ...conversion.details].join(" "),
+            focus: [],
+            dismiss: dismissConversion,
+          },
+        ]
+      : [];
+    return [...(flashed ? [flashed] : []), ...converted, ...solved];
+  }, [conversion, dismissConversion, flashed, solved]);
 }
 
 export function NoticeRow({
@@ -90,6 +106,19 @@ export function NoticeRow({
           }}
         >
           Show me
+        </span>
+      ) : null}
+      {notice.dismiss ? (
+        <span
+          role="button"
+          tabIndex={0}
+          className="rail-notice-show"
+          onClick={notice.dismiss}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") notice.dismiss?.();
+          }}
+        >
+          Dismiss
         </span>
       ) : null}
     </div>

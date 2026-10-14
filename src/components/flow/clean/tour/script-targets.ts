@@ -243,11 +243,19 @@ export const topKey = (re: RegExp): Target => () => {
   return null;
 };
 
-export const fitKey: Target = topKey(/^Fit the plan/i);
-export const undoKey: Target = topKey(/^Undo\b/);
-export const redoKey: Target = topKey(/^Redo\b/);
-export const rateUnitKey: Target = topKey(/^Rate unit/i);
-export const powerUnitKey: Target = topKey(/^Power unit/i);
+/** A key of the mod's top bar (chrome/ModBar), by its id. */
+export const barKey =
+  (id: string): Target =>
+  () =>
+    q(`.mb-key[data-mb="${id}"]`);
+
+export const fitKey: Target = barKey("fit");
+export const undoKey: Target = barKey("undo");
+export const redoKey: Target = barKey("redo");
+export const rateUnitKey: Target = barKey("rate");
+export const powerUnitKey: Target = barKey("power");
+export const libraryKey: Target = barKey("library");
+export const feedbackKey: Target = barKey("feedback");
 
 export const railRoot: Target = () => q(".rail-root");
 export const railSection = (name: RegExp): Target => textOf(".rail-sec", name, () => railRoot());
@@ -322,5 +330,5 @@ export const byOwnText =
     return null;
   };
 
-/** The items column's Power key, which opens the non-recipe machines. */
-export const powerKey: Target = byOwnText("button", /^Power$/);
+/** The top bar's Non-recipe key, which opens the non-recipe machines (the mod's own place for it). */
+export const powerKey: Target = barKey("nonrecipe");

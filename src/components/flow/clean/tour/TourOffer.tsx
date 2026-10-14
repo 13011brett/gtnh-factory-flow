@@ -24,7 +24,10 @@ export function TourOffer() {
       if (r.width < 200 || !probe || !board.contains(probe)) return;
       window.clearInterval(id);
       window.setTimeout(() => {
-        if (!tourOffered() && getTour().phase === "idle") setAt({ x: r.left + 16, y: r.top + 70 });
+        if (tourOffered() || getTour().phase !== "idle") return;
+        // Under any notices the board is showing (a converted plan's), never over their text.
+        const notices = document.querySelector<HTMLElement>(".rail-notices-top")?.getBoundingClientRect();
+        setAt({ x: r.left + 16, y: Math.max(r.top + 70, notices && notices.height > 0 ? notices.bottom + 8 : 0) });
       }, 1200);
     }, 1500);
     return () => window.clearInterval(id);

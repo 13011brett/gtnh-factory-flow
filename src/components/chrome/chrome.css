@@ -397,3 +397,79 @@
 .mc-controls-effect {
   color: var(--mc-muted);
 }
+
+/* Keyboard focus: a gold ring inside the key, shown for the keyboard only. */
+.mb-key:focus-visible,
+.mt-tab:focus-visible,
+.mt-plus:focus-visible,
+.mt-close:focus-visible,
+.mm:focus-visible,
+.mm-row:focus-visible {
+  outline: 2px solid var(--mc-gold, #ffd257);
+  outline-offset: -2px;
+}
+.mm:focus {
+  outline: none;
+}
+.mm-row:focus-visible {
+  background: var(--mc-menu-hover, #4e5058);
+}
+
+/* The board and its panels: every control that plays a button shows the same gold ring when the keyboard is on it.
+   (React Flow strips its cards, drawers and wires of any outline, so they get one back here.) */
+[role="button"]:focus-visible,
+[role="menuitem"]:focus-visible,
+[role="radio"]:focus-visible,
+[role="tab"]:focus-visible {
+  outline: 2px solid var(--mc-gold, #ffd257);
+  outline-offset: -2px;
+}
+.react-flow__node.react-flow__node:focus-visible {
+  outline: 2px solid var(--mc-gold, #ffd257);
+  outline-offset: 3px;
+}
+.react-flow__edge.react-flow__edge:focus-visible {
+  outline: none;
+  filter: drop-shadow(0 0 2px var(--mc-gold, #ffd257)) drop-shadow(0 0 1px var(--mc-gold, #ffd257));
+}
+
+/* ---- A phone (html[data-compact]) ---------------------------------------- */
+/* The same bar, condensed: the plan tabs take the first row (they scroll sideways), the keys wrap below, a little
+   taller for a finger. The two side columns are drawers over the board; their keys are the first two. */
+:root[data-compact] .mb {
+  height: auto;
+  flex-wrap: wrap;
+  row-gap: 3px;
+  padding: 3px 4px;
+}
+:root[data-compact] .mt {
+  flex: 1 0 100%;
+  height: 20px;
+}
+:root[data-compact] .mt-strip,
+:root[data-compact] .mt-wrap {
+  height: 20px;
+}
+:root[data-compact] .mt-tab {
+  height: 19px;
+  max-width: 140px;
+}
+:root[data-compact] .mt-tab[data-active] {
+  height: 20px;
+}
+:root[data-compact] .mt-tab[data-active] .mt-close {
+  display: flex;
+}
+:root[data-compact] .mt-plus {
+  width: 22px;
+  height: 19px;
+}
+:root[data-compact] .mb-key {
+  height: 20px;
+}
+:root[data-compact] .mb-key[data-icon] {
+  width: 22px;
+}
+:root[data-compact] .mb-key.mb-gap {
+  margin-left: 4px;
+}

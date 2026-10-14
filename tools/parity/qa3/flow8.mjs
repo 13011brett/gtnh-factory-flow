@@ -1,0 +1,37 @@
+// Card menus on the real app: the card menu, the gear sheet, the machine list, tier chip power panel, a tooltip, a crop and a bee card.
+import fs from "node:fs";
+import { fresh, importText, toCode, OUT } from "./lib.mjs";
+const FX = "C:/Users/jack/gtnh-planner-mod/.claude/worktrees/website-mod-backport-research-c84135/src/test/resources/";
+const { browser, page, logs } = await fresh();
+await importText(page, toCode(fs.readFileSync(FX + "factory-flow/pa-cell-loop-plan.json", "utf8")));
+await page.waitForTimeout(6000);
+await page.getByRole("button", { name: "Not now" }).click().catch(() => {});
+await page.getByRole("button", { name: "Fit", exact: true }).click();
+await page.waitForTimeout(1000);
+const s = (n) => page.screenshot({ path: OUT + `f8-${n}.png` });
+const card = page.locator(".react-flow__node").filter({ has: page.locator(".cc-name") }).nth(1);
+await card.locator(".cc-key[aria-label='Card actions']").click();
+await page.waitForTimeout(600);
+await s("card-menu");
+console.log("card menu:", await page.evaluate(() => [...document.querySelectorAll("[role=menu] [role=menuitem], [role=menu] button, [role=menu] div")].filter((e) => e.children.length === 0).map((e) => e.textContent.trim()).join(" | ")));
+await page.keyboard.press("Escape");
+await page.mouse.click(1000, 120);
+await card.locator(".cc-key[aria-label='Machine settings']").click();
+await page.waitForTimeout(800);
+await s("gear-sheet");
+await page.keyboard.press("Escape");
+await page.mouse.click(1000, 120);
+await card.locator(".cc-name").click();
+await page.waitForTimeout(800);
+await s("machine-menu");
+await page.keyboard.press("Escape");
+await page.mouse.click(1000, 120);
+await card.locator(".cc-chip").first().hover();
+await page.waitForTimeout(1500);
+await s("chip-hover");
+// right click a wire
+const edge = page.locator(".react-flow__edge-interaction").first();
+const eb = await edge.boundingBox().catch(() => null);
+console.log("edge box", JSON.stringify(eb));
+console.log(logs.filter((l) => !/503|trailer|Hydration|script tag|404|ERR_ABORTED/.test(l)).join("\n"));
+await browser.close();

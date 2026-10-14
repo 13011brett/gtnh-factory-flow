@@ -1,0 +1,17 @@
+import fs from "node:fs";
+import { fresh, importText, toCode, OUT } from "./lib.mjs";
+const FX = "C:/Users/jack/gtnh-planner-mod/.claude/worktrees/website-mod-backport-research-c84135/src/test/resources/";
+const { browser, page } = await fresh();
+await importText(page, toCode(fs.readFileSync(FX + "factory-flow/high-amperage-reactor.json", "utf8")));
+await page.waitForTimeout(5000);
+await page.getByRole("button", { name: "Not now" }).click().catch(() => {});
+await page.locator('[data-mb="library"]').focus(); await page.keyboard.press("Shift+Tab"); await page.keyboard.press("Tab");
+await page.screenshot({ path: OUT + "fixa-ring-key.png", clip: { x: 200, y: 0, width: 900, height: 60 } });
+await page.locator(".react-flow__node").first().focus();
+await page.keyboard.press("Shift+Tab"); await page.keyboard.press("Tab");
+await page.locator(".react-flow__edge").first().focus();
+await page.keyboard.press("Shift+Tab"); await page.keyboard.press("Tab");
+await page.screenshot({ path: OUT + "fixa-ring-edge.png" });
+await page.locator(".react-flow__node").first().focus(); await page.keyboard.press("Shift+Tab"); await page.keyboard.press("Tab");
+await page.screenshot({ path: OUT + "fixa-ring-card.png" });
+await browser.close();

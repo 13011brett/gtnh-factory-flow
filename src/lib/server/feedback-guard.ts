@@ -6,7 +6,8 @@ import type { FeedbackReport } from "./feedback";
  * addresses (one to three reports each) with the mod's own user agent and made-up versions, and the old limit, keyed
  * on the client's own device id, let through over 400 issues. So no one check holds it alone:
  *
- * - the report must look like the mod's (its device id and version shapes);
+ * - the report must look like the mod's (its device id and version shapes), or, from the web planner, like the
+ *   web's: it says `origin: "web"`, has its own device id, no Java or log, and gets stricter limits and its own label;
  * - a process-wide gate takes at most `ARRIVALS_PER_MINUTE` reports a minute to the database, and a flood of refusals
  *   pauses reports altogether for `PAUSE_MS`;
  * - per address and per device, a few an hour and a day;
@@ -28,10 +29,42 @@ const OS = /^[A-Za-z0-9 ._()/+-]{1,100}$/;
 const DEVICE =
   /^(?:gtnhplanner|plannh)-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 
+/** The web planner's device id: `web-` and a UUID, made once in the browser. */
+const WEB_DEVICE = /^web-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+
+/** Where a report says it came from; the game's reports say nothing. */
+export function originOf(report: FeedbackReport): "game" | "web" {
+  return report.origin === "web" ? "web" : "game";
+}
+
+/**
+ * Whether the report is shaped as the web planner sends one: its own origin, its own device id, the page's version
+ * as `mod`, the browser's platform as `os`, and nothing of a game (no pack, no Java, no log or crash text).
+ */
+export function looksSentByTheWeb(report: FeedbackReport): boolean {
+  const v = report.versions;
+  return (
+    originOf(report) === "web" &&
+    WEB_DEVICE.test(report.deviceId) &&
+    MOD_VERSION.test(v.mod) &&
+    v.pack === "" &&
+    v.java === "" &&
+    OS.test(v.os) &&
+    report.log === undefined &&
+    report.crash === undefined
+  );
+}
+
+/** Whether the report is shaped as whichever origin it names: the game's, or the web planner's. */
+export function looksGenuine(report: FeedbackReport): boolean {
+  return originOf(report) === "web" ? looksSentByTheWeb(report) : looksSentByTheGame(report);
+}
+
 /** Whether the report is shaped as the mod sends one. It proves little (the mod is open), but stops the lazy. */
 export function looksSentByTheGame(report: FeedbackReport): boolean {
   const v = report.versions;
   return (
+    originOf(report) === "game" &&
     DEVICE.test(report.deviceId) &&
     MOD_VERSION.test(v.mod) &&
     PACK_VERSION.test(v.pack) &&
@@ -98,6 +131,14 @@ export const PER_SENDER_HOUR = 3;
 export const PER_SENDER_DAY = 10;
 export const SITE_PER_HOUR = 10;
 export const SITE_PER_DAY = 40;
+/**
+ * The web planner's own, stricter limits: a page is easier to script than the game, so each sender gets fewer, and the
+ * web as a whole has a small share of the site's issues. They count against the same address and device records.
+ */
+export const WEB_PER_SENDER_HOUR = 2;
+export const WEB_PER_SENDER_DAY = 5;
+export const WEB_SITE_PER_HOUR = 4;
+export const WEB_SITE_PER_DAY = 15;
 const SAME_WORDS_SECONDS = 30 * 24 * 60 * 60;
 
 const HOUR = 60 * 60;
@@ -124,8 +165,10 @@ export function claimIssue(request: Request, report: FeedbackReport): Promise<Re
   const device = `feedback:device:${saltedKey(report.deviceId)}`;
   const words = `feedback:words:${saltedKey(wordsOf(report))}`;
   const site = "feedback:site";
+  const web = originOf(report) === "web";
+  const webSite = "feedback:site:web";
   return serially(async () => {
-    const [addressHour, addressDay, deviceHour, deviceDay, siteHour, siteDay, sameWords] =
+    const [addressHour, addressDay, deviceHour, deviceDay, siteHour, siteDay, sameWords, webHour, webDay] =
       await Promise.all([
         countEvents(address, "feedback", HOUR),
         countEvents(address, "feedback", DAY),
@@ -134,24 +177,28 @@ export function claimIssue(request: Request, report: FeedbackReport): Promise<Re
         countEvents(site, "feedback", HOUR),
         countEvents(site, "feedback", DAY),
         countEvents(words, "feedback", SAME_WORDS_SECONDS),
+        web ? countEvents(webSite, "feedback", HOUR) : Promise.resolve(0),
+        web ? countEvents(webSite, "feedback", DAY) : Promise.resolve(0),
       ]);
+    const perHour = web ? WEB_PER_SENDER_HOUR : PER_SENDER_HOUR;
+    const perDay = web ? WEB_PER_SENDER_DAY : PER_SENDER_DAY;
     if (sameWords > 0) {
       return { status: 409, error: "That report was sent already." };
     }
-    if (addressHour >= PER_SENDER_HOUR || deviceHour >= PER_SENDER_HOUR) {
+    if (addressHour >= perHour || deviceHour >= perHour) {
       return { status: 429, error: "That's a lot of reports. Try again in an hour." };
     }
-    if (addressDay >= PER_SENDER_DAY || deviceDay >= PER_SENDER_DAY) {
+    if (addressDay >= perDay || deviceDay >= perDay) {
       return { status: 429, error: "That's a lot of reports for one day. Try again tomorrow." };
     }
-    if (siteHour >= SITE_PER_HOUR || siteDay >= SITE_PER_DAY) {
+    if (siteHour >= SITE_PER_HOUR || siteDay >= SITE_PER_DAY || webHour >= WEB_SITE_PER_HOUR || webDay >= WEB_SITE_PER_DAY) {
       return {
         status: 503,
         error: "Lots of reports are coming in right now. Try again in a few hours.",
       };
     }
     await recordEvents(
-      [address, device, site, words].map((actorKey) => ({ actorKey, action: "feedback" })),
+      [address, device, site, words, ...(web ? [webSite] : [])].map((actorKey) => ({ actorKey, action: "feedback" })),
     );
     return undefined;
   });

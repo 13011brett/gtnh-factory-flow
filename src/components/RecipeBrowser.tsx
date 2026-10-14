@@ -796,7 +796,7 @@ export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
     <>
       <aside
         data-help-anchor="browser"
-        className={`relative z-40 flex h-full min-h-[360px] compact:min-h-0 flex-col ${itemsOnRight ? "border-l" : "border-r"} border-neutral-800 bg-[#25272c] text-neutral-100`}
+        className={`relative z-40 flex h-full min-h-[360px] min-w-0 compact:min-h-0 flex-col ${itemsOnRight ? "border-l" : "border-r"} border-neutral-800 bg-[#25272c] text-neutral-100`}
       >
         {(
           // The wheel pages the list from anywhere in the column, including over

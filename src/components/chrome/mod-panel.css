@@ -1,0 +1,435 @@
+/*
+ * The mod's boxes (the Feedback box, the Library's sign-in, ui/popup/*) as one skin for every panel around the board:
+ * the paste dialog, share-to-library and sign-in, the Welcome page, the recipe search and the items column.
+ *
+ * Two ways in. `.pn-backdrop` + `.pn` is a box built from the `pn-*` parts below. `.pn-skin` is the same look laid
+ * over markup that still carries Tailwind classes (a descendant rule per kind of thing: buttons are flat keys,
+ * fields are wells, the rounded corners and the heavy weights go). Plain unlayered CSS, so it beats Tailwind's
+ * layers and globals.css's `button { font: inherit }`. Tokens are the clean card's (`flow/clean/tokens.ts`) and the
+ * Feedback box's: surface #23252A, hairlines #34363C / #2C2E34, wells #16171A, the cyan primary key.
+ */
+.pn-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 100;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(0, 0, 0, 0.45);
+}
+:root,
+.pn,
+.pn-skin {
+  --pn-surface: #23252a;
+  --pn-edge: #34363c;
+  --pn-hair: #2c2e34;
+  --pn-well: #16171a;
+  --pn-ink: #e8e9ee;
+  --pn-muted: #9a9ca4;
+  --pn-dim: #6a6c74;
+  --pn-key: #26282d;
+  --pn-key-hover: #2d2f35;
+  --pn-key-hi: #4a4c54;
+  --pn-key-lo: #17191d;
+  --pn-cyan: #22d3ee;
+  --pn-cyan-hover: #38e1f5;
+  --pn-red: #e05252;
+  --pn-amber: #e0a63a;
+}
+.pn,
+.pn-skin {
+  font-family: var(--font-minecraft), monospace;
+  font-size: 12px;
+  line-height: 15px;
+  font-weight: 400;
+  letter-spacing: 0;
+  color: var(--pn-ink);
+  -webkit-font-smoothing: none;
+}
+.pn {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: 420px;
+  max-width: 100%;
+  max-height: calc(90 * var(--ui-vh, 1vh));
+  overflow-y: auto;
+  background: var(--pn-surface);
+  border: 1px solid var(--pn-edge);
+  box-shadow: 6px 8px 0 rgba(0, 0, 0, 0.45);
+}
+.pn[data-wide] {
+  width: 720px;
+}
+.pn-title {
+  flex: none;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 26px;
+  padding: 0 10px 0 12px;
+  border-bottom: 1px solid var(--pn-hair);
+  font-size: 13px;
+  user-select: none;
+}
+.pn-x {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  cursor: pointer;
+  background:
+    linear-gradient(45deg, transparent 44%, #9a9ca4 44% 56%, transparent 56%),
+    linear-gradient(-45deg, transparent 44%, #9a9ca4 44% 56%, transparent 56%);
+}
+.pn-x:hover {
+  background:
+    linear-gradient(45deg, transparent 44%, #e8e9ee 44% 56%, transparent 56%),
+    linear-gradient(-45deg, transparent 44%, #e8e9ee 44% 56%, transparent 56%);
+}
+.pn-body {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 12px;
+}
+.pn-note {
+  margin: 0;
+  color: var(--pn-muted);
+}
+.pn-err {
+  margin: 0;
+  color: var(--pn-red);
+}
+.pn-keys {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+/* A field: the Feedback box's well. */
+.pn-field,
+.pn-skin input:not([type="radio"]):not([type="checkbox"]):not([type="range"]):not([type="file"]),
+.pn-skin textarea {
+  box-sizing: border-box;
+  width: 100%;
+  padding: 6px 8px;
+  background: var(--pn-well);
+  border: 1px solid var(--pn-edge);
+  border-radius: 0;
+  color: var(--pn-ink);
+  font: inherit;
+  line-height: 15px;
+  outline: none;
+  user-select: text;
+}
+textarea.pn-field {
+  resize: none;
+}
+.pn-field:focus,
+.pn-skin input:focus,
+.pn-skin textarea:focus {
+  border-color: var(--pn-key-hi);
+}
+.pn-field::placeholder,
+.pn-skin input::placeholder,
+.pn-skin textarea::placeholder {
+  color: var(--pn-dim);
+}
+
+/* A key: the clean card's key, flat; the primary one is the cyan Send. */
+.pn-key,
+.pn-skin button[class*="border-line"]:not([class*="!h-"]):not(.group),
+.pn-skin button[class*="bg-cyan"] {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  min-width: 64px;
+  height: 22px;
+  padding: 0 12px;
+  background: var(--pn-key);
+  border: 0;
+  border-radius: 0;
+  color: var(--pn-ink);
+  font: inherit;
+  line-height: 22px;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow:
+    inset 1px 1px var(--pn-key-hi),
+    inset -1px -1px var(--pn-key-lo);
+}
+.pn-key:hover,
+.pn-skin button[class*="border-line"]:not([class*="!h-"]):not(.group):hover {
+  background: var(--pn-key-hover);
+}
+.pn-key:disabled,
+.pn-skin button[class*="border-line"]:not([class*="!h-"]):not(.group):disabled {
+  color: var(--pn-dim);
+  cursor: default;
+  opacity: 1;
+}
+.pn-key[data-primary],
+.pn-skin button[class*="bg-cyan"] {
+  background: var(--pn-cyan);
+  color: #0b1a1e;
+  box-shadow: inset 0 1px rgba(255, 255, 255, 0.4);
+}
+.pn-key[data-primary]:hover,
+.pn-skin button[class*="bg-cyan"]:hover {
+  background: var(--pn-cyan-hover);
+}
+.pn-key[data-primary]:disabled,
+.pn-skin button[class*="bg-cyan"]:disabled {
+  background: #1e6b78;
+  color: #0b1a1e;
+}
+/* Small round-ish things (icon-only keys, the close cross) keep their own size. */
+.pn-skin button[aria-label="Close"] {
+  min-width: 0;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+}
+
+/* The Tailwind classes the older panels carry, brought into line. */
+.pn-skin [class*="rounded"] {
+  border-radius: 0;
+}
+.pn-skin [class*="shadow-"] {
+  box-shadow: none;
+}
+.pn-skin [class*="font-semibold"],
+.pn-skin [class*="font-bold"],
+.pn-skin [class*="font-black"],
+.pn-skin [class*="font-medium"] {
+  font-weight: 400;
+}
+.pn-skin [class*="text-base"],
+.pn-skin [class*="text-lg"] {
+  font-size: 13px;
+  line-height: 16px;
+}
+.pn-skin [class*="text-sm"] {
+  font-size: 12px;
+  line-height: 15px;
+}
+.pn-skin [class*="text-xs"],
+.pn-skin [class*="text-[11px]"],
+.pn-skin [class*="text-[12px]"] {
+  font-size: 11px;
+  line-height: 14px;
+}
+.pn-skin [class*="border-line"] {
+  border-color: var(--pn-edge);
+}
+.pn-skin [class*="bg-surface-raised"] {
+  background-color: var(--pn-key);
+}
+.pn-skin [class*="bg-surface-sunken"] {
+  background-color: var(--pn-well);
+}
+.pn-skin [class*="bg-surface"]:not([class*="raised"]):not([class*="sunken"]) {
+  background-color: var(--pn-surface);
+}
+.pn-skin [class*="text-red-"] {
+  color: var(--pn-red);
+}
+.pn-skin [class*="text-fg-muted"] {
+  color: var(--pn-dim);
+}
+.pn-skin [class*="text-fg-subtle"] {
+  color: var(--pn-muted);
+}
+.pn-skin [class*="text-fg"]:not([class*="muted"]):not([class*="subtle"]) {
+  color: var(--pn-ink);
+}
+.pn-skin a {
+  color: var(--pn-cyan);
+}
+.pn-skin h1,
+.pn-skin h2,
+.pn-skin h3 {
+  font-weight: 400;
+}
+
+/* The compact list menu (a select that is a menu): a key that opens the rows. */
+.pn-pick-key {
+  font-family: var(--font-minecraft), monospace;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  height: 22px;
+  padding: 0 8px;
+  background: var(--pn-key);
+  border: 0;
+  border-radius: 0;
+  color: var(--pn-ink);
+  cursor: pointer;
+  box-shadow:
+    inset 1px 1px var(--pn-key-hi),
+    inset -1px -1px var(--pn-key-lo);
+}
+.pn-pick-key:hover,
+.pn-pick-key[data-open] {
+  background: var(--pn-key-hover);
+}
+.pn-pick-arrow {
+  width: 0;
+  height: 0;
+  border-left: 4px solid transparent;
+  border-right: 4px solid transparent;
+  border-top: 5px solid var(--pn-muted);
+}
+/* Flat chips in a row (the items column's tabs): the mod's tab keys. */
+.pn-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+}
+.pn-chip {
+  font-family: var(--font-minecraft), monospace;
+  font-size: 12px;
+  flex: 1 1 0;
+  min-width: 0;
+  height: 20px;
+  padding: 0 6px;
+  background: var(--pn-key);
+  border: 0;
+  border-radius: 0;
+  color: var(--pn-muted);
+  line-height: 20px;
+  text-align: center;
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow:
+    inset 1px 1px var(--pn-key-hi),
+    inset -1px -1px var(--pn-key-lo);
+}
+.pn-chip:hover {
+  background: var(--pn-key-hover);
+  color: var(--pn-ink);
+}
+.pn-chip[data-on] {
+  background: var(--pn-key-hover);
+  color: var(--pn-cyan);
+  box-shadow: inset 0 -2px 0 var(--pn-cyan);
+}
+
+/* The items column's search and the card its controls sit in. */
+.pn-card {
+  margin: 8px 8px 0;
+  padding: 6px;
+  background: var(--pn-surface);
+  border: 1px solid var(--pn-edge);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  flex: none;
+}
+.pn-search {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 26px;
+  padding: 0 8px;
+  background: var(--pn-well);
+  border: 1px solid var(--pn-edge);
+  color: var(--pn-ink);
+  font-family: var(--font-minecraft), monospace;
+  font-size: 12px;
+}
+.pn-search:focus-within {
+  border-color: var(--pn-key-hi);
+}
+.pn-search input {
+  flex: 1;
+  min-width: 0;
+  background: transparent;
+  border: 0;
+  outline: 0;
+  color: inherit;
+  font: inherit;
+}
+.pn-search input::placeholder {
+  color: var(--pn-dim);
+}
+.pn-search svg {
+  flex: none;
+  color: var(--pn-dim);
+}
+.pn-chips[data-grid] {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+}
+.pn-column {
+  font-family: var(--font-minecraft), monospace;
+}
+.pn-column .pn-chip {
+  font-size: 11px;
+  padding: 0 2px;
+}
+.pn-column [role="option"] span:last-child {
+  font-size: 8px;
+  letter-spacing: -0.02em;
+}
+.pn-column button,
+.pn-column input {
+  font-family: inherit;
+  font-weight: 400;
+}
+.pn-dim {
+  color: var(--pn-dim);
+}
+
+/* Panels laid over with the skin keep their tiles and backdrops dark and flat. */
+.pn-skin [class*="bg-[#"] {
+  background-color: var(--pn-surface);
+}
+.pn-skin button.group {
+  border: 1px solid var(--pn-edge);
+  border-radius: 0;
+}
+.pn-skin button.group:hover {
+  background-color: var(--pn-key-hover);
+  border-color: var(--pn-key-hi);
+}
+
+/*
+ * The recipe search overlay (a full window over the board): the mod's face and flat keys over its Tailwind classes.
+ * Typefaces, corners and weights only; its layout, sizes and colours stay as the recipe cards need them.
+ */
+.rs-mod,
+.rs-mod * {
+  font-family: var(--font-minecraft), monospace;
+  border-radius: 0;
+  letter-spacing: 0;
+  -webkit-font-smoothing: none;
+}
+.rs-mod [class*="font-semibold"],
+.rs-mod [class*="font-bold"],
+.rs-mod [class*="font-black"],
+.rs-mod [class*="font-medium"] {
+  font-weight: 400;
+}
+.rs-mod [class*="shadow-"]:not(section) {
+  box-shadow: none;
+}
+.rs-mod button,
+.rs-mod input,
+.rs-mod select {
+  font-family: inherit;
+}
+.rs-mod input,
+.rs-mod select {
+  background-color: var(--pn-well);
+  border: 1px solid var(--pn-edge);
+  color: var(--pn-ink);
+}
+.rs-mod input:focus {
+  border-color: var(--pn-key-hi);
+  outline: none;
+}

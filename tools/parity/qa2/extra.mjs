@@ -4,7 +4,7 @@ export default function ({ page, wait, rec, check, shot, nodeSel, focus, idle, s
   const tipSel = ".tp, .rail-tip, [role=tooltip], .minecraft-tooltip";
   const tipUp = () => page.evaluate((s) => [...document.querySelectorAll(s)].some((e) => e.getBoundingClientRect().width > 0), tipSel);
   const fit = async () => {
-    await page.locator('button[aria-label="Fit the plan on the screen"]').click();
+    await page.locator('.mb-key:text-is("Fit")').click();
     await wait(900);
   };
   const diffCount = (a, b, x0, y0, x1, y1) => {
@@ -66,11 +66,11 @@ export default function ({ page, wait, rec, check, shot, nodeSel, focus, idle, s
 
   section("topbar-tips", async () => {
     await loadPlan(page, refChain);
-    const targets = ["Share this setup", "Screenshot", "Open settings", "Fit the plan on the screen", "Open the library", "Plan menu: share, import, export", "Undo", "Rate unit: per second", "Power unit: EU per tick"];
+    const targets = ["Share", "Settings", "Fit", "Library", "Undo", "Redo", "Arrange", "Help", "Feedback", "/s", "EU/t", "Avg"]; // QA3: the mod-style bar renamed its keys
     for (const t of targets) {
       await idle();
       await wait(300);
-      const loc = page.locator(`[aria-label="${t}"], [title="${t}"]`).first();
+      const loc = page.locator(`[aria-label="${t}"], [title="${t}"], .mb-key:text-is("${t}")`).first();
       if (!(await loc.count())) { rec("topbar-tips", t, "FAIL", "not found"); continue; }
       const b = await loc.boundingBox();
       await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
@@ -115,7 +115,7 @@ export default function ({ page, wait, rec, check, shot, nodeSel, focus, idle, s
     await loadPlan(page, refChain);
     await wait(500);
     // screenshot panel
-    await page.locator('[aria-label="Screenshot"]').first().click();
+    await page.locator('.mb-key:text-is("Share")').first().click(); await page.getByText('Screenshot...').first().click();
     await wait(1500);
     await shot("screenshot-panel");
     const sp = await page.evaluate(() => document.querySelector("[role=dialog]")?.innerText?.replace(/\n/g, " | ").slice(0, 400) ?? document.body.innerText.slice(0, 100));

@@ -108,7 +108,7 @@ export function BoardMinimap({ hidden = false }: { hidden?: boolean }) {
   return createPortal(
     <div
       ref={wrapRef}
-      className="mm nodrag nopan nowheel"
+      className="mmap nodrag nopan nowheel"
       data-minimap=""
       data-corner={settings.corner}
       data-shape={settings.shape}
@@ -117,7 +117,7 @@ export function BoardMinimap({ hidden = false }: { hidden?: boolean }) {
     >
       <canvas
         ref={canvasRef}
-        className="mm-canvas"
+        className="mmap-canvas"
         style={{ width: size, height: size }}
         aria-label="Minimap"
         onPointerDown={(event) => {
@@ -137,14 +137,14 @@ export function BoardMinimap({ hidden = false }: { hidden?: boolean }) {
           setMinimap({ zoom: fitZoomIndex(engineRef.current?.scene?.bounds, size, MINIMAP_ZOOMS) });
         }}
       />
-      <div className="mm-title" data-circle={circle ? "" : undefined} title={planName}>
+      <div className="mmap-title" data-circle={circle ? "" : undefined} title={planName}>
         {planName}
       </div>
       <div
         role="button"
         aria-label="Minimap settings"
         title="Minimap settings"
-        className="mm-gear"
+        className="mmap-gear"
         onClick={() => setSettingsOpen((open) => !open)}
       />
       {settingsOpen ? <MinimapSettingsPanel onClose={() => setSettingsOpen(false)} /> : null}

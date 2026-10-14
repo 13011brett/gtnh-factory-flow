@@ -3,10 +3,9 @@ import { beforeEach, describe, expect, it } from "vitest";
 import { APP_VERSION } from "@/lib/version";
 import { buildReport, deviceId, faceRects, sendsLine, titleOf, versions } from "./feedback-model";
 
-/** The site's guard (src/lib/server/feedback-guard.ts) takes only the mod's shapes. */
-const DEVICE = /^(?:gtnhplanner|plannh)-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
+/** The site's guard (src/lib/server/feedback-guard.ts) knows the web's own shapes. */
+const DEVICE = /^web-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/;
 const MOD_VERSION = /^\d+\.\d+\.\d+(?:[-+][0-9A-Za-z.+-]+)?$/;
-const JAVA_VERSION = /^\d+(?:\.\d+)*(?:[._+-][0-9A-Za-z._+-]*)?$/;
 const OS = /^[A-Za-z0-9 ._()/+-]{1,100}$/;
 
 describe("feedback report", () => {
@@ -15,8 +14,9 @@ describe("feedback report", () => {
   it("carries the shapes the route's guard wants", () => {
     const v = versions();
     expect(MOD_VERSION.test(v.mod)).toBe(true);
-    expect(v.mod).toBe(`${APP_VERSION}+web`);
-    expect(JAVA_VERSION.test(v.java)).toBe(true);
+    expect(v.mod).toBe(APP_VERSION);
+    expect(v.java).toBe("");
+    expect(v.pack).toBe("");
     expect(OS.test(v.os)).toBe(true);
     expect(DEVICE.test(deviceId())).toBe(true);
   });
@@ -42,7 +42,7 @@ describe("feedback report", () => {
 
   it("builds the route's report, mood and picture only when there are some", () => {
     const base = buildReport({ kind: "idea", text: "A thing\nand why" });
-    expect(base).toMatchObject({ kind: "idea", title: "A thing", description: "A thing\nand why", plans: [] });
+    expect(base).toMatchObject({ origin: "web", kind: "idea", title: "A thing", description: "A thing\nand why", plans: [] });
     expect("mood" in base).toBe(false);
     expect("picture" in base).toBe(false);
     const full = buildReport({ kind: "bug", mood: "sad", text: "x", plan: { name: "P", plan: { a: 1 } }, picture: "AAAA" });
@@ -71,9 +71,9 @@ describe("faces", () => {
 });
 
 describe("the route takes what the box sends", () => {
-  it("parses as a report and looks like the game's to the guard", async () => {
+  it("parses as a report and looks like the web's to the guard", async () => {
     const { parseFeedback } = await import("@/lib/server/feedback");
-    const { looksSentByTheGame } = await import("@/lib/server/feedback-guard");
+    const { looksSentByTheGame, looksSentByTheWeb } = await import("@/lib/server/feedback-guard");
     const { createNewProject } = await import("@/examples");
     const body = buildReport({
       kind: "bug",
@@ -86,6 +86,7 @@ describe("the route takes what the box sends", () => {
     if ("error" in report) return;
     expect(report.title).toBe("The card overlaps");
     expect(report.plans).toHaveLength(1);
-    expect(looksSentByTheGame(report)).toBe(true);
+    expect(looksSentByTheWeb(report)).toBe(true);
+    expect(looksSentByTheGame(report)).toBe(false);
   });
 });

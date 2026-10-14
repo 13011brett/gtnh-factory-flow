@@ -11,7 +11,9 @@ import {
   setAppFont,
   type AppFontId,
 } from "@/lib/app-font";
-import { SEE_THROUGH_STEP, useDeviceSettings, writeDeviceSettings } from "@/lib/device-settings";
+import { useDeviceSettings, writeDeviceSettings } from "@/lib/device-settings";
+import { SEE_THROUGH_STEP, setSeeThrough, useSeeThrough } from "@/components/flow/clean/seethrough/see-through";
+import { MinimapSettingsRows } from "@/components/flow/clean/minimap/MinimapSettingsPanel";
 import { areBoardSoundsEnabled, getBoardSoundVolume, playBoardSound, setBoardSoundsEnabled, setBoardSoundVolume } from "@/lib/board-sounds";
 import { setUiScalePercent, useUiScalePercent } from "@/lib/ui-scale";
 import { BOARD_TIMELAPSE_PRESETS, runBoardTimelapsePreset } from "@/components/flow/board-timelapse";
@@ -50,6 +52,8 @@ interface Section {
   /** One short line on what the section is for. */
   intro?: string;
   rows: Row[];
+  /** A section drawn by another part of the app instead of rows (the minimap's own rows). */
+  body?: ReactNode;
 }
 
 /**
@@ -65,6 +69,7 @@ export function ModSettings({
   onOpenMachineList?: () => void;
 }) {
   const settings = useDeviceSettings();
+  const seeThrough = useSeeThrough();
   const uiPercent = useUiScalePercent();
   const [font, setFont] = useState<AppFontId>(() => getStoredAppFont());
   const [sounds, setSounds] = useState(() => ({ enabled: areBoardSoundsEnabled(), volume: getBoardSoundVolume() }));
@@ -125,8 +130,8 @@ export function ModSettings({
           label: "See-through",
           kind: "slider",
           names: SEE_THROUGH_NAMES,
-          at: settings.boardSeeThrough / SEE_THROUGH_STEP,
-          to: (index) => writeDeviceSettings({ boardSeeThrough: index * SEE_THROUGH_STEP }),
+          at: seeThrough / SEE_THROUGH_STEP,
+          to: (index) => setSeeThrough(index * SEE_THROUGH_STEP),
         },
         {
           label: "Font",
@@ -163,6 +168,7 @@ export function ModSettings({
         },
       ],
     },
+    { name: "Minimap", rows: [], body: <MinimapSettingsRows className="ms-minimap" /> },
     {
       name: "Sound",
       rows: [
@@ -266,14 +272,13 @@ export function ModSettings({
           </nav>
           <div className="ms-rows">
             {section.intro ? <div className="ms-intro">{section.intro}</div> : null}
-            {section.rows.map((row) => (
-              <SettingRow key={row.label} row={row} onSet={set} dragRef={dragRef} />
-            ))}
+            {section.body ??
+              section.rows.map((row) => <SettingRow key={row.label} row={row} onSet={set} dragRef={dragRef} />)}
           </div>
           <div className="ms-preview" aria-hidden>
             <SettingsPreview
               section={section.name}
-              seeThrough={settings.boardSeeThrough}
+              seeThrough={seeThrough}
               names={settings.zoomedOutNames}
               circuit={settings.circuitAsInput}
               sizeIndex={sizeIndexOf(uiPercent)}

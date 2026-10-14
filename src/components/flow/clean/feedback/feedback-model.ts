@@ -3,9 +3,9 @@ import { mixHex } from "../colors";
 
 /**
  * The Feedback box's pure parts: the face pictures, the sentence naming what goes with the words, the issue's
- * title, and the report as `/api/feedback` takes it. The route's guard (`src/lib/server/feedback-guard.ts`) wants
- * the mod's shapes: a `gtnhplanner-<uuid>` device id and version strings it can match. The page sends its own
- * version with `+web` after it and `0-web` where the mod sends its Java, so an issue from the page reads as one.
+ * title, and the report as `/api/feedback` takes it. A report from the page says so (`origin: "web"`): its own
+ * device id (`web-<uuid>`), the page's version as `mod`, the browser's platform as `os`, and no pack, Java or log.
+ * The route's guard (`src/lib/server/feedback-guard.ts`) knows that shape, gives it stricter limits and its own label.
  */
 
 export type FeedbackKind = "bug" | "idea" | "help";
@@ -51,7 +51,7 @@ export function titleOf(text: string): string {
   return first;
 }
 
-const DEVICE_KEY = "gtnhplanner.feedback.device";
+const DEVICE_KEY = "gtnhplanner.feedback.web-device";
 
 function uuid(): string {
   if (typeof crypto !== "undefined" && typeof crypto.randomUUID === "function") return crypto.randomUUID();
@@ -59,16 +59,16 @@ function uuid(): string {
   return `${hex(8)}-${hex(4)}-4${hex(3)}-a${hex(3)}-${hex(12)}`;
 }
 
-/** The sender's id: `gtnhplanner-` and a UUID, made once and kept (the route limits per device). */
+/** The sender's id: `web-` and a UUID, made once and kept (the route limits per device). */
 export function deviceId(): string {
   try {
     const stored = window.localStorage.getItem(DEVICE_KEY);
-    if (stored && /^gtnhplanner-[0-9a-f-]{36}$/.test(stored)) return stored;
-    const made = `gtnhplanner-${uuid()}`;
+    if (stored && /^web-[0-9a-f-]{36}$/.test(stored)) return stored;
+    const made = `web-${uuid()}`;
     window.localStorage.setItem(DEVICE_KEY, made);
     return made;
   } catch {
-    return `gtnhplanner-${uuid()}`;
+    return `web-${uuid()}`;
   }
 }
 
@@ -81,7 +81,7 @@ function osName(): string {
 }
 
 export function versions(): { mod: string; pack: string; java: string; os: string } {
-  return { mod: `${APP_VERSION}+web`, pack: "", java: "0-web", os: osName() };
+  return { mod: APP_VERSION, pack: "", java: "", os: osName() };
 }
 
 export interface ReportInput {
@@ -95,6 +95,7 @@ export interface ReportInput {
 
 export function buildReport(input: ReportInput): Record<string, unknown> {
   return {
+    origin: "web",
     kind: input.kind,
     ...(input.mood ? { mood: input.mood } : {}),
     title: titleOf(input.text),

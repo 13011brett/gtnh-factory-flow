@@ -47,7 +47,7 @@ export default function ({ page, wait, rec, check, shot, nodeSel, focus, idle, s
     await tipDelay("drawer body", an + " .cd-num");
     await tipDelay("rail row", ".rail-row", 1);
     await tipDelay("rail machine line chip", ".rail-machine .rail-tier");
-    await tipDelay("top bar key (rate unit)", 'button:has-text("EU/t")');
+    await tipDelay("top bar key (rate unit)", '.mb-key:text-is("EU/t")');
     await tipDelay("plan tab", 'text=Untitled design', 0);
     await tipDelay("top bar undo key", 'header button >> nth=0');
     // none while holding: press on the drawer bar and stay

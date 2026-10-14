@@ -15,7 +15,7 @@ import {
   planFile,
 } from "@/lib/server/feedback";
 import { storeFeedbackFile } from "@/lib/server/feedback-files";
-import { claimIssue, feedbackGate, looksSentByTheGame } from "@/lib/server/feedback-guard";
+import { claimIssue, feedbackGate, looksGenuine } from "@/lib/server/feedback-guard";
 
 export const runtime = "nodejs";
 export const dynamic = "force-dynamic";
@@ -63,7 +63,7 @@ export async function POST(request: Request) {
     if ("error" in report) {
       return refuse(400, report.error);
     }
-    if (!looksSentByTheGame(report)) {
+    if (!looksGenuine(report)) {
       return refuse(400, "That report could not be read.");
     }
     const refusal = await claimIssue(request, report);

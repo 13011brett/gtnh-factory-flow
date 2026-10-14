@@ -53,7 +53,7 @@ for (const st of states) {
     const r = await rectOf(page, nodeSel);
     const shot = path.join(OUT, "web", st.id + ".png");
     if (st.clip === "rail") {
-      const pr = await rectOf(page, "aside.inspector-panel");
+      const pr = await rectOf(page, ".rail-root");
       await page.screenshot({ path: shot, clip: { x: pr.x, y: pr.y, width: ref.width / DSF, height: ref.height / DSF } });
     } else {
       await page.screenshot({ path: shot, clip: { x: r.x - offX, y: r.y - offY, width: ref.width / DSF, height: ref.height / DSF } });

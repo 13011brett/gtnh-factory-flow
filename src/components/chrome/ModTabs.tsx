@@ -4,6 +4,7 @@ import "./chrome.css";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
 import { copyToClipboard } from "@/lib/clipboard";
+import { activateOnKey } from "@/lib/hooks/button-keys";
 import { openDesigns } from "@/lib/designs/design-library";
 import { readDesign } from "@/lib/designs/design-storage";
 import { encodePlanCode, planCodeLink } from "@/lib/import-export/plan-code";
@@ -14,6 +15,8 @@ import { useDesignStore } from "@/store/design-store";
 import { useFactoryStore } from "@/store/factory-store";
 import { useSolvingBooks } from "@/components/flow/use-solving-books";
 import { tipAttrs } from "@/components/flow/clean/interaction";
+import { openPlanFile } from "@/lib/import-export/open-plan-file";
+import { flashNotice } from "@/components/flow/clean/rail/NoticeBar";
 import { ChromeMenu, chromeAnchorOf, MENU_ANCHOR_ATTR, type ChromeAnchor, type MenuEntry } from "./ChromeMenu";
 
 /** What the tab strip asks of the bar: the dialogs it does not own. */
@@ -49,6 +52,10 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
   const [fade, setFade] = useState({ left: false, right: false });
   const stripRef = useRef<HTMLDivElement>(null);
   const canClose = designs.length + publicViews.length > 1;
+  // One tab is in the Tab order (roving): the open plan's, else the first. The arrows move among the rest.
+  const tabIds = [...publicViews.map((view) => `public:${view.id}`), ...designs.map((design) => design.id)];
+  const wanted = publicView ? `public:${publicView.id}` : activeDesignId;
+  const tabStop = wanted && tabIds.includes(wanted) ? wanted : tabIds[0];
   const closeMenu = useCallback(() => setMenu(undefined), []);
 
   const syncFade = useCallback(() => {
@@ -121,7 +128,8 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
           },
         },
         { label: "Open a plan...", detail: "My plans", onSelect: () => openLibrary({ kind: "all" }) },
-        { label: "Paste plan", detail: "a plan link or code", onSelect: onPaste },
+        { label: "Open plan file...", detail: ".json", onSelect: () => document.querySelector<HTMLInputElement>("[data-plan-file-input]")?.click() },
+        { label: "Paste plan", detail: "a plan link, code or file", onSelect: onPaste },
         { label: "Browse library", detail: "public plans", onSelect: () => openLibrary({ kind: "public" }) },
       ];
     }
@@ -174,6 +182,23 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
           ref={stripRef}
           className="mt-strip"
           onScroll={syncFade}
+          role="tablist"
+          aria-label="Open plans"
+          onKeyDown={(event) => {
+            if (event.target instanceof HTMLInputElement) return;
+            const tabs = [...event.currentTarget.querySelectorAll<HTMLElement>(".mt-tab")];
+            const at = tabs.indexOf(document.activeElement as HTMLElement);
+            if (at < 0) return;
+            let to = -1;
+            if (event.key === "ArrowRight") to = (at + 1) % tabs.length;
+            else if (event.key === "ArrowLeft") to = (at - 1 + tabs.length) % tabs.length;
+            else if (event.key === "Home") to = 0;
+            else if (event.key === "End") to = tabs.length - 1;
+            if (to < 0) return;
+            event.preventDefault();
+            tabs[to].focus();
+            tabs[to].scrollIntoView({ block: "nearest", inline: "nearest" });
+          }}
           onWheel={(event) => {
             const strip = stripRef.current;
             if (!strip || strip.scrollWidth <= strip.clientWidth) return;
@@ -191,6 +216,13 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
                 data-public-tab={view.id}
                 role="tab"
                 aria-selected={active}
+                tabIndex={tabStop === `public:${view.id}` ? 0 : -1}
+                onKeyDown={(event) => {
+                  activateOnKey(event);
+                  if ((event.key === "Delete" || event.key === "Backspace") && event.target === event.currentTarget) {
+                    void useDesignStore.getState().closePublicView(view.id);
+                  }
+                }}
                 onClick={() => {
                   leaveWelcomeTab();
                   leaveLibrary();
@@ -235,6 +267,18 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
                 data-active={active ? "" : undefined}
                 role="tab"
                 aria-selected={active}
+                tabIndex={tabStop === design.id ? 0 : -1}
+                onKeyDown={(event) => {
+                  if (isRenaming || event.target !== event.currentTarget) return;
+                  activateOnKey(event);
+                  if (event.key === "F2") {
+                    event.preventDefault();
+                    setRenaming(design.id);
+                  } else if ((event.key === "Delete" || event.key === "Backspace") && canClose) {
+                    event.preventDefault();
+                    void close(design.id);
+                  }
+                }}
                 onClick={() => {
                   if (!isRenaming) void activate(design.id);
                 }}
@@ -290,6 +334,10 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
         className="mt-plus"
         role="button"
         aria-label="New plan"
+        aria-haspopup="menu"
+        aria-expanded={menu?.kind === "plus"}
+        tabIndex={0}
+        onKeyDown={activateOnKey}
         {...{ [MENU_ANCHOR_ATTR]: "" }}
         data-open={menu?.kind === "plus" ? "" : undefined}
         onClick={(event) => {
@@ -301,6 +349,23 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
       >
         +
       </div>
+      <input
+        type="file"
+        accept="application/json,.json"
+        className="hidden"
+        data-plan-file-input=""
+        aria-label="Open plan file"
+        onChange={(event) => {
+          const file = event.target.files?.[0];
+          event.target.value = "";
+          if (!file) return;
+          leaveWelcomeTab();
+          leaveLibrary();
+          openPlanFile(file).catch((error) =>
+            flashNotice("warn", error instanceof Error ? error.message : "That plan file could not be opened."),
+          );
+        }}
+      />
       {menu ? (
         <ChromeMenu
           anchor={menu.anchor}

@@ -69,21 +69,34 @@ export function openAsPlan(project: FactoryProject): PlanOpening {
   }
   const converted = convertBuildToPlanWithReport(project);
   const origin: PlanOrigin = project.solveMode ? "solve" : "build";
+  const report = converted.report;
+  // Said every time: what came over and what did not, in one line.
   const details: string[] = [];
-  if (converted.report.ratioBuffersFlattened > 0) {
-    details.push("Ratio buffers became plain wires.");
+  const plural = (count: number, one: string, many = `${one}s`) => `${count} ${count === 1 ? one : many}`;
+  if (origin === "build" && report.pinned > 0) {
+    details.push(`${plural(report.pinned, "card")} pinned at ${report.pinned === 1 ? "its count" : "their counts"}.`);
   }
-  if (converted.report.droppedTargets.length > 0) {
-    details.push("A target that no card makes was dropped.");
+  if (report.portRates > 0) {
+    details.push(`${plural(report.portRates, "rate")} set from ${report.portRates === 1 ? "a target" : "targets"}.`);
   }
+  if (report.drawerRatesParked > 0) {
+    details.push(`${plural(report.drawerRatesParked, "drawer rate")} set to Ignore.`);
+  }
+  if (report.unanchored) details.push("Nothing is set yet. Pin a count or set a rate.");
+  if (origin === "solve" && !report.unanchored && !report.seededFromTargets) details.push("Pins and drawer rates kept.");
+  const dropped: string[] = [];
+  if (report.ratioBuffersFlattened > 0) dropped.push(plural(report.ratioBuffersFlattened, "ratio buffer"));
+  if (report.droppedTargets.length > 0) dropped.push(plural(report.droppedTargets.length, "target") + " no card makes");
+  if (dropped.length > 0) details.push(`Dropped: ${dropped.join(", ")}.`);
   return {
     project: converted.project,
     origin,
-    report: converted.report,
+    report,
+    // An empty board has nothing to say (every new design starts as one).
     notice:
-      details.length > 0
-        ? { origin, text: `Converted from a ${origin} plan.`, details }
-        : undefined,
+      project.nodes.length === 0 && (project.storages ?? []).length === 0
+        ? undefined
+        : { origin, text: `Converted from a ${origin === "solve" ? "Solve" : "Build"} plan.`, details },
   };
 }
 

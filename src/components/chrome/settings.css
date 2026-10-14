@@ -312,7 +312,7 @@
   width: 100%;
   height: 100%;
 }
-.sp-card {
+.spv-card {
   position: absolute;
   box-sizing: border-box;
   width: calc(60px * var(--sp-scale, 1));
@@ -334,7 +334,7 @@
 .sp-chip[data-tier="ev"] {
   background: #a8a8ff;
 }
-.sp-pic {
+.spv-pic {
   position: absolute;
   left: 4px;
   top: 4px;
@@ -342,10 +342,10 @@
   height: calc(22px * var(--sp-scale, 1));
   background: #5a8f6a;
 }
-.sp-pic[data-tone="blue"] {
+.spv-pic[data-tone="blue"] {
   background: #4c6fb0;
 }
-.sp-circ {
+.spv-circ {
   display: none;
   position: absolute;
   right: 3px;
@@ -358,7 +358,7 @@
   line-height: 11px;
   text-align: center;
 }
-.sp-board[data-circuit] .sp-circ {
+.sp-board[data-circuit] .spv-circ {
   display: block;
 }
 .sp-name {
@@ -430,4 +430,13 @@
   transform: scale(1.4);
   transform-origin: left center;
   width: 12px;
+}
+
+/* The Minimap section is the minimap's own rows (flow/clean/minimap), drawn at the settings' row height. */
+.ms-rows .ms-minimap {
+  zoom: 0.7;
+  padding: 0 14px 0 14px;
+}
+.ms-rows {
+  overflow-y: auto;
 }

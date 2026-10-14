@@ -7,7 +7,7 @@ export const usePlanOverviewWidth = useRailColumnWidth;
 
 export function PlanOverview({ inDrawer = false }: { inDrawer?: boolean }) {
   return (
-    <div data-testid="plan-overview" className="h-full min-h-0">
+    <div data-testid="plan-overview" className="h-full min-h-0 min-w-0">
       <OverviewRail forceOpen={inDrawer} />
     </div>
   );

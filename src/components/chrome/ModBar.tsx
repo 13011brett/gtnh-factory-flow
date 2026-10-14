@@ -4,9 +4,11 @@ import "./chrome.css";
 
 import { useCallback, useEffect, useState, type MouseEvent, type ReactNode } from "react";
 import { copyToClipboard } from "@/lib/clipboard";
+import { activateOnKey } from "@/lib/hooks/button-keys";
 import { encodePlanCode, planCodeLink } from "@/lib/import-export/plan-code";
+import { useIsCompactViewport } from "@/lib/compact-view";
+import { usePlanLayout } from "@/components/use-plan-layout";
 import { leaveLibrary, openLibrary, useLibraryTab } from "@/lib/library/library-tab";
-import { GT_VOLTAGE_TIERS } from "@/lib/model";
 import { isPowerDisplayUnit, type RateUnit } from "@/lib/model/rate-unit";
 import { playBoardSound } from "@/lib/board-sounds";
 import { useWorkspaceView, writeWorkspaceView } from "@/lib/workspace-view";
@@ -16,6 +18,7 @@ import { stampOpened } from "@/lib/library/last-open";
 import { ensureInteractionHost } from "@/components/flow/clean/interaction";
 import { tipAttrs } from "@/components/flow/clean/interaction";
 import { isEditableKeyboardTarget } from "@/components/flow/keyboard";
+import { downloadPlanFile } from "@/lib/import-export/open-plan-file";
 import { PastePlanDialog } from "@/components/export/PastePlanDialog";
 import { arrangeLabel, pressArrange, getBoardCommands, useArrangeState } from "./board-commands";
 import { ChromeMenu, chromeAnchorOf, MENU_ANCHOR_ATTR, type ChromeAnchor, type MenuEntry } from "./ChromeMenu";
@@ -28,25 +31,6 @@ import { HelpLinks } from "./help-links";
 /** The rate unit key's four clocks, in the mod's order. */
 const RATE_ORDER: RateUnit[] = ["tick", "second", "minute", "hour"];
 const RATE_LABEL: Record<string, string> = { tick: "/t", second: "/s", minute: "/min", hour: "/hr", eu: "/s" };
-
-/** The tier most of the plan's machines run at: what the Amps key counts in. */
-export function dominantTier(overclockTiers: string[]): string | undefined {
-  const known = new Set<string>(GT_VOLTAGE_TIERS.map((entry) => entry.tier));
-  const counts = new Map<string, number>();
-  for (const tier of overclockTiers) {
-    if (!known.has(tier) || tier === "DEMO") continue;
-    counts.set(tier, (counts.get(tier) ?? 0) + 1);
-  }
-  let best: string | undefined;
-  let most = 0;
-  for (const [tier, count] of counts) {
-    if (count > most) {
-      best = tier;
-      most = count;
-    }
-  }
-  return best;
-}
 
 function useHistoryShortcuts() {
   const undo = useFactoryStore((state) => state.undo);
@@ -112,8 +96,11 @@ function BarKey({
   return (
     <div
       role="button"
-      tabIndex={-1}
+      tabIndex={off ? -1 : 0}
       aria-label={ariaLabel ?? label ?? id}
+      aria-haspopup={menuAnchor ? "menu" : undefined}
+      aria-expanded={menuAnchor ? Boolean(open) : undefined}
+      onKeyDown={activateOnKey}
       aria-disabled={off || undefined}
       className={gap ? "mb-key mb-gap" : "mb-key"}
       data-mb={id}
@@ -190,6 +177,12 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
   const openPowerMenu = useFactoryStore((state) => state.openPowerMenu);
   const closePowerMenu = useFactoryStore((state) => state.closePowerMenu);
   const workspace = useWorkspaceView();
+  // A phone: the two side columns are drawers over the board, one at a time; their keys sit first in the bar.
+  const compact = useIsCompactViewport();
+  const planLayout = usePlanLayout();
+  const bothOpen = workspace.leftPanelOpen && workspace.rightPanelOpen;
+  const itemsOpen = workspace.leftPanelOpen && !bothOpen;
+  const sideOpen = workspace.rightPanelOpen && !bothOpen;
   const library = useLibraryTab();
   const arrange = useArrangeState();
   const isReadOnly = useFactoryStore((state) => state.isReadOnly);
@@ -202,7 +195,8 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
   useEffect(() => {
     try {
       const saved = localStorage.getItem("gtnh-factory-flow.power-display-unit.v1");
-      if (isPowerDisplayUnit(saved)) setPowerDisplayUnit(saved);
+      // A tier saved by the older global unit becomes the mod's per-machine Amps.
+      if (isPowerDisplayUnit(saved)) setPowerDisplayUnit(saved === "eu" ? "eu" : "amps");
     } catch {
       /* EU/t when storage is unavailable. */
     }
@@ -230,8 +224,8 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
     if (isAmps) {
       setPowerDisplayUnit("eu");
     } else {
-      const tiers = useFactoryStore.getState().project.nodes.map((node) => String(node.overclockTier));
-      setPowerDisplayUnit((dominantTier(tiers) ?? "LV") as never);
+      // The mod's Amps: every card counts in its own machine's tier.
+      setPowerDisplayUnit("amps");
     }
     playBoardSound("dialPower");
   };
@@ -253,6 +247,7 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
   const shareEntries: MenuEntry[] = [
     { label: linkedPost ? "Update in library..." : "Share to library...", onSelect: onShare, disabled: isReadOnly },
     { label: "Copy plan code", onSelect: () => void copyPlanCode() },
+    { label: "Export plan file (.json)", onSelect: () => downloadPlanFile(useFactoryStore.getState().project) },
     { label: "Screenshot...", onSelect: onScreenshot },
   ];
 
@@ -262,8 +257,31 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
   };
 
   return (
-    <header className="mb" data-mod-bar="" data-help-anchor="plan-actions">
+    <>
+      <header className="mb" data-mod-bar="" data-help-anchor="plan-actions">
       <ModTabs onPaste={() => setPasting(true)} onShare={onShare} />
+      {compact ? (
+        <>
+          <BarKey
+            id="drawer-side"
+            label={planLayout ? "Overview" : "Resources"}
+            tip={planLayout ? "Overview: inputs, outputs and machines" : "Resources"}
+            open={sideOpen}
+            onClick={() =>
+              writeWorkspaceView(sideOpen ? { rightPanelOpen: false } : { rightPanelOpen: true, leftPanelOpen: false })
+            }
+          />
+          <BarKey
+            id="drawer-items"
+            label="Items"
+            tip="Items: search and place recipes"
+            open={itemsOpen}
+            onClick={() =>
+              writeWorkspaceView(itemsOpen ? { leftPanelOpen: false } : { leftPanelOpen: true, rightPanelOpen: false })
+            }
+          />
+        </>
+      ) : null}
       <BarKey
         id="nonrecipe"
         gap
@@ -412,8 +430,10 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
         />
       ) : null}
       {controlsOpen ? <ControlsList onClose={() => setControlsOpen(false)} /> : null}
+      </header>
+      {/* Outside the bar: its stacking context (z 30) would put the box under the side columns and drawers. */}
       {pasting ? <PastePlanDialog onClose={() => setPasting(false)} /> : null}
-    </header>
+    </>
   );
 }
 

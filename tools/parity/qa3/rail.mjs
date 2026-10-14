@@ -1,0 +1,32 @@
+// Rail machine lines: wheel/click on the count box, trash key, hover scope, EU/t.
+import fs from "node:fs";
+import { fresh, importText, toCode, OUT } from "./lib.mjs";
+const FX = "C:/Users/jack/gtnh-planner-mod/.claude/worktrees/website-mod-backport-research-c84135/src/test/resources/";
+const { browser, page } = await fresh();
+await importText(page, toCode(fs.readFileSync(FX + "factory-flow/pa-cell-loop-plan.json", "utf8")));
+await page.waitForTimeout(6000);
+await page.getByRole("button", { name: "Not now" }).click().catch(() => {});
+const line = page.locator(".rail-row").filter({ has: page.locator(".rail-tier") }).first();
+await line.hover();
+await page.waitForTimeout(600);
+console.log("machine line controls:", await line.evaluate((e) => [...e.querySelectorAll("[aria-label]")].map((x) => x.getAttribute("aria-label")).join(" | ")));
+const box = line.locator(".rail-box");
+console.log("before", await box.textContent());
+const b = await box.boundingBox();
+await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
+await page.mouse.wheel(0, -100);
+await page.waitForTimeout(500);
+console.log("after wheel up", await box.textContent(), "count", await line.locator(".rail-count").textContent());
+await box.click();
+await page.waitForTimeout(300);
+console.log("click opens editor:", await page.evaluate(() => document.activeElement?.tagName));
+await page.keyboard.type("4");
+await page.keyboard.press("Enter");
+await page.waitForTimeout(1500);
+console.log("typed 4:", await line.locator(".rail-count").textContent());
+// hover a resource row and check dimming
+const row = page.locator(".rail-row").filter({ hasText: "Hydrogen" }).first();
+await row.hover();
+await page.waitForTimeout(500);
+await page.screenshot({ path: OUT + "rail-hover-scope.png" });
+await browser.close();

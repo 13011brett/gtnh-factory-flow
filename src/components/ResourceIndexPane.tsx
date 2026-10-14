@@ -1,8 +1,9 @@
 "use client";
 
-import { Search, X, ChevronLeft, ChevronRight, Zap } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState, useTransition } from "react";
-import type { DragEvent, PointerEvent, RefObject, WheelEvent } from "react";
+import { Zap } from "lucide-react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore, useTransition } from "react";
+import type { DragEvent, PointerEvent, ReactNode, RefObject, WheelEvent } from "react";
+import { createPortal } from "react-dom";
 import { writeResourceDrag } from "@/lib/resource-drag";
 import { DEFAULT_DATASET_MANIFEST_URL } from "@/lib/datasets";
 import {
@@ -27,18 +28,23 @@ import { useDebouncedValue } from "@/lib/hooks/use-debounced-value";
 import { useIsCompactViewport } from "@/lib/compact-view";
 import { isEchoOfTouch } from "@/lib/pointer-kind";
 import { isFromBrowseMenu, useBrowseMenu } from "./browse-menu";
-import { ControlsCard } from "./ControlsCard";
-import { ModPick } from "./chrome/ModPick";
+import { ChromeMenu, chromeAnchorOf, MENU_ANCHOR_ATTR, type ChromeAnchor } from "./chrome/ChromeMenu";
 import "./chrome/mod-panel.css";
-import { MinecraftTooltip } from "./nei/MinecraftTooltip";
+import "./nei/nei.css";
+import { isEditableKeyboardTarget } from "./flow/keyboard";
+import { McFloatingTip, modDisplayName, type McTipLine } from "./nei/McTip";
 import { isSwatchFluid, ResourceIcon, spriteArtPixels } from "./nei/ResourceIcon";
 
 /**
- * THE ITEM PANEL: search box, six filters, sort, paged result grid and the
- * recent shelf. Shared by the items column and every item picker (product
- * drawer button, search stencil keys, library filter). The caller owns the
- * search text (the column keeps it in the store, a picker locally) and
- * decides what a tile click does.
+ * THE ITEM PANEL, drawn as NEI's item list: page keys and the page count at the
+ * top, a grid of slots with the item art alone (the name is the tooltip, a
+ * Minecraft one shown at once), and the search field. The six filters and the
+ * sort sit in one small menu key beside the page keys. Shared by the items
+ * column and every item picker (product drawer button, search stencil keys,
+ * library filter). The caller owns the search text (the column keeps it in the
+ * store, a picker locally), decides what a slot click does, and where the search
+ * field goes: `dock` puts it at the bottom middle of the screen as NEI's is,
+ * `bottom` under the list (the phone's drawer), `top` above it (pickers).
  */
 export function ResourceIndexPane({
   search,
@@ -48,6 +54,8 @@ export function ResourceIndexPane({
   activeResource,
   onBrowse,
   autoFocus = false,
+  searchAt = "top",
+  leading,
 }: {
   search: string;
   onSearchChange: (value: string) => void;
@@ -56,6 +64,9 @@ export function ResourceIndexPane({
   activeResource?: IndexedResource;
   onBrowse: (resource: IndexedResource, mode: "recipes" | "uses") => void;
   autoFocus?: boolean;
+  searchAt?: "top" | "bottom" | "dock" | "none";
+  /** Keys at the start of the page row (the column's fold key). */
+  leading?: ReactNode;
 }) {
   const datasetManifestUrl = useFactoryStore((state) => state.datasetManifestUrl);
   const selectedDatasetVersion = useFactoryStore((state) =>
@@ -107,7 +118,7 @@ export function ResourceIndexPane({
   const displayedResources = onBoard
     ? boardResults.resources
     : powerRow
-      ? [powerRow, ...resourceResults]
+      ? [powerRow, ...resourceResults].slice(0, resourcePageSize)
       : resourceResults;
   const displayedTotal = onBoard ? boardResults.total : resourceTotal;
   const displayedOutcome = onBoard ? boardResults.outcome : resourceSearchOutcome;
@@ -205,7 +216,7 @@ export function ResourceIndexPane({
       }
     });
 
-    queryRecipeDatasetResources(
+    queryResourcesInChunks(
       datasetManifestUrl ?? DEFAULT_DATASET_MANIFEST_URL,
       selectedDatasetVersion,
       {
@@ -275,143 +286,104 @@ export function ResourceIndexPane({
   }, [resourcePage, resourcePageSize, resourceTotal]);
 
   const browseResource = onBrowse;
+  // The docked field is a body portal: drawn only once the page is up, so the server's HTML matches the first render.
+  const mounted = useSyncExternalStore(
+    noopSubscribe,
+    () => true,
+    () => false,
+  );
+  const searchNone =
+    !resourceQueryLoading && debouncedRecipeSearch.trim() !== "" && displayedTotal === 0 && !!dataset;
+  const searchField = (
+    <NeiSearchField
+      inputRef={inputRef}
+      value={recipeSearch}
+      onChange={setRecipeSearch}
+      flashing={isSearchFlashing}
+      none={searchNone}
+    />
+  );
+  const listMenu = (
+    <NeiListMenu
+      filter={resourceFilter}
+      sort={resourceSort}
+      onFilter={setResourceFilter}
+      onSort={setResourceSort}
+    />
+  );
   return (
-    <div className="pn-column flex min-h-0 flex-1 flex-col" onWheel={handleResourceWheel}>
-        {/* The same card other column views put their search and filters in. */}
-        <ControlsCard>
-          <div className="flex items-center gap-1.5">
-            {/* 16px text on a phone, deliberately: below that, iOS zooms the
-                whole page in the moment the field takes focus, and the way back
-                out is a pinch. */}
-            <label
-              className={[
-                "pn-search min-w-0 flex-1 compact:text-base",
-                isSearchFlashing ? "search-box-flash" : "",
-              ].join(" ")}
-            >
-              <Search className="h-4 w-4 text-neutral-500" />
-              <input
-                ref={inputRef}
-                value={recipeSearch}
-                onChange={(event) => {
-                  const value = event.target.value;
-                  setRecipeSearch(value);
-                }}
-                placeholder="Search item or fluid..."
-                className="min-w-0 flex-1 bg-transparent outline-none"
-              />
-              {recipeSearch ? (
-                <button
-                  type="button"
-                  onClick={() => setRecipeSearch("")}
-                  title="Clear search"
-                  aria-label="Clear search"
-                  className="text-neutral-500 hover:text-neutral-200"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              ) : null}
-            </label>
+    <div className="nei pn-column flex min-h-0 flex-1 flex-col" onWheel={handleResourceWheel}>
+      {searchAt === "top" ? <div className="nei-search-foot">{searchField}</div> : null}
+      {!dataset ? (
+        <>
+          <div className="nei-pager">
+            {leading}
+            <span className="nei-pager-count nei-text"> </span>
           </div>
-
-          {/* What the search had to do to find anything. Only ever shown when it
-              had to do something: a spelling stood in, or the words were taken
-              one at a time because no item has all of them. */}
-          {displayedOutcome.phase !== "exact" ? (
-            <p className="mt-1.5 truncate text-[11px] leading-tight text-amber-300/80">
-              {displayedOutcome.phase === "corrected"
-                ? `Showing results for ${displayedOutcome.corrections
-                    .map((correction) => correction.to)
-                    .join(", ")}`
-                : "No item has all those words. Showing the closest."}
-            </p>
-          ) : null}
-
-          {/* Six exclusive filters, three across in two rows so full names stay
-              readable in the narrow panel. Sort gets its own full-width row. */}
-          <div className="pn-chips" data-grid="">
-            {RESOURCE_FILTER_CHOICES.map((choice) => (
-              <button
-                key={choice.mode}
-                type="button"
-                onClick={() => setResourceFilter(choice.mode)}
-                title={choice.title}
-                aria-pressed={resourceFilter === choice.mode}
-                className="pn-chip"
-                data-on={resourceFilter === choice.mode ? "" : undefined}
-              >
-                {choice.label}
-              </button>
-            ))}
+          <div className="nei-empty">
+            {isDatasetLoading ? "Loading recipe index..." : "Recipe index is not loaded yet."}
           </div>
-          <ModPick
-            value={resourceSort}
-            onChange={setResourceSort}
-            label="Sort results"
-            title="Sort results"
-            options={RESOURCE_SORT_CHOICES}
-          />
-        </ControlsCard>
+          <div className="min-h-0 flex-1" />
+        </>
+      ) : (
+        <VirtualResourceResultList
+          resources={displayedResources}
+          total={displayedTotal}
+          currentPage={resourcePage}
+          isLoading={resourceQueryLoading && !onBoard}
+          error={resourceQueryError}
+          emptyLabel={
+            onBoard
+              ? "Nothing placed on the board yet."
+              : resourceFilter === "plants"
+                ? "No crop grows that."
+                : resourceFilter === "bees"
+                  ? "No bee makes that."
+                  : undefined
+          }
+          activeResource={activeResource}
+          onPageChange={setResourcePage}
+          onPageSizeChange={setResourcePageSize}
+          onBrowse={browseResource}
+          leading={leading}
+          trailing={listMenu}
+        />
+      )}
 
-        <div className="min-h-0 flex-1 overflow-hidden px-2 pb-1 pt-2">
-          {!dataset && isDatasetLoading ? (
-            <div className="rounded border border-dashed border-neutral-600 p-4 text-sm text-neutral-300">
-              Loading recipe index...
-            </div>
-          ) : !dataset ? (
-            <div className="rounded border border-dashed border-neutral-600 p-4 text-sm text-neutral-300">
-              Recipe index is not loaded yet.
-            </div>
-          ) : (
-            <VirtualResourceResultList
-              resources={displayedResources}
-              total={displayedTotal}
-              currentPage={resourcePage}
-              isLoading={resourceQueryLoading && !onBoard}
-              error={resourceQueryError}
-              emptyLabel={
-                onBoard
-                  ? "Nothing placed on the board yet."
-                  : resourceFilter === "plants"
-                    ? "No crop grows that."
-                    : resourceFilter === "bees"
-                      ? "No bee makes that."
-                      : undefined
-              }
-              activeResource={activeResource}
-              onPageChange={setResourcePage}
-              onPageSizeChange={setResourcePageSize}
-              onBrowse={browseResource}
-            />
-          )}
-        </div>
+      {/* What the search had to do to find anything. Only ever shown when it
+          had to do something: a spelling stood in, or the words were taken
+          one at a time because no item has all of them. */}
+      {displayedOutcome.phase !== "exact" ? (
+        <p className="nei-note">
+          {displayedOutcome.phase === "corrected"
+            ? `Showing results for ${displayedOutcome.corrections
+                .map((correction) => correction.to)
+                .join(", ")}`
+            : "No item has all those words. Showing the closest."}
+        </p>
+      ) : null}
 
-        <RecentResourceStrip onBrowse={browseResource} />
+      <RecentResourceStrip onBrowse={browseResource} />
+      {searchAt === "bottom" ? <div className="nei-search-foot">{searchField}</div> : null}
+      {searchAt === "dock" && mounted
+        ? createPortal(
+            <div className="nei-dock" data-nei-search-dock="">
+              <div className="nei ui-zoom">{searchField}</div>
+            </div>,
+            document.body,
+          )
+        : null}
     </div>
   );
 }
 
 const RESOURCE_DEFAULT_PAGE_SIZE = 6;
 /**
- * Results are a dense grid of tiles: icon on top, a quiet gray name (two
- * lines at most) under it, the hover tooltip carrying the rest. Four columns
- * in the standard panel.
+ * NEI's slot: 18 GUI px at GUI scale 2, here 32 shell px, the art inside it
+ * 28 (16 GUI px). Mirrors `--nei-slot` and `--nei-art` in nei/nei.css.
  */
-// Height is exactly what the tile holds (44px icon cell + two 10px name lines
-// + borders), so a wrapped second line is never clipped. Fluid art stays at
-// 40px inside the cell: a solid square at full size out-shouts the items.
-const RESOURCE_TILE_HEIGHT = 66;
-const RESOURCE_TILE_MIN_WIDTH = 58;
-const RESOURCE_TILE_GAP = 2;
-const RESOURCE_GRID_GAP = 4;
-/**
- * Magnifies the art inside its fixed grid cell. ResourceIcon caps that zoom
- * against each item's opaque bounds, so wide items keep their corners.
- */
-const RESOURCE_GRID_ART = "!h-full !w-full";
-// The pager measures 28px (24 + 4 margin); the extra is slack so a fractional
-// device pixel can never clip the last row of tiles.
-const RESOURCE_PAGER_HEIGHT = 31;
+const NEI_SLOT = 32;
+const NEI_ART = 28;
 /** One mouse notch is 100 on most platforms, so one notch is one page. */
 const RESOURCE_WHEEL_PAGE_DELTA = 80;
 
@@ -437,13 +409,15 @@ const RESOURCE_FILTER_CHOICES: Array<{
   mode: ResourceFilterMode;
   label: string;
   title: string;
+  /** The row in the list menu. */
+  menu: string;
 }> = [
-  { mode: "all", label: "All", title: "Everything" },
-  { mode: "item", label: "Items", title: "Items" },
-  { mode: "fluid", label: "Fluids", title: "Fluids" },
-  { mode: "board", label: "Placed", title: "On this board" },
-  { mode: "plants", label: "CropsNH", title: "Grown" },
-  { mode: "bees", label: "Bees", title: "From bees" },
+  { mode: "all", label: "All", title: "Everything", menu: "Everything" },
+  { mode: "item", label: "Items", title: "Items", menu: "Items only" },
+  { mode: "fluid", label: "Fluids", title: "Fluids", menu: "Fluids only" },
+  { mode: "board", label: "Placed", title: "On this board", menu: "On this board" },
+  { mode: "plants", label: "CropsNH", title: "Grown", menu: "Grown by crops" },
+  { mode: "bees", label: "Bees", title: "From bees", menu: "Made by bees" },
 ];
 
 /** The dataset query only knows kinds and sources; this splits the choice up. */
@@ -456,22 +430,24 @@ function resourceFilterSource(filter: ResourceFilterMode): "plants" | "bees" | u
 }
 
 /**
- * A tile's hover tooltip: the name, then its mod and recipe count, then any
- * dataset tooltip lines. First line white, the rest blue, as app-wide.
+ * A slot's tooltip, as NEI writes an item's: the name in white, the dataset's
+ * tooltip lines and the recipe count in grey, the mod's name last in blue
+ * italics.
  */
-function resourceTooltipLines(resource: IndexedResource): string[] {
-  const subtitle = [
-    getResourceModLabel(resource),
-    resource.recipeCount > 0 ? `${resource.recipeCount} recipes` : undefined,
-  ]
-    .filter(Boolean)
-    .join(" · ");
-  const name = resourceLabel(resource);
-  return [
-    name,
-    subtitle,
-    ...(resource.tooltip ?? []).filter((line) => line.trim() && line !== name),
-  ].filter(Boolean);
+function resourceTooltipLines(resource: IndexedResource): McTipLine[] {
+  const name = resource.id === POWER_EU_CLAUSE_ID ? "Power (EU/t)" : resourceLabel(resource);
+  const lines: McTipLine[] = [{ text: name, tone: "name" }];
+  for (const line of resource.tooltip ?? []) {
+    if (line.trim() && line !== name) lines.push({ text: line });
+  }
+  if (resource.recipeCount > 0) {
+    lines.push({ text: `${resource.recipeCount} recipes` });
+  }
+  const mod = getResourceModLabel(resource);
+  if (mod !== "fluids" && mod !== "other") {
+    lines.push({ text: modDisplayName(mod), tone: "mod" });
+  }
+  return lines;
 }
 
 /** Mod is the id prefix ("gregtech:..."); bare fluid ids group as "fluids". */
@@ -524,20 +500,10 @@ function useResourcePageSize(
       return;
     }
 
+    // As many whole slots as fit each way, as NEI fills its column.
     const updatePageSize = () => {
-      const availableHeight = Math.max(RESOURCE_TILE_HEIGHT, container.clientHeight);
-      const listHeight = Math.max(RESOURCE_TILE_HEIGHT, availableHeight - RESOURCE_PAGER_HEIGHT);
-      const width = Math.max(RESOURCE_TILE_MIN_WIDTH, container.clientWidth);
-      const nextColumns = Math.max(
-        1,
-        Math.floor(
-          (width + RESOURCE_TILE_GAP) / (RESOURCE_TILE_MIN_WIDTH + RESOURCE_TILE_GAP),
-        ),
-      );
-      const rows = Math.max(
-        1,
-        Math.floor((listHeight + RESOURCE_TILE_GAP) / (RESOURCE_TILE_HEIGHT + RESOURCE_TILE_GAP)),
-      );
+      const nextColumns = Math.max(1, Math.floor(container.clientWidth / NEI_SLOT));
+      const rows = Math.max(1, Math.floor(container.clientHeight / NEI_SLOT));
       const nextPageSize = nextColumns * rows;
 
       setPageSize((current) => (current === nextPageSize ? current : nextPageSize));
@@ -734,117 +700,39 @@ interface ResourceQueryCacheEntry {
 }
 
 
-/**
- * The last things looked up, in one small row under the results. Click for
- * recipes, right click for uses, like a result tile. The list is the store's
- * browse history, so items opened from anywhere (a card's slot too) land here.
- */
-const RECENT_STRIP_ROWS = 1;
-const RECENT_STRIP_ROWS_COMPACT = 1;
-const RECENT_STRIP_CELL = 36;
 /** More than one row of the widest column could ever show. */
 const RECENT_STRIP_LIMIT = 24;
 
+/**
+ * The last things looked up, in one row of slots under the list. Click for
+ * recipes, right click for uses, like a slot in the list. The list is the
+ * store's browse history, so items opened from anywhere (a card's slot too)
+ * land here.
+ */
 function RecentResourceStrip({
   onBrowse,
 }: {
   onBrowse: (resource: IndexedResource, mode: "recipes" | "uses") => void;
 }) {
   const history = useFactoryStore((state) => state.recipeResourceHistory);
-  const clearResourceHistory = useFactoryStore((state) => state.clearResourceHistory);
   const activeResource = useFactoryStore((state) => state.recipeBrowserResource);
-  const isCompact = useIsCompactViewport();
-  const rows = isCompact ? RECENT_STRIP_ROWS_COMPACT : RECENT_STRIP_ROWS;
-  const cell = RECENT_STRIP_CELL;
-  const recent = history.slice(0, RECENT_STRIP_LIMIT);
-  const rowBrowse = useResourceBrowseMenu(onBrowse);
+  const recent = useMemo(
+    () => history.slice(0, RECENT_STRIP_LIMIT).map((resource) => ({ ...resource, recipeCount: 0 })),
+    [history],
+  );
 
   if (recent.length === 0) {
     return null;
   }
 
   return (
-    // A card of its own, like the controls at the top of the column, so it does
-    // not read as more of the list. The bottom margin keeps it off the edge.
-    <div className="mx-2 mb-1.5 shrink-0 rounded-[6px] border border-neutral-700 bg-[#2a2d33] p-1">
-      <div className="mb-0.5 flex items-center justify-between px-0.5">
-        <span className="text-[9px] font-semibold uppercase tracking-wide text-neutral-500">
-          Recent
-        </span>
-        <button
-          type="button"
-          onClick={clearResourceHistory}
-          title="Clear recent items"
-          className="text-[9px] font-medium text-neutral-600 hover:text-neutral-200"
-        >
-          Clear
-        </button>
-      </div>
-      {/* auto-fill picks the column count from the width, and the height stops
-          it at one row: a shelf, not a second list. */}
-      <div
-        className="grid gap-1 overflow-hidden"
-        style={{
-          gridTemplateColumns: `repeat(auto-fill, minmax(${cell}px, 1fr))`,
-          maxHeight: rows * cell + (rows - 1) * RESOURCE_GRID_GAP,
-        }}
-        aria-label="Recently viewed"
-        role="listbox"
-      >
-        {recent.map((resource) => {
-          const active =
-            activeResource?.kind === resource.kind && activeResource.id === resource.id;
-          const indexed: IndexedResource = { ...resource, recipeCount: 0 };
-          return (
-            <MinecraftTooltip
-              key={`${resource.kind}:${resource.id}`}
-              label={[
-                ...resourceTooltipLines(indexed),
-                "Click for recipes, right click for uses",
-              ]}
-            >
-              <button
-                type="button"
-                onClick={(event) => {
-                  if (rowBrowse.claimedByMenu(event) || rowBrowse.openOnTap(event)) {
-                    return;
-                  }
-                  onBrowse(indexed, "recipes");
-                }}
-                onContextMenu={(event) => {
-                  event.preventDefault();
-                  if (rowBrowse.claimedByMenu(event)) {
-                    return;
-                  }
-                  onBrowse(indexed, "uses");
-                }}
-                {...rowBrowse.pressProps(indexed)}
-                aria-label={resourceLabel(resource)}
-                className={[
-                  "minecraft-pixel-art flex aspect-square items-center justify-center overflow-hidden rounded-[4px] border",
-                  active
-                    ? "border-cyan-400 bg-cyan-500/10"
-                    : "border-transparent hover:border-neutral-500 hover:bg-white/5",
-                ].join(" ")}
-                role="option"
-                aria-selected={active}
-              >
-                <ResourceIcon
-
-                  itemZoom={1.4}
-                  resource={{ ...resource, amount: 1 }}
-                  size="md"
-                  bare
-                  showAmount={false}
-                  tooltip={false}
-                  className={RESOURCE_GRID_ART}
-                />
-              </button>
-            </MinecraftTooltip>
-          );
-        })}
-      </div>
-      {rowBrowse.menu}
+    <div className="nei-recent" aria-label="Recently viewed" role="listbox">
+      <NeiSlots
+        resources={recent}
+        activeResource={activeResource}
+        onBrowse={onBrowse}
+        hint="Recently viewed"
+      />
     </div>
   );
 }
@@ -860,6 +748,8 @@ function VirtualResourceResultList({
   onPageChange,
   onPageSizeChange,
   onBrowse,
+  leading,
+  trailing,
 }: {
   resources: IndexedResource[];
   total: number;
@@ -872,49 +762,87 @@ function VirtualResourceResultList({
   onPageChange: (page: number) => void;
   onPageSizeChange: (pageSize: number) => void;
   onBrowse: (resource: IndexedResource, mode: "recipes" | "uses") => void;
+  leading?: ReactNode;
+  trailing?: ReactNode;
 }) {
   const containerRef = useRef<HTMLDivElement | null>(null);
   const { pageSize, gridColumns } = useResourcePageSize(containerRef, onPageSizeChange);
   const pageCount = Math.max(1, Math.ceil(total / pageSize));
+  // NEI's page keys go round: back from the first page is the last.
   const handlePreviousPage = useCallback(() => {
-    onPageChange(Math.max(0, currentPage - 1));
-  }, [currentPage, onPageChange]);
+    onPageChange(currentPage === 0 ? pageCount - 1 : currentPage - 1);
+  }, [currentPage, onPageChange, pageCount]);
   const handleNextPage = useCallback(() => {
-    onPageChange(Math.min(pageCount - 1, currentPage + 1));
+    onPageChange(currentPage >= pageCount - 1 ? 0 : currentPage + 1);
   }, [currentPage, onPageChange, pageCount]);
 
   return (
-    <div ref={containerRef} className="flex h-full min-w-0 min-h-0 flex-col overflow-hidden">
-      {error ? (
-        <div className="rounded border border-dashed border-red-700 p-4 text-sm text-red-200">
-          {error}
-        </div>
-      ) : isLoading && resources.length === 0 ? (
-        <ResourceResultSkeleton pageSize={pageSize} gridColumns={gridColumns} />
-      ) : resources.length === 0 ? (
-        <div className="rounded border border-dashed border-neutral-600 p-4 text-sm text-neutral-300">
-          {emptyLabel ?? "No matching resource."}
-        </div>
-      ) : (
-        <ResourceResultPage
-          resources={resources}
-          activeResource={activeResource}
-          gridColumns={gridColumns}
-          isRefreshing={isLoading}
-          onBrowseResource={onBrowse}
-        />
-      )}
-      <ResourcePager
-        currentPage={currentPage}
-        pageCount={pageCount}
-        onPreviousPage={handlePreviousPage}
-        onNextPage={handleNextPage}
-      />
-    </div>
+    <>
+      <div className="nei-pager">
+        {leading}
+        <button
+          type="button"
+          className="nei-btn"
+          onClick={handlePreviousPage}
+          disabled={pageCount <= 1}
+          aria-label="Previous resource page"
+        >
+          <NeiArrow direction="left" />
+        </button>
+        <span className="nei-pager-count nei-text" aria-live="polite">
+          {Math.min(currentPage + 1, pageCount)}/{pageCount}
+        </span>
+        {trailing}
+        <button
+          type="button"
+          className="nei-btn"
+          onClick={handleNextPage}
+          disabled={pageCount <= 1}
+          aria-label="Next resource page"
+        >
+          <NeiArrow direction="right" />
+        </button>
+      </div>
+      <div ref={containerRef} className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden">
+        {error ? (
+          <div className="nei-empty">{error}</div>
+        ) : isLoading && resources.length === 0 ? (
+          <ResourceResultSkeleton pageSize={pageSize} gridColumns={gridColumns} />
+        ) : resources.length === 0 ? (
+          <div className="nei-empty">{emptyLabel ?? "No matching resource."}</div>
+        ) : (
+          <ResourceResultPage
+            resources={resources}
+            activeResource={activeResource}
+            gridColumns={gridColumns}
+            isRefreshing={isLoading}
+            onBrowseResource={onBrowse}
+          />
+        )}
+      </div>
+    </>
   );
 }
 
-/** Pulsing placeholders shaped like the results, instead of a text box. */
+/** The vanilla button's pixel chevron, 4 x 7 GUI px. */
+function NeiArrow({ direction }: { direction: "left" | "right" }) {
+  const d = "M3 0h1v1H3zM2 1h1v1H2zM1 2h1v1H1zM0 3h1v1H0zM1 4h1v1H1zM2 5h1v1H2zM3 6h1v1H3z";
+  return (
+    <svg
+      width={8}
+      height={14}
+      viewBox="0 0 4 7"
+      shapeRendering="crispEdges"
+      fill="currentColor"
+      aria-hidden
+      style={direction === "right" ? { transform: "scaleX(-1)" } : undefined}
+    >
+      <path d={d} />
+    </svg>
+  );
+}
+
+/** Faint empty slots while a page loads. */
 function ResourceResultSkeleton({
   pageSize,
   gridColumns,
@@ -922,69 +850,136 @@ function ResourceResultSkeleton({
   pageSize: number;
   gridColumns: number;
 }) {
-  const count = Math.max(3, Math.min(pageSize, 60));
+  const count = Math.max(3, Math.min(pageSize, 200));
   return (
     <div
-      className="grid min-h-0 flex-1 content-start gap-0.5 overflow-hidden"
-      style={{ gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))` }}
+      className="nei-grid"
+      style={{ gridTemplateColumns: `repeat(${gridColumns}, ${NEI_SLOT}px)` }}
       aria-label="Loading resources"
     >
       {Array.from({ length: count }, (_, index) => (
-        <div
-          key={index}
-          className="flex shrink-0 flex-col items-center gap-1 pt-1"
-          style={{ height: RESOURCE_TILE_HEIGHT }}
-        >
-          <div className="h-11 w-11 shrink-0 animate-pulse rounded-[4px] bg-neutral-800/70" />
-          <div
-            className="h-2.5 animate-pulse rounded bg-neutral-800/70"
-            style={{ width: `${45 + ((index * 17) % 40)}%` }}
-          />
-        </div>
+        <div key={index} className="nei-skel" />
       ))}
     </div>
   );
 }
 
-function ResourcePager({
-  currentPage,
-  pageCount,
-  onPreviousPage,
-  onNextPage,
+/**
+ * NEI's search field. Typing filters the list; a right click clears it, as
+ * NEI's does; Escape lets go of it. Its text turns red when nothing matches.
+ */
+function NeiSearchField({
+  inputRef,
+  value,
+  onChange,
+  flashing,
+  none,
 }: {
-  currentPage: number;
-  pageCount: number;
-  onPreviousPage: () => void;
-  onNextPage: () => void;
+  inputRef: RefObject<HTMLInputElement | null>;
+  value: string;
+  onChange: (value: string) => void;
+  flashing: boolean;
+  none: boolean;
 }) {
+  const [focused, setFocused] = useState(false);
   return (
-    <div className="mt-1 flex h-6 w-full min-w-0 shrink-0 items-center gap-1">
+    <label
+      className={["nei-search", flashing ? "search-box-flash" : ""].join(" ")}
+      data-focused={focused ? "" : undefined}
+      data-none={none ? "" : undefined}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        onChange("");
+        inputRef.current?.focus();
+      }}
+    >
+      {/* 16px text on a phone, deliberately: below that, iOS zooms the whole
+          page in the moment the field takes focus, and the way back out is a
+          pinch. */}
+      <input
+        ref={inputRef}
+        value={value}
+        onChange={(event) => onChange(event.target.value)}
+        onFocus={() => setFocused(true)}
+        onBlur={() => setFocused(false)}
+        onKeyDown={(event) => {
+          if (event.key === "Escape") {
+            event.currentTarget.blur();
+          }
+        }}
+        placeholder="Search..."
+        aria-label="Search items and fluids"
+        spellCheck={false}
+        autoComplete="off"
+        className="compact:!text-base"
+      />
+    </label>
+  );
+}
+
+/** One menu for what the list shows and how it is sorted, from a key beside the page count. */
+function NeiListMenu({
+  filter,
+  sort,
+  onFilter,
+  onSort,
+}: {
+  filter: ResourceFilterMode;
+  sort: ResourceSortMode;
+  onFilter: (filter: ResourceFilterMode) => void;
+  onSort: (sort: ResourceSortMode) => void;
+}) {
+  const [anchor, setAnchor] = useState<ChromeAnchor>();
+  const close = useCallback(() => setAnchor(undefined), []);
+  const changed = filter !== "all" || sort !== "popular";
+  const filterLabel = RESOURCE_FILTER_CHOICES.find((choice) => choice.mode === filter)?.title ?? filter;
+  const sortLabel = RESOURCE_SORT_CHOICES.find((choice) => choice.value === sort)?.label ?? sort;
+  return (
+    <>
       <button
         type="button"
-        onClick={onPreviousPage}
-        disabled={currentPage === 0}
-        className="pn-chip flex-none disabled:cursor-not-allowed disabled:opacity-35"
-        style={{ width: 28, flex: "none" }}
-        aria-label="Previous resource page"
-        title="Previous page"
+        className="nei-btn"
+        aria-label="Show and sort"
+        aria-haspopup="menu"
+        aria-expanded={anchor !== undefined}
+        title={`Showing ${filterLabel.toLowerCase()}, ${sortLabel.toLowerCase()}`}
+        data-on={changed ? "" : undefined}
+        {...{ [MENU_ANCHOR_ATTR]: "" }}
+        onClick={(event) => {
+          const next = chromeAnchorOf(event.currentTarget);
+          setAnchor((open) => (open ? undefined : next));
+        }}
       >
-        <ChevronLeft className="h-3.5 w-3.5" />
+        <svg width={10} height={10} viewBox="0 0 5 5" shapeRendering="crispEdges" fill="currentColor" aria-hidden>
+          <path d="M0 0h5v1H0zM0 2h5v1H0zM0 4h5v1H0z" />
+        </svg>
       </button>
-      <div className="pn-dim min-w-0 flex-1 truncate text-center text-[11px]">
-        Page {Math.min(currentPage + 1, pageCount)} of {pageCount}
-      </div>
-      <button
-        type="button"
-        onClick={onNextPage}
-        disabled={currentPage >= pageCount - 1}
-        className="pn-chip flex-none disabled:cursor-not-allowed disabled:opacity-35"
-        style={{ width: 28, flex: "none" }}
-        aria-label="Next resource page"
-        title="Next page"
-      >
-        <ChevronRight className="h-3.5 w-3.5" />
-      </button>
-    </div>
+      {anchor ? (
+        <ChromeMenu
+          anchor={anchor}
+          label="Show and sort"
+          align="right"
+          zIndex={80}
+          minWidth={170}
+          entries={[
+            ...RESOURCE_FILTER_CHOICES.map((choice, index) => ({
+              label: choice.menu,
+              detail: index === 0 ? "Show" : undefined,
+              current: filter === choice.mode,
+              onSelect: () => onFilter(choice.mode),
+            })),
+            ...RESOURCE_SORT_CHOICES.map((choice, index) => ({
+              label: choice.label,
+              detail: index === 0 ? "Sort" : undefined,
+              ruleAbove: index === 0,
+              current: sort === choice.value,
+              onSelect: () => onSort(choice.value),
+            })),
+          ]}
+          onClose={close}
+        />
+      ) : null}
+    </>
   );
 }
 
@@ -1071,91 +1066,181 @@ function ResourceResultPage({
     },
     [onBrowseResource, startBrowseTransition],
   );
-  const rowBrowse = useResourceBrowseMenu(browse);
 
   return (
     <div
-      className={[
-        "grid min-h-0 flex-1 content-start gap-0.5 overflow-hidden",
-        isRefreshing ? "opacity-60" : "",
-      ].join(" ")}
-      style={{ gridTemplateColumns: `repeat(${gridColumns}, minmax(0, 1fr))` }}
+      className="nei-grid"
+      style={{
+        gridTemplateColumns: `repeat(${gridColumns}, ${NEI_SLOT}px)`,
+        opacity: isRefreshing ? 0.6 : undefined,
+      }}
       aria-label="Resource results"
       role="listbox"
     >
-      {resources.map((resource) => {
-        const active = activeResource?.kind === resource.kind && activeResource.id === resource.id;
-
-        return (
-          // No hover tooltip: the tile already says what it is, and a tooltip
-          // over every cell of a dense grid is a flicker, not a help.
-          <button
-              key={`${resource.kind}:${resource.id}`}
-              type="button"
-              onClick={(event) => {
-                if (rowBrowse.claimedByMenu(event) || rowBrowse.openOnTap(event)) {
-                  return;
-                }
-                browse(resource, "recipes");
-              }}
-              onContextMenu={(event) => {
-                event.preventDefault();
-                if (rowBrowse.claimedByMenu(event)) {
-                  return;
-                }
-                browse(resource, "uses");
-              }}
-              {...rowBrowse.pressProps(resource)}
-              aria-label={resourceLabel(resource)}
-              className={[
-                "flex min-w-0 flex-col items-center overflow-hidden rounded-[4px] border px-0.5",
-                // The power tile's own whisper of amber; selection still wins.
-                !active && resource.id === POWER_EU_CLAUSE_ID ? "bg-amber-400/[0.07]" : "",
-                active
-                  ? "border-cyan-400 bg-cyan-500/10"
-                  : "border-transparent hover:border-neutral-600 hover:bg-white/5",
-              ].join(" ")}
-              style={{ height: RESOURCE_TILE_HEIGHT }}
-              role="option"
-              aria-selected={active}
-            >
-              <span className="minecraft-pixel-art flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden">
-                {resource.id === POWER_EU_CLAUSE_ID ? (
-                  <span className="flex h-full w-full items-center justify-center bg-amber-400/10">
-                    <Zap className="h-5 w-5 fill-current text-amber-400" aria-hidden />
-                  </span>
-                ) : (
-                  <ResourceIcon
-
-                    itemZoom={1.5}
-                    resource={{ ...resource, amount: 1 }}
-                    size="sm"
-                    bare
-                    showAmount={false}
-                    tooltip={false}
-                    // Items use the shared fit; fluids match their visual size.
-                    iconPixelSize={
-                      resource.kind === "fluid"
-                        ? isSwatchFluid(resource)
-                          ? 56
-                          : spriteArtPixels(40)
-                        : undefined
-                    }
-                    className="!h-11 !w-11"
-                  />
-                )}
-              </span>
-              <span className="line-clamp-2 w-full break-words text-center text-[9px] leading-[10px] text-neutral-400">
-                {resource.id === POWER_EU_CLAUSE_ID ? "Power (EU/t)" : resourceLabel(resource)}
-              </span>
-          </button>
-        );
-      })}
-      {rowBrowse.menu}
+      <NeiSlots resources={resources} activeResource={activeResource} onBrowse={browse} />
     </div>
   );
 }
 
+/**
+ * NEI's slots: the art alone, the grey highlight under the hovered one, its
+ * tooltip at once in Minecraft's box. Left click asks for recipes, right
+ * click for uses, and R or U over a slot ask the same, as in NEI. A slot drags
+ * onto the board for a drawer.
+ */
+function NeiSlots({
+  resources,
+  activeResource,
+  onBrowse,
+  hint,
+}: {
+  resources: readonly IndexedResource[];
+  activeResource?: { kind: string; id: string };
+  onBrowse: (resource: IndexedResource, mode: "recipes" | "uses") => void;
+  /** A dim line under the tooltip's name (the recent row says what it is). */
+  hint?: string;
+}) {
+  const rowBrowse = useResourceBrowseMenu(onBrowse);
+  const [hover, setHover] = useState<{ resource: IndexedResource; x: number; y: number }>();
+  const hoverRef = useRef<IndexedResource | undefined>(undefined);
+  const dragging = useRef(false);
+
+  // R and U over a slot: the two questions its clicks ask.
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const resource = hoverRef.current;
+      if (!resource || event.ctrlKey || event.metaKey || event.altKey || event.shiftKey) return;
+      if (isEditableKeyboardTarget(event.target)) return;
+      const key = event.key.toLowerCase();
+      if (key !== "r" && key !== "u") return;
+      event.preventDefault();
+      onBrowse(resource, key === "r" ? "recipes" : "uses");
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [onBrowse]);
+
+  const leave = () => {
+    hoverRef.current = undefined;
+    setHover(undefined);
+  };
+  const tipLines = useMemo(() => {
+    if (!hover) return undefined;
+    const lines = resourceTooltipLines(hover.resource);
+    if (hint) lines.splice(1, 0, { text: hint, tone: "hint" });
+    return lines;
+  }, [hover, hint]);
+
+  return (
+    <>
+      {resources.map((resource) => {
+        const active = activeResource?.kind === resource.kind && activeResource.id === resource.id;
+        const press = rowBrowse.pressProps(resource);
+        return (
+          <button
+            key={`${resource.kind}:${resource.id}`}
+            type="button"
+            className="nei-slot"
+            onClick={(event) => {
+              if (rowBrowse.claimedByMenu(event) || rowBrowse.openOnTap(event)) {
+                return;
+              }
+              onBrowse(resource, "recipes");
+            }}
+            onContextMenu={(event) => {
+              event.preventDefault();
+              if (rowBrowse.claimedByMenu(event)) {
+                return;
+              }
+              onBrowse(resource, "uses");
+            }}
+            onMouseMove={(event) => {
+              if (dragging.current || event.buttons !== 0) return;
+              hoverRef.current = resource;
+              setHover({ resource, x: event.clientX, y: event.clientY });
+            }}
+            onMouseLeave={leave}
+            {...press}
+            onDragStart={(event) => {
+              dragging.current = true;
+              leave();
+              press.onDragStart(event);
+            }}
+            onDragEnd={() => {
+              dragging.current = false;
+            }}
+            aria-label={resource.id === POWER_EU_CLAUSE_ID ? "Power (EU/t)" : resourceLabel(resource)}
+            role="option"
+            aria-selected={active}
+          >
+            <span className="nei-art minecraft-pixel-art">
+              {resource.id === POWER_EU_CLAUSE_ID ? (
+                <Zap className="h-5 w-5 fill-current text-amber-400" aria-hidden />
+              ) : (
+                <ResourceIcon
+                  itemZoom={1.5}
+                  resource={{ ...resource, amount: 1 }}
+                  size="sm"
+                  bare
+                  showAmount={false}
+                  tooltip={false}
+                  // Items use the shared fit; fluids match their visual size.
+                  iconPixelSize={
+                    resource.kind === "fluid"
+                      ? isSwatchFluid(resource)
+                        ? 36
+                        : spriteArtPixels(NEI_ART)
+                      : undefined
+                  }
+                  className="!h-full !w-full"
+                />
+              )}
+            </span>
+          </button>
+        );
+      })}
+      {rowBrowse.menu}
+      {hover && tipLines ? <McFloatingTip lines={tipLines} x={hover.x} y={hover.y} /> : null}
+    </>
+  );
+}
+
+const noopSubscribe = () => () => {};
+
+/** The most one resource query answers; a taller page asks for its slots in several. */
+const RESOURCE_QUERY_MAX = 120;
+
+/**
+ * A page of the list, asked for in pieces of at most 120 (the server's cap), so
+ * a tall column fills to its foot as NEI's does. The first answer carries the
+ * total, the mods and how the search was read.
+ */
+async function queryResourcesInChunks(
+  ...[manifestUrl, version, query, options]: Parameters<typeof queryRecipeDatasetResources>
+): Promise<RecipeDatasetResourceQueryResult> {
+  if (query.limit <= RESOURCE_QUERY_MAX) {
+    return queryRecipeDatasetResources(manifestUrl, version, query, options);
+  }
+  const parts: Array<Promise<RecipeDatasetResourceQueryResult>> = [];
+  for (let at = 0; at < query.limit; at += RESOURCE_QUERY_MAX) {
+    parts.push(
+      queryRecipeDatasetResources(
+        manifestUrl,
+        version,
+        { ...query, offset: query.offset + at, limit: Math.min(RESOURCE_QUERY_MAX, query.limit - at) },
+        options,
+      ),
+    );
+  }
+  const answers = await Promise.all(parts);
+  const first = answers[0];
+  return {
+    ...first,
+    resources: answers.flatMap((answer) => answer.resources),
+    limit: query.limit,
+    hasMore: answers[answers.length - 1].hasMore,
+  };
+}
 
 export function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value));

@@ -1,0 +1,307 @@
+/*
+ * NEI's item list beside the board, and the Minecraft tooltip, in website units. One GUI pixel of the game at
+ * GUI scale 2 is about 1.75 shell px here (the mod's reference shots are 2 device px per GUI px, the app shell is
+ * zoomed by about 1.17), so an 18 px slot is 32, its 16 px item art 28, a 16 px button 28 and the 170 x 18 search
+ * field 300 x 32. Colours are the game's own: the button texture (#6F6F6F face, #AAAAAA light edge, #555 shade,
+ * black outline, #E0E0E0 label), the text field (#A0A0A0 frame on black, #404040 hint), NEI's slot highlight
+ * (0xEE555555) and the tooltip (0xF0100010 ground, a 0x505000FF to 0x5028007F frame). Plain unlayered CSS, so it
+ * beats Tailwind's layers and globals.css's `button { font: inherit }`.
+ */
+
+.nei {
+  --nei-slot: 32px;
+  --nei-art: 28px;
+  --nei-key: 28px;
+  font-family: var(--font-minecraft), monospace;
+  -webkit-font-smoothing: none;
+}
+
+/* Minecraft's text: white with its shadow a quarter as bright, one GUI pixel down and right. */
+.nei-text {
+  color: #ffffff;
+  text-shadow: 2px 2px 0 #3f3f3f;
+  font-size: 14px;
+  line-height: 16px;
+}
+
+/* The top row: NEI's page keys and page count, with the column's fold key first. */
+.nei-pager {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 36px;
+  padding: 0 6px;
+  flex: none;
+}
+.nei-pager-count {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* A vanilla button: black outline, light top-left edge, shaded bottom-right, the stone-grey face. */
+.nei-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: var(--nei-key);
+  height: var(--nei-key);
+  padding: 0;
+  background: #6f6f6f;
+  border: 2px solid #000000;
+  box-shadow:
+    inset 2px 2px 0 #aaaaaa,
+    inset -2px -4px 0 #555455;
+  color: #e0e0e0;
+  text-shadow: 2px 2px 0 #383838;
+  font-family: var(--font-minecraft), monospace;
+  font-size: 14px;
+  line-height: 14px;
+  cursor: pointer;
+  user-select: none;
+}
+.nei-btn:hover:not(:disabled) {
+  /* The hovered button texture: a blue-lavender face, its label yellow. */
+  background: #7e88bf;
+  box-shadow:
+    inset 2px 2px 0 #bcc7ff,
+    inset -2px -4px 0 #5e6799;
+  color: #ffffa0;
+}
+.nei-btn:disabled {
+  /* The disabled texture: flat dark face, grey label, no edges. */
+  background: #2c2c2c;
+  box-shadow: none;
+  color: #a0a0a0;
+  text-shadow: none;
+  cursor: default;
+}
+.nei-btn[data-on] {
+  color: #ffff55;
+}
+.nei-btn svg {
+  display: block;
+}
+
+/* The slot grid: the item art alone, no names, no frames, centred in the column as NEI centres its grid. */
+.nei-grid {
+  display: grid;
+  grid-auto-rows: var(--nei-slot);
+  justify-content: center;
+  align-content: start;
+  min-height: 0;
+  flex: 1;
+  overflow: hidden;
+}
+.nei-slot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--nei-slot);
+  height: var(--nei-slot);
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  cursor: pointer;
+}
+.nei-slot:hover,
+.nei-slot[data-hover] {
+  background: rgba(85, 85, 85, 0.93);
+}
+.nei-slot[aria-selected="true"] {
+  background: rgba(85, 85, 85, 0.5);
+}
+.nei-slot:focus-visible {
+  outline: 2px solid #ffd257;
+  outline-offset: -2px;
+}
+.nei-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--nei-art);
+  height: var(--nei-art);
+  overflow: hidden;
+}
+.nei-skel {
+  width: var(--nei-art);
+  height: var(--nei-art);
+  margin: 2px;
+  background: rgba(255, 255, 255, 0.04);
+}
+.nei-empty {
+  padding: 8px 10px;
+  color: #aaaaaa;
+  text-shadow: 2px 2px 0 #2a2a2a;
+  font-size: 12px;
+  line-height: 15px;
+}
+.nei-note {
+  flex: none;
+  padding: 0 8px 4px;
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+  color: #ffff55;
+  text-shadow: 2px 2px 0 #3f3f15;
+  font-size: 11px;
+  line-height: 14px;
+}
+
+/* The recent shelf: one row of the same slots under a hairline. */
+.nei-recent {
+  display: flex;
+  flex: none;
+  justify-content: center;
+  overflow: hidden;
+  height: var(--nei-slot);
+  margin: 2px 0 4px;
+  padding-top: 2px;
+  border-top: 1px solid #34363c;
+}
+
+/* The search field: Minecraft's text field (a #A0A0A0 frame on black), NEI's size. */
+.nei-search {
+  position: relative;
+  display: flex;
+  align-items: center;
+  box-sizing: border-box;
+  width: 300px;
+  max-width: 100%;
+  height: 32px;
+  padding: 0 7px;
+  background: #000000;
+  border: 2px solid #a0a0a0;
+  border-radius: 0;
+}
+.nei-search[data-focused] {
+  border-color: #ffffff;
+}
+.nei-search input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: #e0e0e0;
+  caret-color: #d0d0d0;
+  text-shadow: 2px 2px 0 #383838;
+  font-family: var(--font-minecraft), monospace;
+  font-size: 14px;
+  line-height: 16px;
+}
+.nei-search input::placeholder {
+  color: #404040;
+  text-shadow: none;
+  opacity: 1;
+}
+.nei-search[data-none] input {
+  /* NEI's field reads red when nothing matches. */
+  color: #ff5555;
+  text-shadow: 2px 2px 0 #3f1515;
+}
+
+/* The field sits at the bottom middle of the screen, over the board's bottom edge, as NEI's does. */
+.nei-dock {
+  position: fixed;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 45;
+  display: flex;
+  justify-content: center;
+  pointer-events: none;
+}
+.nei-dock > * {
+  pointer-events: auto;
+  margin-bottom: 5px;
+}
+/* At the bottom of the items drawer on a phone. */
+.nei-search-foot {
+  display: flex;
+  justify-content: center;
+  flex: none;
+  padding: 4px 6px 6px;
+}
+.nei-search-foot .nei-search {
+  width: 100%;
+}
+
+/*
+ * Minecraft's tooltip (GuiScreen.drawHoveringText): a 0xF0100010 ground whose four corners are cut by one GUI
+ * pixel, a one-pixel frame one pixel in, purple fading from 0x505000FF at the top to 0x5028007F at the bottom, the
+ * text three pixels inside it. Square, no shadow of its own.
+ */
+.mc-tip {
+  box-sizing: border-box;
+  padding: 7px 8px 6px;
+  background: rgba(16, 0, 16, 0.94);
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  color: #ffffff;
+  font-family: var(--font-minecraft), monospace;
+  font-size: 14px;
+  line-height: 17px;
+  -webkit-font-smoothing: none;
+  clip-path: polygon(
+    2px 0,
+    calc(100% - 2px) 0,
+    calc(100% - 2px) 2px,
+    100% 2px,
+    100% calc(100% - 2px),
+    calc(100% - 2px) calc(100% - 2px),
+    calc(100% - 2px) 100%,
+    2px 100%,
+    2px calc(100% - 2px),
+    0 calc(100% - 2px),
+    0 2px,
+    2px 2px
+  );
+}
+.mc-tip::before {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  border: 2px solid transparent;
+  border-image: linear-gradient(rgba(80, 0, 255, 0.31), rgba(40, 0, 127, 0.31)) 1;
+  pointer-events: none;
+}
+/* A rich panel's own inks, brought to Minecraft's: white, grey and the muted grey. */
+.mc-tip .text-fg {
+  color: #ffffff;
+}
+.mc-tip .text-fg-subtle,
+.mc-tip .text-fg-muted {
+  color: #aaaaaa;
+}
+.mc-tip-line {
+  white-space: pre-wrap;
+  color: #aaaaaa;
+  text-shadow: 2px 2px 0 #2a2a2a;
+}
+.mc-tip-line[data-tone="name"] {
+  color: #ffffff;
+  text-shadow: 2px 2px 0 #3f3f3f;
+  margin-bottom: 4px;
+}
+.mc-tip-line[data-tone="name"]:last-child {
+  margin-bottom: 0;
+}
+.mc-tip-line[data-tone="mod"] {
+  color: #5555ff;
+  font-style: italic;
+  text-shadow: 2px 2px 0 #151540;
+}
+.mc-tip-line[data-tone="hint"] {
+  color: #555555;
+  text-shadow: 2px 2px 0 #151515;
+}

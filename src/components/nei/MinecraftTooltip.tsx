@@ -374,14 +374,11 @@ export function MinecraftTooltip({
                 // the room left to the viewport edge and wraps its last word.
                 // With max-content the panel states its real width and the
                 // clamp above moves it inside the edge.
-                className={`${TOOLTIP_PANEL_CLASS} ui-zoom w-max max-w-[420px] px-2 py-1 font-mono text-[16px] leading-[19px]`}
+                className={`${TOOLTIP_PANEL_CLASS} ui-zoom w-max max-w-[420px]`}
                 style={{ left: position.x, top: position.y }}
               >
                 {lines.map((line, index) => (
-                  <div
-                    key={`${line}-${index}`}
-                    className={index === 0 ? "text-fg" : "text-fg-subtle"}
-                  >
+                  <div key={`${line}-${index}`} className="mc-tip-line" data-tone={index === 0 ? "name" : undefined}>
                     {line}
                   </div>
                 ))}

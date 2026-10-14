@@ -38,6 +38,13 @@ export type RateRuleVariant = "drawer" | "table";
  * Anything else is not a number and the caller falls back rather than guess.
  */
 export function parseAmountWithSuffix(text: string): number | undefined {
+  // A fraction of two such numbers is a number too: "1/3", "2.5k/3".
+  const slash = text.split("/");
+  if (slash.length === 2) {
+    const top = parseAmountWithSuffix(slash[0]!);
+    const bottom = parseAmountWithSuffix(slash[1]!);
+    return top === undefined || bottom === undefined || bottom === 0 ? undefined : top / bottom;
+  }
   const match = text
     .trim()
     .toLowerCase()

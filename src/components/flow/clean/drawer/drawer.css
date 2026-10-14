@@ -1,0 +1,587 @@
+/*
+ * The clean drawer: the mod's drawer (DrawerPaint, a card's port row lifted off the card) on the website's
+ * 120 x 80 footprint. A bar 20 px along the top (move, select, tooltip), a body 60 px with the row and its
+ * controls. Plain unlayered CSS like clean.css; state hangs on data attributes (React rewrites className on the
+ * board). Colours are the mod's: blue source, orange product and byproduct, steel trash. The per-kind values are
+ * the mixes of tokens.ts `drawerMixes`, pinned by drawer.test.ts.
+ */
+
+.cd-wrap {
+  position: relative;
+  width: 120px;
+  height: 80px;
+}
+
+.cd {
+  position: relative;
+  box-sizing: border-box;
+  width: 120px;
+  height: 80px;
+  color: var(--cc-ink);
+  font-family: var(--app-font, ui-sans-serif, system-ui, sans-serif);
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0;
+  text-shadow: none;
+  font-variant-numeric: tabular-nums;
+  --cd-radius: 6px;
+}
+
+.cd[data-kind="source"] {
+  --cd-tint: #78b6f4;
+  --cd-frame: #4f6986;
+  --cd-edge: #597ca1;
+  --cd-bar: #344252;
+  --cd-bar-hot: #3e536b;
+  --cd-body: #292f38;
+  --cd-stripe: #2e3844;
+  --cd-glance: #2c343e;
+  --cd-number: #94c3f3;
+  --cd-name: #8ba8c8;
+  --cd-grip: #89a9cc;
+  --cd-grip-hot: #95a0b0;
+  --cd-lit: #9b9e83;
+  --cd-radius: 6px;
+}
+.cd[data-kind="product"] {
+  --cd-tint: #f59a5c;
+  --cd-frame: #815e49;
+  --cd-edge: #9e6d4e;
+  --cd-bar: #4d3c34;
+  --cd-bar-hot: #664b3a;
+  --cd-body: #322d2e;
+  --cd-stripe: #3e3431;
+  --cd-glance: #38312f;
+  --cd-number: #f2ae81;
+  --cd-name: #c39b84;
+  --cd-grip: #c89b80;
+  --cd-grip-hot: #a89c99;
+  --cd-lit: #c59552;
+  --cd-radius: 2px;
+}
+.cd[data-kind="trash"] {
+  --cd-tint: #8a93a6;
+  --cd-frame: #565b66;
+  --cd-edge: #636976;
+  --cd-bar: #383b43;
+  --cd-bar-hot: #444852;
+  --cd-body: #2a2d33;
+  --cd-stripe: #30333a;
+  --cd-glance: #2d3036;
+  --cd-number: #b9c0cd;
+  --cd-name: #9398a5;
+  --cd-grip: #9298a5;
+  --cd-grip-hot: #989ba4;
+  --cd-lit: #a1936a;
+  --cd-radius: 0;
+}
+
+/* ---- The silhouette: an outline layer and a fill layer inset 1 px -------------------------------------------- */
+
+.cd-edge,
+.cd-fill {
+  position: absolute;
+  pointer-events: none;
+}
+.cd-edge {
+  inset: 0;
+  background: var(--cd-frame);
+  border-radius: var(--cd-radius);
+  /* The lifted shadow of a card; the selection, glow and accept rings are added to this list by data attributes. */
+  box-shadow: 6px 8px 7px rgba(0, 0, 0, 0.36);
+}
+.cd-fill {
+  inset: 1px;
+  overflow: hidden;
+  background: repeating-linear-gradient(135deg, var(--cd-stripe) 0 3px, var(--cd-body) 3px 8px);
+  border-radius: calc(var(--cd-radius) - 1px);
+}
+/* A bin narrows 4 px a side to its base. Box shadows ignore a clip, so a bin's rings are a drop-shadow list. */
+.cd[data-kind="trash"] .cd-edge,
+.cd[data-kind="trash"] .cd-fill {
+  clip-path: polygon(0 0, 100% 0, calc(100% - 4px) 100%, 4px 100%);
+  box-shadow: none;
+}
+.cd[data-kind="trash"] .cd-wrap-shadow,
+.cd[data-kind="trash"] {
+  filter: drop-shadow(6px 8px 7px rgba(0, 0, 0, 0.36));
+}
+
+/* ---- The bar ----------------------------------------------------------------------------------------------- */
+
+.cd-bar {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 0;
+  height: 19px;
+  background: var(--cd-bar);
+  border-bottom: 1px solid var(--cd-frame);
+  pointer-events: auto;
+  cursor: grab;
+}
+.cd:hover .cd-bar,
+.cd[data-selected] .cd-bar {
+  background: var(--cd-bar-hot);
+}
+/* The grip: two rows of 1 px dots, 15 px wide, 2 px pitch, at y 7 and y 11 of the drawer (6 and 10 in the bar). */
+.cd-bar::before {
+  content: "";
+  position: absolute;
+  left: calc(50% - 7.5px);
+  top: 6px;
+  width: 15px;
+  height: 5px;
+  background:
+    repeating-linear-gradient(90deg, var(--cd-grip) 0 1px, transparent 1px 2px) 0 0 / 15px 1px no-repeat,
+    repeating-linear-gradient(90deg, var(--cd-grip) 0 1px, transparent 1px 2px) 0 4px / 15px 1px no-repeat;
+}
+.cd:hover .cd-bar::before {
+  background:
+    repeating-linear-gradient(90deg, var(--cd-grip-hot) 0 1px, transparent 1px 2px) 0 0 / 15px 1px no-repeat,
+    repeating-linear-gradient(90deg, var(--cd-grip-hot) 0 1px, transparent 1px 2px) 0 4px / 15px 1px no-repeat;
+}
+
+/* The delete key: 14 x 14 at (3, 3) in the bar, only while the pointer is on the drawer or it is selected. */
+.cd-del {
+  position: absolute;
+  left: 3px;
+  top: 3px;
+  width: 14px;
+  height: 14px;
+  box-sizing: border-box;
+  z-index: 3;
+  background: var(--cc-key);
+  cursor: pointer;
+  visibility: hidden;
+  box-shadow:
+    inset 0 0 0 1px var(--cc-key-edge),
+    inset 1px 1px 0 1px var(--cc-key-hi),
+    inset -1px -1px 0 1px var(--cc-key-lo);
+}
+.cd-del::after {
+  content: "";
+  position: absolute;
+  left: 2px;
+  top: 6px;
+  width: 10px;
+  height: 2px;
+  background: var(--cc-ink);
+}
+.cd:hover .cd-del,
+.cd[data-selected] .cd-del {
+  visibility: visible;
+}
+.cd-del:hover {
+  background: #9c3543;
+}
+.cd[data-kind="trash"] .cd-del {
+  left: 5px;
+}
+
+/* ---- The body: the row and its controls --------------------------------------------------------------------- */
+
+.cd-body {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 20px;
+  bottom: 0;
+  /* The port row: lights, scopes and starts a wire; the Handle blankets it. */
+}
+.cd-body[data-lit]::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.cd-icon {
+  position: absolute !important;
+  z-index: 1;
+  top: 27px;
+  width: 32px !important;
+  height: 32px !important;
+  pointer-events: none;
+}
+.cd[data-kind="source"] .cd-icon {
+  left: 4px;
+}
+.cd:not([data-kind="source"]) .cd-icon {
+  right: 4px;
+}
+.cd[data-kind="trash"] .cd-icon {
+  right: 6px;
+}
+
+.cd-num {
+  position: absolute;
+  top: 0;
+  width: 76px;
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 16px;
+  color: var(--cd-number);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.cd-num::after {
+  content: attr(data-unit);
+  margin-left: 2px;
+  font-size: 9px;
+  font-weight: 500;
+  color: var(--cc-muted);
+  position: relative;
+  top: -3px;
+}
+.cd-num[data-zero] {
+  color: var(--cc-idle);
+}
+.cd-num[data-small] {
+  font-size: 9px;
+}
+.cd-num[data-small]::after {
+  top: 0;
+  margin-left: 0;
+  color: inherit;
+  font-weight: 600;
+}
+.cd-name {
+  position: absolute;
+  top: 17px;
+  width: 76px;
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 10px;
+  color: var(--cd-name);
+  white-space: nowrap;
+  overflow: hidden;
+  pointer-events: none;
+}
+.cd-name[data-small] {
+  font-size: 7.5px;
+}
+.cd-name[data-clip] {
+  -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 10px), transparent);
+  mask-image: linear-gradient(90deg, #000 calc(100% - 10px), transparent);
+}
+.cd[data-kind="source"] .cd-num,
+.cd[data-kind="source"] .cd-name {
+  left: 40px;
+}
+.cd:not([data-kind="source"]) .cd-num,
+.cd:not([data-kind="source"]) .cd-name {
+  left: 4px;
+  text-align: right;
+}
+.cd[data-kind="trash"] .cd-num,
+.cd[data-kind="trash"] .cd-name {
+  left: 6px;
+  width: 72px;
+}
+
+/* The rule key 14 x 14 and the rate box 56 x 14, a pair 2 px apart in the row's last line. */
+.cd-key,
+.cd-box {
+  position: absolute;
+  top: 38px;
+  height: 14px;
+  box-sizing: border-box;
+  z-index: 40;
+  cursor: pointer;
+  user-select: none;
+}
+.cd-key {
+  width: 14px;
+  background: #34373e;
+  box-shadow:
+    inset 0 0 0 1px #111317,
+    inset 0 1px 0 1px rgba(255, 255, 255, 0.12);
+  color: var(--cc-gold);
+  font-size: 11px;
+  font-weight: 600;
+  line-height: 14px;
+  text-align: center;
+}
+.cd-key:hover,
+.cd-key[data-open] {
+  background: #454952;
+}
+.cd-key[data-any] {
+  color: var(--cc-muted);
+}
+.cd-key::before {
+  content: attr(data-mark);
+}
+.cd-box {
+  width: 56px;
+  background: #0f1114;
+  color: var(--cc-gold);
+  font-size: 9px;
+  font-weight: 500;
+  line-height: 14px;
+  text-align: center;
+  white-space: nowrap;
+  overflow: hidden;
+  box-shadow:
+    inset 0 0 0 1px #5a5e68,
+    inset 0 1px 0 1px rgba(0, 0, 0, 0.7);
+}
+.cd-box:hover {
+  background: #15171c;
+  box-shadow:
+    inset 0 0 0 1px var(--cc-gold),
+    inset 0 1px 0 1px rgba(0, 0, 0, 0.7);
+}
+.cd-box::before {
+  content: attr(data-text);
+}
+.cd-box::after {
+  content: attr(data-unit);
+  margin-left: 1px;
+  color: #8a8e97;
+}
+.cd-box[data-empty]::before {
+  color: #6f737c;
+}
+.cd-box[data-empty]::after,
+.cd-box[data-fixed]::after {
+  content: none;
+}
+.cd-box[data-fixed] {
+  cursor: default;
+}
+.cd-box[data-fixed]::before {
+  color: #6f737c;
+}
+.cd-box[data-fixed]:hover {
+  background: #0f1114;
+  box-shadow:
+    inset 0 0 0 1px #5a5e68,
+    inset 0 1px 0 1px rgba(0, 0, 0, 0.7);
+}
+.cd-box[data-prompt]::before {
+  animation: cc-prompt var(--cc-prompt) steps(1, end) infinite;
+}
+.cd-box[data-unmet] {
+  box-shadow:
+    inset 0 0 0 1px rgba(248, 113, 113, 0.75),
+    inset 0 1px 0 1px rgba(0, 0, 0, 0.7);
+  color: #f87171;
+}
+/* How far the real rate has got toward yours: a 2 px line along the box's foot. */
+.cd-box[data-progress]::after {
+  content: "";
+  position: absolute;
+  left: 1px;
+  bottom: 1px;
+  width: calc((100% - 2px) * var(--cd-progress, 0));
+  height: 2px;
+  margin: 0;
+  background: var(--cc-ok);
+}
+.cd-box[data-progress][data-tone="bad"]::after {
+  background: #f87171;
+}
+.cd-box[data-progress][data-tone="calm"]::after {
+  background: var(--cc-trash);
+}
+.cd-box[data-progress][data-unit]::before {
+  content: attr(data-text) " " attr(data-unit);
+}
+.cd-box[data-editing] {
+  padding: 0;
+  box-shadow:
+    inset 0 0 0 1px var(--cc-gold),
+    inset 0 1px 0 1px rgba(0, 0, 0, 0.7);
+  background: #15171c;
+}
+.cd-box[data-editing]::before,
+.cd-box[data-editing]::after {
+  content: none;
+}
+.cd-box input {
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  margin: 0;
+  padding: 0 2px;
+  border: 0;
+  outline: 0;
+  background: transparent;
+  color: var(--cc-gold);
+  font: inherit;
+  text-align: center;
+}
+
+/* Where the controls sit: a source's at the words' left edge, a product's and trash's from the drawer's left. */
+.cd[data-kind="source"] .cd-key {
+  left: 40px;
+}
+.cd[data-kind="source"] .cd-box {
+  left: 56px;
+}
+.cd:not([data-kind="source"]) .cd-key {
+  left: 4px;
+}
+.cd:not([data-kind="source"]) .cd-box {
+  left: 20px;
+}
+.cd[data-kind="trash"] .cd-key {
+  left: 6px;
+}
+.cd[data-kind="trash"] .cd-box {
+  left: 22px;
+}
+
+/* ---- Selection, lit and accepting rings ---------------------------------------------------------------------- */
+
+.cd[data-selected] .cd-edge {
+  box-shadow:
+    0 0 0 2px var(--cc-select),
+    6px 8px 7px rgba(0, 0, 0, 0.36);
+}
+.cd[data-lit] .cd-edge {
+  background: var(--cd-lit);
+  box-shadow:
+    0 0 0 1px rgba(255, 210, 87, 0.086),
+    0 0 0 2px rgba(255, 210, 87, 0.086),
+    0 0 0 3px rgba(255, 210, 87, 0.086),
+    6px 8px 7px rgba(0, 0, 0, 0.36);
+}
+.cd[data-selected][data-lit] .cd-edge {
+  box-shadow:
+    0 0 0 2px var(--cc-select),
+    0 0 0 5px rgba(255, 210, 87, 0.086),
+    6px 8px 7px rgba(0, 0, 0, 0.36);
+}
+/* A wire in hand that this drawer would take (set by the interaction layer): a 1 px ring, 2 where it would go now. */
+.cd[data-accepts] .cd-edge {
+  box-shadow:
+    0 0 0 1px rgba(74, 222, 128, 0.7),
+    6px 8px 7px rgba(0, 0, 0, 0.36);
+}
+.cd[data-accepts="now"] .cd-edge {
+  box-shadow:
+    0 0 0 2px var(--cc-accept),
+    6px 8px 7px rgba(0, 0, 0, 0.36);
+}
+.cd[data-kind="trash"][data-selected] {
+  filter: drop-shadow(2px 0 0 var(--cc-select)) drop-shadow(-2px 0 0 var(--cc-select))
+    drop-shadow(0 2px 0 var(--cc-select)) drop-shadow(0 -2px 0 var(--cc-select))
+    drop-shadow(6px 8px 7px rgba(0, 0, 0, 0.36));
+}
+.cd[data-kind="trash"][data-lit] {
+  filter: drop-shadow(1px 0 0 rgba(255, 210, 87, 0.3)) drop-shadow(-1px 0 0 rgba(255, 210, 87, 0.3))
+    drop-shadow(0 1px 0 rgba(255, 210, 87, 0.3)) drop-shadow(0 -1px 0 rgba(255, 210, 87, 0.3))
+    drop-shadow(6px 8px 7px rgba(0, 0, 0, 0.36));
+}
+.cd[data-kind="trash"][data-accepts] {
+  filter: drop-shadow(1px 0 0 rgba(74, 222, 128, 0.7)) drop-shadow(-1px 0 0 rgba(74, 222, 128, 0.7))
+    drop-shadow(0 1px 0 rgba(74, 222, 128, 0.7)) drop-shadow(0 -1px 0 rgba(74, 222, 128, 0.7))
+    drop-shadow(6px 8px 7px rgba(0, 0, 0, 0.36));
+}
+
+/* ---- Zoomed out ----------------------------------------------------------------------------------------------- */
+
+/* Zoomed out the board hides every direct child of a glance root but the glance layer; the silhouette, the icon
+   (drawn big) and the rate pill (the edge layer's ::after) are what stays. */
+.cd-edge::after {
+  content: attr(data-rate);
+  display: none;
+  position: absolute;
+  right: 4px;
+  bottom: 4px;
+  padding: calc(1px / var(--board-zoom, 1));
+  background: rgba(16, 17, 20, 0.75);
+  font-size: min(calc(20px / var(--board-zoom, 1)), 40px, calc(100px / (var(--cd-chars, 4) * 0.62)));
+  font-weight: 600;
+  line-height: 1;
+  color: var(--cd-number);
+  white-space: nowrap;
+  z-index: 2;
+}
+.cd-edge[data-zero]::after {
+  color: var(--cc-muted);
+}
+.factory-flow-board[data-detail-level="glance"] .cd[data-node-glance-root] > .cd-edge,
+.factory-flow-board[data-detail-level="glance"] .cd[data-node-glance-root] > .cd-fill,
+.factory-flow-board[data-detail-level="glance"] .cd[data-node-glance-root] > .cd-icon {
+  visibility: visible;
+  opacity: 1;
+}
+.factory-flow-board[data-detail-level="glance"] .cd-fill {
+  background: var(--cd-glance);
+}
+.factory-flow-board[data-detail-level="glance"] .cd-edge {
+  background: var(--cd-edge);
+}
+.factory-flow-board[data-detail-level="glance"] .cd-edge::after {
+  display: block;
+}
+.factory-flow-board[data-detail-level="glance"] .cd .cd-icon {
+  left: 8px !important;
+  right: auto !important;
+  top: 7px;
+  width: 66px !important;
+  height: 66px !important;
+}
+.factory-flow-board[data-detail-level="glance"] .cd[data-kind="trash"] .cd-icon {
+  left: 10px !important;
+}
+.factory-flow-board[data-detail-level="glance"] .cd-fill {
+  inset: max(1.5px, calc(1px / var(--board-zoom, 1)));
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cd-box[data-prompt]::before {
+    animation: none;
+    color: var(--cc-gold);
+  }
+}
+
+/* ---- The rule menu (a portal on the body) ----------------------------------------------------------------------- */
+
+.cd-menu {
+  position: fixed;
+  z-index: 9999;
+  box-sizing: border-box;
+  width: 110px;
+  padding: 2px 0;
+  background: #2b2d33;
+  box-shadow:
+    inset 0 0 0 1px #111317,
+    4px 4px 0 rgba(0, 0, 0, 0.35);
+  color: var(--cc-ink);
+  font-family: var(--app-font, ui-sans-serif, system-ui, sans-serif);
+  font-size: 11px;
+  line-height: 14px;
+}
+.cd-menu-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-sizing: border-box;
+  height: 20px;
+  padding: 0 8px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.cd-menu-row:hover {
+  background: rgba(255, 255, 255, 0.08);
+}
+.cd-menu-row[data-on] {
+  background: rgba(255, 255, 255, 0.06);
+}
+.cd-menu-row[data-muted] {
+  color: var(--cc-muted);
+}
+.cd-menu-row b {
+  display: inline-block;
+  width: 10px;
+  font-weight: 600;
+  text-align: center;
+  color: var(--cc-muted);
+}
+.cd-menu-row[data-on] b {
+  color: var(--cc-gold);
+}

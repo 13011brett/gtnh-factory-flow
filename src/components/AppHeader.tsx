@@ -21,6 +21,7 @@ import { DevMenu } from "./DevMenu";
 import { SettingsDialog } from "./SettingsDialog";
 import { MachineListDialog } from "./MachineListDialog";
 import { HeaderLinks, SupportButton } from "./HeaderLinks";
+import { ModBar } from "./chrome/ModBar";
 
 /**
  * The pack picker's switch. See the note where it renders; flip this back to
@@ -72,6 +73,48 @@ export function AppHeader({ onLoadDatasetVersion }: AppHeaderProps) {
   // the buttons that fall off the end of it.
   const isCompact = useIsCompactViewport();
 
+  // Dialogs the bar and the header both open; they portal or sit fixed, so neither layout owns their place.
+  const dialogs = (
+    <>
+      {isChangelogOpen ? (
+        <ChangelogDialog unseenVersions={unseenVersions} onClose={() => setChangelogOpen(false)} />
+      ) : null}
+      {/* The one popup that opens by itself, once per browser. */}
+      <ModAnnouncement />
+      {isDevMenuOpen ? <DevMenu onClose={() => setDevMenuOpen(false)} /> : null}
+      {isShareOpen ? <SharePlanDialog onClose={() => setShareOpen(false)} /> : null}
+      {isExportOpen ? <ExportImageDialog onClose={() => setExportOpen(false)} /> : null}
+      {isSettingsOpen ? (
+        <SettingsDialog
+          onClose={() => setSettingsOpen(false)}
+          onOpenMachineList={() => setMachineListOpen(true)}
+        />
+      ) : null}
+      {isMachineListOpen ? <MachineListDialog onClose={() => setMachineListOpen(false)} /> : null}
+    </>
+  );
+
+  // Desktop: the mod's bar (src/components/chrome). Phones keep the folded menu below.
+  if (!isCompact) {
+    return (
+      <>
+        <ModBar
+          onShare={() => setShareOpen(true)}
+          onScreenshot={() => setExportOpen(true)}
+          onSettings={() => setSettingsOpen(true)}
+          onChangelog={() => {
+            setUnseenVersions(new Set(unseenEntries().map((entry) => entry.version)));
+            markNotesReadAndNotify();
+            setChangelogOpen(true);
+          }}
+          onDevMenu={() => setDevMenuOpen(true)}
+          unreadNotes={hasUnread}
+        />
+        {dialogs}
+      </>
+    );
+  }
+
   return (
     <header className="app-header relative flex h-[30px] shrink-0 items-center justify-between gap-3 border-b border-line bg-surface px-3 compact:h-auto compact:flex-wrap compact:gap-y-0">
       <h1 className="flex min-w-0 items-center gap-2 text-sm font-bold tracking-tight">
@@ -120,21 +163,7 @@ export function AppHeader({ onLoadDatasetVersion }: AppHeaderProps) {
       <div className="app-header-tabs min-w-0 flex-1 compact:order-last compact:basis-full">
         <DesignTabs />
       </div>
-      {isChangelogOpen ? (
-        <ChangelogDialog unseenVersions={unseenVersions} onClose={() => setChangelogOpen(false)} />
-      ) : null}
-      {/* The one popup that opens by itself, once per browser. */}
-      <ModAnnouncement />
-      {isDevMenuOpen ? <DevMenu onClose={() => setDevMenuOpen(false)} /> : null}
-      {isShareOpen ? <SharePlanDialog onClose={() => setShareOpen(false)} /> : null}
-      {isExportOpen ? <ExportImageDialog onClose={() => setExportOpen(false)} /> : null}
-      {isSettingsOpen ? (
-        <SettingsDialog
-          onClose={() => setSettingsOpen(false)}
-          onOpenMachineList={() => setMachineListOpen(true)}
-        />
-      ) : null}
-      {isMachineListOpen ? <MachineListDialog onClose={() => setMachineListOpen(false)} /> : null}
+      {dialogs}
       {isCompact ? (
         <AppMenu
           onLoadDatasetVersion={onLoadDatasetVersion}

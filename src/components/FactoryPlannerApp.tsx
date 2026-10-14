@@ -368,11 +368,13 @@ function PlacementRevealer() {
 function BoardColumn() {
   const covering = useCoveringPage();
   const publicView = useDesignStore((state) => state.publicView);
+  // The mod's bar renames in the tab menu and describes in the share box: no identity strip on a desktop board.
+  const isCompact = useIsCompactViewport();
 
   return (
     <div className="grid h-full min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)]">
       <div className="min-w-0">
-        {covering ? null : publicView ? <PublicViewBar key={publicView.id} /> : <PlanIdentityDrawer />}
+        {covering ? null : publicView ? <PublicViewBar key={publicView.id} /> : isCompact ? <PlanIdentityDrawer /> : null}
         {covering ? null : <TabConflictNotice />}
       </div>
       {/*

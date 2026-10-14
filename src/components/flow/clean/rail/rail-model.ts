@@ -375,8 +375,8 @@ export function buildRailModel(
     if (leaves > RAIL_EPS) outputs.push(line(key, leaves, "o"));
     if (Math.min(m, u) > RAIL_EPS) internal.push(line(key, Math.min(m, u), "x"));
   }
-  const byAmount = (a: RailLine, b: RailLine) =>
-    b.amount - a.amount || a.label.localeCompare(b.label);
+  // Biggest first; equal amounts keep the order the plan met them in (the sort is stable), as the mod lists them.
+  const byAmount = (a: RailLine, b: RailLine) => b.amount - a.amount;
   inputs.sort(byAmount);
   outputs.sort(byAmount);
   internal.sort(byAmount);

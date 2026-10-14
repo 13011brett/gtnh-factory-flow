@@ -236,8 +236,9 @@
 .sp-pick {
   grid-column: 1 / -1;
   box-sizing: border-box;
-  height: 80px;
-  margin: 0 20px 20px;
+  /* The card is as tall as the holders' (a head and 80): 60 and a 10 margin each side. */
+  height: 60px;
+  margin: 10px 20px;
   display: flex;
   align-items: center;
   justify-content: center;

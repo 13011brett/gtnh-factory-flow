@@ -91,6 +91,15 @@ it("lists the plan's sections, lines and machines", () => {
   expect(container.querySelector(".rail-tier")?.textContent).toBe("LV");
 });
 
+it("opens with INTERNAL folded, as the mod does", () => {
+  load(mockLeftovers);
+  const { container } = render(<OverviewRail />);
+  const folded = [...container.querySelectorAll(".rail-sec")]
+    .filter((e) => e.hasAttribute("data-folded"))
+    .map((e) => e.querySelector(".rail-sec-title")?.textContent);
+  expect(folded).toEqual(["INTERNAL"]);
+});
+
 it("folds to a strip and remembers it per device", () => {
   load(mockLeftovers);
   const { container } = render(<OverviewRail />);
@@ -103,6 +112,7 @@ it("folds to a strip and remembers it per device", () => {
   // A section folds and stays folded.
   fireEvent.click(container.querySelector(".rail-sec")!);
   expect(JSON.parse(window.localStorage.getItem(RAIL_VIEW_STORAGE_KEY)!).folded).toEqual([
+    "INTERNAL",
     "INPUTS",
   ]);
   cleanup();

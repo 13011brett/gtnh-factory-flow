@@ -58,15 +58,15 @@ function BoardPicture({
       <svg className="sp-wire" viewBox="0 0 244 150" shapeRendering="crispEdges" aria-hidden>
         <path d="M104 58H128V98H146" fill="none" stroke="#22d3ee" strokeWidth="2" />
       </svg>
-      <div className="sp-card" style={{ left: 54, top: 36 }}>
+      <div className="spv-card" style={{ left: 54, top: 36 }}>
         <span className="sp-chip" />
-        <span className="sp-pic" />
-        <span className="sp-circ">C</span>
+        <span className="spv-pic" />
+        <span className="spv-circ">C</span>
         <span className="sp-name">Electric Blast Furnace</span>
       </div>
-      <div className="sp-card" style={{ left: 146, top: 80 }}>
+      <div className="spv-card" style={{ left: 146, top: 80 }}>
         <span className="sp-chip" data-tier="ev" />
-        <span className="sp-pic" data-tone="blue" />
+        <span className="spv-pic" data-tone="blue" />
         <span className="sp-name">Large Chemical Reactor</span>
       </div>
     </div>

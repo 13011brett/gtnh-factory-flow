@@ -54,9 +54,6 @@
   box-shadow: inset 0 -1px 0 var(--mc-bar-line);
   user-select: none;
 }
-.mb-gap {
-  margin-left: 6px;
-}
 .mb-grow {
   flex: 1 1 0;
   min-width: 0;
@@ -103,6 +100,9 @@
 }
 .mb-key > svg {
   flex: none;
+}
+.mb-key.mb-gap {
+  margin-left: 6px;
 }
 .mb-key[data-glyph="bolt"] {
   gap: 3px;
@@ -152,8 +152,9 @@
   box-sizing: border-box;
   display: flex;
   align-items: center;
-  height: 16px;
-  padding: 1px 5px 0;
+  height: 15px;
+  margin-top: 1px;
+  padding: 0 14px 0 5px;
   min-width: 48px;
   max-width: 120px;
   background: #1c1e22;
@@ -165,11 +166,14 @@
   background: #2d2f35;
 }
 .mt-tab[data-active] {
-  background: var(--mc-frame);
+  height: 16px;
+  margin-top: 0;
+  padding-top: 1px;
+  background: linear-gradient(#52545c 0 1px, #5a5c65 1px 2px, var(--mc-frame) 2px);
   color: #fff;
   box-shadow:
-    0 0 0 1px var(--mc-ring),
-    inset 0 1px 0 var(--mc-highlight);
+    inset 1px 0 0 var(--mc-ring),
+    inset -1px 0 0 var(--mc-ring);
   z-index: 1;
 }
 .mt-tab[data-readonly] {
@@ -184,12 +188,12 @@
 }
 .mt-close {
   display: none;
-  flex: none;
+  position: absolute;
+  right: 2px;
+  top: 3px;
   box-sizing: border-box;
   width: 9px;
   height: 9px;
-  margin-left: 2px;
-  margin-right: -3px;
   align-items: center;
   justify-content: center;
   color: var(--mc-muted);
@@ -206,7 +210,8 @@
   flex: none;
   box-sizing: border-box;
   width: 16px;
-  height: 16px;
+  height: 15px;
+  margin-top: 1px;
   display: flex;
   align-items: center;
   justify-content: center;

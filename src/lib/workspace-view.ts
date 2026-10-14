@@ -59,7 +59,7 @@ export const DEFAULT_WORKSPACE_VIEW: WorkspaceView = {
   showHiddenResources: false,
   favouritesOnly: false,
   netFlowRates: false,
-  averageMachineDraw: false,
+  averageMachineDraw: true,
   trendsOpen: true,
   hiddenResourceKeys: [],
   favouriteResourceKeys: [],

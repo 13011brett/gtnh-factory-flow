@@ -75,7 +75,7 @@ function useHistoryShortcuts() {
 function BarKey({
   id,
   label,
-  widest,
+  width,
   tip,
   tipSub,
   icon,
@@ -92,8 +92,8 @@ function BarKey({
 }: {
   id: string;
   label?: string;
-  /** The longest label the key shows: it is as wide as that (the mod's `fit`). */
-  widest?: string;
+  /** The key's width in the mod's GUI pixels: its widest label's width in the game's font, plus 12 (the mod's `fit`). */
+  width?: number;
   tip: string;
   tipSub?: string;
   icon?: boolean;
@@ -122,7 +122,7 @@ function BarKey({
       data-open={open ? "" : undefined}
       data-glyph={glyph}
       {...(menuAnchor ? { [MENU_ANCHOR_ATTR]: "" } : {})}
-      style={widest ? { minWidth: `calc(${widest.length}ch + 12px)` } : undefined}
+      style={width ? { width } : undefined}
       onMouseDown={(event) => event.preventDefault()}
       onClick={(event) => {
         if (off) return;
@@ -249,11 +249,10 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
   };
 
   const linkedPost = useFactoryStore((state) => state.project.metadata?.communityPlanId);
-  const hasPlan = useFactoryStore((state) => state.project.nodes.length > 0);
 
   const shareEntries: MenuEntry[] = [
     { label: linkedPost ? "Update in library..." : "Share to library...", onSelect: onShare, disabled: isReadOnly },
-    { label: "Copy plan code", onSelect: () => void copyPlanCode(), disabled: !hasPlan },
+    { label: "Copy plan code", onSelect: () => void copyPlanCode() },
     { label: "Screenshot...", onSelect: onScreenshot },
   ];
 
@@ -269,6 +268,7 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
         id="nonrecipe"
         gap
         glyph="bolt"
+        width={78}
         ariaLabel="Non-recipe machines"
         tip="Non-recipe machines: generators, turbines, boilers, reactors"
         open={powerMenuOpen}
@@ -311,17 +311,17 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
         id="arrange"
         gap
         label={arrangeLabel(arrange)}
-        widest="Arranging 100%"
+        width={90}
         tip="Auto-arrange the plan (press again to stop)"
         off={isReadOnly}
         onClick={() => pressArrange()}
       />
-      <BarKey id="fit" label="Fit" widest="Fit" tip="Zoom to fit the whole plan" onClick={() => getBoardCommands()?.fit()} />
+      <BarKey id="fit" label="Fit" width={24} tip="Zoom to fit the whole plan" onClick={() => getBoardCommands()?.fit()} />
       <BarKey
         id="rate"
         gap
         label={RATE_LABEL[rateUnit] ?? "/s"}
-        widest="/min"
+        width={32}
         tip="Rate unit: per tick, second, minute or hour"
         onClick={() => stepRate(1)}
         onContext={() => stepRate(-1)}
@@ -330,7 +330,7 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
       <BarKey
         id="power"
         label={isAmps ? "Amps" : "EU/t"}
-        widest="EU/t"
+        width={36}
         tip="Show power as EU/t, or as amps at each machine's tier"
         onClick={togglePower}
         onContext={togglePower}
@@ -339,7 +339,7 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
       <BarKey
         id="peak"
         label={peak ? "Peak" : "Avg"}
-        widest="Peak"
+        width={35}
         tip="Average or peak power use (peak: every machine running at once)"
         onClick={togglePeak}
         onContext={togglePeak}
@@ -349,14 +349,14 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
         id="library"
         gap
         label={library.active ? "Board" : "Library"}
-        widest="Library"
+        width={50}
         tip="Library: your plans, and plans other players shared"
         onClick={() => (library.active ? leaveLibrary() : openLibrary())}
       />
       <BarKey
         id="share"
         label="Share"
-        widest="Share"
+        width={42}
         tip="Share this plan: to the library, as a code or as a picture"
         open={menu?.kind === "share"}
         onClick={(event) => openMenuFrom("share", event)}

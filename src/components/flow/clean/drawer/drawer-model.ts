@@ -241,7 +241,7 @@ export function buildDrawerView(input: DrawerViewInput): CleanDrawerView {
     rule,
     ruleMark: kind === "trash" ? "×" : RULE_MARK[rule],
     target: targetParts,
-    boxText: kind === "trash" ? "Voided" : prompt ? "Set rate" : "Set",
+    boxText: kind === "trash" ? "Voided" : "Set", // the mod says "Set", pulsing gold while nothing is set
     prompt,
     unmet: isUnmet,
     reaches,

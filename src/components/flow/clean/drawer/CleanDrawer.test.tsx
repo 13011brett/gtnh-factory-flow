@@ -106,7 +106,7 @@ describe("the clean drawer", () => {
     load(storage(), { unanchored: ["s1"] });
     const { container } = renderDrawer(stored(), "source");
     const box = container.querySelector(".cd-box")!;
-    expect(box.getAttribute("data-text")).toBe("Set rate");
+    expect(box.getAttribute("data-text")).toBe("Set");
     expect(box.hasAttribute("data-prompt")).toBe(true);
     cleanup();
     load(storage(), { unanchored: [] });

@@ -66,13 +66,13 @@ export const states = [
   { id: "custom-rate", ref: "custom-rate-card-empty-holder", plan: EMPTY, target: lastNodeId, add: async (c) => { await c.page.evaluate(() => window.__ccStore.getState().addCustomRateNode()); await wait(c, 1200); }, setup: none },
   { id: "fluid-tank", ref: "fluid-tank-card-empty-holder", plan: EMPTY, target: lastNodeId, add: async (c) => { await c.page.evaluate(() => window.__ccStore.getState().addFluidTankNode()); await wait(c, 1200); }, setup: none },
   // ---- drawers (232 x 96 px at 2 px per GUI px in the mod; the website's footprint is 120 x 80 css) ----
-  { id: "drawer-product-atleast", ref: "drawer-product-atleast-aniline", plan: drawerPlan, node: "aniline", anchor: { x: 34, y: 20 }, drawer: true, setup: none },
-  { id: "drawer-source-atmost", ref: "drawer-source-atmost-rule", plan: drawerPlan, node: "acid", anchor: { x: 34, y: 20 }, drawer: true, setup: none },
-  { id: "drawer-trash-voided", ref: "drawer-trash-voided-methane", plan: drawerPlan, node: "methane", anchor: { x: 34, y: 20 }, drawer: true, setup: none },
-  { id: "drawer-product-any-set", ref: "drawer-product-any-set-rate-pulsing", plan: anyDrawerPlan, node: "aniline", anchor: { x: 34, y: 20 }, drawer: true, setup: none },
+  { id: "drawer-product-atleast", ref: "drawer-product-atleast-aniline", plan: drawerPlan, node: "aniline", anchor: { x: 34, y: 20 }, drawer: true, extendH: 40, setup: none },
+  { id: "drawer-source-atmost", ref: "drawer-source-atmost-rule", plan: drawerPlan, node: "acid", anchor: { x: 34, y: 20 }, drawer: true, extendH: 40, setup: none },
+  { id: "drawer-trash-voided", ref: "drawer-trash-voided-methane", plan: drawerPlan, node: "methane", anchor: { x: 34, y: 20 }, drawer: true, extendH: 40, setup: none },
+  { id: "drawer-product-any-set", ref: "drawer-product-any-set-rate-pulsing", plan: anyDrawerPlan, node: "aniline", anchor: { x: 34, y: 20 }, drawer: true, extendH: 40, setup: none },
   // ---- QA2 additions: rule menus and the folded rail (full board states are in qa2/*.mjs) ----
-  { id: "drawer-rule-menu", ref: "drawer-rule-menu-open", plan: drawerPlan, node: "aniline", anchor: { x: 34, y: 20 }, drawer: true, setup: async (c) => { await c.page.locator(`${c.nodeSel} .cd-key`).click(); await wait(c, 700); } },
-  { id: "drawer-source-rule-menu", ref: "drawer-source-rule-menu", plan: drawerPlan, node: "acid", anchor: { x: 34, y: 20 }, drawer: true, setup: async (c) => { await c.page.locator(`${c.nodeSel} .cd-key`).click(); await wait(c, 700); } },
+  { id: "drawer-rule-menu", ref: "drawer-rule-menu-open", plan: drawerPlan, node: "aniline", anchor: { x: 34, y: 20 }, drawer: true, extendH: 40, setup: async (c) => { await c.page.locator(`${c.nodeSel} .cd-key`).click(); await wait(c, 700); } },
+  { id: "drawer-source-rule-menu", ref: "drawer-source-rule-menu", plan: drawerPlan, node: "acid", anchor: { x: 34, y: 20 }, drawer: true, extendH: 40, setup: async (c) => { await c.page.locator(`${c.nodeSel} .cd-key`).click(); await wait(c, 700); } },
   // ---- overview rail ----
   { id: "overview-rail", ref: "overview-rail-full", plan: refChain, node: "nb", clip: "rail", setup: none },
 ];

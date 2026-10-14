@@ -7,7 +7,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { boot, loadPlan, panTo, rectOf, setZoom, pickRecipe, DSF } from "./lib/app.mjs";
-import { readPng, writePng, sideBySide, anaglyph, detectCardByEdge, crop } from "./lib/png.mjs";
+import { readPng, writePng, sideBySide, anaglyph, detectCardByEdge, crop, blank, copyInto } from "./lib/png.mjs";
 import { states } from "./states.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -23,6 +23,8 @@ for (const st of states) {
   if (filter && !new RegExp(filter).test(st.id)) continue;
   try {
     let ref = readPng(path.join(REF, st.ref + ".png"));
+    // Room under a short reference (a drawer crop) for the website's taller footprint: blank rows added.
+    if (st.extendH) { const big = blank(ref.width, ref.height + st.extendH, [10, 10, 10, 255]); copyInto(big, ref, 0, 0); ref = big; }
     const edge = st.anchor ? null : detectCardByEdge(ref, 300);
     let det = st.anchor ?? (edge ? { x: edge.x, y: edge.y } : { x: 0, y: 0 });
     let zoom = st.zoom ?? (edge && !st.drawer ? Math.round((edge.w / 640) * 100) / 100 : 1);
@@ -50,7 +52,8 @@ for (const st of states) {
     await page.mouse.move(1500, 960);
     await st.setup(ctx);
     await page.waitForTimeout(300);
-    const r = await rectOf(page, nodeSel);
+    // A drawer is aligned by its body (.cd), not React Flow's wrapper.
+    const r = (st.drawer && (await rectOf(page, nodeSel + " .cd"))) || (await rectOf(page, nodeSel));
     const shot = path.join(OUT, "web", st.id + ".png");
     if (st.clip === "rail") {
       const pr = await rectOf(page, ".rail-root");

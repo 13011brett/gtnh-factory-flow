@@ -1,7 +1,8 @@
 /*
  * The clean drawer: the mod's drawer (DrawerPaint, a card's port row lifted off the card) on the website's
- * 120 x 80 footprint. A bar 12 px along the top (the mod 8 of 54: move, select, tooltip), a body 68 px with the row and its
- * controls. Plain unlayered CSS like clean.css; state hangs on data attributes (React rewrites className on the
+ * 120 x 60 footprint, the 20 px grid's nearest to the mod's 116 x 48 beside a 320 card. A bar 10 px along the top (the
+ * mod's 8 of 48: move, select, tooltip), a body 50 px with the row and its controls laid out as the mod's: the icon
+ * 5 px in from the side, the words 41 px in, the rule key and rate box under them, the content centred in the body. Plain unlayered CSS like clean.css; state hangs on data attributes (React rewrites className on the
  * board). Colours are the mod's: blue source, orange product and byproduct, steel trash. The per-kind values are
  * the mixes of tokens.ts `drawerMixes`, pinned by drawer.test.ts.
  */
@@ -9,14 +10,14 @@
 .cd-wrap {
   position: relative;
   width: 120px;
-  height: 80px;
+  height: 60px;
 }
 
 .cd {
   position: relative;
   box-sizing: border-box;
   width: 120px;
-  height: 80px;
+  height: 60px;
   color: var(--cc-ink);
   font-family: var(--cc-font);
   font-size: 8px;
@@ -42,7 +43,7 @@
   --cd-grip: #89a9cc;
   --cd-grip-hot: #95a0b0;
   --cd-lit: #9b9e83;
-  --cd-radius: 6px;
+  --cd-radius: 5px; /* the mod's tank, 9 x 0.5 */
 }
 .cd[data-kind="product"] {
   --cd-tint: #f59a5c;
@@ -97,7 +98,7 @@
   background: repeating-linear-gradient(135deg, var(--cd-stripe) 0 3px, var(--cd-body) 3px 8px);
   border-radius: calc(var(--cd-radius) - 1px);
 }
-/* A bin narrows 4 px a side to its base. Box shadows ignore a clip, so a bin's rings are a drop-shadow list. */
+/* A bin narrows 4 px a side to its base (the mod's 3 of 48). Box shadows ignore a clip, so a bin's rings are a drop-shadow list. */
 .cd[data-kind="trash"] .cd-edge,
 .cd[data-kind="trash"] .cd-fill {
   clip-path: polygon(0 0, 100% 0, calc(100% - 4px) 100%, 4px 100%);
@@ -115,7 +116,7 @@
   left: 0;
   right: 0;
   top: 0;
-  height: 12px;
+  height: 10px;
   box-sizing: border-box;
   background: var(--cd-bar);
   border-bottom: 1px solid var(--cd-frame);
@@ -126,31 +127,32 @@
 .cd[data-selected] .cd-bar {
   background: var(--cd-bar-hot);
 }
-/* The grip: two rows of 1 px dots, 15 px wide, 2 px pitch, at y 3 and y 6 of the bar (the mod 2 and 4 of its 8). */
+/* The grip: two rows of 1 px dots, 15 px wide, 2 px pitch, at y 2 and y 4 of the bar, as the mod's. */
 .cd-bar::before {
   content: "";
   position: absolute;
   left: calc(50% - 7.5px);
-  top: 3px;
+  top: 2px;
   width: 15px;
   height: 4px;
   background:
     repeating-linear-gradient(90deg, var(--cd-grip) 0 1px, transparent 1px 2px) 0 0 / 15px 1px no-repeat,
-    repeating-linear-gradient(90deg, var(--cd-grip) 0 1px, transparent 1px 2px) 0 3px / 15px 1px no-repeat;
+    repeating-linear-gradient(90deg, var(--cd-grip) 0 1px, transparent 1px 2px) 0 2px / 15px 1px no-repeat;
 }
 .cd:hover .cd-bar::before {
   background:
     repeating-linear-gradient(90deg, var(--cd-grip-hot) 0 1px, transparent 1px 2px) 0 0 / 15px 1px no-repeat,
-    repeating-linear-gradient(90deg, var(--cd-grip-hot) 0 1px, transparent 1px 2px) 0 3px / 15px 1px no-repeat;
+    repeating-linear-gradient(90deg, var(--cd-grip-hot) 0 1px, transparent 1px 2px) 0 2px / 15px 1px no-repeat;
 }
 
-/* The delete key: 14 x 14 at (3, 3) in the bar, only while the pointer is on the drawer or it is selected. */
+/* The delete key: 10 x 10 at (3, 3), hanging over the bar's lower edge, only while the pointer is on the drawer or it
+   is selected (DrawerPaint.DELETE, DELETE_IN). */
 .cd-del {
   position: absolute;
   left: 3px;
   top: 3px;
-  width: 14px;
-  height: 14px;
+  width: 10px;
+  height: 10px;
   box-sizing: border-box;
   z-index: 3;
   background: var(--cc-key);
@@ -165,8 +167,8 @@
   content: "";
   position: absolute;
   left: 2px;
-  top: 6px;
-  width: 10px;
+  top: 4px;
+  width: 6px;
   height: 2px;
   background: var(--cc-ink);
 }
@@ -177,17 +179,13 @@
 .cd-del:hover {
   background: #9c3543;
 }
-.cd[data-kind="trash"] .cd-del {
-  left: 5px;
-}
-
 /* ---- The body: the row and its controls --------------------------------------------------------------------- */
 
 .cd-body {
   position: absolute;
   left: 0;
   right: 0;
-  top: 12px;
+  top: 10px;
   bottom: 0;
   /* The port row: lights, scopes and starts a wire; the Handle blankets it. */
 }
@@ -200,7 +198,7 @@
 .cd-icon {
   position: absolute !important;
   z-index: 1;
-  top: 30px;
+  top: 19px;
   width: 32px !important;
   height: 32px !important;
   pointer-events: none;
@@ -213,34 +211,34 @@
   background-clip: content-box;
 }
 .cd[data-kind="source"] .cd-icon {
-  left: 4px;
+  left: 5px;
 }
 .cd:not([data-kind="source"]) .cd-icon {
-  right: 4px;
-}
-.cd[data-kind="trash"] .cd-icon {
-  right: 6px;
+  right: 5px;
 }
 
+/* The words: the number's glyphs 8 px under the bar (the mod's 3 under its 8 px bar in a 40 px box, centred in 50
+   here), the name 2 px under the number, both 41 px in from the icon's side and 75 wide. */
 .cd-num {
   position: absolute;
-  top: 6px;
-  width: 76px;
+  top: 7px;
+  width: 75px;
   font-size: 13px;
   font-weight: 400;
-  line-height: 16px;
+  line-height: 13px;
   color: var(--cd-number);
   white-space: nowrap;
   pointer-events: none;
 }
+/* The unit small beside the number, a space and 2 px after it, its foot a pixel above the number's (CardPaint.words). */
 .cd-num::after {
   content: attr(data-unit);
-  margin-left: 2px;
+  margin-left: 6px;
   font-size: 8px;
   font-weight: 400;
   color: var(--cc-muted);
   position: relative;
-  top: -3px;
+  top: -1px;
 }
 .cd-num[data-zero] {
   color: var(--cc-idle);
@@ -255,8 +253,8 @@
 }
 .cd-name {
   position: absolute;
-  top: 24px;
-  width: 76px;
+  top: 21px;
+  width: 75px;
   font-size: 8px;
   font-weight: 400;
   line-height: 10px;
@@ -274,40 +272,36 @@
 }
 .cd[data-kind="source"] .cd-num,
 .cd[data-kind="source"] .cd-name {
-  left: 40px;
+  left: 41px;
 }
 .cd:not([data-kind="source"]) .cd-num,
 .cd:not([data-kind="source"]) .cd-name {
   left: 4px;
   text-align: right;
 }
-.cd[data-kind="trash"] .cd-num,
-.cd[data-kind="trash"] .cd-name {
-  left: 6px;
-  width: 72px;
-}
 
-/* The rule key 14 x 14 and the rate box 56 x 14, a pair 2 px apart in the row's last line. */
+/* The rule key 10 x 10 and the rate box 63 x 10, a pair 2 px apart under the words (CardLayout.CTRL_*: the mod's box
+   is 59 in a 116 drawer), their bottoms 8 px above the drawer's. */
 .cd-key,
 .cd-box {
   position: absolute;
-  top: 48px;
-  height: 14px;
+  top: 32px;
+  height: 10px;
   box-sizing: border-box;
   z-index: 40;
   cursor: pointer;
   user-select: none;
 }
 .cd-key {
-  width: 14px;
+  width: 10px;
   background: #34373e;
   box-shadow:
     inset 0 0 0 1px #111317,
-    inset 0 1px 0 1px rgba(255, 255, 255, 0.12);
+    inset 0 2px 0 -1px rgba(255, 255, 255, 0.12);
   color: var(--cc-gold);
-  font-size: 9px;
+  font-size: 8px;
   font-weight: 400;
-  line-height: 14px;
+  line-height: 10px;
   text-align: center;
 }
 .cd-key:hover,
@@ -321,12 +315,12 @@
   content: attr(data-mark);
 }
 .cd-box {
-  width: 56px;
+  width: 63px;
   background: #0f1114;
   color: var(--cc-gold);
   font-size: 8px;
   font-weight: 400;
-  line-height: 14px;
+  line-height: 10px;
   text-align: center;
   white-space: nowrap;
   overflow: hidden;
@@ -376,26 +370,7 @@
     inset 0 1px 0 1px rgba(0, 0, 0, 0.7);
   color: #f87171;
 }
-/* How far the real rate has got toward yours: a 2 px line along the box's foot. */
-.cd-box[data-progress]::after {
-  content: "";
-  position: absolute;
-  left: 1px;
-  bottom: 1px;
-  width: calc((100% - 2px) * var(--cd-progress, 0));
-  height: 2px;
-  margin: 0;
-  background: var(--cc-ok);
-}
-.cd-box[data-progress][data-tone="bad"]::after {
-  background: #f87171;
-}
-.cd-box[data-progress][data-tone="calm"]::after {
-  background: var(--cc-trash);
-}
-.cd-box[data-progress][data-unit]::before {
-  content: attr(data-text) " " attr(data-unit);
-}
+/* The mod's box shows only the rate and its unit: no progress line (data-progress stays for tests and tips). */
 .cd-box[data-editing] {
   padding: 0;
   box-shadow:
@@ -423,22 +398,16 @@
 
 /* Where the controls sit: a source's at the words' left edge, a product's and trash's from the drawer's left. */
 .cd[data-kind="source"] .cd-key {
-  left: 40px;
+  left: 41px;
 }
 .cd[data-kind="source"] .cd-box {
-  left: 56px;
+  left: 53px;
 }
 .cd:not([data-kind="source"]) .cd-key {
   left: 4px;
 }
 .cd:not([data-kind="source"]) .cd-box {
-  left: 20px;
-}
-.cd[data-kind="trash"] .cd-key {
-  left: 6px;
-}
-.cd[data-kind="trash"] .cd-box {
-  left: 22px;
+  left: 16px;
 }
 
 /* ---- Selection, lit and accepting rings ---------------------------------------------------------------------- */
@@ -530,8 +499,8 @@
   left: 8px !important;
   right: auto !important;
   top: 7px;
-  width: 66px !important;
-  height: 66px !important;
+  width: 46px !important;
+  height: 46px !important;
 }
 .factory-flow-board[data-detail-level="glance"] .cd[data-kind="trash"] .cd-icon {
   left: 10px !important;

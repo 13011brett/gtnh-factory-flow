@@ -222,6 +222,36 @@ const tests = {
   },
 };
 
+tests.sockets = async (page) => {
+  // The other gesture: a socket dragged onto a machine's port makes the card take that port's resource.
+  for (const [kind, add] of [["custom", "addCustomRateNode"], ["tank", "addFluidTankNode"]]) {
+    const ids = await loadPlan(page, refChain);
+    await st(page, (add) => window.__ccStore.getState()[add](), add);
+    const cid = await lastNode(page);
+    await st(page, ({ cid, nb }) => {
+      const S = window.__ccStore;
+      const p = structuredClone(S.getState().project);
+      const at = p.nodes.find((n) => n.id === nb).position;
+      p.nodes.find((n) => n.id === cid).position = { x: at.x + 900, y: at.y };
+      S.getState().setProject(p);
+    }, { cid, nb: ids.nb });
+    await wait(page, 500);
+    await frame(page, ids.nb);
+    const socket = await page.locator(node(cid) + " .sp-socket[data-side=output]").boundingBox();
+    const row = await page.locator(node(ids.nb) + ` .cc-row[data-resource-handle-id="input:fluid:sulfuricacid"]`).first().boundingBox();
+    await page.mouse.move(socket.x + socket.width / 2, socket.y + socket.height / 2);
+    await page.mouse.down();
+    await page.mouse.move(row.x + row.width / 2, row.y + row.height / 2, { steps: 14 });
+    await page.mouse.up();
+    await wait(page, 2500);
+    const p = await proj(page);
+    const holder = p.nodes.find((n) => n.id === cid);
+    const r = p.recipes.find((x) => x.id === holder.recipeId);
+    check(kind + ": a socket dragged to a port adopts the resource", r.outputs.includes("sulfuricacid"), JSON.stringify(r).slice(0, 160));
+    check(kind + ": and wires to it", p.edges.some((e) => e.source === cid && e.target === ids.nb));
+  }
+};
+
 tests.tank = async (page) => {
   const ids = await loadPlan(page, refChain);
   await st(page, () => window.__ccStore.getState().addFluidTankNode());

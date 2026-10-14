@@ -1784,6 +1784,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
         isPowerRecipe(entry) ||
         isCropFarmRecipe(entry) ||
         isCustomRateRecipe(entry) ||
+        isFluidTankRecipe(entry) ||
         isEecRecipe(entry);
       if (ownsRecipe(primary) || ownsRecipe(recipe)) {
         return state;
@@ -3621,7 +3622,11 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
       }
       const recipesById = new Map(state.project.recipes.map((recipe) => [recipe.id, recipe]));
       const ownsRecipe = (recipe: Recipe | undefined) =>
-        !recipe || isPowerRecipe(recipe) || isCropFarmRecipe(recipe) || isCustomRateRecipe(recipe);
+        !recipe ||
+        isPowerRecipe(recipe) ||
+        isCropFarmRecipe(recipe) ||
+        isCustomRateRecipe(recipe) ||
+        isFluidTankRecipe(recipe);
       if (cards.some((card) => ownsRecipe(recipesById.get(card.recipeId)))) {
         return state;
       }

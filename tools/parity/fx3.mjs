@@ -39,6 +39,46 @@ const scenarios = {
     await wait(page, 1200);
     return ids.nb;
   },
+  async "shared-wired"(page) {
+    const plan = {
+      ...refChain,
+      drawers: [
+        ...refChain.drawers,
+        { key: "acid", kind: "fluid", id: "sulfuricacid", name: "Sulfuric Acid", x: -420, y: 760, rate: 0.6, mode: "at-most" },
+      ],
+      wires: [{ from: "dt", to: "nb", res: ["fluid", "benzene"] }, { from: "acid", to: "nb", res: ["fluid", "sulfuricacid"] }],
+    };
+    const ids = await loadPlan(page, plan);
+    const other = await pickRecipe(page, { res: ["fluid", "aniline"], nameRe: "Large Chemical Reactor", hasIn: ["Palladium"] });
+    await store(page, ({ id, other }) => window.__ccStore.getState().addRecipeToNode(id, other), { id: ids.nb, other });
+    await wait(page, 800);
+    // a drawer on the second recipe's aniline, wired through its prefixed handle
+    await store(page, ({ nb }) => {
+      const S = window.__ccStore;
+      const p = structuredClone(S.getState().project);
+      p.storages.push({ id: "drawer-ani", kind: "fluid", resourceId: "aniline", displayName: "Aniline", position: { x: 700, y: 800 }, targetPerSecond: 1, targetMode: "at-least" });
+      p.edges.push({ id: "e-ani", source: nb, target: "drawer-ani", sourceHandle: "r1:output:fluid:aniline", resourceKind: "fluid", resourceId: "aniline" });
+      S.getState().setProject(p);
+    }, { nb: ids.nb });
+    await wait(page, 1500);
+    return ids.nb;
+  },
+  async "power-drawer"(page) {
+    await loadPlan(page, EMPTY);
+    await store(page, () => window.__ccStore.getState().addPowerSourceNode("large-gas-turbine"));
+    await wait(page, 900);
+    const id = await lastNode(page);
+    await store(page, ({ id }) => {
+      const S = window.__ccStore;
+      const p = structuredClone(S.getState().project);
+      const at = p.nodes.find((n) => n.id === id).position;
+      p.storages.push({ id: "drawer-eu", kind: "power", resourceId: "eu", displayName: "EU", position: { x: at.x + 440, y: at.y + 20 }, targetPerSecond: 1000, targetMode: "at-least" });
+      p.edges.push({ id: "e-eu", source: id, target: "drawer-eu", sourceHandle: "output:power:eu", resourceKind: "power", resourceId: "eu" });
+      S.getState().setProject(p);
+    }, { id });
+    await wait(page, 1500);
+    return id;
+  },
   async "power-steam"(page) {
     await loadPlan(page, EMPTY);
     await store(page, () =>
@@ -173,15 +213,17 @@ for (const [name, make] of Object.entries(scenarios)) {
   try {
     const id = await make(page);
     const sel = `.react-flow__node[data-id="${id}"]`;
-    await setZoom(page, id, 1);
+    await setZoom(page, id, Number(process.env.FX3_ZOOM ?? 1));
     await panTo(page, id, 420, 160);
     await page.mouse.move(1500, 960);
     await wait(page, 500);
     const r = await rectOf(page, sel);
-    const file = path.join(OUT, `fx3-${name}.png`);
+    const file = path.join(OUT, `fx3-${name}${process.env.FX3_ZOOM ? "-z" + process.env.FX3_ZOOM : ""}.png`);
     await page.screenshot({
       path: file,
-      clip: { x: r.x - 12, y: r.y - 12, width: r.w + 24, height: r.h + 24 },
+      clip: process.env.FX3_WIDE
+        ? { x: Math.max(0, r.x - 360), y: Math.max(0, r.y - 12), width: r.w + 760, height: r.h + 24 }
+        : { x: r.x - 12, y: r.y - 12, width: r.w + 24, height: r.h + 24 },
     });
     console.log(
       "ok",

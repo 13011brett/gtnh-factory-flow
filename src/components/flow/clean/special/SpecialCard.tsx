@@ -682,10 +682,7 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
         aria-hidden
         style={
           view.glyph === "gauge"
-            ? ({
-                backgroundImage: GAUGE_URL,
-                backgroundSize: "calc(100% - 96px) calc(100% - 96px)",
-              } as CSSProperties)
+            ? ({ backgroundImage: GAUGE_URL } as CSSProperties)
             : view.glanceArt
               ? { backgroundImage: `url(${view.glanceArt})` }
               : undefined

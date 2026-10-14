@@ -719,7 +719,11 @@
   pointer-events: none;
   background-repeat: no-repeat;
   background-position: center;
-  background-size: calc(100% - 24px) calc(100% - 24px);
+  /* The art keeps its shape inside the card less a 12 px margin (the mod fits it in a square, never stretched). */
+  background-size: contain;
+  background-origin: content-box;
+  padding: 12px;
+  box-sizing: border-box;
   image-rendering: pixelated;
 }
 .cc-glance::after {

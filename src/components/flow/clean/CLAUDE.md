@@ -1,9 +1,20 @@
 # The clean look (src/components/flow/clean)
 
-The mod's flat card on the website's board. It draws `RecipeNode` for plan-mode boards
-(`project.planMode`); `RecipeNodeSwitch` in `CleanRecipeNode.tsx` is what FactoryFlow registers as
-`recipeNode` and falls back to the classic card per node where `support.ts` says the clean card
-has no design yet (power, crop, bee, custom rate, Extreme Entity Crusher, shared machines).
+The mod's flat card on the website's board. It draws every `RecipeNode`: `RecipeNodeSwitch` in
+`CleanRecipeNode.tsx` is what FactoryFlow registers as `recipeNode`, and it has no classic path (the
+classic `RecipeNode` and `StorageNode` stay in the tree, unreachable from the board). A node the plain card
+cannot be goes to `special/` (`specialKindOf`): a shared machine, a generator, a custom rate or fluid tank
+holder, a crop card. Bees, the Extreme Entity Crusher and every other machine are the plain card.
+
+- `special/` is those cards on the plain card's classes (`cc-card`, `cc-head`, `cc-rail`, `cc-row`, `cc-pic`,
+  `cc-strip`) plus `sp-*` (`special.css`, loaded after `clean.css`; `cs-*` is the menus'). `use-special.ts` has
+  one hook a kind (each starts from `useCleanCardModel` and overrides), `SpecialCard.tsx` draws a
+  `SpecialView`, `SpecialSheets.tsx` is the gear sheet of a card whose settings are not a machine's controls.
+  A shared machine's section n draws its ports through `CleanPortRow` with the `r<n>:` handle prefix and the card's
+  node id; a rule row over each recipe (share, circuit, up, down, off). A holder has two sockets (`custom-any`
+  handles) until a port is dropped on it; the fluid tank adopts the dataset's Tank recipe the port fits
+  (`lib/datasets/tank-recipe.ts`, `lib/model/fluid-tank.ts`) and lets go when unwired. A generator's pinned settings
+  are the plan's `settingPins["power:<source>"]`.
 
 - `tokens.ts` + `clean.css` own the palette and geometry. Others read them; `colors.ts` has `mixHex`
   (the mod's float32 `Hyb.mix`, so drawer and forced-row mixes match their Java twins).

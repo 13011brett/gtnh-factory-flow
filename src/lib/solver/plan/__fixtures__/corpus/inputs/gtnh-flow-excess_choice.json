@@ -1,0 +1,142 @@
+{
+  "mode": "AUTO",
+  "machines": [
+    {
+      "id": "9c5fb577-bf67-396a-a009-a394663bc96a",
+      "name": "multiblock centrifuge",
+      "durationTicks": 80.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 800.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 0,
+          "name": "air",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 80.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 1,
+          "name": "oxygen",
+          "free": false
+        },
+        {
+          "amount": 3120.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 2,
+          "name": "nitrogen",
+          "free": false
+        }
+      ],
+      "countFixed": true,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "bb097e1d-843d-30ce-a36c-b1bad5073882",
+      "name": "coke oven",
+      "durationTicks": 100.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 4.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 3,
+          "name": "oak wood",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 2,
+          "name": "nitrogen",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 20.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 4,
+          "name": "charcoal",
+          "free": false
+        },
+        {
+          "amount": 1500.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 5,
+          "name": "wood tar",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "e4dd2cd4-fa6d-37e3-8afd-7ba02f668ee4",
+      "name": "second coke oven",
+      "durationTicks": 100.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 25.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 4,
+          "name": "charcoal",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 800.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 6,
+          "name": "coal tar",
+          "free": false
+        }
+      ],
+      "countFixed": true,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "8393cdb7-cc16-39e8-b95b-839905380592",
+      "source": "bb097e1d-843d-30ce-a36c-b1bad5073882",
+      "sourceOutput": 0,
+      "target": "e4dd2cd4-fa6d-37e3-8afd-7ba02f668ee4",
+      "targetInput": 0
+    },
+    {
+      "id": "da72d040-df10-3c59-952d-df0062696bfc",
+      "source": "9c5fb577-bf67-396a-a009-a394663bc96a",
+      "sourceOutput": 1,
+      "target": "bb097e1d-843d-30ce-a36c-b1bad5073882",
+      "targetInput": 1
+    }
+  ],
+  "pools": [],
+  "drawers": [],
+  "extentPins": {},
+  "spares": {}
+}

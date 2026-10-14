@@ -1,0 +1,580 @@
+{
+  "mode": "AUTO",
+  "machines": [
+    {
+      "id": "90e953c2-c2f5-35d4-87f8-614612584dca",
+      "name": "distillation tower",
+      "durationTicks": 900.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1200.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 0,
+          "name": "coal tar",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 400.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 1,
+          "name": "kerosene",
+          "free": false
+        },
+        {
+          "amount": 50.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 2,
+          "name": "anthracene",
+          "free": false
+        },
+        {
+          "amount": 150.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 3,
+          "name": "ethylbenzene",
+          "free": false
+        },
+        {
+          "amount": 100.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 4,
+          "name": "naphtha",
+          "free": false
+        },
+        {
+          "amount": 500.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 5,
+          "name": "coal tar oil",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "98f0bd0c-43ab-3e04-a47b-9c4b7c5a878b",
+      "name": "LCR",
+      "durationTicks": 510.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 6,
+          "name": "ethanol",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 7,
+          "name": "sulfuric acid",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 500.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 8,
+          "name": "ether",
+          "free": false
+        },
+        {
+          "amount": 1500.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 9,
+          "name": "diluted sulfuric acid",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "9c16bdc9-bcf7-316b-9d71-1f6eea78b8fd",
+      "name": "large chemical reactor",
+      "durationTicks": 2400.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 4000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 10,
+          "name": "crushed ice",
+          "free": false
+        },
+        {
+          "amount": 8000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 11,
+          "name": "diethylamine",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 12,
+          "name": "iron II chloride",
+          "free": false
+        },
+        {
+          "amount": 2000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 13,
+          "name": "cyclopentadiene",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 15000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 14,
+          "name": "impure ferrocene mixture",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "ba3bf4a6-b8e3-3689-9b46-0b473967d535",
+      "name": "pyrolyse oven",
+      "durationTicks": 360.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 32.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 15,
+          "name": "charcoal",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 0.5,
+          "multiplier": 1.0,
+          "resource": 16,
+          "name": "dried earth dust",
+          "free": false
+        },
+        {
+          "amount": 800.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 0,
+          "name": "coal tar",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "cfaa0576-3c5b-3b56-9ee5-596a3059a661",
+      "name": "large chemical reactor",
+      "durationTicks": 2400.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 11,
+          "name": "diethylamine",
+          "free": false
+        },
+        {
+          "amount": 3000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 4,
+          "name": "naphtha",
+          "free": false
+        },
+        {
+          "amount": 40000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 1,
+          "name": "kerosene",
+          "free": false
+        },
+        {
+          "amount": 8.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 17,
+          "name": "sodium hydroxide dust",
+          "free": false
+        },
+        {
+          "amount": 4.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 18,
+          "name": "ferrocene dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 44000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 19,
+          "name": "jet fuel no.3",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {
+        "0": 1000.0
+      },
+      "targetInputRates": {}
+    },
+    {
+      "id": "de7d56cf-9b80-3249-ab70-abeba033d715",
+      "name": "distillery",
+      "durationTicks": 300.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 500.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 20,
+          "name": "ferrocene solution",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 0.25,
+          "multiplier": 1.0,
+          "resource": 18,
+          "name": "ferrocene dust",
+          "free": false
+        },
+        {
+          "amount": 250.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 8,
+          "name": "ether",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "1c187e54-e166-3ba7-923f-66a58258acb7",
+      "name": "mixer",
+      "durationTicks": 800.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 8,
+          "name": "ether",
+          "free": false
+        },
+        {
+          "amount": 7500.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 14,
+          "name": "impure ferrocene mixture",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 20,
+          "name": "ferrocene solution",
+          "free": false
+        },
+        {
+          "amount": 5000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 21,
+          "name": "ferrocene waste",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "3789d393-0e9b-3823-83dc-6749d1b5e5f5",
+      "name": "distillation tower",
+      "durationTicks": 600.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 21,
+          "name": "ferrocene waste",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 800.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 11,
+          "name": "diethylamine",
+          "free": false
+        },
+        {
+          "amount": 400.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 22,
+          "name": "water",
+          "free": true
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "40756391-dfb2-39d7-b72d-140290533af0",
+      "name": "LCR",
+      "durationTicks": 200.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 23,
+          "name": "ammonia",
+          "free": false
+        },
+        {
+          "amount": 2000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 6,
+          "name": "ethanol",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 11,
+          "name": "diethylamine",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "5970ffd7-87f4-35a7-9a7c-d66fe8ff22ff",
+      "name": "distillery",
+      "durationTicks": 20.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 20.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 5,
+          "name": "coal tar oil",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 6.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 13,
+          "name": "cyclopentadiene",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "80d0fb2a-df01-30d3-ab21-06fb24ff7f55",
+      "source": "90e953c2-c2f5-35d4-87f8-614612584dca",
+      "sourceOutput": 4,
+      "target": "5970ffd7-87f4-35a7-9a7c-d66fe8ff22ff",
+      "targetInput": 0
+    },
+    {
+      "id": "94b758ea-cb91-3144-addc-fc41fbccec14",
+      "source": "ba3bf4a6-b8e3-3689-9b46-0b473967d535",
+      "sourceOutput": 1,
+      "target": "90e953c2-c2f5-35d4-87f8-614612584dca",
+      "targetInput": 0
+    },
+    {
+      "id": "958c22a9-56dd-34ab-ad89-c228ea7e09ce",
+      "source": "90e953c2-c2f5-35d4-87f8-614612584dca",
+      "sourceOutput": 3,
+      "target": "cfaa0576-3c5b-3b56-9ee5-596a3059a661",
+      "targetInput": 1
+    },
+    {
+      "id": "a6873d75-6408-3382-8e1f-421831b9073f",
+      "source": "de7d56cf-9b80-3249-ab70-abeba033d715",
+      "sourceOutput": 0,
+      "target": "cfaa0576-3c5b-3b56-9ee5-596a3059a661",
+      "targetInput": 4
+    },
+    {
+      "id": "bb6a361b-633d-3171-bc54-5ada8911d955",
+      "source": "5970ffd7-87f4-35a7-9a7c-d66fe8ff22ff",
+      "sourceOutput": 0,
+      "target": "9c16bdc9-bcf7-316b-9d71-1f6eea78b8fd",
+      "targetInput": 3
+    },
+    {
+      "id": "ddc8e9ad-9a88-39b3-a934-ae843e79e5bf",
+      "source": "de7d56cf-9b80-3249-ab70-abeba033d715",
+      "sourceOutput": 1,
+      "target": "1c187e54-e166-3ba7-923f-66a58258acb7",
+      "targetInput": 0
+    },
+    {
+      "id": "ed58f66d-bc7a-35e4-b236-aa36ff4748e6",
+      "source": "1c187e54-e166-3ba7-923f-66a58258acb7",
+      "sourceOutput": 1,
+      "target": "3789d393-0e9b-3823-83dc-6749d1b5e5f5",
+      "targetInput": 0
+    },
+    {
+      "id": "131e3a3c-c4f4-3c27-9d38-14aa91f63cbc",
+      "source": "3789d393-0e9b-3823-83dc-6749d1b5e5f5",
+      "sourceOutput": 0,
+      "target": "cfaa0576-3c5b-3b56-9ee5-596a3059a661",
+      "targetInput": 0
+    },
+    {
+      "id": "39ada8b9-cd3d-3ca1-ab38-8c0f935e05b2",
+      "source": "1c187e54-e166-3ba7-923f-66a58258acb7",
+      "sourceOutput": 0,
+      "target": "de7d56cf-9b80-3249-ab70-abeba033d715",
+      "targetInput": 0
+    },
+    {
+      "id": "42339bd6-79b0-3cf8-935a-ec339a02b8b4",
+      "source": "40756391-dfb2-39d7-b72d-140290533af0",
+      "sourceOutput": 0,
+      "target": "cfaa0576-3c5b-3b56-9ee5-596a3059a661",
+      "targetInput": 0
+    },
+    {
+      "id": "430c3eb3-da7f-3a36-9bc4-7839cda5a69a",
+      "source": "3789d393-0e9b-3823-83dc-6749d1b5e5f5",
+      "sourceOutput": 0,
+      "target": "9c16bdc9-bcf7-316b-9d71-1f6eea78b8fd",
+      "targetInput": 1
+    },
+    {
+      "id": "4522427d-0753-31de-830f-26e9dfc1c6f5",
+      "source": "98f0bd0c-43ab-3e04-a47b-9c4b7c5a878b",
+      "sourceOutput": 0,
+      "target": "1c187e54-e166-3ba7-923f-66a58258acb7",
+      "targetInput": 0
+    },
+    {
+      "id": "54b2dff3-7422-373d-9dc8-a5930b73e50b",
+      "source": "90e953c2-c2f5-35d4-87f8-614612584dca",
+      "sourceOutput": 0,
+      "target": "cfaa0576-3c5b-3b56-9ee5-596a3059a661",
+      "targetInput": 2
+    },
+    {
+      "id": "60a22df3-69f6-3944-a83b-468d9776d3d7",
+      "source": "40756391-dfb2-39d7-b72d-140290533af0",
+      "sourceOutput": 0,
+      "target": "9c16bdc9-bcf7-316b-9d71-1f6eea78b8fd",
+      "targetInput": 1
+    },
+    {
+      "id": "6b4beb1d-40f3-3a4b-abbf-41b961cdd29b",
+      "source": "9c16bdc9-bcf7-316b-9d71-1f6eea78b8fd",
+      "sourceOutput": 0,
+      "target": "1c187e54-e166-3ba7-923f-66a58258acb7",
+      "targetInput": 1
+    }
+  ],
+  "pools": [],
+  "drawers": [],
+  "extentPins": {},
+  "spares": {}
+}

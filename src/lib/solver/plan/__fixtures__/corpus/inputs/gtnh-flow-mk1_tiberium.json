@@ -1,0 +1,173 @@
+{
+  "mode": "AUTO",
+  "machines": [
+    {
+      "id": "f26921be-6c55-3a95-bba7-e6f9a476d5f6",
+      "name": "distillation tower",
+      "durationTicks": 20.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 20.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 0,
+          "name": "naquadah solution",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 2.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 1,
+          "name": "naquadah asphalt",
+          "free": false
+        },
+        {
+          "amount": 5.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 2,
+          "name": "heavy naquadah fuel",
+          "free": false
+        },
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 3,
+          "name": "light naquadah fuel",
+          "free": false
+        },
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 4,
+          "name": "water",
+          "free": true
+        },
+        {
+          "amount": 60.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 5,
+          "name": "naquadah gas",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "fd588685-539b-3193-afa9-879f82b58bbf",
+      "name": "chemical bath",
+      "durationTicks": 400.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 6,
+          "name": "diamond",
+          "free": false
+        },
+        {
+          "amount": 144.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 2,
+          "name": "heavy naquadah fuel",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 7,
+          "name": "tiberium",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "6d7e4124-7541-3e4b-87ae-2900d26b163e",
+      "name": "fusion reactor",
+      "durationTicks": 500.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 360.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 2,
+          "name": "heavy naquadah fuel",
+          "free": false
+        },
+        {
+          "amount": 780.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 3,
+          "name": "light naquadah fuel",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 100.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 8,
+          "name": "naquadah fuel mk1",
+          "free": false
+        }
+      ],
+      "countFixed": true,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "8f34da7e-cab0-304e-b761-12f543d2f0fd",
+      "source": "f26921be-6c55-3a95-bba7-e6f9a476d5f6",
+      "sourceOutput": 2,
+      "target": "6d7e4124-7541-3e4b-87ae-2900d26b163e",
+      "targetInput": 1
+    },
+    {
+      "id": "964db878-87b2-3e4c-824e-d7d6541f3483",
+      "source": "f26921be-6c55-3a95-bba7-e6f9a476d5f6",
+      "sourceOutput": 1,
+      "target": "6d7e4124-7541-3e4b-87ae-2900d26b163e",
+      "targetInput": 0
+    },
+    {
+      "id": "c1baecd1-d852-3060-87ea-89891c4d9399",
+      "source": "f26921be-6c55-3a95-bba7-e6f9a476d5f6",
+      "sourceOutput": 1,
+      "target": "fd588685-539b-3193-afa9-879f82b58bbf",
+      "targetInput": 1
+    }
+  ],
+  "pools": [],
+  "drawers": [],
+  "extentPins": {},
+  "spares": {}
+}

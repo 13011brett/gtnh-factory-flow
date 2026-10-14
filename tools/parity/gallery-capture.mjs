@@ -177,10 +177,16 @@ const entries = [
 
 /** Board scenes. */
 function boardEntries() {
-  const W = { ...chainVcm, nodes: chainVcm.nodes.map((n) => (n.key === "vcm" ? { ...n, tier: "LV", x: 1100, y: 300 } : n)) };
+  // The mod's scene: an Ethylene drawer off the tower, below and left of the vinyl chloride card.
+  const W = {
+    ...chainVcm,
+    nodes: chainVcm.nodes.map((n) => (n.key === "vcm" ? { ...n, tier: "LV", x: 1100, y: 300 } : n)),
+    drawers: [...chainVcm.drawers, { key: "eth", kind: "fluid", id: "ethylene", name: "Ethylene", x: 860, y: 340 }],
+    wires: [...chainVcm.wires, { from: "dt", to: "eth", res: ["fluid", "ethylene"] }],
+  };
   const handle = (page, ids, node, h) => page.locator(`.react-flow__handle[data-nodeid="${ids[node]}"][data-handleid="${h}"]`).first();
   const grab = async (page, ids) => {
-    const b = await handle(page, ids, "dt", "output:fluid:ethylene").boundingBox();
+    const b = await page.locator(`.react-flow__node[data-id="${ids.eth}"] .cd-body`).first().boundingBox();
     await page.mouse.move(b.x + b.width / 2, b.y + b.height / 2);
     await page.mouse.down();
     await page.mouse.move(b.x + 40, b.y + 10, { steps: 4 });

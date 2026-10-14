@@ -242,6 +242,17 @@ describe("convertBuildToPlan", () => {
       expect(report.ratioBuffersFlattened).toBe(1);
     });
 
+    it("a buffer's rule survives the public schema (plan JSON, links, library posts)", () => {
+      const ruled = withBuffer({ targetPerSecond: 12, targetMode: "exact" });
+      const parsed = factoryProjectSchema.parse(JSON.parse(JSON.stringify({ ...ruled, planMode: true })));
+      expect(parsed.storages![0]).toMatchObject({ id: "buf", targetPerSecond: 12, targetMode: "exact" });
+      expect(parsed.edges.map((e) => [e.source, e.target])).toEqual([
+        ["a", "buf"],
+        ["buf", "b"],
+        ["buf", "c"],
+      ]);
+    });
+
     it("parks a rate no older board enforced on a buffer", () => {
       const { project: plan } = convertBuildToPlanWithReport(withBuffer({ targetPerSecond: 5, targetMode: "exact" }));
       expect(plan.storages![0]!.targetMode).toBe("ignore");

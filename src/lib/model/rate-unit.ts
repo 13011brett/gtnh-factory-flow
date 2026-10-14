@@ -77,7 +77,7 @@ export function energyPerUnitSuffix(kind: string): string {
  * Cards and the panel take these two; the browser takes the plain pair above.
  */
 export function energyPerUnitDisplayValue(euPerUnit: number): number {
-  return powerState.unit === "eu" ? euPerUnit : euPerUnit / getVoltageTierMaxEuT(powerState.unit);
+  return powerState.unit === "eu" || powerState.unit === "amps" ? euPerUnit : euPerUnit / getVoltageTierMaxEuT(powerState.unit);
 }
 
 export function energyPerUnitDisplaySuffix(kind: string): string {
@@ -102,16 +102,31 @@ export function rateUnitSuffix(fluid: boolean): string {
  * divided by T's voltage; packets per tick, nothing more. Same module-
  * singleton pattern as the rate unit above, for the same reason.
  */
-export type PowerDisplayUnit = "eu" | Exclude<MachineTier, "DEMO">;
+export type PowerDisplayUnit = "eu" | "amps" | Exclude<MachineTier, "DEMO">;
 
 export function isPowerDisplayUnit(value: unknown): value is PowerDisplayUnit {
-  return value === "eu" || GT_VOLTAGE_TIERS.some(({ tier }) => tier === value);
+  return value === "eu" || value === "amps" || GT_VOLTAGE_TIERS.some(({ tier }) => tier === value);
 }
 
 const powerState: { unit: PowerDisplayUnit } = { unit: "eu" };
 
 export function setActivePowerDisplayUnit(unit: PowerDisplayUnit): void {
   powerState.unit = unit;
+}
+
+/**
+ * "amps" is the mod's Amps key: each card quotes its own power in amps of its own machine's tier ("12 A HV"), the way
+ * the mod's power row does; everything with no machine of its own (the overview, drawers, wires) stays in EU/t. A tier
+ * unit is the older global form (one tier for the whole board).
+ */
+function perTickDivisor(ownTier: string | undefined): number | undefined {
+  if (powerState.unit === "eu") return undefined;
+  if (powerState.unit === "amps") {
+    return ownTier && ownTier !== "DEMO" && GT_VOLTAGE_TIERS.some(({ tier }) => tier === ownTier)
+      ? getVoltageTierMaxEuT(ownTier as Exclude<MachineTier, "DEMO">)
+      : undefined;
+  }
+  return getVoltageTierMaxEuT(powerState.unit);
 }
 
 /**
@@ -122,7 +137,7 @@ export function setActivePowerDisplayUnit(unit: PowerDisplayUnit): void {
  */
 export function rateSuffixForKind(kind: string): string {
   if (kind === "power") {
-    return powerState.unit === "eu" ? " EU/t" : ` A ${powerState.unit}`;
+    return powerState.unit === "eu" || powerState.unit === "amps" ? " EU/t" : ` A ${powerState.unit}`;
   }
   return rateUnitSuffix(kind === "fluid");
 }
@@ -131,21 +146,27 @@ export function rateSuffixForKind(kind: string): string {
 export function rateMultiplierForKind(kind: string): number {
   if (kind === "power") {
     const perTick = 1 / 20;
-    return powerState.unit === "eu"
+    return powerState.unit === "eu" || powerState.unit === "amps"
       ? perTick
       : perTick / getVoltageTierMaxEuT(powerState.unit);
   }
   return rateUnitMultiplier();
 }
 
-/** EU/t converted for display: itself in EU/t mode, amps of the tier otherwise. */
-export function powerDisplayFromEuT(euPerTick: number): number {
-  return powerState.unit === "eu" ? euPerTick : euPerTick / getVoltageTierMaxEuT(powerState.unit);
+/**
+ * EU/t converted for display: itself in EU/t mode, amps of the tier otherwise. In Amps mode `ownTier` is the
+ * machine's own tier; with none given the figure stays in EU/t.
+ */
+export function powerDisplayFromEuT(euPerTick: number, ownTier?: string): number {
+  const divisor = perTickDivisor(ownTier);
+  return divisor === undefined ? euPerTick : euPerTick / divisor;
 }
 
 /** The label the figure above wears. */
-export function powerDisplaySuffix(): string {
-  return powerState.unit === "eu" ? "EU/t" : `A ${powerState.unit}`;
+export function powerDisplaySuffix(ownTier?: string): string {
+  if (powerState.unit === "eu") return "EU/t";
+  if (powerState.unit === "amps") return perTickDivisor(ownTier) === undefined ? "EU/t" : `A ${ownTier}`;
+  return `A ${powerState.unit}`;
 }
 
 /**

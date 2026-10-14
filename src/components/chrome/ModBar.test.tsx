@@ -5,7 +5,7 @@ import { useFactoryStore } from "@/store/factory-store";
 import { useDesignStore } from "@/store/design-store";
 import { writeWorkspaceView } from "@/lib/workspace-view";
 import { OPEN_FEEDBACK_EVENT } from "./chrome-events";
-import { dominantTier, ModBar } from "./ModBar";
+import { ModBar } from "./ModBar";
 import { registerBoardCommands } from "./board-commands";
 
 vi.mock("@/lib/compact-view", () => ({ isCompactViewport: () => false }));
@@ -149,13 +149,5 @@ describe("the mod's top bar", () => {
       expect(key(id).getAttribute("data-tip-id"), id).toBe(`bar|${id}`);
       expect(JSON.parse(key(id).getAttribute("data-tip")!).title.length).toBeGreaterThan(3);
     }
-  });
-});
-
-describe("the Amps key's tier", () => {
-  it("is the tier most machines run at", () => {
-    expect(dominantTier(["HV", "HV", "LV", "EV"])).toBe("HV");
-    expect(dominantTier([])).toBeUndefined();
-    expect(dominantTier(["nonsense", "DEMO"])).toBeUndefined();
   });
 });

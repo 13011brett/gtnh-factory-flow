@@ -28,6 +28,7 @@ import { makePortKey } from "@/lib/solver/plan/port-key";
 import { MachineListMenu } from "./menus/MachineListMenu";
 import { OptionListMenu } from "./menus/OptionListMenu";
 import { SettingsSheet } from "./menus/SettingsSheet";
+import { useDeviceSettings } from "@/lib/device-settings";
 import { anchorOf, type MenuAnchor } from "./menus/MenuPortal";
 import { countRowsTip, machineNameTip, powerRowTip, stripTip, tierChipTip, useCardTipFacts } from "./menus/card-tips";
 import { recipeHeatNeed, settingControls, settingPatch, steppedOption, type SettingControl } from "./menus/settings-model";
@@ -531,6 +532,7 @@ export interface CleanCardProps {
 /** The clean recipe card: header, hairline, port rails around the picture, power row, settings strip. */
 export function CleanCard({ view, actions, context, recipe, node }: CleanCardProps) {
   const { wasClick, onPointerDownCapture } = useClickSlop();
+  const glanceNames = useDeviceSettings().zoomedOutNames;
   const rootRef = useRef<HTMLDivElement>(null);
   useEffect(() => ensureInteractionHost(), []);
   // Every prompt on the board shares one phase however late it mounted.
@@ -771,6 +773,7 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
         className="cc-glance"
         data-node-detail="glance"
         data-count={view.count.text}
+        data-name={glanceNames ? view.name : undefined}
         aria-hidden
         style={view.glanceArt ? { backgroundImage: `url(${view.glanceArt})` } : undefined}
       />

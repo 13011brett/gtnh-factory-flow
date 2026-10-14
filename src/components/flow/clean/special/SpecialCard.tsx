@@ -1,6 +1,7 @@
 "use client";
 
 import "../clean.css";
+import { useDeviceSettings } from "@/lib/device-settings";
 import "./special.css";
 
 import { Handle, Position } from "@xyflow/react";
@@ -351,6 +352,7 @@ export interface SpecialCardProps {
 export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
   const { view, actions, context } = model;
   const { wasClick, onPointerDownCapture } = useClickSlop();
+  const glanceNames = useDeviceSettings().zoomedOutNames;
   const rootRef = useRef<HTMLDivElement>(null);
   useEffect(() => ensureInteractionHost(), []);
   useEffect(() => {
@@ -679,6 +681,7 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
         className="cc-glance"
         data-node-detail="glance"
         data-count={countText}
+        data-name={glanceNames ? view.name : undefined}
         aria-hidden
         style={
           view.glyph === "gauge"

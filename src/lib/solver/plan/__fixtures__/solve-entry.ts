@@ -5,7 +5,7 @@
  * WP1a/b wired the core: one island, no alternatives, spares or drawer relaxation. WP1c replaces `solveCore` with the
  * full entry (islands, alternatives, spares) and `COVERAGE` with "full".
  */
-import { solveCore } from "../solve-core";
+import { solvePlan } from "../solve-plan";
 import type { Answer, SolveInput } from "./types-local";
 
 export type SolveForTest = (input: SolveInput) => Answer | Promise<Answer>;
@@ -15,6 +15,6 @@ export type SolveForTest = (input: SolveInput) => Answer | Promise<Answer>;
  * - "solution": the whole `solution` digest except `spares`.
  * - "full": the whole digest (alternatives and spares too).
  */
-export const COVERAGE: "solution" | "full" = "solution";
+export const COVERAGE: "solution" | "full" = "full";
 
-export const solveForTest: SolveForTest | null = (input) => solveCore(input);
+export const solveForTest: SolveForTest | null = (input) => solvePlan(input);

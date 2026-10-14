@@ -263,7 +263,9 @@ describe("passive production machine effects", () => {
     };
 
     expect(getMachineOutputMultiplier(recipe, toleratedNode, recipe.outputs[0]!, "LV")).toBeCloseTo(
-      1,
+      // F(30%) + F(15%) over the 30% base: Forestry rolls a product twice, the second species at half chance.
+      0.0841469 / 0.3,
+      5,
     );
     expect(getMachineOutputMultiplier(recipe, toleratedNode, recipe.outputs[1]!, "LV")).toBe(0);
     expect(getMachineOutputMultiplier(recipe, wrongNode, recipe.outputs[0]!, "LV")).toBe(0);
@@ -305,10 +307,9 @@ describe("passive production machine effects", () => {
     expect(stats.tier).toBe("MV");
     expect(stats.overclockSteps).toBe(0);
     expect(stats.durationTicks).toBeCloseTo(550 / 16);
-    expect(stats.eut).toBeCloseTo((37 + 2048) * 1.4 ** 4);
-    expect(getMachineEutMultiplier(industrialRecipe, node)).toBeCloseTo(
-      ((37 + 2048) / 37) * 1.4 ** 4,
-    );
+    // MTEIndustrialApiary: (int)(37 * 1.4^4 * 16) + 32 * 4^3.
+    expect(stats.eut).toBeCloseTo(4322, 5);
+    expect(getMachineEutMultiplier(industrialRecipe, node)).toBeCloseTo(4322 / 37, 8);
     expect(
       getMachineOutputMultiplier(industrialRecipe, node, recipe.outputs[0]!, "MV"),
     ).toBeCloseTo(Math.pow((4 * 1.2 ** 4 + 8) / 0.1, 0.52));
@@ -323,7 +324,11 @@ describe("passive production machine effects", () => {
     const industrialRecipe = applyMachineHandlerToRecipe(recipe, node);
 
     expect(getMachineDurationMultiplier(industrialRecipe, node)).toBeCloseTo(1 / 256);
-    expect(getMachineEutMultiplier(industrialRecipe, node)).toBeCloseTo((37 + 524288) / 37);
+    // The production upgrades keep their energy: (int)(37 * 1.4^8 * 14.75 * 256) + 32 * 4^7.
+    expect(getMachineEutMultiplier(industrialRecipe, node)).toBeCloseTo(
+      (Math.trunc(37 * 1.4 ** 8 * 14.75 * 256) + 524288) / 37,
+      8,
+    );
     expect(
       getMachineOutputMultiplier(industrialRecipe, node, recipe.outputs[0]!, "MV"),
     ).toBeCloseTo(Math.pow((17.19926784 + 8) / 0.1, 0.52));

@@ -1551,6 +1551,10 @@ const BEE_SPEED_GENES: Array<{ key: string; label: string; value: number }> = [
   { key: "blinding", label: "Blinding", value: 2 },
 ];
 
+export function getBeeSpeedGeneValueByKey(key: string | undefined) {
+  return BEE_SPEED_GENES.find((gene) => gene.key === key)?.value ?? 1;
+}
+
 function beeSpeedGeneControl(): MachineConfigControl {
   return selectControl({
     id: BEE_SPEED_GENE_CONTROL_ID,

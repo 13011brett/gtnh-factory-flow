@@ -37,7 +37,9 @@ The instance is small and has gone down under load. Rules:
 
 - The in-game planner's Feedback box posts to `/api/feedback`; each report becomes an issue on
   `jackwrichards/gtnh-planner-mod` through `GITHUB_FEEDBACK_TOKEN` (in `/opt/shared/env.local`; without it the route
-  answers 503).
+  answers 503). The web planner's reports (`origin: "web"`) open on the website's repo,
+  `jackwrichards/gtnh-factory-flow` (`feedbackRepo`; `GITHUB_FEEDBACK_WEB_REPO` and `GITHUB_FEEDBACK_REPO` override), so
+  the token needs Issues read and write on both repos.
 - It was flooded on 2026-10-12 (450 spam issues from about 5,000 residential addresses, the mod's user agent, made-up
   versions), so `feedback-guard.ts` stands in front: the mod's shapes (device id, versions), an in-memory gate (30
   a minute; 60 refusals in 10 minutes pause reports for 6 hours), 3 an hour and 10 a day per address and per device,

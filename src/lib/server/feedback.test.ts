@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { PROJECT_SCHEMA_VERSION } from "@/lib/model/types";
 import {
+  feedbackRepo,
   FROM_GAME_LABEL,
   FROM_WEB_LABEL,
   issueBody,
@@ -169,5 +170,15 @@ describe("feedback reports from the game", () => {
     await expect(
       openIssue("bad", "o/r", { title: "t", body: "b", labels: [] }, fake as unknown as typeof fetch),
     ).rejects.toThrow("GitHub answered 401");
+  });
+});
+
+describe("feedbackRepo", () => {
+  it("sends the web planner's reports to the website's repo and the game's to the mod's", () => {
+    expect(feedbackRepo("web", {})).toBe("jackwrichards/gtnh-factory-flow");
+    expect(feedbackRepo("game", {})).toBe("jackwrichards/gtnh-planner-mod");
+    expect(feedbackRepo(undefined, {})).toBe("jackwrichards/gtnh-planner-mod");
+    expect(feedbackRepo("web", { GITHUB_FEEDBACK_WEB_REPO: "o/web", GITHUB_FEEDBACK_REPO: "o/game" })).toBe("o/web");
+    expect(feedbackRepo("game", { GITHUB_FEEDBACK_WEB_REPO: "o/web", GITHUB_FEEDBACK_REPO: "o/game" })).toBe("o/game");
   });
 });

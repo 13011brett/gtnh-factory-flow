@@ -4,6 +4,8 @@ import { sameEdgeList, selectVisibleEdges, type RoutePoints } from "./edge-culle
 
 /** How far past the screen a wire still counts as near, as a share of the screen's size. */
 export const EDGE_MARGIN = 0.35;
+/** A wire already mounted stays until it is this far out, so a zoom that goes back and forth does not remount it. */
+export const EDGE_KEEP_MARGIN = 0.9;
 /** How far an unrouted wire may wander round obstacles beyond its two cards, in flow px. */
 export const EDGE_DETOUR = 480;
 
@@ -34,10 +36,24 @@ class BoardEdges {
     if (!view) return [];
     return selectVisibleEdges(this.all, view, {
       margin: EDGE_MARGIN,
+      keepMargin: EDGE_KEEP_MARGIN,
+      kept: this.shownIds(),
       detour: EDGE_DETOUR,
       boxOf: (id) => boardVirtualizer.boxOf(id),
       routeOf: this.routeOf,
     });
+  }
+
+  private shownIdSet: Set<string> | undefined;
+  private shownIdsOf: Edge[] | undefined;
+
+  /** The ids of the wires mounted now, kept per list. */
+  private shownIds(): ReadonlySet<string> {
+    if (this.shownIdsOf !== this.shown || !this.shownIdSet) {
+      this.shownIdSet = new Set(this.shown.map((edge) => edge.id));
+      this.shownIdsOf = this.shown;
+    }
+    return this.shownIdSet;
   }
 
   /** Recomputes; returns the new list when the choice changed. */

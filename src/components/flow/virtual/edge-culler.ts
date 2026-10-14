@@ -57,6 +57,9 @@ export function selectVisibleEdges<E extends CullableEdge>(
   view: VRect,
   options: {
     margin: number;
+    /** Wires already mounted stay until they are out of this larger reach (the camera's rectangle grown by it). */
+    keepMargin?: number;
+    kept?: ReadonlySet<string>;
     detour: number;
     boxOf: (cardId: string) => VRect | undefined;
     routeOf?: (edgeId: string) => RoutePoints | undefined;
@@ -64,6 +67,7 @@ export function selectVisibleEdges<E extends CullableEdge>(
   },
 ): E[] {
   const reach = grow(view, options.margin);
+  const keepReach = options.keepMargin !== undefined && options.kept ? grow(view, options.keepMargin) : undefined;
   const shown: E[] = [];
   for (const edge of edges) {
     if (edge.selected || options.alwaysIds?.has(edge.id)) {
@@ -78,7 +82,7 @@ export function selectVisibleEdges<E extends CullableEdge>(
     // Stroke, arrow and hops reach a little past the route; an unrouted wire may detour round obstacles.
     const pad = route ? 40 : options.detour;
     const padded = { x: box.x - pad, y: box.y - pad, w: box.w + 2 * pad, h: box.h + 2 * pad };
-    if (meets(padded, reach)) shown.push(edge);
+    if (meets(padded, keepReach && options.kept!.has(edge.id) ? keepReach : reach)) shown.push(edge);
   }
   return shown;
 }

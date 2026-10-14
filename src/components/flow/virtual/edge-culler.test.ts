@@ -52,6 +52,18 @@ describe("selectVisibleEdges", () => {
     expect(selectVisibleEdges(far, view, { margin: 0, detour: 0, boxOf })).toHaveLength(1);
   });
 
+  it("keeps a wire that is already mounted until it is past the larger reach", () => {
+    const wires = [{ id: "ab", source: "a", target: "b" }];
+    const near: VRect = { x: 0, y: 0, w: 1000, h: 1000 };
+    const farther: VRect = { x: 2000, y: 0, w: 1000, h: 1000 };
+    const base = { margin: 0.1, detour: 0, boxOf };
+    // Not mounted: the camera has to reach it. Mounted: it stays through a wider band.
+    expect(selectVisibleEdges(wires, farther, { ...base, keepMargin: 2, kept: new Set<string>() })).toEqual([]);
+    expect(selectVisibleEdges(wires, farther, { ...base, keepMargin: 2, kept: new Set(["ab"]) })).toHaveLength(1);
+    expect(selectVisibleEdges(wires, { ...farther, x: 9000 }, { ...base, keepMargin: 2, kept: new Set(["ab"]) })).toEqual([]);
+    expect(selectVisibleEdges(wires, near, { ...base, keepMargin: 2, kept: new Set<string>() })).toHaveLength(1);
+  });
+
   it("keeps the original order and objects", () => {
     const shown = selectVisibleEdges(edges, view, { margin: 0.35, detour: 480, boxOf });
     expect(shown[0]).toBe(edges[0]);

@@ -13,7 +13,7 @@ import {
   type StorageThroughputResult,
   type ThroughputResult,
 } from "../../../model/types";
-import { makePortKey } from "../port-key";
+import { makeLeftoverKey, makePortKey } from "../port-key";
 import type { PlanLeftover, PlanSolveExtras } from "../types";
 
 /**
@@ -358,9 +358,9 @@ export const mockForced: MockPlan = build({
 // ---------------------------------------------------------------------------
 
 const shortfallBearers = [inn("alloy", "Copper Dust"), inn("alloy2", "Copper Dust")];
-const shortfallKey = [...shortfallBearers].sort().join("|");
+const shortfallKey = makeLeftoverKey(shortfallBearers);
 const surplusBearers = [out("crush", "Tin Dust"), out("crush2", "Tin Dust")];
-const surplusKey = [...surplusBearers].sort().join("|");
+const surplusKey = makeLeftoverKey(surplusBearers);
 
 const leftoversA: PlanLeftover = {
   key: shortfallKey,

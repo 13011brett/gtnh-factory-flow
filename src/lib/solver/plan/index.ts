@@ -1,41 +1,22 @@
-import type {
-  BottleneckReport,
-  FactoryProject,
-  FactoryStorage,
-  NodeThroughputResult,
-  StorageThroughputResult,
-  ThroughputResult,
-} from "../../model/types";
+import type { ThroughputResult } from "../../model/types";
+import type { PlanSolveArgs } from "./adapter/args";
+import { planSolveAdapter } from "./adapter/solve";
 
 export * from "./types";
 export { makePortKey, parsePortKey } from "./port-key";
+export { LEFTOVER_KEY_SEPARATOR, makeLeftoverKey, splitLeftoverKey } from "./port-key";
 export { compareIds, comparePortRef } from "./ids";
 export { convertBuildToPlan } from "./convert";
-
-/**
- * Everything `calculateThroughput` has built by the time it reaches the
- * solve-mode branch: the project fully expanded (shared sections, hatch
- * supplies, loose-cell tanks), every enabled node's nameplate report, the
- * storages, and the hidden helpers to strike from the result. The plan solver
- * reads the nameplate flows, so overclocks, parallels, chances and output
- * multipliers are the old solvers' by construction.
- */
-export interface PlanSolveArgs {
-  project: FactoryProject;
-  nodes: Record<string, NodeThroughputResult>;
-  storages: Record<string, StorageThroughputResult>;
-  projectStorages: FactoryStorage[];
-  bottlenecks: BottleneckReport[];
-  crossForm: { hiddenNodeIds: string[]; hiddenEdgeIds: string[] };
-  options: { generatedAt?: string };
-}
+export type { PlanHelpers, PlanSolveArgs, PlanUnit } from "./adapter/args";
+export { getSolveCore, hasSolveCore, setSolveCore, type SolveCore } from "./adapter/engine";
 
 /**
  * The plan-mode entry, called from the dispatch seam in `calculateThroughput`
- * for a project with `planMode`. The adapter (WP2) replaces this body; until
- * then plan mode is not available and nothing may turn it on by accident.
+ * for a project with `planMode`: the adapter turns the expanded project into
+ * the solver core's input and the core's answer back into books
+ * (`adapter/`). Without an installed core (`setSolveCore`) it throws, so plan
+ * mode never answers silently with nothing.
  */
 export function planSolve(args: PlanSolveArgs): ThroughputResult {
-  void args;
-  throw new Error("Plan mode solver: not implemented");
+  return planSolveAdapter(args);
 }

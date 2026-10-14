@@ -25,3 +25,21 @@ export function parsePortKey(
   }
   return { nodeId: key.slice(0, first), side, handle: key.slice(second + 1) };
 }
+
+/**
+ * Joins the PortKeys of a leftover's bearers into the key `spareShares` is
+ * stored under. A PortKey holds `|`, `:` and anything a node id may hold, so
+ * none of those can join them; U+001F (unit separator) cannot occur in a node
+ * id or in an encoded handle (`encodeURIComponent` never yields a control
+ * character), so the key splits back exactly. Bearers are sorted (UTF-16
+ * order) so the same set always gives the same key.
+ */
+export const LEFTOVER_KEY_SEPARATOR = "\u001f";
+
+export function makeLeftoverKey(portKeys: readonly PortKey[]): string {
+  return [...portKeys].sort().join(LEFTOVER_KEY_SEPARATOR);
+}
+
+export function splitLeftoverKey(key: string): PortKey[] {
+  return key.split(LEFTOVER_KEY_SEPARATOR);
+}

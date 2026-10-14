@@ -54,7 +54,7 @@ import { expandPool, getPoolProject } from "./pool-mode";
 import { getSetupRules } from "../model/setup-rules";
 import { solveEquationsCore } from "./equations-core";
 import { solveSolveMode } from "./solve-mode";
-import { planSolve } from "./plan";
+import { planSolve, type PlanUnit } from "./plan";
 
 const EPSILON = 0.000001;
 
@@ -117,6 +117,7 @@ export function calculateThroughput(
   const bottlenecks: BottleneckReport[] = [];
   let totalEuT = 0;
   const projectStorages = project.storages ?? [];
+  const planUnits: Record<string, PlanUnit> = {};
   const storagesById = new Map(projectStorages.map((storage) => [storage.id, storage]));
 
   for (const storage of projectStorages) {
@@ -214,6 +215,12 @@ export function calculateThroughput(
     const euT =
       overclockedRecipe.eut * node.machineCount * node.parallel * machineParallelMultiplier;
     totalEuT += euT;
+    if (project.planMode) {
+      planUnits[node.id] = {
+        durationTicks: overclockedRecipe.durationTicks,
+        throughputFactor: node.parallel * machineParallelMultiplier,
+      };
+    }
 
     nodes[node.id] = {
       nodeId: node.id,
@@ -250,6 +257,8 @@ export function calculateThroughput(
       bottlenecks,
       crossForm,
       options,
+      units: planUnits,
+      helpers: { buildEdgeResult, refreshStorageResultsFromEdges, calculateFuelEstimate },
     });
   }
 

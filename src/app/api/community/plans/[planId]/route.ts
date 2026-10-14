@@ -3,6 +3,7 @@ import type { SupabaseClient } from "@supabase/supabase-js";
 import { factoryProjectSchema } from "@/lib/model/schemas";
 import { normalizeLoadedProject } from "@/lib/model/project-normalize";
 import { calculateThroughput } from "@/lib/solver";
+import { ensurePlanEngine } from "@/lib/server/plan-engine";
 import { computeCommunityPlanStats } from "@/lib/community/plan-stats";
 import type { CommunityPlanSummary } from "@/lib/community/types";
 import { APP_VERSION } from "@/lib/version";
@@ -138,6 +139,7 @@ async function refreshStaleStats(
     // The same funnel the board runs a loaded plan through, so the card and
     // the opened tab compute from the identical project.
     const project = normalizeLoadedProject(parsed.data);
+    await ensurePlanEngine(project);
     const stats = computeCommunityPlanStats(project, calculateThroughput(project));
     plan.needs = stats.needs;
     plan.outputs = stats.outputs;
@@ -274,6 +276,7 @@ export async function PUT(request: Request, { params }: { params: Promise<{ plan
         return NextResponse.json({ error: "Refusing to share an empty plan." }, { status: 400 });
       }
 
+      await ensurePlanEngine(project);
       const stats = computeCommunityPlanStats(project, calculateThroughput(project));
       Object.assign(update, {
         plan: project,

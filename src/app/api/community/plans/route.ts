@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { factoryProjectSchema } from "@/lib/model/schemas";
 import { calculateThroughput } from "@/lib/solver";
+import { ensurePlanEngine } from "@/lib/server/plan-engine";
 import { computeCommunityPlanStats } from "@/lib/community/plan-stats";
 import { APP_VERSION } from "@/lib/version";
 import {
@@ -299,6 +300,7 @@ export async function POST(request: Request) {
     }
 
     // Stats are always derived server-side from the validated plan.
+    await ensurePlanEngine(project);
     const stats = computeCommunityPlanStats(project, calculateThroughput(project));
 
     const db = getCommunityDb();

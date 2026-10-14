@@ -148,7 +148,9 @@ function solveBooksUngated(project: FactoryProject): ThroughputResult {
     size > SYNC_SOLVE_LIMIT ||
     provenSlow ||
     (size > CROSS_FORM_SYNC_LIMIT && project.edges.some((edge) => edge.crossForm)) ||
-    ((project.solveMode === true || project.poolMode === true) && size > SOLVE_MODE_SYNC_LIMIT);
+    ((project.solveMode === true || project.poolMode === true) && size > SOLVE_MODE_SYNC_LIMIT) ||
+    // Plan mode runs integer programs (HiGHS, which only the worker loads): the worker whenever there is one.
+    project.planMode === true;
   if (!expectSlow || !workerAvailable()) {
     const started = performance.now();
     const result = calculateThroughput(project);

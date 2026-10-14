@@ -318,7 +318,11 @@ export interface PlanBearer {
 }
 
 export interface PlanLeftover {
-  /** Stable key (`spareShares` is keyed on it). */
+  /**
+   * Stable key (`spareShares` is keyed on it): the bearers' PortKeys sorted
+   * and joined by U+001F (`makeLeftoverKey` in `port-key.ts`). Never `|`:
+   * a PortKey holds it.
+   */
   key: string;
   importing: boolean;
   custom: boolean;

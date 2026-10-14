@@ -773,6 +773,11 @@ export interface FactoryProject {
    */
   spareShares?: Record<string, Record<string, number>>;
   /**
+   * Plan mode's setting pins (the mod's `Graph.settingPins`): machine name -> the setting keys its cards show as
+   * strip chips. A machine absent here shows its defaults (the coil on a heat recipe).
+   */
+  settingPins?: Record<string, string[]>;
+  /**
    * Pool mode's cell-to-fluid bridges: litres one filled cell holds, keyed
    * by the cell item id, read from the Canner's own recipes (never
    * guessed) and fetched for every cell/fluid pair the plan's slots name.

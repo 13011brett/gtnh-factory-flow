@@ -18,6 +18,7 @@ import {
   dedupeEdgeWires,
   findDuplicateEdge,
 } from "@/lib/model/edge-identity";
+import { applySettingMemory } from "@/lib/model/setting-memory";
 import { recipeMapName } from "@/lib/model/recipe-rules";
 import {
   edgeSectionAt,
@@ -77,6 +78,7 @@ import {
   BOARD_WINDOW_MIN_HEIGHT,
   BOARD_WINDOW_MIN_WIDTH,
   BOARD_WINDOW_TITLE_HEIGHT,
+  CLASSIC_NODE_WIDTH,
   RECIPE_NODE_WIDTH,
   STORAGE_NODE_HEIGHT,
   STORAGE_NODE_WIDTH,
@@ -352,6 +354,8 @@ interface FactoryStore {
    */
   swapMachineRecipe: (nodeId: string, recipe: Recipe) => void;
   updateNode: (nodeId: string, patch: Partial<FactoryNode>) => void;
+  /** Pins settings to a machine's cards in plan mode (`FactoryProject.settingPins`). */
+  setSettingPins: (machineKey: string, keys: string[]) => void;
   /**
    * SHARED MACHINES (shared-machine.ts). Opens the recipe search with this
    * card's machine PINNED: only that machine's recipes can show, and the add
@@ -1707,6 +1711,16 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
         project,
         lastResult: solveBooks(project),
       });
+    });
+  },
+  setSettingPins: (machineKey, keys) => {
+    set((state) => {
+      if (state.isReadOnly) return state;
+      const project = touchProject({
+        ...state.project,
+        settingPins: { ...(state.project.settingPins ?? {}), [machineKey]: keys },
+      });
+      return withProjectHistory(state, { project });
     });
   },
   browseMachineRecipes: (nodeId) => {
@@ -4092,7 +4106,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
         })),
         ...memberPockets.map((entry) => ({
           ...entry.position,
-          width: entry.expanded ? boardWindowSize(entry).width : RECIPE_NODE_WIDTH,
+          width: entry.expanded ? boardWindowSize(entry).width : CLASSIC_NODE_WIDTH,
           height: entry.expanded ? boardWindowSize(entry).height : BOARD_GRID * 12,
         })),
       ];
@@ -4852,7 +4866,7 @@ function addRecipeNodeToState(
   const spawnHandler = options?.machineHandlerId
     ? recipe.machineHandlers?.find((handler) => handler.id === options.machineHandlerId)
     : undefined;
-  const node: FactoryNode = {
+  const plainNode: FactoryNode = {
     id: createId("node"),
     recipeId: recipe.id,
     cropFullFarmCount: isCropFarmRecipe(recipe) ? 1 : undefined,
@@ -4871,6 +4885,10 @@ function addRecipeNodeToState(
     enabled: true,
     position,
   };
+  // Plan mode: the settings last changed on this machine come with the new card (the mod's SettingMemory).
+  const node: FactoryNode = state.project.planMode
+    ? { ...plainNode, ...applySettingMemory(recipe, plainNode) }
+    : plainNode;
   const recipeAlreadyInProject = state.project.recipes.some((entry) => entry.id === recipe.id);
   const project = touchProject({
     ...state.project,
@@ -5061,7 +5079,7 @@ function projectBlockerRects(project: FactoryProject): PlacementRect[] {
     }
     rects.push({
       ...absolutize(pocket.position, pocket.parentPocketId),
-      width: pocket.expanded ? boardWindowSize(pocket).width : RECIPE_NODE_WIDTH,
+      width: pocket.expanded ? boardWindowSize(pocket).width : CLASSIC_NODE_WIDTH,
       height: pocket.expanded ? boardWindowSize(pocket).height : BOARD_GRID * 14,
     });
   }

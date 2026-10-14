@@ -22,6 +22,7 @@ function canvas(): CanvasRenderingContext2D | null {
 let appFamily: string | undefined;
 export function resetMeasuredFont(): void {
   appFamily = undefined;
+  cleanFamily = undefined;
   widths.clear();
 }
 
@@ -38,6 +39,40 @@ function family(): string {
   }
   appFamily = value;
   return value;
+}
+
+/** The clean card's own face: Monocraft (`--cc-font` in clean.css), whatever the app font is. */
+let cleanFamily: string | undefined;
+function cleanFace(): string {
+  if (cleanFamily) return cleanFamily;
+  let value = "monospace";
+  try {
+    if (typeof document !== "undefined") {
+      const raw = getComputedStyle(document.documentElement).getPropertyValue("--font-minecraft").trim();
+      if (raw) value = `${raw}, monospace`;
+    }
+  } catch {
+    // Keep the generic family.
+  }
+  cleanFamily = value;
+  return value;
+}
+
+/** Width in CSS px of `text` at `size` px and `weight`, in the clean card's Monocraft. */
+export function measureClean(text: string, size: number, weight = 400): number {
+  const key = `c|${weight}|${size}|${text}`;
+  const cached = widths.get(key);
+  if (cached !== undefined) return cached;
+  const ctx = canvas();
+  let width: number;
+  if (ctx) {
+    ctx.font = `${weight} ${size}px ${cleanFace()}`;
+    width = ctx.measureText(text).width;
+  } else {
+    width = text.length * size * 0.667;
+  }
+  widths.set(key, width);
+  return width;
 }
 
 /** Width in CSS px of `text` at `size` px and `weight`, in the app's font. */

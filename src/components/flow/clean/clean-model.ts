@@ -47,7 +47,8 @@ import {
 import { orderMachineHandlers } from "../MachinePicker";
 import type { RecipeNodeData } from "../RecipeNode";
 import { CC_GEOMETRY } from "./tokens";
-import { measureText } from "./text-measure";
+import { isPinned, pinMachineKey, settingControls } from "./menus/settings-model";
+import { measureClean } from "./text-measure";
 
 type VoltageTier = Parameters<typeof getVoltageTierIndex>[0];
 
@@ -257,9 +258,9 @@ export function buildPortView(
     zero: !(port.currentPerSecond > 0),
     gold: node.portRates?.[port.handleId] !== undefined,
     rate: node.portRates?.[port.handleId],
-    numberSmall: measureText(number, 14, 600) + 2 + measureText(unit, 9, 500) > WORDS,
-    nameSmall: measureText(port.displayName, 9, 500) > WORDS,
-    nameClipped: measureText(port.displayName, 7.5, 500) > WORDS,
+    numberSmall: measureClean(number, 13) + 2 + measureClean(unit, 8) > WORDS,
+    nameSmall: measureClean(port.displayName, 8) > WORDS,
+    nameClipped: measureClean(port.displayName, 6) > WORDS,
     wired: port.connected,
     choice: (port.resource?.alternatives?.length ?? 0) > 1,
     resourceKey: makeResourceKey(port.kind, port.resourceId),
@@ -285,7 +286,7 @@ export function layoutStrip(chips: Array<Omit<CleanChipView, "x" | "y" | "width"
   let x = 0;
   let row = 0;
   const placed = chips.map((chip) => {
-    const text = measureText(chip.label, 11, 500) + (chip.value ? 4 + measureText(chip.value, 11, 500) : 0);
+    const text = measureClean(chip.label, 8) + (chip.value ? 4 + measureClean(chip.value, 8) : 0);
     const width = Math.min(inner, Math.ceil(text + (chip.reading ? 0 : 12) + (chip.icon ? 17 : 0)));
     if (x > 0 && x + width > inner) {
       x = 0;
@@ -312,6 +313,8 @@ export function useCleanCardModel(
   const updateNode = useFactoryStore((state) => state.updateNode);
   const averageDraw = useWorkspaceView().averageMachineDraw;
   useRateDisplayUnits();
+  // Pins live on the project, not the node: re-render when they move.
+  useFactoryStore((state) => state.project.settingPins);
   const machineIcons = useMachineHandlerIconEntries();
   const mapIcons = useRecipeMapIcons();
   // The solve is read lazily like the classic card does: this component
@@ -355,6 +358,7 @@ export function useCleanCardModel(
     };
   }, [recipe, projectNode]);
 
+  const pinControls = useMemo(() => settingControls(recipe, projectNode), [recipe, projectNode]);
   const verdict = deriveNodeVerdict(liveProject, lastResult, projectNode.id);
   const rails = buildRailPorts(liveProject, lastResult, projectNode.id, derived.overclockedRecipe, verdict);
   const plan = lastResult?.plan;
@@ -381,13 +385,18 @@ export function useCleanCardModel(
 
   const G = CC_GEOMETRY;
   const chipsLeft = G.cardWidth - 8 - (tierLabel ? G.chipWidth : 0) - (ampsLabel ? 2 + G.chipWidth : 0);
-  const nameRoom = Math.max(40, chipsLeft - 8 - 68 - (hasPicker ? 15 : 0));
-  const nameSize = [14, 13, 12].find((size) => measureText(name, size, 500) <= nameRoom) ?? 9;
+  const nameRoom = Math.max(40, chipsLeft - 8 - 8 - 2 * (G.keySize + 2) - 8 - (hasPicker ? 15 : 0));
+  // The mod's name is x1.25 of its 8 px text (10); Monocraft runs wider than the mod's face, so it steps down to 8 before it clips with an ellipsis.
+  const nameSize = [10, 9].find((size) => measureClean(name, size) <= nameRoom) ?? 8;
 
   // Power row: a machine's draw, or a steam machine's litres.
   const usage = Math.min(1, Math.max(0, result?.utilization ?? 1));
   const drawScale = averageDraw ? usage : usage > 0 ? 1 : 0;
-  const machines = projectNode.machineCount * Math.max(1, projectNode.parallel);
+  // The card's demand is what the card runs: the solved count (or the pinned one, fractions and all) times one
+  // machine's draw, as the mod prints it, not the built machine count the classic card multiplied by.
+  const solvedNeeded = result?.theoreticalMachinesRequired ?? 0;
+  const solvedPin = projectNode.solvePin;
+  const machines = (solvedPin !== undefined && solvedPin > 0 ? solvedPin : solvedNeeded) * Math.max(1, projectNode.parallel);
   let power: CleanPowerView | undefined;
   if (powerReport) {
     const stalled = powerReport.state !== "ok";
@@ -428,31 +437,20 @@ export function useCleanCardModel(
       : "How many of this machine the plan needs. Click to pin a count.",
   };
 
-  // Settings strip: the coil on a heat recipe, parallels over one, and every setting changed from default.
+  // Settings strip (the mod's pins): the settings pinned to this machine's cards, the coil by default on a heat recipe.
   const settings: CleanCardContext["settings"] = [];
   const rawChips: Array<Omit<CleanChipView, "x" | "y" | "width">> = [];
-  if (derived.coilControl) {
-    const value = derived.coilControl.current.label;
-    settings.push({ id: "heatingCoil", label: derived.coilControl.label, value, steps: derived.coilControl.tiers.length > 1 });
-    rawChips.push({
-      id: "heatingCoil",
-      label: derived.coilControl.label,
-      value,
-      icon: derived.coilControl.current.resource?.iconPath,
-      title: `${derived.coilControl.label}: ${value}`,
-    });
-  }
-  for (const control of derived.controls) {
-    if (control.id === "heatingCoil" || /^(machineParallel|voltageParallel)/.test(control.id)) continue;
-    if (control.tiers.length <= 1) continue;
-    settings.push({ id: control.id, label: control.label, value: control.current.label, steps: true });
-    if (control.current.key === control.minimum.key) continue;
+  const pinKey = pinMachineKey(recipe, projectNode);
+  for (const control of pinControls) {
+    settings.push({ id: control.id, label: control.label, value: control.value, steps: control.options.length > 1 });
+    if (!isPinned(liveProject, pinKey, control)) continue;
     rawChips.push({
       id: control.id,
       label: control.label,
-      value: control.current.label,
-      icon: control.current.resource?.iconPath,
-      title: `${control.label}: ${control.current.label}`,
+      value: control.value,
+      icon: control.icon,
+      warn: control.warn || undefined,
+      title: `${control.label}: ${control.value}`,
     });
   }
   const parallels = powerReport?.parallels ?? steamReport?.parallels ?? derived.parallel;

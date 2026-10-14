@@ -1,3 +1,4 @@
+import { RECIPE_NODE_WIDTH } from "@/lib/board-grid";
 import { openLibrary } from "@/lib/library/library-tab";
 import type { FactoryProject } from "@/lib/model/types";
 import type { TargetMode } from "@/lib/model/storage-target";
@@ -176,7 +177,7 @@ export function framesReadably(ids: string[]): boolean {
   if (points.length < 2) return true;
   const xs = points.map((p) => p.x);
   const ys = points.map((p) => p.y);
-  const width = Math.max(...xs) - Math.min(...xs) + 380;
+  const width = Math.max(...xs) - Math.min(...xs) + RECIPE_NODE_WIDTH;
   const height = Math.max(...ys) - Math.min(...ys) + 240;
   const viewW = typeof window === "undefined" ? 1200 : Math.max(400, window.innerWidth - 560);
   const viewH = typeof window === "undefined" ? 700 : Math.max(300, window.innerHeight - 140);

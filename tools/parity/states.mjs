@@ -69,6 +69,9 @@ export const states = [
   { id: "drawer-source-atmost", ref: "drawer-source-atmost-rule", plan: drawerPlan, node: "acid", anchor: { x: 34, y: 20 }, drawer: true, setup: none },
   { id: "drawer-trash-voided", ref: "drawer-trash-voided-methane", plan: drawerPlan, node: "methane", anchor: { x: 34, y: 20 }, drawer: true, setup: none },
   { id: "drawer-product-any-set", ref: "drawer-product-any-set-rate-pulsing", plan: anyDrawerPlan, node: "aniline", anchor: { x: 34, y: 20 }, drawer: true, setup: none },
+  // ---- QA2 additions: rule menus and the folded rail (full board states are in qa2/*.mjs) ----
+  { id: "drawer-rule-menu", ref: "drawer-rule-menu-open", plan: drawerPlan, node: "aniline", anchor: { x: 34, y: 20 }, drawer: true, setup: async (c) => { await c.page.locator(`${c.nodeSel} .cd-key`).click(); await wait(c, 700); } },
+  { id: "drawer-source-rule-menu", ref: "drawer-source-rule-menu", plan: drawerPlan, node: "acid", anchor: { x: 34, y: 20 }, drawer: true, setup: async (c) => { await c.page.locator(`${c.nodeSel} .cd-key`).click(); await wait(c, 700); } },
   // ---- overview rail ----
   { id: "overview-rail", ref: "overview-rail-full", plan: refChain, node: "nb", clip: "rail", setup: none },
 ];

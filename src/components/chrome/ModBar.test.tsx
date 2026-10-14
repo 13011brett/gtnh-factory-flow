@@ -134,6 +134,15 @@ describe("the mod's top bar", () => {
     expect(document.querySelectorAll(".mc-controls-row")).toHaveLength(19);
   });
 
+  it("the Help menu's Download the mod opens the mod's newest release", () => {
+    const open = vi.spyOn(window, "open").mockImplementation(() => null);
+    renderBar();
+    fireEvent.click(key("help"));
+    fireEvent.click(screen.getByText("Download the mod"));
+    expect(open).toHaveBeenCalledWith("https://github.com/jackwrichards/gtnh-planner-mod/releases/latest", "_blank", "noopener,noreferrer");
+    open.mockRestore();
+  });
+
   it("the Feedback key knocks on the feedback door, and a part that answers takes it", () => {
     const open = vi.spyOn(window, "open").mockImplementation(() => null);
     renderBar();

@@ -26,6 +26,7 @@ const CLAIM_DISTANCE = 14;
 export function PanelDrawer({
   side,
   label,
+  width,
   open,
   onOpen,
   onClose,
@@ -34,6 +35,8 @@ export function PanelDrawer({
   side: "left" | "right";
   /** What the drawer holds, for the handle's accessible name. */
   label: string;
+  /** The panel's desktop width in shell px; a phone gets what it can spare. Defaults by side. */
+  width?: number;
   open: boolean;
   onOpen: () => void;
   onClose: () => void;
@@ -73,6 +76,7 @@ export function PanelDrawer({
   // A close from a button inside the panel has no gesture behind it and leaves at
   // once; it is the one exit that does not animate.
   const isMounted = open || isDragging;
+  const maxWidth = width ?? (side === "left" ? 256 : 234);
   const closedTranslate = side === "left" ? "-100% 0" : "100% 0";
 
   /**
@@ -83,7 +87,7 @@ export function PanelDrawer({
   const getPanelWidth = () =>
     panelRef.current?.offsetWidth ||
     // Shell pixels, like offsetWidth: the document's width is real pixels.
-    Math.min((document.documentElement.clientWidth / getUiScale()) * 0.88, side === "left" ? 256 : 234);
+    Math.min((document.documentElement.clientWidth / getUiScale()) * 0.88, maxWidth);
 
   /**
    * Live during a drag: 0 fully closed, 1 fully open. Written to `translate`,
@@ -229,13 +233,12 @@ export function PanelDrawer({
             // While a finger owns it the transform is written frame by frame, so
             // a transition here would lag behind the finger by its own duration.
             isDragging ? "transition-none" : "transition-transform duration-200 ease-out",
-            // 256 and 234 are the columns' desktop widths; a phone gets as much
-            // of that as it can spare while still showing the board behind.
-            side === "left"
-              ? "left-0 w-[min(calc(88*var(--ui-vw)),256px)]"
-              : "right-0 w-[min(calc(88*var(--ui-vw)),234px)]",
+            // A phone gets as much of the desktop width as it can spare while
+            // still showing the board behind (the width is the style below).
+            side === "left" ? "left-0" : "right-0",
             isSlidIn ? "translate-x-0" : side === "left" ? "-translate-x-full" : "translate-x-full",
           ].join(" ")}
+          style={{ width: `min(calc(88 * var(--ui-vw)), ${maxWidth}px)` }}
         >
           {children}
         </div>

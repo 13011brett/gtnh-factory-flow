@@ -19,6 +19,7 @@ import { GT_VOLTAGE_TIERS } from "@/lib/model";
 import { GT_TIER_COLORS } from "@/components/flow/tier-colors";
 import { ResourceIcon } from "@/components/nei/ResourceIcon";
 import { useFactoryStore } from "@/store/factory-store";
+import { overlayInsets } from "@/lib/workspace-columns";
 import type { MachineTier } from "@/lib/model/types";
 
 /**
@@ -116,7 +117,7 @@ export function PowerSourceOverlay() {
       onPointerDown={closePowerMenu}
       // Like the recipe search: the dim starts where the item browser ends,
       // so the left column stays bright beside it.
-      style={{ left: layout.sheet ? 0 : layout.leftInset }}
+      style={{ left: layout.sheet ? 0 : layout.leftInset, right: layout.sheet ? 0 : layout.rightInset }}
     >
       <section
         className="pointer-events-auto relative flex flex-col font-mono"
@@ -396,6 +397,7 @@ const PICKER_SHEET_BELOW = 700;
 interface PickerViewport {
   sheet: boolean;
   leftInset: number;
+  rightInset: number;
   width: number;
   height: number;
 }
@@ -403,26 +405,27 @@ interface PickerViewport {
 /** In SHELL px: the picker draws zoomed, so the window is measured in its units. */
 function readPickerViewport(): PickerViewport {
   if (typeof window === "undefined") {
-    return { sheet: false, leftInset: PICKER_RAIL_LEFT, width: 960, height: 760 };
+    return { sheet: false, leftInset: PICKER_RAIL_LEFT, rightInset: 0, width: 960, height: 760 };
   }
   const scale = getUiScale();
   const viewportWidth = window.innerWidth / scale;
   const viewportHeight = window.innerHeight / scale;
   if (viewportWidth < PICKER_SHEET_BELOW) {
-    return { sheet: true, leftInset: 0, width: viewportWidth, height: viewportHeight };
+    return { sheet: true, leftInset: 0, rightInset: 0, width: viewportWidth, height: viewportHeight };
   }
   // A closed item panel UNMOUNTS the aside and leaves the rail, so absence
   // means the rail's width, not the panel's.
   const browser = document.querySelector('aside[data-help-anchor="browser"]');
   // Real px -> shell px.
-  const leftInset = browser
-    ? Math.round(browser.getBoundingClientRect().width / scale)
-    : PICKER_RAIL_LEFT;
+  const { left: leftInset, right: rightInset } = overlayInsets(scale, () =>
+    browser ? Math.round(browser.getBoundingClientRect().width / scale) : PICKER_RAIL_LEFT,
+  );
   return {
     sheet: false,
     leftInset,
+    rightInset,
     // No width cap: a wide screen gets more columns, not a wrapped shelf.
-    width: Math.max(PICKER_MIN_WIDTH, viewportWidth - leftInset - 24),
+    width: Math.max(PICKER_MIN_WIDTH, viewportWidth - leftInset - rightInset - 24),
     height: Math.min(PICKER_MAX_HEIGHT, Math.max(360, viewportHeight - 20)),
   };
 }

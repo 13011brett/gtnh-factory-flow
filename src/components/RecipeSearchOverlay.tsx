@@ -74,6 +74,7 @@ import { getPowerMachineIcon, resolvePowerResource } from "@/lib/power/planner-d
 import { formatAmount } from "@/lib/power/sources/helpers";
 import { buildPowerSettingsReader, type PowerSourceDefinition } from "@/lib/power/types";
 import { useFactoryStore } from "@/store/factory-store";
+import { overlayInsets } from "@/lib/workspace-columns";
 
 /**
  * One condition on the stencil: a resource and the side of the recipe it must
@@ -1046,7 +1047,7 @@ export function RecipeSearchOverlay({
       onPointerDown={closeSearch}
       // The dim starts where the item browser ends: the left column stays
       // bright and clickable beside the search, because the two are one tool.
-      style={{ left: sheet ? 0 : layout.leftInset }}
+      style={{ left: sheet ? 0 : layout.leftInset, right: sheet ? 0 : layout.rightInset }}
     >
       {/* The section itself does NOT stop the close: only its two solid boxes
           do, so the bare corners beside the stencil card still read as the
@@ -2750,6 +2751,8 @@ interface RecipeSearchViewport {
   sheet: boolean;
   /** Where the search begins: the item browser keeps everything left of it. */
   leftInset: number;
+  /** Plan boards seat the items on the right: the search stops short of them. */
+  rightInset: number;
   width: number;
   height: number;
 }
@@ -2766,7 +2769,7 @@ function measureLeftSidebar(scale: number): number {
 /** In SHELL px: the search draws zoomed, so the window is measured in its units. */
 function readRecipeSearchViewport(): RecipeSearchViewport {
   if (typeof window === "undefined") {
-    return { sheet: false, leftInset: BOARD_SIDEBAR_LEFT, width: 960, height: 760 };
+    return { sheet: false, leftInset: BOARD_SIDEBAR_LEFT, rightInset: 0, width: 960, height: 760 };
   }
 
   const scale = getUiScale();
@@ -2776,16 +2779,17 @@ function readRecipeSearchViewport(): RecipeSearchViewport {
   // Too narrow to be a window at all: fill the screen instead of leaving a
   // panel that is mostly margin. The item browser is a drawer here anyway.
   if (viewportWidth < RECIPE_SEARCH_SHEET_BELOW) {
-    return { sheet: true, leftInset: 0, width: viewportWidth, height: viewportHeight };
+    return { sheet: true, leftInset: 0, rightInset: 0, width: viewportWidth, height: viewportHeight };
   }
 
-  const leftInset = measureLeftSidebar(scale);
+  const { left: leftInset, right: rightInset } = overlayInsets(scale, () => measureLeftSidebar(scale));
   return {
     sheet: false,
     leftInset,
+    rightInset,
     width: Math.min(
       RECIPE_SEARCH_MAX_WIDTH,
-      Math.max(RECIPE_SEARCH_MIN_WIDTH, viewportWidth - leftInset - 24),
+      Math.max(RECIPE_SEARCH_MIN_WIDTH, viewportWidth - leftInset - rightInset - 24),
     ),
     height: Math.min(RECIPE_SEARCH_MAX_HEIGHT, Math.max(360, viewportHeight - 20)),
   };

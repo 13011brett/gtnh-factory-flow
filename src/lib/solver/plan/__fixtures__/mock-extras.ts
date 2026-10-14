@@ -211,8 +211,10 @@ function build(spec: MockSpec): MockPlan {
 
   const storageResults: Record<string, StorageThroughputResult> = {};
   for (const d of spec.drawers) {
-    const produced = spec.wires.filter((w) => w.from === d.id).reduce((a, w) => a + w.perSecond, 0);
-    const consumed = spec.wires.filter((w) => w.to === d.id).reduce((a, w) => a + w.perSecond, 0);
+    // As the real books (throughput.ts refreshStorageResultsFromEdges): what flows into a drawer is its produced, what
+    // flows out of it its consumed.
+    const produced = spec.wires.filter((w) => w.to === d.id).reduce((a, w) => a + w.perSecond, 0);
+    const consumed = spec.wires.filter((w) => w.from === d.id).reduce((a, w) => a + w.perSecond, 0);
     storageResults[d.id] = {
       storageId: d.id,
       kind: "item",
@@ -225,7 +227,7 @@ function build(spec: MockSpec): MockPlan {
       netPerSecond: produced - consumed,
       status: "balanced",
       ...(d.rate !== undefined ? { targetPerSecond: d.rate } : {}),
-      ...(d.rate !== undefined && d.kind === "product" && consumed < d.rate - 1e-9
+      ...(d.rate !== undefined && d.kind === "product" && produced < d.rate - 1e-9
         ? { targetUnreachable: true }
         : {}),
     };
@@ -247,10 +249,10 @@ function build(spec: MockSpec): MockPlan {
     }
     const imported = spec.drawers
       .filter((d) => d.kind === "source" && d.item === item)
-      .reduce((a, d) => a + storageResults[d.id]!.producedPerSecond, 0);
+      .reduce((a, d) => a + storageResults[d.id]!.consumedPerSecond, 0);
     const product = spec.drawers
       .filter((d) => d.kind === "product" && d.item === item)
-      .reduce((a, d) => a + storageResults[d.id]!.consumedPerSecond, 0);
+      .reduce((a, d) => a + storageResults[d.id]!.producedPerSecond, 0);
     const net = produced + imported - consumed - product;
     resources[key(item)] = {
       key: key(item),

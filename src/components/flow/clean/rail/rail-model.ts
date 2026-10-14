@@ -302,7 +302,7 @@ export function buildRailModel(
     const role = roles.get(storage.id) ?? "idle";
     const key = canonicalOf(aliases, makeResourceKey(storage.kind, storage.resourceId));
     if (role === "trash") {
-      const eaten = result.storages[storage.id]?.consumedPerSecond ?? 0;
+      const eaten = result.storages[storage.id]?.producedPerSecond ?? 0;
       trashed.set(key, (trashed.get(key) ?? 0) + Math.max(0, eaten));
       continue;
     }

@@ -108,6 +108,12 @@ import type {
 import { nearestFreeSpot, type PlacementRect } from "@/components/flow/board-placement";
 import { getStorageRoles } from "@/lib/model/storage-role";
 import { edgeRatioWeight, setStorageRatioPercentage, equalizeStorageRatioPercentages } from "@/lib/model/storage-ratios";
+import {
+  prunePlanFields,
+  rehomeSectionFields,
+  renumberAfterSectionRemoved,
+  renumberAfterSectionsSwapped,
+} from "@/lib/solver/plan/hygiene";
 import { collectPocketMembers, expandPocketSelection } from "@/lib/model/pocket-connections";
 import { paperForBoardId, pickBoardPaper } from "@/lib/model/board-paper";
 import type { BoardCamera } from "@/lib/designs/design-camera";
@@ -1838,11 +1844,15 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
                   : undefined,
             };
       const project = touchProject(
-        pruneOrphanStorages({
-          ...state.project,
-          nodes: state.project.nodes.map((entry) => (entry.id === nodeId ? nextNode : entry)),
-          edges,
-        }),
+        renumberAfterSectionRemoved(
+          pruneOrphanStorages({
+            ...state.project,
+            nodes: state.project.nodes.map((entry) => (entry.id === nodeId ? nextNode : entry)),
+            edges,
+          }),
+          nodeId,
+          section,
+        ),
       );
       return withProjectHistory(state, {
         project,
@@ -1883,19 +1893,26 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
           ...(entry.recipeInputOverrides ? { recipeInputOverrides: entry.recipeInputOverrides } : {}),
         })),
       };
-      const project = touchProject({
-        ...state.project,
-        nodes: state.project.nodes.map((entry) => (entry.id === nodeId ? nextNode : entry)),
-        edges: state.project.edges.map((edge) =>
-          edge.source === nodeId || edge.target === nodeId
-            ? {
-                ...edge,
-                sourceHandle: edge.source === nodeId ? swapped(edge.sourceHandle) : edge.sourceHandle,
-                targetHandle: edge.target === nodeId ? swapped(edge.targetHandle) : edge.targetHandle,
-              }
-            : edge,
+      const project = touchProject(
+        renumberAfterSectionsSwapped(
+          {
+            ...state.project,
+            nodes: state.project.nodes.map((entry) => (entry.id === nodeId ? nextNode : entry)),
+            edges: state.project.edges.map((edge) =>
+              edge.source === nodeId || edge.target === nodeId
+                ? {
+                    ...edge,
+                    sourceHandle: edge.source === nodeId ? swapped(edge.sourceHandle) : edge.sourceHandle,
+                    targetHandle: edge.target === nodeId ? swapped(edge.targetHandle) : edge.targetHandle,
+                  }
+                : edge,
+            ),
+          },
+          nodeId,
+          section,
+          other,
         ),
-      });
+      );
       return withProjectHistory(state, {
         project,
         selectedNodeId: nodeId,
@@ -3546,10 +3563,12 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
               targetHandle: target.handleId,
             };
       });
+      // Port rates and spare splits on the absorbed cards follow their sections.
+      const rehomed = rehomeSectionFields(state.project, host.id, moved);
       const project = touchProject(
         pruneOrphanStorages({
-          ...state.project,
-          nodes: state.project.nodes
+          ...rehomed,
+          nodes: rehomed.nodes
             .filter((node) => node.id === host.id || !moved.has(node.id))
             .map((node) =>
               node.id === host.id ? { ...node, machineHandlerId: handler.id, extraRecipes } : node,
@@ -6132,7 +6151,7 @@ function touchProject(project: FactoryProject): FactoryProject {
     // a custom rate card never keeps a resource after its last wire goes —
     // whether the wire, the machine at the far end or a whole selection was
     // what got deleted.
-    ...normalizeProjectHatchInputs(normalizeFullFarms(releaseCustomRates(project))),
+    ...prunePlanFields(normalizeProjectHatchInputs(normalizeFullFarms(releaseCustomRates(project)))),
     metadata: {
       ...project.metadata,
       updatedAt: new Date().toISOString(),

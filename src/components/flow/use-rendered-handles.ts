@@ -1,5 +1,6 @@
 import { useEffect, useRef } from "react";
 import { useUpdateNodeInternals } from "@xyflow/react";
+import { holdCardById } from "./node-containment";
 
 /**
  * React Flow measures a card's handles when the card MOUNTS and whenever its
@@ -24,6 +25,9 @@ export function useRenderedHandles(nodeId: string, handleIds: readonly string[])
       return;
     }
     lastKey.current = key;
+    // React Flow reads the handles' rectangles; a card the browser is skipping
+    // has none, so it is drawn for this read.
+    holdCardById(nodeId);
     updateNodeInternals(nodeId);
   }, [key, nodeId, updateNodeInternals]);
 }

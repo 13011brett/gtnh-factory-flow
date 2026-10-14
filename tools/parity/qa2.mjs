@@ -122,7 +122,17 @@ section("drawer-rules", async () => {
   await page.keyboard.up("Control");
   await wait(300);
   const after10 = (await storage(id))?.targetPerSecond;
-  rec("drawer-rules", "ctrl+wheel up on box +10", Math.abs(after10 - after - 10) < 1e-6 ? "PASS" : "FAIL", `${after} -> ${after10}`);
+  rec("drawer-rules", "ctrl+wheel up on box +10 (real wheel event, mod: round + 10)", Math.abs(after10 - after - 10) < 1e-6 ? "PASS" : "FAIL", `${after} -> ${after10}`);
+  await page.keyboard.down("Shift");
+  await page.mouse.wheel(0, -100);
+  await page.keyboard.up("Shift");
+  await wait(300);
+  const after100 = (await storage(id))?.targetPerSecond;
+  rec("drawer-rules", "shift+wheel up on box +100 (mod: round + 100)", Math.abs(after100 - after10 - 100) < 1e-6 ? "PASS" : "FAIL", `${after10} -> ${after100}`);
+  await page.mouse.wheel(0, 100);
+  await wait(300);
+  const down1 = (await storage(id))?.targetPerSecond;
+  rec("drawer-rules", "wheel down on box -1", Math.abs(down1 - after100 + 1) < 1e-6 ? "PASS" : "FAIL", `${after100} -> ${down1}`);
   for (const k of ["acid", "methane"]) {
     await focus(ids[k]);
     await page.locator(nodeSel(ids[k]) + " .cd-key").click();

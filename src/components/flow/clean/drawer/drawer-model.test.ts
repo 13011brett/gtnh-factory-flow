@@ -117,3 +117,48 @@ describe("drawer.css", () => {
     });
   }
 });
+
+describe("the drawer's tips are the mod's (DrawerCard.tip)", () => {
+  const base = { label: "Aniline", unanchored: false, unmet: false, linked: true };
+  const product = (patch = {}) =>
+    buildDrawerView({
+      ...base,
+      storage: storage({ targetPerSecond: 1, targetMode: "at-least" }),
+      role: "product",
+      result: { netPerSecond: 1 } as never,
+      ...patch,
+    });
+
+  it("the bar says what it is and what the mouse does", () => {
+    const tip = product().tips.bar;
+    expect(tip).toMatchObject({ title: "Aniline", sub: "Product" });
+    expect(tip.actions).toEqual([
+      { input: "drag", label: "Move" },
+      { input: "left", label: "Select" },
+    ]);
+  });
+
+  it("the rule key and the rate box carry their lines", () => {
+    const view = product();
+    expect(view.tips.rule).toMatchObject({ title: "Rule", sub: "At least" });
+    expect(view.tips.rule.actions?.map((a) => a.label)).toEqual(["Pick", "Next", "Clear"]);
+    expect(view.tips.rate.title).toBe("Target rate");
+    expect(view.tips.rate.actions?.map((a) => a.label)).toEqual(["Type (2.5k, 1/3)", "+1, Ctrl 10, Shift 100", "Clear"]);
+    expect(view.tips.del).toMatchObject({ title: "Delete this drawer", actions: [{ input: "left", label: "Delete" }] });
+  });
+
+  it("an unconnected drawer says so, and a short one says how short", () => {
+    const view = product({ linked: false, unmet: true, result: { netPerSecond: 0.5 } as never });
+    expect(view.tips.body.notes).toContainEqual({ text: "Unconnected", tone: "warn" });
+    expect(view.tips.body.notes?.some((n) => n.text.startsWith("Reaches only") && n.tone === "red")).toBe(true);
+    expect(view.tips.body.rows).toEqual([{ label: "Takes", value: "0.5 /s" }]);
+  });
+
+  it("no rate yet on Any, trash keeps its one line", () => {
+    const any = buildDrawerView({ ...base, storage: storage(), role: "product", result: { netPerSecond: 0 } as never });
+    expect(any.tips.rate.title).toBe("No rate yet");
+    const trash = buildDrawerView({ ...base, storage: storage({ drainMode: "trash" }), role: "trash", result: undefined });
+    expect(trash.tips.rule.title).toBe("Trash");
+    expect(trash.tips.rule.actions).toEqual([{ input: "left", label: "Keep it instead" }]);
+  });
+});

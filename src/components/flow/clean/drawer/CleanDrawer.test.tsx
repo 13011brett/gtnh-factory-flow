@@ -121,7 +121,9 @@ describe("the clean drawer", () => {
     const box = container.querySelector(".cd-box")!;
     expect(box.hasAttribute("data-unmet")).toBe(true);
     expect(box.getAttribute("data-tone")).toBe("bad");
-    expect(box.getAttribute("title")).toContain("Reaches: 1 /s");
+    const tip = JSON.parse(box.getAttribute("data-tip")!);
+    expect(tip.title).toBe("Target rate");
+    expect(tip.rows).toContainEqual({ label: "Reaches", value: "1 /s", tone: "red" });
   });
 
   it("trash has no rule: a key and the word Voided", () => {

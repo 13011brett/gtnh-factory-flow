@@ -127,3 +127,44 @@ it("hides on a press and on a wheel step", () => {
   });
   expect(shown()).toBeNull();
 });
+
+it("gives a titled control the same 0.8 s wait on a plan board, and drops the native title", async () => {
+  const { setRestWait } = await import("./rest-tracker");
+  setRestWait(800);
+  const key = document.createElement("button");
+  key.setAttribute("data-test-target", "");
+  key.setAttribute("title", "Undo\nLast change");
+  document.body.appendChild(key);
+  move(key);
+  expect(key.hasAttribute("title")).toBe(false);
+  act(() => vi.advanceTimersByTime(700));
+  expect(shown()).toBeNull();
+  act(() => vi.advanceTimersByTime(150));
+  expect(shown()?.textContent).toContain("Undo");
+  expect(shown()?.textContent).toContain("Last change");
+  setRestWait(0);
+});
+
+it("words the keys the mod words, by aria-label, over the website's short title", async () => {
+  const { setRestWait } = await import("./rest-tracker");
+  setRestWait(800);
+  const key = document.createElement("button");
+  key.setAttribute("data-test-target", "");
+  key.setAttribute("aria-label", "Rate unit: per second");
+  document.body.appendChild(key);
+  move(key);
+  act(() => vi.advanceTimersByTime(900));
+  expect(shown()?.textContent).toContain("Rate unit: per tick, second, minute or hour");
+  setRestWait(0);
+});
+
+it("leaves titles alone on a classic board", () => {
+  const key = document.createElement("button");
+  key.setAttribute("data-test-target", "");
+  key.setAttribute("title", "Classic");
+  document.body.appendChild(key);
+  move(key);
+  act(() => vi.advanceTimersByTime(2000));
+  expect(key.getAttribute("title")).toBe("Classic");
+  expect(shown()).toBeNull();
+});

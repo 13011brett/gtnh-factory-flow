@@ -17,17 +17,18 @@ describe("a typed port rate", () => {
 
 describe("the wheel on the rate box", () => {
   const none = { shiftKey: false, ctrlKey: false };
-  it("steps by 1, Ctrl by 10, Shift by 100, landing on whole steps", () => {
+  it("rounds the shown figure then adds 1, Ctrl 10, Shift 100 (the mod, not a landing on whole steps)", () => {
     expect(stepShownRate(2.3, true, none)).toBe(3);
     expect(stepShownRate(3, true, none)).toBe(4);
-    expect(stepShownRate(2.3, false, none)).toBe(2);
-    expect(stepShownRate(14, true, { shiftKey: false, ctrlKey: true })).toBe(20);
-    expect(stepShownRate(14, true, { shiftKey: true, ctrlKey: false })).toBe(100);
+    expect(stepShownRate(2.7, false, none)).toBe(2);
+    expect(stepShownRate(8, true, { shiftKey: false, ctrlKey: true })).toBe(18);
+    expect(stepShownRate(14, true, { shiftKey: true, ctrlKey: false })).toBe(114);
   });
 
   it("clears below 1", () => {
     expect(stepShownRate(1, false, none)).toBeUndefined();
     expect(stepShownRate(0.4, false, none)).toBeUndefined();
+    expect(stepShownRate(10, false, { shiftKey: false, ctrlKey: true })).toBeUndefined();
     expect(stepShownRate(5, false, { shiftKey: false, ctrlKey: true })).toBeUndefined();
   });
 });

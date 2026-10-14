@@ -24,7 +24,6 @@ import { getCategoryPresentation } from "@/lib/model/category-presentation";
 import { useDropdownDismiss } from "@/lib/hooks/use-dropdown-dismiss";
 import { getUiScale } from "@/lib/ui-scale";
 import { playBoardSound, suppressBoardSound } from "@/lib/board-sounds";
-import { fluidArtPixels, FLUID_ICON_SCALE, ResourceIcon } from "@/components/nei/ResourceIcon";
 import { useFactoryStore } from "@/store/factory-store";
 import type { BrowseMode as PortBrowseMode } from "@/components/browse-menu";
 import { isWiringConnection } from "../../connection-drag";
@@ -36,6 +35,8 @@ import { usePortRowBrowse } from "../../use-port-row-browse";
 import type { StorageNodeData } from "../../StorageNode";
 import { checklistLocked } from "../../RecipeNode";
 import { TO_PRODUCT, TO_TRASH, buildDrawerView } from "./drawer-model";
+import { DrawerIcon } from "./DrawerIcon";
+import { ensureInteractionHost, tipAttrs } from "../interaction";
 import type { TargetMode } from "@/lib/model/storage-target";
 
 /** A press that moved this far (screen px) before release is a drag, not a click. */
@@ -61,22 +62,6 @@ const WELL_HANDLE: CSSProperties = {
   opacity: 0,
   zIndex: 30,
 };
-
-const ICON_PX = 32;
-const FLUID_BREATHE_PX = 4;
-const ITEM_SPRITE_MARGIN_SCALE = 2;
-
-/** The sprite size that makes the art fill a box (the classic drawer's rule, kept). */
-function iconPixelSize(
-  boxPx: number,
-  storage: Pick<FactoryStorage, "kind" | "iconPath" | "iconAtlas">,
-): number {
-  const plainFluid = storage.kind === "fluid" && !storage.iconPath && !storage.iconAtlas;
-  if (plainFluid) return Math.round((boxPx - FLUID_BREATHE_PX) / FLUID_ICON_SCALE);
-  if (storage.kind === "fluid") return fluidArtPixels(boxPx);
-  if (storage.kind === "item") return boxPx * ITEM_SPRITE_MARGIN_SCALE;
-  return boxPx;
-}
 
 function useNativeWheel(element: HTMLElement | null, onWheel: (event: WheelEvent) => void) {
   const handler = useRef(onWheel);
@@ -146,6 +131,7 @@ export function CleanDrawer({
   role: StorageRole;
 }) {
   const { storage, result } = data;
+  useEffect(() => ensureInteractionHost(), []);
   const category = useFactoryStore((state) =>
     getCategoryPresentation(state.project.recipes, storage.kind, storage.resourceId),
   );
@@ -269,7 +255,7 @@ export function CleanDrawer({
       // Scrolling down to under one in the shown unit clears the rate.
       const step = event.shiftKey ? 100 : event.ctrlKey || event.metaKey ? 10 : 1;
       const shown = Math.abs(rule.target ?? 0) * rateMultiplierForKind(storage.kind);
-      if (Math.ceil(shown / step - 1e-9) * step - step < 1) {
+      if (Math.round(shown) - step < 1) {
         promote();
         playBoardSound("dialRate", { step: 0 });
         suppressBoardSound("adjust", 150);
@@ -278,7 +264,8 @@ export function CleanDrawer({
       }
     }
     promote();
-    rule.stepRate(up, event);
+    // The mod's step: the shown figure rounded, plus 1, 10 with Ctrl or 100 with Shift.
+    rule.stepRate(up, { shiftKey: event.shiftKey, ctrlKey: event.ctrlKey, metaKey: event.metaKey, add: true });
   });
 
   const middle = (event: MouseEvent) => {
@@ -397,27 +384,14 @@ export function CleanDrawer({
           aria-hidden
         />
         <div className="cd-fill" aria-hidden>
-          <div className="cd-bar" title={view.tips.bar} />
+          <div className="cd-bar" {...tipAttrs(view.tips.bar)} />
         </div>
-        <ResourceIcon
-          resource={{
-            ...storage,
-            id: storage.resourceId,
-            amount: 1,
-            alternatives: category?.alternatives,
-          }}
-          showAmount={false}
-          bare
-          tooltip={false}
-          showConsumedState={false}
-          iconPixelSize={iconPixelSize(ICON_PX, storage)}
-          className="cd-icon"
-        />
+        <DrawerIcon storage={storage} alternatives={category?.alternatives} />
         <div
           role="button"
           tabIndex={0}
           className="cd-del"
-          title={view.tips.del}
+          {...tipAttrs(view.tips.del)}
           aria-label="Delete drawer"
           onPointerDownCapture={pressed}
           onClick={(event) => {
@@ -428,7 +402,7 @@ export function CleanDrawer({
         <div
           className="cd-body"
           data-lit={lit ? "" : undefined}
-          title={rule.open ? undefined : view.tips.body}
+          {...tipAttrs(view.tips.body)}
           onPointerEnter={() => {
             rowBrowse.handlers.onPointerEnter();
             if (!isWiringConnection() && !checklistLocked()) {
@@ -493,7 +467,7 @@ export function CleanDrawer({
               data-mark={view.ruleMark}
               data-any={view.rule === "ignore" || view.kind === "trash" ? "" : undefined}
               data-open={rule.open ? "" : undefined}
-              title={rule.open ? undefined : view.tips.rule}
+              {...tipAttrs(view.tips.rule)}
               aria-haspopup="menu"
               aria-expanded={rule.open}
               aria-label={`Rule: ${view.kind === "trash" ? "Trash" : RULE_NAME[view.rule]}`}
@@ -525,7 +499,7 @@ export function CleanDrawer({
               tabIndex={view.kind === "trash" ? undefined : 0}
               className="cd-box nodrag nowheel"
               data-editing={editing ? "" : undefined}
-              title={view.tips.rate}
+              {...(view.kind === "trash" ? tipAttrs(view.tips.body) : tipAttrs(view.tips.rate))}
               aria-label={
                 view.target
                   ? `Your rate: ${view.target.number} ${view.target.unit}`
@@ -626,20 +600,7 @@ export function CleanDrawerFace({
         <div className="cd-bar" />
       </div>
       <div className="cd-body">
-        <ResourceIcon
-          resource={{
-            ...storage,
-            id: storage.resourceId,
-            amount: 1,
-            alternatives: category?.alternatives,
-          }}
-          showAmount={false}
-          bare
-          tooltip={false}
-          showConsumedState={false}
-          iconPixelSize={iconPixelSize(ICON_PX, storage)}
-          className="cd-icon"
-        />
+        <DrawerIcon storage={storage} alternatives={category?.alternatives} />
         <span className="cd-num" data-unit={view.unit} data-zero="">
           {view.number}
         </span>

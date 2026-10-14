@@ -49,7 +49,7 @@ import { findUnanchored } from "./unanchored";
  * the hidden tanks of loose cell wires, so a wire the player drew once counts
  * as one step. Cores that do not know the field ignore it.
  */
-export type PlanSolveInput = SolveInput & { weightless?: Id[] };
+export type PlanSolveInput = SolveInput;
 
 /** One machine of the model: the solve node, its report and its port rows. */
 export interface MachineEntry {

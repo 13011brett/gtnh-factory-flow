@@ -1,6 +1,8 @@
 import { compareIds } from "../ids";
 import { makeLeftoverKey } from "../port-key";
 import type {
+  Alternative,
+  Alternatives,
   Answer,
   DrawerReadout,
   External,
@@ -8,10 +10,13 @@ import type {
   Leftover,
   Note,
   PlanForced,
+  PlanBearer,
   PlanLeftover,
+  PlanSide,
   PlanSolveExtras,
   PlanTerminal,
   PortKey,
+  PortRef,
 } from "../types";
 import type { PlanModel } from "./model";
 
@@ -29,6 +34,13 @@ const EMPTY_DRAWERS: DrawerReadout = { rates: {}, unmet: [], shortfalls: [] };
 
 /** Rates below this share of the port's own rate are solver dust. */
 const DUST = 1e-9;
+
+const CHOICE_NOTES: ReadonlySet<Note["message"]> = new Set([
+  "CHOICE_NO_LONGER_FITS",
+  "CHOICE_NEEDS_MORE_GATES",
+  "SHOWING_CLOSEST",
+  "STOPPED_EARLY",
+]);
 
 export function readAnswer(model: PlanModel, answer: Answer): PlanReading {
   const edgeFlows = new Map<string, number>();
@@ -50,10 +62,10 @@ export function readAnswer(model: PlanModel, answer: Answer): PlanReading {
         unneeded: [],
         unanchored: model.unanchored,
         terminals: [],
-        notes: answer.notes,
+        notes: [...answer.notes],
         openGates: 0,
         failure: answer.failure,
-        unmetDrawers: answer.drawers.unmet,
+        unmetDrawers: [...answer.drawers.unmet],
       },
     };
   }
@@ -128,10 +140,38 @@ export function readAnswer(model: PlanModel, answer: Answer): PlanReading {
     .filter((e) => !model.drawerPorts.has(e.portKey))
     .map((e) => ({ nodeId: e.node, portKey: e.portKey, side: e.side, perSecond: e.perSecond }));
 
-  const leftovers = solution.spares.flatMap((spare) => readLeftover(model, spare));
+  const leftovers = solution.spares.flatMap((spare) => readLeftover(model, spare, alternatives));
+  // A forced row finds its decision through what crosses at the places' gates (a stored split puts flow at
+  // more than one place; every one of them is the same decision).
+  const decisionOfPort = new Map<PortKey, PortKey>();
+  for (const leftover of leftovers) {
+    if (leftover.decision === undefined) {
+      continue;
+    }
+    for (const bearer of leftover.bearers) {
+      for (const place of bearer.whole ?? []) {
+        decisionOfPort.set(place.portKey, leftover.decision);
+      }
+      for (const flow of bearer.flows) {
+        decisionOfPort.set(flow.portKey, leftover.decision);
+      }
+    }
+  }
+  for (const row of forced) {
+    const decision = decisionOfPort.get(row.portKey);
+    if (decision !== undefined) {
+      row.decision = decision;
+    }
+  }
 
   const unneeded = solution.unneeded.filter((id) => model.machines.has(id) && !model.hidden.has(id));
   const notes: Note[] = [...solution.notes, ...alternatives.notes];
+  const choiceNotes = notes.filter((n) => CHOICE_NOTES.has(n.message));
+  const anchorKeys = (refs: PortRef[]): PortKey[] =>
+    refs.flatMap((ref) => {
+      const row = model.row(ref);
+      return row ? [row.portKey] : [];
+    });
 
   return {
     solved: true,
@@ -146,17 +186,27 @@ export function readAnswer(model: PlanModel, answer: Answer): PlanReading {
       notes,
       openGates: solution.openGates,
       unmetDrawers: (solution.drawers ?? EMPTY_DRAWERS).unmet,
+      chosen: anchorKeys(alternatives.chosen?.gateAnchors ?? solution.key.gateAnchors),
+      alternativesComplete: alternatives.complete,
+      choiceNotes,
     },
   };
 }
 
-function readLeftover(model: PlanModel, spare: Leftover): PlanLeftover[] {
-  const bearers = [];
+function readLeftover(model: PlanModel, spare: Leftover, alternatives: Alternatives): PlanLeftover[] {
+  const pick = spare.bearers.find((b) => b.solverPick) ?? spare.bearers[0];
+  const pickRow = pick ? model.row(pick.anchor) : undefined;
+  const sideOf = (ref: PortRef): PlanSide => (ref.input ? "in" : "out");
+  const bearers: PlanBearer[] = [];
   for (const bearer of spare.bearers) {
     const row = model.row(bearer.anchor);
     if (!row) {
       return [];
     }
+    // The search's option this place is: the same decision, opening this gate.
+    const option: Alternative | undefined = alternatives.options.find(
+      (o) => samePort(o.opens, bearer.anchor) && pick !== undefined && samePort(o.replaces, pick.anchor),
+    );
     bearers.push({
       portKey: row.portKey,
       maxPerSecond: bearer.max,
@@ -166,10 +216,32 @@ function readLeftover(model: PlanModel, spare: Leftover): PlanLeftover[] {
         const flowRow = model.row(flow.port);
         return flowRow ? [{ portKey: flowRow.portKey, perSecond: flow.ratePerSecond }] : [];
       }),
+      nodeId: bearer.anchor.node,
+      side: sideOf(bearer.anchor),
+      resourceKey: row.key,
+      ...(option
+        ? {
+            rank: option.rank,
+            whole: option.externals.flatMap((e) => {
+              const r = model.row(e.port);
+              return r ? [{ portKey: r.portKey, side: sideOf(e.port), perSecond: e.ratePerSecond }] : [];
+            }),
+            support: option.key.gateAnchors.flatMap((a) => {
+              const r = model.row(a);
+              return r ? [r.portKey] : [];
+            }),
+          }
+        : {}),
     });
   }
   if (bearers.length === 0) {
     return [];
+  }
+  const split: Record<PortKey, number> = {};
+  const defaultSplit: Record<PortKey, number> = {};
+  for (const b of bearers) {
+    split[b.portKey] = b.share;
+    defaultSplit[b.portKey] = b.solverPick ? 1 : 0;
   }
   return [
     {
@@ -177,6 +249,13 @@ function readLeftover(model: PlanModel, spare: Leftover): PlanLeftover[] {
       importing: spare.importing,
       custom: spare.custom,
       bearers,
+      ...(pickRow ? { decision: pickRow.portKey, resourceKey: pickRow.key } : {}),
+      split,
+      defaultSplit,
     },
   ];
+}
+
+function samePort(a: PortRef, b: PortRef): boolean {
+  return a.node === b.node && a.port === b.port && a.input === b.input;
 }

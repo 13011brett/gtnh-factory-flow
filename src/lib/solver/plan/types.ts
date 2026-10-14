@@ -116,6 +116,11 @@ export interface SolveInput {
   extentPins: Record<Id, number>;
   /** Stored leftover splits: leftover key -> bearer key -> share. */
   spares: Record<string, Record<string, number>>;
+  /**
+   * Machines that are no step of their own in `portSteps` (the hidden tank of a loose cell wire: the player drew one
+   * wire, so it counts as one). Website-only; the Java has no such field. Absent = none.
+   */
+  weightless?: Id[];
 }
 
 // ---------------------------------------------------------------------------
@@ -304,8 +309,14 @@ export interface PlanForced {
   /** `kind:id` of the port's row. */
   resourceKey: string;
   perSecond: number;
+  /**
+   * The decision (see `PlanLeftover.decision`) this open gate belongs to, when the solver listed one: the card's and
+   * the rail's way from a forced row to its alternative places. Absent when the gate has no listed alternatives.
+   */
+  decision?: PortKey;
 }
 
+/** One place a leftover can be borne at: an open gate named by a port of it. */
 export interface PlanBearer {
   portKey: PortKey;
   /** What crosses at this place when it bears the whole leftover. */
@@ -315,6 +326,20 @@ export interface PlanBearer {
   solverPick: boolean;
   /** What crosses at the gate's ports now. */
   flows: Array<{ portKey: PortKey; perSecond: number }>;
+  /** The solve node and side of `portKey` (the place's card and whether it sits on an input or an output). */
+  nodeId?: Id;
+  side?: PlanSide;
+  /** `kind:id` of the place's resource. */
+  resourceKey?: string;
+  /** Why it is not the default (`DEFAULT` for the solver's own pick). */
+  rank?: Rank;
+  /** What crosses at each of the gate's ports when this place bears the whole leftover. */
+  whole?: Array<{ portKey: PortKey; side: PlanSide; perSecond: number }>;
+  /**
+   * The whole support picking this place implies, as the open gates' anchors (the engine's `ChoiceKey`): what a stored
+   * choice of it would be. `spareShares` is how it is stored (100% on this place), not this.
+   */
+  support?: PortKey[];
 }
 
 export interface PlanLeftover {
@@ -327,6 +352,17 @@ export interface PlanLeftover {
   importing: boolean;
   custom: boolean;
   bearers: PlanBearer[];
+  /**
+   * The decision this leftover is: the anchor of the open gate the solver's own answer opens (= the solver-pick
+   * bearer's `portKey`). `PlanForced.decision` points here.
+   */
+  decision?: PortKey;
+  /** `kind:id` of the leftover's resource (every place of it carries this one). */
+  resourceKey?: string;
+  /** Each place's part now, by `portKey` (sums to 1): the stored split when `custom`, else the default. */
+  split?: Record<PortKey, number>;
+  /** The solver's own split: 1 on the solver-pick place, 0 elsewhere ("Auto" puts it back). */
+  defaultSplit?: Record<PortKey, number>;
 }
 
 /** An unwired port: a free terminal that imports or exports at its own rate. */
@@ -351,4 +387,10 @@ export interface PlanSolveExtras {
   failure?: PlanNote;
   /** Drawers whose rule the answer does not keep. */
   unmetDrawers?: Id[];
+  /** The open gates the answer uses, as the anchors a stored choice names (engine `ChoiceKey`, as PortKeys). */
+  chosen?: PortKey[];
+  /** false when the alternatives search was cut short (the rail says the list may be partial). */
+  alternativesComplete?: boolean;
+  /** The alternatives search's and the stored choice's own notes (SHOWING_CLOSEST, STOPPED_EARLY, CHOICE_*), already in `notes`. */
+  choiceNotes?: PlanNote[];
 }

@@ -176,7 +176,10 @@ export type SolveResult =
   | { ok: true; point: StageOutcome; x: number[] }
   | { ok: false; rejection: Note };
 
-/** HiGHS settings tried in turn; the first conserving answer wins, "no solution" needs every one to say so. */
+/**
+ * HiGHS settings tried in turn; the first conserving answer wins. "No solution" is believed once two of them say so
+ * (the Java believes it when its two simplex set-ups agree); the third is for answers that are wrong, not absent.
+ */
 const OPINIONS: Array<Record<string, number | string | boolean>> = [
   {},
   { presolve: "off" },
@@ -188,6 +191,9 @@ const OPINIONS: Array<Record<string, number | string | boolean>> = [
     dual_feasibility_tolerance: 1e-9,
   },
 ];
+
+/** Settings that must say "no solution" before it is believed. */
+const VERDICTS_NEEDED = 2;
 
 let columnOrder: "forward" | "reverse" = "forward";
 let lpCount = 0;
@@ -292,6 +298,7 @@ export function runModel(ctx: SolveContext, lp: ModelLp, label: string): SolveRe
     return { ok: false, rejection: ctx.rejection };
   }
   let last: Note = note("SOLVER_UNSATISFIABLE", "infeasible");
+  let verdicts = 0;
   for (const opinion of OPINIONS) {
     let solution;
     try {
@@ -302,6 +309,7 @@ export function runModel(ctx: SolveContext, lp: ModelLp, label: string): SolveRe
     }
     if (solution.status !== "optimal") {
       last = note("SOLVER_UNSATISFIABLE", solution.status);
+      if (++verdicts >= VERDICTS_NEEDED) break;
       continue;
     }
     // `+ 0` turns a negative zero into a zero
@@ -321,4 +329,31 @@ export function runModel(ctx: SolveContext, lp: ModelLp, label: string): SolveRe
   }
   ctx.rejection = last;
   return { ok: false, rejection: last };
+}
+
+/**
+ * One run of a model the check does not apply to (a relaxation that is allowed to break rows), under the first HiGHS
+ * setting only, with the dual of every row. Returns null when there is no HiGHS or no optimum: the caller then rules
+ * nothing out. Counted like any LP.
+ */
+export function runRelaxation(
+  lp: ModelLp,
+  label: string,
+): { lowered: Lowered; x: number[]; objective: number; rowDuals: number[] } | null {
+  lpHook?.(label);
+  lpCount++;
+  const lowered = lower(lp);
+  if (lowered.infeasible) return null;
+  let solution;
+  try {
+    solution = solveLpAuto(lowered.program, { rowDuals: true });
+  } catch {
+    return null;
+  }
+  if (solution.status !== "optimal" || !solution.rowDuals) return null;
+  const x = lp.lo.map((_, c) => {
+    const k = lowered.colOf[c]!;
+    return (k < 0 ? lowered.fixed[c]! : (solution.x[k] ?? 0)) + 0;
+  });
+  return { lowered, x, objective: solution.objective, rowDuals: solution.rowDuals };
 }

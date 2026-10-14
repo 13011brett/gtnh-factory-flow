@@ -206,6 +206,11 @@ export function buildModel(input: SolveInput): ModelData {
   }
 
   const { portComponent, portGate, gates } = buildGates(connectedPorts, edges);
-  const portSteps = portStepsOf(machines.length, connectedPorts, portComponent);
+  const weightless = machines.map(() => false);
+  for (const id of input.weightless ?? []) {
+    const m = machineIndex.get(id);
+    if (m !== undefined) weightless[m] = true;
+  }
+  const portSteps = portStepsOf(machines.length, connectedPorts, portComponent, weightless);
   return { machines, machineIndex, edges, connectedPorts, portLookup, gates, pools, drawers, portGate, portComponent, portSteps };
 }

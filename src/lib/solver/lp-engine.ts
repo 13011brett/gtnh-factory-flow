@@ -22,7 +22,7 @@ interface HighsInstance {
   ) => {
     Status: string;
     Columns: Record<string, { Primal: number; Status?: string }>;
-    Rows?: Array<{ Status?: string }>;
+    Rows?: Array<{ Status?: string; Dual?: number | null }>;
   };
 }
 
@@ -92,6 +92,8 @@ export interface LpSolveOptions {
    * basis does not describe a vertex.
    */
   exactPrimal?: boolean;
+  /** Also return the dual of every row (see `LpSolution.rowDuals`). */
+  rowDuals?: boolean;
 }
 
 export function hasIntegerColumns(lp: LinearProgram): boolean {
@@ -176,7 +178,10 @@ function solveWithHighs(
   lines.push("Subject To");
   let rowIndex = 0;
   const writtenRows: BasisRow[] = [];
+  const writtenIndex: number[] = [];
+  let originalIndex = 0;
   for (const originalRow of lp.equalities) {
+    const rowNumber = originalIndex++;
     const row = scaledRow(originalRow);
     const terms: string[] = [];
     for (const [c, v] of row.coefficients) {
@@ -189,9 +194,11 @@ function solveWithHighs(
     }
     lines.push(` e${rowIndex}: ${terms.join(" ")} = ${format(row.rhs)}`);
     writtenRows.push(originalRow);
+    writtenIndex.push(rowNumber);
     rowIndex += 1;
   }
   for (const originalRow of lp.upperBounds) {
+    const rowNumber = originalIndex++;
     const row = scaledRow(originalRow);
     const terms: string[] = [];
     for (const [c, v] of row.coefficients) {
@@ -204,6 +211,7 @@ function solveWithHighs(
     }
     lines.push(` u${rowIndex}: ${terms.join(" ")} <= ${format(row.rhs)}`);
     writtenRows.push(originalRow);
+    writtenIndex.push(rowNumber);
     rowIndex += 1;
   }
   // A column that no row or objective term names is not in the program HiGHS
@@ -264,6 +272,14 @@ function solveWithHighs(
   let objective = 0;
   for (let c = 0; c < n; c += 1) {
     objective += lp.maximize[c]! * x[c]!;
+  }
+  if (solveOptions.rowDuals && !mip) {
+    const rowDuals = new Array<number>(originalIndex).fill(0);
+    (solved.Rows ?? []).forEach((r, i) => {
+      const dual = (r as { Dual?: number | null }).Dual;
+      if (writtenIndex[i] !== undefined && typeof dual === "number" && Number.isFinite(dual)) rowDuals[writtenIndex[i]!] = dual;
+    });
+    return { status: "optimal", x, objective, rowDuals };
   }
   return { status: "optimal", x, objective };
 }

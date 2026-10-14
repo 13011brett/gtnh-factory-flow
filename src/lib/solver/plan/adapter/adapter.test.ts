@@ -16,6 +16,13 @@ import { setSolveCore } from "./engine";
 
 afterEach(() => setSolveCore(undefined));
 
+/** The mocks predate the extras' decision field. */
+function withoutDecision<T extends { decision?: string }>(row: T): Omit<T, "decision"> {
+  const copy = { ...row };
+  delete copy.decision;
+  return copy;
+}
+
 const NO_DRAWERS = { rates: {}, unmet: [], shortfalls: [] };
 
 /** The port a mock PortKey names, in the input the adapter produced. */
@@ -109,8 +116,8 @@ describe("answer to books, replaying the UI mocks", () => {
       const want = mock.result.plan!;
       const got = out.plan!;
       const byPort = <T extends { portKey: string }>(list: T[]) => [...list].sort((a, b) => a.portKey.localeCompare(b.portKey));
-      expect(byPort(got.forced)).toEqual(byPort(want.forced));
-      expect(got.leftovers).toEqual(want.leftovers);
+      expect(byPort(got.forced).map(withoutDecision)).toEqual(byPort(want.forced));
+      expect(got.leftovers).toMatchObject(want.leftovers);
       expect(got.unneeded).toEqual(want.unneeded);
       expect([...got.unanchored].sort()).toEqual([...want.unanchored].sort());
       expect(got.notes).toEqual(want.notes);
@@ -290,6 +297,8 @@ describe.skipIf(solveForTest === null)("with the real solver core", () => {
     }
     const byPort = <T extends { portKey: string }>(list: T[]) =>
       [...list].sort((a, b) => a.portKey.localeCompare(b.portKey));
-    expect(byPort(out.plan!.forced)).toEqual(byPort(mockForced.result.plan!.forced));
+    expect(byPort(out.plan!.forced).map(withoutDecision)).toEqual(
+      byPort(mockForced.result.plan!.forced),
+    );
   });
 });

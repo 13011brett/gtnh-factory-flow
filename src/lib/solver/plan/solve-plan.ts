@@ -3,6 +3,7 @@
  * each solved by the full chain (drawer relaxation, stored choice, alternatives, spares) with island-local indexing, then
  * merged into one `SolutionView` + `Alternatives` read over the whole plan. A pure function: same input, same output.
  */
+import { inputDigest, type PieceCache } from "./cache";
 import { SolveContext, type StageOutcome } from "./context";
 import { applyChoice, enumerate } from "./enumerate";
 import { splitIslands } from "./islands";
@@ -37,12 +38,24 @@ function portOf(whole: SolveContext, ref: PortRef): number {
   return whole.model.portLookup.get(portKey(whole.model.machineIndex.get(ref.node)!, ref.port, ref.input))!;
 }
 
-/** The plan's answer: every island solved by itself, read together as one plan's. */
-export function solvePlan(input: SolveInput, ext: CoreExtensions = planExtensions): Answer {
+/**
+ * The plan's answer: every island solved by itself, read together as one plan's. With a `cache` an island whose input
+ * was solved before (by value) is read back, not solved again; the answer is the same either way.
+ */
+export function solvePlan(input: SolveInput, ext: CoreExtensions = planExtensions, cache?: PieceCache): Answer {
+  const solveIsland = (island: SolveInput): Piece => {
+    if (!cache) return solvePiece(island, ext);
+    const key = inputDigest(island);
+    const kept = cache.get(key);
+    if (kept) return kept;
+    const piece = solvePiece(island, ext);
+    cache.set(key, piece);
+    return piece;
+  };
   const islands = splitIslands(input);
-  if (islands.length === 1) return solvePiece(input, ext).answer;
-  const pieces: Piece[] = islands.map((island) => solvePiece(island, ext));
-  if (!pieces.some((p) => p.answer.kind === "solved")) return solvePiece(input, ext).answer;
+  if (islands.length === 1) return solveIsland(input).answer;
+  const pieces: Piece[] = islands.map(solveIsland);
+  if (!pieces.some((p) => p.answer.kind === "solved")) return solveIsland(input).answer;
 
   const whole = new SolveContext(input);
   const model = whole.model;

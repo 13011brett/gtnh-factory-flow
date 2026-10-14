@@ -2460,6 +2460,52 @@ html:not([data-app-font="minecraft"]) [class*="[text-shadow:"] {
   stroke: #7b8b9c;
 }
 
+/* PULSE TIERS (animation-phase.ts, useBoardPulseGate). Every running animation
+   is a compositor layer and a main-thread tick: 200 cards with an unwired port
+   idled at 35 ms a frame, 2,580 layers. The board therefore caps how much of it
+   breathes, by the number of cards carrying a mark, on the board's data-pulse:
+
+   (none)  a small board: everything breathes, as above.
+   ring    one animation a card, its ring; the slot, reason cell and wash marks
+           and the hovered-resource glow are steady, at about mid breath.
+   still   nothing breathes; every mark is steady.
+
+   The steady values sit in the middle of each mark's range. Later in the
+   file than the rules they override, with one more class of specificity. */
+.factory-flow-board[data-pulse] .recipe-node-shell[data-verdict="unwired"] .flow-port--bind::after {
+  animation: none;
+  opacity: 0.5;
+}
+.factory-flow-board[data-pulse] .recipe-node-shell[data-verdict="unwired"] .verdict-reason-cell {
+  animation: none;
+  opacity: 0.8;
+}
+.factory-flow-board[data-pulse]
+  .recipe-node-shell[data-verdict="unwired"]
+  .verdict-reason-cell::after {
+  animation: none;
+  opacity: 0.5;
+}
+.factory-flow-board[data-pulse] .resource-glow::after,
+.factory-flow-board[data-pulse] .storage-wash {
+  animation: none;
+  opacity: 0.3;
+}
+.factory-flow-board[data-pulse="still"] .unwired-ring::after {
+  animation: none;
+  opacity: 0.55;
+}
+.factory-flow-board[data-pulse="still"] .dead-loop-ring::after,
+.factory-flow-board[data-pulse="still"] .clog-lock-ring::after {
+  animation: none;
+  opacity: 0.6;
+}
+.factory-flow-board[data-pulse="still"] .dead-loop-wire,
+.factory-flow-board[data-pulse="still"] .clog-lock-wire {
+  animation: none;
+  opacity: 0.5;
+}
+
 /* Hovering the usage cell lights the marks that produced that word; a card
    has one reason, so every mark on it belongs to that word. Pure CSS: hover
    must never rebuild a node. */

@@ -1,0 +1,33 @@
+/*
+ * Cards the camera cannot see are skipped by the browser (node-containment.ts
+ * has the why). `data-cv` is set per card once it has been laid out;
+ * --cv-w/--cv-h are its size then, used only until the browser has its own
+ * remembered size (`auto`).
+ *
+ * Paint containment clips at the card's box, so the margin keeps the
+ * selection ring, the dead-loop and unwired halos, the glow outline and the
+ * overhanging handles. Anything that leaves the card further (a menu, the
+ * glance hover panel) belongs to a hovered, selected, dragged or focused card,
+ * which is never skipped. Measured: pixel-identical to no containment.
+ */
+.factory-flow-board .react-flow__node-recipeNode[data-cv],
+.factory-flow-board .react-flow__node-storageNode[data-cv] {
+  content-visibility: auto;
+  contain-intrinsic-size: auto var(--cv-w, 380px) auto var(--cv-h, 200px);
+  overflow-clip-margin: 64px;
+}
+
+.factory-flow-board .react-flow__node-recipeNode[data-cv]:hover,
+.factory-flow-board .react-flow__node-recipeNode[data-cv]:focus-within,
+.factory-flow-board .react-flow__node-recipeNode[data-cv].selected,
+.factory-flow-board .react-flow__node-recipeNode[data-cv].dragging,
+.factory-flow-board .react-flow__node-recipeNode[data-cv][data-cv-hold],
+.factory-flow-board .react-flow__node-storageNode[data-cv]:hover,
+.factory-flow-board .react-flow__node-storageNode[data-cv]:focus-within,
+.factory-flow-board .react-flow__node-storageNode[data-cv].selected,
+.factory-flow-board .react-flow__node-storageNode[data-cv].dragging,
+.factory-flow-board .react-flow__node-storageNode[data-cv][data-cv-hold],
+.factory-flow-board[data-cv-hold] .react-flow__node-recipeNode[data-cv],
+.factory-flow-board[data-cv-hold] .react-flow__node-storageNode[data-cv] {
+  content-visibility: visible;
+}

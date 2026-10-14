@@ -109,6 +109,7 @@ import { BoardContextMenu, type BoardMenuTarget } from "./BoardContextMenu";
 import { listPoolCellPairs } from "@/lib/solver/pool-mode";
 import "./pool-mode.css";
 import "./scroll-camera.css";
+import "./node-containment.css";
 import { ScrollCamera } from "./scroll-camera";
 import {
   getEffectiveNodeRecipe,
@@ -329,7 +330,13 @@ import { EDGE_HOP_MAX_RADIUS, buildHoppedPath, type HopSpan } from "./wire-hops"
 import { describeDeathSpiral, findDeathSpirals } from "./death-spiral";
 import { describeClogLock, findClogLocks } from "./clog-lock";
 import { findUnwiredNodeIds } from "./node-verdict";
-import { useBoardPulseSync } from "./animation-phase";
+import { useBoardPulseGate, useBoardPulseSync } from "./animation-phase";
+import { useSlicedMount } from "./sliced-mount";
+import {
+  CONTAINMENT_HOLD_ATTRIBUTE,
+  isCardSkipped,
+  useNodeContainment,
+} from "./node-containment";
 import {
   isWiringConnection,
   onWiringConnectionChange,
@@ -2302,6 +2309,10 @@ export function FactoryFlow() {
   // unwired cards and the notice about them, the hovered-resource wash - shares
   // one period (--board-pulse) and, from here, one phase. See animation-phase.ts.
   useBoardPulseSync(boardRef);
+  // ...and a budget of how many may run at once: see useBoardPulseGate.
+  useBoardPulseGate(boardRef);
+  // Cards off screen are skipped by the browser; see node-containment.ts.
+  useNodeContainment(boardRef);
   const flowInstanceRef = useRef<ReactFlowInstance<BoardFlowNode, ResourceFlowEdge> | null>(null);
   // A phone changes several things about the board: which cards can be dragged,
   // which toolbars are folded, where the centred banners sit.
@@ -4575,6 +4586,8 @@ export function FactoryFlow() {
       };
       setNodeDetailLevel(isStatLook ? NODE_DETAIL_GLANCE : NODE_DETAIL_FULL);
       applyCardDetail(cardDetail === "full" ? NODE_DETAIL_FULL : NODE_DETAIL_GLANCE);
+      // The photograph takes every card, on screen or not.
+      boardRef.current?.setAttribute(CONTAINMENT_HOLD_ATTRIBUTE, "");
       // Captures use the ordinary board colours (calm off) and the smart view
       // the dialog named, not the live board's; restored after.
       writeBoardView({
@@ -4706,6 +4719,7 @@ export function FactoryFlow() {
         });
         setNodeDetailLevel(restoreDetailLevel);
         applyCardDetail(restoreDetailLevel);
+        boardRef.current?.removeAttribute(CONTAINMENT_HOLD_ATTRIBUTE);
         dispatchImageExportComplete(requestId, capture, failure);
       }
     },
@@ -6144,6 +6158,21 @@ export function FactoryFlow() {
       className: [edge.className, (edge.data?.bundle?.edgeIds ?? [edge.id]).every((id) => checked.has(id)) ? "checklist-done" : ""].filter(Boolean).join(" ") }));
   }, [visibleFlowEdges, checklistMode, project.checklist]);
 
+  // A plan of hundreds of cards reaches React Flow a slice at a time, nearest the
+  // camera first (sliced-mount.ts); a small one passes straight through.
+  const sliceFocus = useCallback(() => {
+    const camera = flowInstanceRef.current?.getViewport() ?? pendingCameraRef.current;
+    const size = boardRef.current?.getBoundingClientRect();
+    if (!camera || !size || !(camera.zoom > 0)) {
+      return undefined;
+    }
+    return {
+      x: (size.width / 2 - camera.x) / camera.zoom,
+      y: (size.height / 2 - camera.y) / camera.zoom,
+    };
+  }, []);
+  const mounted = useSlicedMount(checklistNodes, checklistEdges, project.id, sliceFocus);
+
   const paintCursor =
     nodeColorPaintMode !== undefined
       ? getPaintBrushCursor(
@@ -6265,8 +6294,8 @@ export function FactoryFlow() {
       {boardMenu && !isReadOnly ? <BoardContextMenu target={boardMenu} onClose={closeBoardMenu} /> : null}
       <StorageRatioEditor />
       <ReactFlow
-        nodes={checklistNodes}
-        edges={checklistEdges}
+        nodes={mounted.nodes}
+        edges={mounted.edges}
         nodeTypes={nodeTypes}
         edgeTypes={edgeTypes}
         // A press that travels under this many pixels is a CLICK, over it a
@@ -7475,6 +7504,11 @@ const AutoSolveKeys = memo(function AutoSolveKeys() {
   );
 });
 
+/** A zoom change this large (a ratio, in nats: about 12%) writes --board-zoom at once. */
+const BOARD_ZOOM_STEP = 0.12;
+/** Smaller changes write the exact zoom once it has rested this long. */
+const BOARD_ZOOM_SETTLE_MS = 140;
+
 /**
  * The single owner of the board's zoom-detail level. Renders nothing: it
  * watches the store's transform, publishes the level for edges to subscribe
@@ -7495,20 +7529,32 @@ const NodeDetailController = memo(function NodeDetailController({
   useEffect(() => {
     let level: NodeDetailLevel = NODE_DETAIL_FULL;
     let publishedZoom = 0;
+    let settleTimer: number | undefined;
 
     // The live zoom, as a custom property on the board: the identity glance's
-    // hover popup divides by it to render at SCREEN size. Rounded so pinch
-    // jitter does not spam style invalidations.
+    // hover popup and the card's screen-size rings divide by it. It is
+    // INHERITED, so every write restyles every element under the board (6-8 us
+    // each, over a second a frame at 1000 cards). So it moves in coarse steps
+    // while the zoom is moving (a ring a few percent too thick for a moment is
+    // invisible) and lands exactly once the zoom has rested.
     const publishZoom = (zoom: number) => {
       if (!Number.isFinite(zoom) || zoom <= 0) {
         return;
       }
       const rounded = Math.round(zoom * 500) / 500;
+      window.clearTimeout(settleTimer);
       if (rounded === publishedZoom) {
         return;
       }
-      publishedZoom = rounded;
-      boardRef.current?.style.setProperty("--board-zoom", String(rounded));
+      const write = () => {
+        publishedZoom = rounded;
+        boardRef.current?.style.setProperty("--board-zoom", String(rounded));
+      };
+      if (publishedZoom === 0 || Math.abs(Math.log(rounded / publishedZoom)) >= BOARD_ZOOM_STEP) {
+        write();
+      } else {
+        settleTimer = window.setTimeout(write, BOARD_ZOOM_SETTLE_MS);
+      }
     };
 
     // The attribute carries the EFFECTIVE level (a forced glance wins over
@@ -7555,6 +7601,7 @@ const NodeDetailController = memo(function NodeDetailController({
     // level with no zoom event anywhere near it.
     const unsubscribeLevel = subscribeNodeDetailLevel(applyAttribute);
     return () => {
+      window.clearTimeout(settleTimer);
       unsubscribeZoom();
       unsubscribeLevel();
     };
@@ -10796,6 +10843,11 @@ function getMeasuredSlotEndpoint({
     `.react-flow__node[data-id="${cssEscape(nodeId)}"]`,
   );
   if (!nodeElement) {
+    return undefined;
+  }
+  // A card the browser is skipping has no inner boxes (every rectangle reads
+  // zero); not cached either, so the next call with the card on screen measures.
+  if (isCardSkipped(nodeElement)) {
     return undefined;
   }
   const slotElement =

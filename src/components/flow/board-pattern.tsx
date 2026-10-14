@@ -198,7 +198,10 @@ export const TiledBackground = memo(function TiledBackground({
 }) {
   // The stock's half-cell shift is `1 + dimension / 2` SCREEN pixels; the one
   // screen pixel is the only part that needs the zoom.
-  const zoom = useStore((state) => state.transform[2]);
+  // Hundredths: the shift is one screen pixel in flow pixels, so a step of
+  // 0.01 moves it by a hundredth of a pixel at most, and a zoom frame inside
+  // one step re-renders nothing and writes no style.
+  const zoom = useStore((state) => Math.round(state.transform[2] * 100) / 100);
   const [element, setElement] = useState<HTMLDivElement | null>(null);
 
   const tile = gap || 1;

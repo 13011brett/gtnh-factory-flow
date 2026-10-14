@@ -18,6 +18,18 @@
  * The numbers here are SCROLL_CAMERA_OFFSET (500000px) and twice it; change
  * them together with the constant.
  */
+
+/* NOT INHERITED: the zoom is written on the viewport on every zoom step, and
+   an inherited custom property restyles every element under the writer
+   (measured at 6-8 us each: a 200-card board spent 12 s of a 20 s zoom
+   scenario in style, 0.6 s without the inheritance). Nothing under the
+   viewport reads it; cards read --board-zoom, which moves in coarse steps
+   (NodeDetailController in FactoryFlow.tsx). */
+@property --camera-zoom {
+  syntax: "<number>";
+  inherits: false;
+  initial-value: 1;
+}
 .factory-flow-board[data-scroll-camera] .react-flow {
   overflow: hidden;
   overflow-anchor: none;

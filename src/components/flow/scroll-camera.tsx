@@ -115,14 +115,23 @@ export function ScrollCamera({ boardRef }: { boardRef: RefObject<HTMLElement | n
     // pointer. It exists only during a shift-drag, so the lookup is usually
     // null; the observer below stamps it the moment it appears, since a
     // marquee drawn while the camera stands still sees no transform change.
+    // Looked up only when the pane's children change (the observer), never per
+    // camera step: a selector query per step was 2 ms of forced style work each.
+    let marquee: HTMLElement | null = null;
+    const findMarquee = () => {
+      marquee = pane.querySelector<HTMLElement>(":scope > .react-flow__selection");
+    };
     const placeMarquee = () => {
-      const marquee = pane.querySelector<HTMLElement>(":scope > .react-flow__selection");
       if (marquee) {
         marquee.style.translate = `${expectedLeft}px ${expectedTop}px`;
       }
     };
-    const marqueeObserver = new MutationObserver(placeMarquee);
+    const marqueeObserver = new MutationObserver(() => {
+      findMarquee();
+      placeMarquee();
+    });
     marqueeObserver.observe(pane, { childList: true });
+    findMarquee();
 
     // Something else scrolled the wrapper (a focus, a scrollIntoView): the
     // camera did not move, so the offset goes straight back.

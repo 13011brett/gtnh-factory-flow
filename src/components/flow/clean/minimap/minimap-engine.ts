@@ -14,6 +14,9 @@ import { publishMinimapScene } from "./scene-store";
 
 type StoreApi = ReturnType<typeof useStoreApi>;
 
+/** The least time between two rebuilds of the scene. */
+const REBUILD_GAP_MS = 100;
+
 const IMAGE_CACHE = new Map<string, HTMLImageElement | "loading" | "failed">();
 
 function urlOf(css: string): string | undefined {
@@ -50,6 +53,9 @@ export function readExtras(root: Element | null, id: string, type: string | unde
   return undefined;
 }
 
+/** Last frame costs, for checking the map stays cheap (window.__minimapStats in development). */
+export const minimapStats = { rebuildMs: 0, drawMs: 0, tiles: 0, rebuilds: 0, draws: 0 };
+
 export class MinimapEngine {
   scene: Scene | undefined;
   view: MapView | undefined;
@@ -60,6 +66,10 @@ export class MinimapEngine {
   private extras = new Map<string, { data: unknown; extras: TileExtras | undefined }>();
   private routesSig = "";
   private stopped = false;
+  /** The map's face, read once: asking for a computed style every frame would cost a style recalculation. */
+  private font: string | undefined;
+  private lastRebuildAt = -1000;
+  private deferTimer = 0;
 
   constructor(
     private readonly store: StoreApi,
@@ -76,6 +86,7 @@ export class MinimapEngine {
   /** Starts listening; returns the stop function. */
   start(): () => void {
     this.stopped = false;
+    if (process.env.NODE_ENV !== "production") (window as unknown as { __minimapStats?: object }).__minimapStats = minimapStats;
     this.schedule("scene");
     const unsubscribe = this.store.subscribe((state, prev) => {
       if (state.nodes !== prev.nodes || state.edges !== prev.edges || state.nodeLookup !== prev.nodeLookup) {
@@ -93,6 +104,7 @@ export class MinimapEngine {
       this.stopped = true;
       unsubscribe();
       window.clearInterval(poll);
+      window.clearTimeout(this.deferTimer);
       if (this.raf) cancelAnimationFrame(this.raf);
       this.raf = 0;
     };
@@ -142,11 +154,27 @@ export class MinimapEngine {
     const canvas = this.canvas();
     if (!canvas || this.stopped) return;
     if (this.dirty.scene) {
-      this.dirty.scene = false;
-      this.rebuild();
+      const t0 = performance.now();
+      // A dragged card changes the nodes every frame; the map takes it at most ten times a second.
+      if (t0 - this.lastRebuildAt < REBUILD_GAP_MS && this.scene) {
+        if (!this.deferTimer) {
+          this.deferTimer = window.setTimeout(() => {
+            this.deferTimer = 0;
+            this.schedule("draw");
+          }, REBUILD_GAP_MS);
+        }
+      } else {
+        this.lastRebuildAt = t0;
+        this.dirty.scene = false;
+        this.rebuild();
+        minimapStats.rebuildMs = performance.now() - t0;
+        minimapStats.rebuilds++;
+        minimapStats.tiles = this.scene?.tiles.length ?? 0;
+      }
     }
     if (!this.dirty.draw) return;
     this.dirty.draw = false;
+    const drawStart = performance.now();
     const state = this.store.getState();
     const [tx, ty, tz] = state.transform;
     const viewW = state.width / tz;
@@ -183,7 +211,7 @@ export class MinimapEngine {
       circle: cfg.shape === "circle",
     };
     drawMinimap(ctx, this.scene, view, {
-      font: getComputedStyle(canvas).fontFamily || "monospace",
+      font: (this.font ??= getComputedStyle(canvas).fontFamily || "monospace"),
       viewRect,
       image: (url) => {
         const hit = IMAGE_CACHE.get(url);
@@ -202,5 +230,7 @@ export class MinimapEngine {
       },
     });
     this.view = view;
+    minimapStats.drawMs = performance.now() - drawStart;
+    minimapStats.draws++;
   }
 }

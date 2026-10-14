@@ -4,8 +4,8 @@ import { useFactoryStore } from "@/store/factory-store";
 import { Cursor, draws, sleep, type MouseGlyph } from "./cursor";
 import * as input from "./input";
 import type { Mods } from "./input";
-import { restoreProject } from "./sandbox";
-import { bringIntoView, centreOf, scrollToShow, settled, type Target } from "./targets";
+import { resetBorrowedSettings, restoreProject } from "./sandbox";
+import { bringIntoView, centreOf, ensureHittable, scrollToShow, settled, type Target } from "./targets";
 import { getTour, resetTour, setTour } from "./tour-store";
 
 /**
@@ -75,6 +75,7 @@ async function resolve(aim: Aim, c: Ctx, label: string, timeoutMs = 3500): Promi
         guard(c);
         await bringIntoView(el);
         await scrollToShow(el);
+        await ensureHittable(el);
         const settledEl = (await settled(() => (aim() instanceof Element ? (aim() as Element) : null), 1500)) ?? el;
         return { el: settledEl, pt: centreOf(settledEl) };
       }
@@ -510,6 +511,7 @@ export class Director {
   private closeThings(): void {
     const factory = useFactoryStore.getState();
     factory.clearResourceBrowser();
+    resetBorrowedSettings();
     input.pressKey("Escape");
   }
 }

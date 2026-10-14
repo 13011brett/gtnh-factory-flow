@@ -3,7 +3,9 @@
 import { useRef, useState } from "react";
 import { useDropdownDismiss } from "@/lib/hooks/use-dropdown-dismiss";
 
-import { Bug, ChevronDown, Compass, Heart, Library } from "lucide-react";
+import { Bug, ChevronDown, Compass, Heart, Library, Route } from "lucide-react";
+import { openFeedback } from "@/components/flow/clean/feedback/feedback-store";
+import { startTour } from "@/components/flow/clean/tour/tour-controller";
 import { leaveLibrary, openLibrary } from "@/lib/library/library-tab";
 import { openWelcomeTab } from "@/lib/welcome/welcome-tab";
 import { APP_VERSION } from "@/lib/version";
@@ -104,6 +106,19 @@ export function MenuLinks({ onAction, auxiliary = false }: { onAction?: () => vo
         </span>
         <span className="truncate">Library</span>
       </button> : null}
+      <button
+        type="button"
+        onClick={() => {
+          onAction?.();
+          void startTour();
+        }}
+        className="flex h-10 items-center gap-2.5 rounded px-2 text-left text-sm text-fg-subtle hover:bg-surface-sunken"
+      >
+        <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+          <Route className="h-3.5 w-3.5" aria-hidden />
+        </span>
+        <span className="truncate">Take the tour</span>
+      </button>
       <MenuLink href={GITHUB_URL} label="Source on GitHub">
         <GithubMark />
       </MenuLink>
@@ -118,6 +133,19 @@ export function MenuLinks({ onAction, auxiliary = false }: { onAction?: () => vo
       >
         <Heart className="h-3.5 w-3.5 fill-current" aria-hidden />
       </MenuLink> : null}
+      <button
+        type="button"
+        onClick={() => {
+          onAction?.();
+          openFeedback();
+        }}
+        className="flex h-10 items-center gap-2.5 rounded px-2 text-left text-sm text-fg-subtle hover:bg-surface-sunken"
+      >
+        <span className="flex h-4 w-4 shrink-0 items-center justify-center">
+          <Bug className="h-3.5 w-3.5" aria-hidden />
+        </span>
+        <span className="truncate">Send feedback</span>
+      </button>
       <MenuLink href={BUG_REPORT_URL} label="Report a bug">
         <Bug className="h-3.5 w-3.5" aria-hidden />
       </MenuLink>

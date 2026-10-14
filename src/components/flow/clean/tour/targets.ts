@@ -3,6 +3,7 @@
 import { useFactoryStore } from "@/store/factory-store";
 import { draws } from "./cursor";
 import type { Rect } from "./placement";
+import { hitTest } from "./input";
 import { getBoardBridge } from "./TourBridge";
 
 /**
@@ -197,4 +198,39 @@ export async function scrollToShow(el: Element): Promise<void> {
   if (el.closest('.react-flow') || !clippedByScroller(el)) return;
   (el as HTMLElement).scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' as ScrollBehavior });
   await draws(2);
+}
+
+function scrollerOf(el: Element): HTMLElement | null {
+  for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
+    if (/(auto|scroll)/.test(getComputedStyle(p).overflowY) && p.scrollHeight > p.clientHeight) return p;
+  }
+  return null;
+}
+
+/**
+ * Makes sure a press at the element's middle lands on it: something sticky (a list's header bar) may cover it once
+ * scrolled into view. The list is put so the element sits in the middle of it, then nudged a little each way from
+ * there until the middle is free.
+ */
+export async function ensureHittable(el: Element): Promise<void> {
+  const free = () => {
+    const c = centreOf(el);
+    const hit = hitTest(c.x, c.y);
+    return Boolean(hit && (hit === el || el.contains(hit)));
+  };
+  if (free()) return;
+  const scroller = scrollerOf(el);
+  if (!scroller) return;
+  const pr = scroller.getBoundingClientRect();
+  const r = el.getBoundingClientRect();
+  scroller.scrollBy({ top: r.top + r.height / 2 - (pr.top + pr.height * 0.6), behavior: 'instant' as ScrollBehavior });
+  await draws(2);
+  if (free()) return;
+  const home = scroller.scrollTop;
+  for (const dy of [40, -40, 80, -80, 120, -120, 180, -180]) {
+    scroller.scrollTop = home + dy;
+    await draws(2);
+    if (free()) return;
+  }
+  scroller.scrollTop = home;
 }

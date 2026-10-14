@@ -7,6 +7,7 @@ import { mouseGlyphSvg } from "./cursor";
 import { parseLines, type Line, type Span } from "./markup";
 import { placeNote, type Rect } from "./placement";
 import { rectOf } from "./targets";
+import { getBoardBridge } from "./TourBridge";
 
 /**
  * The note (the mod's Callout): a dark box with a gold edge beside the thing it is about, a tip pointing at it,
@@ -101,7 +102,12 @@ export function Callout({
       const avoid: Rect[] = [...cards];
       if (cursor && cursor.x > 0) avoid.push({ x: cursor.x - 6, y: cursor.y - 6, w: 36, h: 40 });
       // Not over the top bar or the board's own corner keys.
-      const place = placeNote({ target: rect, size, viewport, avoid, inset: { top: 40, bottom: 8, left: 0, right: 0 } });
+      let place = placeNote({ target: rect, size, viewport, avoid, inset: { top: 40, bottom: 8, left: 0, right: 0 } });
+      // A note about nothing in particular sits at the top of the board, across its middle (the mod's noteAt).
+      const pane = note.nothing ? getBoardBridge()?.paneRect() : null;
+      if (pane) {
+        place = { x: Math.max(10, pane.left + (pane.width - size.w) / 2), y: pane.top + pane.height * 0.1, side: "centre", tip: 0 };
+      }
       const key = `${Math.round(place.x)},${Math.round(place.y)},${place.side},${Math.round(place.tip)}`;
       if (key !== last) {
         last = key;

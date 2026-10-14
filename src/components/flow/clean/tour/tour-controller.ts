@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { COMPACT_MAX_HEIGHT, COMPACT_MAX_WIDTH } from "@/lib/viewport-breakpoints";
 import { Cursor, draws } from "./cursor";
 import { Director, tourWarnings, type NoteSpec } from "./director";
 import { resetPointerState } from "./input";
@@ -46,17 +47,18 @@ export function getTourCursor(): Cursor | undefined {
 
 /** Whether the planner can be toured right now (the host is mounted). */
 export function tourAvailable(): boolean {
-  return layer !== undefined;
+  // The tour drives the full layout (the overview beside the board, the items column); compact boards have neither.
+  return layer !== undefined && window.innerWidth > COMPACT_MAX_WIDTH && window.innerHeight > COMPACT_MAX_HEIGHT;
 }
 
 export async function startTour(step = 0): Promise<void> {
-  if (starting || getTour().phase !== "idle" || !layer) return;
+  if (starting || getTour().phase !== "idle" || !tourAvailable()) return;
   starting = true;
   markTourOffered();
   try {
     setTour({ phase: "playing", index: 0, total: STEPS.length, noteReady: false });
     await enterSandbox();
-    cursor = new Cursor(layer);
+    cursor = new Cursor(layer!);
     director = new Director(STEPS, cursor, {
       onNote: setNote,
       onLeave: () => void leaveTour(),

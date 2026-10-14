@@ -1326,8 +1326,6 @@ function ensureGridSolve() {
       requests,
       tuning,
     };
-    // Read the installed geometry on demand, never re-solve a benchmark's
-    // approximation. The signature gate lets probes wait for the worker.
     // The minimap reads the same installed routes (clean/minimap).
     registerMinimapRoutes(() => ({
       signature: gridSolveSignature,
@@ -1338,6 +1336,8 @@ function ensureGridSolve() {
           : [];
       }),
     }));
+    // Read the installed geometry on demand, never re-solve a benchmark's
+    // approximation. The signature gate lets probes wait for the worker.
     registerBoardScoreReader(() => {
       const routes: GridRoutedEdge[] = [];
       let settled = gridSolveSignature === gridSolveWantedSignature;

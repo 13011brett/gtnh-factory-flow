@@ -29,7 +29,6 @@ function init(p: Pt, button: number, buttons: number, mods: Mods | undefined, ex
     bubbles: true,
     cancelable: true,
     composed: true,
-    view: window,
     clientX: p.x,
     clientY: p.y,
     screenX: p.x + (window.screenX || 0),
@@ -43,8 +42,23 @@ function init(p: Pt, button: number, buttons: number, mods: Mods | undefined, ex
   };
 }
 
+/**
+ * An event with its view set to the window (d3-drag and React Flow read event.view); a test document whose window
+ * is not a real one refuses it, so the event is made without.
+ */
+function make<T extends Event>(Ctor: new (type: string, init?: object) => T, type: string, init: object): T {
+  try {
+    return new Ctor(type, { ...init, view: window });
+  } catch {
+    return new Ctor(type, init);
+  }
+}
+
 function pointer(type: string, target: Element, p: Pt, button: number, buttons: number, mods?: Mods) {
-  const event = new PointerEvent(
+  // Where there are no pointer events (an old browser, a test document) a mouse event stands in.
+  const Ctor = typeof PointerEvent === "function" ? PointerEvent : MouseEvent;
+  const event = make(
+    Ctor as new (type: string, init?: object) => Event,
     type,
     init(p, button, buttons, mods, {
       pointerId: 1,
@@ -59,7 +73,7 @@ function pointer(type: string, target: Element, p: Pt, button: number, buttons: 
 }
 
 function mouse(type: string, target: Element, p: Pt, button: number, buttons: number, mods?: Mods, detail = 0) {
-  target.dispatchEvent(new MouseEvent(type, init(p, button, buttons, mods, { detail })));
+  target.dispatchEvent(make(MouseEvent, type, init(p, button, buttons, mods, { detail })));
 }
 
 let hovered: Element | null = null;
@@ -152,7 +166,7 @@ export function doubleClick(p: Pt, mods?: Mods): Element | null {
 export function wheel(p: Pt, deltaY: number, mods?: Mods, deltaX = 0): Element | null {
   const el = moveTo(p, mods);
   if (!el) return null;
-  el.dispatchEvent(new WheelEvent("wheel", { ...init(p, 0, 0, mods), deltaY, deltaX, deltaMode: 0 }));
+  el.dispatchEvent(make(WheelEvent, "wheel", { ...init(p, 0, 0, mods), deltaY, deltaX, deltaMode: 0 }));
   return el;
 }
 

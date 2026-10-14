@@ -59,6 +59,13 @@ export async function enterSandbox(): Promise<void> {
   setMinimap({ show: true });
 }
 
+/** The settings the tour borrows, put back to what the tour started them at (a step replayed by Back or a jump). */
+export function resetBorrowedSettings(): void {
+  if (!saved) return;
+  setMinimap({ ...saved.minimap, show: true });
+  setSeeThrough(saved.seeThrough);
+}
+
 /** Puts the tour's plan back to what a step started from (Back). */
 export function restoreProject(project: FactoryProject): void {
   const factory = useFactoryStore.getState();

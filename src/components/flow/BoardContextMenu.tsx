@@ -10,6 +10,7 @@ import type { DatasetResourceIndexEntry } from "@/lib/datasets/types";
 import type { ResourceAmount } from "@/lib/model/types";
 import { getUiScale } from "@/lib/ui-scale";
 import { useFactoryStore } from "@/store/factory-store";
+import { addStickyNoteAt } from "./clean/note/note-actions";
 
 /**
  * THE BOARD'S ONE RIGHT-CLICK MENU. Right click the void, a card, a drawer
@@ -48,6 +49,7 @@ export function BoardContextMenu({
   onClose: () => void;
 }) {
   const [picking, setPicking] = useState(false);
+  const planMode = useFactoryStore((state) => state.project.planMode === true);
   const datasetManifestUrl = useFactoryStore((state) => state.datasetManifestUrl);
   const datasetManifest = useFactoryStore((state) => state.datasetManifest);
   const selectedDatasetVersionId = useFactoryStore((state) => state.selectedDatasetVersionId);
@@ -123,6 +125,9 @@ export function BoardContextMenu({
 
   return (
     <LibraryMenu left={target.x} top={target.y} label="Board menu" onClose={onClose}>
+      {target.kind === "pane" && planMode ? (
+        <MenuItem label="Add a sticky note" onClick={run(() => addStickyNoteAt(target.flow))} />
+      ) : null}
       {target.kind === "pane" ? (
         <MenuItem label="New product drawer" onClick={() => setPicking(true)} />
       ) : null}

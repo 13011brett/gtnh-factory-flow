@@ -17,6 +17,7 @@ import { CountBox, CleanPortRow, StripChip, TierChip, AmpsChip, glyph } from "..
 import type { CleanCardView, CleanChipView } from "../clean-model";
 import { ensureInteractionHost, tipAttrs, useClickSlop, type TipSpec } from "../interaction";
 import { menuTip, powerPanelTip } from "../interaction/tips";
+import { syncPromptPhase } from "../../virtual/prompt-phase";
 import { MachineListMenu } from "../menus/MachineListMenu";
 import { OptionListMenu } from "../menus/OptionListMenu";
 import { SettingsSheet } from "../menus/SettingsSheet";
@@ -356,10 +357,8 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   useEffect(() => ensureInteractionHost(), []);
   useEffect(() => {
-    if (!view.unset) return;
-    for (const animation of rootRef.current?.getAnimations?.({ subtree: true }) ?? []) {
-      if ((animation as CSSAnimation).animationName === "cc-prompt") animation.startTime = 0;
-    }
+    // Every prompt on the board blinks off one clock (virtual/prompt-phase.ts).
+    if (view.unset) syncPromptPhase();
   }, [view.unset]);
   const deleteNode = useFactoryStore((state) => state.deleteNode);
   const duplicateNode = useFactoryStore((state) => state.duplicateNode);

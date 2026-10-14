@@ -1,6 +1,7 @@
 "use client";
 
-import { useRef, useState, type MouseEvent, type WheelEvent } from "react";
+import { useEffect, useRef, useState, type MouseEvent, type WheelEvent } from "react";
+import { startPromptClock } from "../../virtual/prompt-phase";
 import { formatSlotRateBare } from "../../flow-explainers";
 import { rateMultiplierForKind } from "@/lib/model/rate-unit";
 import { useFactoryStore } from "@/store/factory-store";
@@ -45,6 +46,11 @@ export function PortRateControls({
   const pinned = p.rate !== undefined;
   const scale = rateMultiplierForKind(kind);
   const now = Math.max(0, p.port.currentPerSecond);
+  const prompting = !pinned && unset;
+  // The prompt blinks off the board's one clock (virtual/prompt-phase.ts).
+  useEffect(() => {
+    if (prompting) startPromptClock();
+  }, [prompting]);
 
   const commit = () => {
     if (draft === undefined) return;

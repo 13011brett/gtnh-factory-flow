@@ -129,7 +129,16 @@ function tipElement(from: Element | null | undefined): Element | null {
 }
 
 function targetAt(x: number, y: number): Element | null {
-  return tipElement(document.elementFromPoint?.(x, y));
+  const hit = document.elementFromPoint?.(x, y);
+  // A port's handle covers its whole row, the Forced strip too: the strip's own tip wins where the mouse is over it.
+  const strip = hit?.classList.contains("resource-slot-handle")
+    ? hit.parentElement?.querySelector(".cc-forced")
+    : null;
+  if (strip) {
+    const box = strip.getBoundingClientRect();
+    if (y >= box.top && y <= box.bottom && x >= box.left && x <= box.right) return tipElement(strip);
+  }
+  return tipElement(hit);
 }
 
 function fire(): void {
@@ -158,7 +167,8 @@ function onMove(event: PointerEvent): void {
   lastX = event.clientX;
   lastY = event.clientY;
   buttonsDown = event.buttons !== 0;
-  const element = tipElement(event.target as Element | null);
+  const under = event.target as Element | null;
+  const element = under?.classList?.contains("resource-slot-handle") ? targetAt(lastX, lastY) : tipElement(under);
   const id = element?.getAttribute("data-tip-id") ?? undefined;
   const before = tracker.target();
   tracker.point(id, now());

@@ -18,6 +18,7 @@ export async function boot({ width = 1920, height = 1080, dsf = DSF, headless = 
   await page.addInitScript(() => {
     try {
       localStorage.setItem("gtnh-factory-flow.mod-announcement-dismissed.v1", "x");
+      localStorage.setItem("gtnhplanner.tour.offered", "1");
     } catch {}
   });
   page.on("pageerror", (e) => console.log("[pageerror]", String(e).slice(0, 300)));

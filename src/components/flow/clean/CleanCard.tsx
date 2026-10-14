@@ -161,7 +161,19 @@ export function CleanPortRow({
       onPointerUp={rowBrowse.handlers.onPointerUp}
       onPointerCancel={rowBrowse.handlers.onPointerCancel}
       onClick={(event) => {
-        if (wasClick(event)) rowBrowse.handlers.onClick(event);
+        if (!wasClick(event)) return;
+        // The port's handle covers the whole row, the Forced strip too, so a click there arrives here: it is the strip's.
+        const strip = p.forced ? event.currentTarget.querySelector(".cc-forced")?.getBoundingClientRect() : undefined;
+        if (
+          strip &&
+          event.clientY >= strip.top &&
+          event.clientY <= strip.bottom &&
+          openSparePopupForPort(makePortKey(p.nodeId, isInput ? "i" : "o", p.handleId), event.clientX, event.clientY)
+        ) {
+          event.stopPropagation();
+          return;
+        }
+        rowBrowse.handlers.onClick(event);
       }}
       onContextMenu={rowBrowse.handlers.onContextMenu}
     >

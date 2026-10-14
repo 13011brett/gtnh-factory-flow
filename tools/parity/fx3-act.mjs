@@ -191,14 +191,22 @@ const tests = {
         p.edges.some((e) => e.source === cid),
       );
     }
+    // clear of the plan's drawers, whose handles can sit over the chips
+    await st(page, ({ cid }) => {
+      const S = window.__ccStore;
+      const p = structuredClone(S.getState().project);
+      p.nodes.find((n) => n.id === cid).position = { x: -300, y: 1900 };
+      S.getState().setProject(p);
+    }, { cid });
+    await wait(page, 600);
     await frame(page, cid);
     // rate chip: edit
     await page
       .locator(`${sel} .cc-sc[data-label^="Rate"]`)
-      .click()
-      .catch(() => {});
-    await wait(page, 300);
+      .click({ timeout: 4000 })
+      .catch((e) => console.log("  rate click:", String(e).slice(0, 1800)));
     const input = page.locator(`${sel} .cc-sc input`);
+    await input.waitFor({ timeout: 2500 }).catch(() => {});
     if (await input.count()) {
       await input.fill("5");
       await page.keyboard.press("Enter");

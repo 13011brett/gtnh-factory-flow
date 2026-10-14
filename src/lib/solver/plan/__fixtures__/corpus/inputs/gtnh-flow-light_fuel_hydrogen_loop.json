@@ -1,0 +1,149 @@
+{
+  "mode": "AUTO",
+  "machines": [
+    {
+      "id": "81b1f67d-f7ad-3eea-a483-3b9d9bd80652",
+      "name": "chemical reactor",
+      "durationTicks": 160.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 2000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 0,
+          "name": "hydrogen",
+          "free": false
+        },
+        {
+          "amount": 12000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 1,
+          "name": "sulfuric light fuel",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 2,
+          "name": "hydrogen sulfide",
+          "free": false
+        },
+        {
+          "amount": 12000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 3,
+          "name": "light fuel",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "003d7aca-e9e4-3ae5-b725-1611caa74493",
+      "name": "electrolyzer",
+      "durationTicks": 144.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 2,
+          "name": "hydrogen sulfide",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 2000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 0,
+          "name": "hydrogen",
+          "free": false
+        },
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 4,
+          "name": "sulfur dust",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "680a8ea4-e50f-3a34-bdfa-cd2b74d5dd3f",
+      "name": "distillery",
+      "durationTicks": 20.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 25.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 5,
+          "name": "oil",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 25.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 1,
+          "name": "sulfuric light fuel",
+          "free": false
+        }
+      ],
+      "countFixed": true,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "8c0c5066-abac-37b3-b021-198749c10d85",
+      "source": "003d7aca-e9e4-3ae5-b725-1611caa74493",
+      "sourceOutput": 0,
+      "target": "81b1f67d-f7ad-3eea-a483-3b9d9bd80652",
+      "targetInput": 0
+    },
+    {
+      "id": "d80335a8-0d30-32a2-b5d3-5dc897509013",
+      "source": "680a8ea4-e50f-3a34-bdfa-cd2b74d5dd3f",
+      "sourceOutput": 0,
+      "target": "81b1f67d-f7ad-3eea-a483-3b9d9bd80652",
+      "targetInput": 1
+    },
+    {
+      "id": "2520af6c-ce3c-33f5-8f45-cea784af0c0d",
+      "source": "81b1f67d-f7ad-3eea-a483-3b9d9bd80652",
+      "sourceOutput": 0,
+      "target": "003d7aca-e9e4-3ae5-b725-1611caa74493",
+      "targetInput": 0
+    }
+  ],
+  "pools": [],
+  "drawers": [],
+  "extentPins": {},
+  "spares": {}
+}

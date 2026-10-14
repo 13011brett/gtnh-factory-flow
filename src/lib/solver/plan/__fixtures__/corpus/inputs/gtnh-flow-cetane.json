@@ -1,0 +1,474 @@
+{
+  "mode": "AUTO",
+  "machines": [
+    {
+      "id": "bb2d7ee2-6994-3d9a-ba26-19a6f0cd15ee",
+      "name": "mixer",
+      "durationTicks": 16.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 5000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 0,
+          "name": "light fuel",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 1,
+          "name": "heavy fuel",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 6000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 2,
+          "name": "diesel",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "c3ca8ac5-d84d-33c9-bfa1-763ccb0235be",
+      "name": "LCR",
+      "durationTicks": 120.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 10000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 2,
+          "name": "diesel",
+          "free": false
+        },
+        {
+          "amount": 200.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 3,
+          "name": "tetranitromethane",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 10000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 4,
+          "name": "cetane-boosted diesel",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {
+        "0": 1000.0
+      },
+      "targetInputRates": {}
+    },
+    {
+      "id": "d7b4d405-0f86-3667-a437-55fbe01a2190",
+      "name": "LCR",
+      "durationTicks": 480.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 8000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 5,
+          "name": "nitric acid",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 6,
+          "name": "ethenone",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 2000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 3,
+          "name": "tetranitromethane",
+          "free": false
+        },
+        {
+          "amount": 9000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 7,
+          "name": "water",
+          "free": true
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "e685523d-39ce-3c37-9f0e-04cc7492b973",
+      "name": "large combustion engine",
+      "durationTicks": 244.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 4,
+          "name": "cetane-boosted diesel",
+          "free": false
+        },
+        {
+          "amount": 489.0,
+          "chance": 0.99853027,
+          "multiplier": 1.0,
+          "resource": 8,
+          "name": "oxygen",
+          "free": false
+        },
+        {
+          "amount": 4.0,
+          "chance": 0.8475,
+          "multiplier": 1.0,
+          "resource": 9,
+          "name": "lubricant",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1500000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 10,
+          "name": "EU",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "26b30d0e-ae79-3ea8-be45-93941c03bdef",
+      "name": "LCR",
+      "durationTicks": 480.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 2000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 8,
+          "name": "oxygen",
+          "free": false
+        },
+        {
+          "amount": 4000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 11,
+          "name": "hydrogen",
+          "free": false
+        },
+        {
+          "amount": 2.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 12,
+          "name": "carbon dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 13,
+          "name": "acetic acid",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "69a80193-c0a3-3830-89e3-31605b83937b",
+      "name": "LCR",
+      "durationTicks": 320.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 14,
+          "name": "nitrogen",
+          "free": false
+        },
+        {
+          "amount": 3000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 11,
+          "name": "hydrogen",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 15,
+          "name": "ammonia",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "6a72fdbb-d8c8-355a-b649-1abfa11c5813",
+      "name": "LCR",
+      "durationTicks": 320.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 4000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 8,
+          "name": "oxygen",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 15,
+          "name": "ammonia",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 5,
+          "name": "nitric acid",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 7,
+          "name": "water",
+          "free": true
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "722e2837-a364-32bf-962b-cc5b1cf1ed58",
+      "name": "LCR",
+      "durationTicks": 160.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 500.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 16,
+          "name": "sulfuric acid",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 13,
+          "name": "acetic acid",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 6,
+          "name": "ethenone",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "7e395688-269d-389e-b11d-df6c189272ac",
+      "name": "LCR",
+      "durationTicks": 480.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 7,
+          "name": "water",
+          "free": true
+        },
+        {
+          "amount": 3000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 8,
+          "name": "oxygen",
+          "free": false
+        },
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 17,
+          "name": "sulfur dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 16,
+          "name": "sulfuric acid",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "8002ffbb-1338-3a2f-a4e2-00899351ff66",
+      "source": "7e395688-269d-389e-b11d-df6c189272ac",
+      "sourceOutput": 0,
+      "target": "722e2837-a364-32bf-962b-cc5b1cf1ed58",
+      "targetInput": 0
+    },
+    {
+      "id": "d467fce0-ceaf-30b6-be9d-28235bd70154",
+      "source": "bb2d7ee2-6994-3d9a-ba26-19a6f0cd15ee",
+      "sourceOutput": 0,
+      "target": "c3ca8ac5-d84d-33c9-bfa1-763ccb0235be",
+      "targetInput": 0
+    },
+    {
+      "id": "d659f80f-f797-32f4-9703-ff38121b084e",
+      "source": "d7b4d405-0f86-3667-a437-55fbe01a2190",
+      "sourceOutput": 0,
+      "target": "c3ca8ac5-d84d-33c9-bfa1-763ccb0235be",
+      "targetInput": 1
+    },
+    {
+      "id": "ee6f25e0-c1ed-37c8-b169-dd73d7d8d678",
+      "source": "c3ca8ac5-d84d-33c9-bfa1-763ccb0235be",
+      "sourceOutput": 0,
+      "target": "e685523d-39ce-3c37-9f0e-04cc7492b973",
+      "targetInput": 0
+    },
+    {
+      "id": "0fe9ba73-0a17-3717-9e69-b82bcef24104",
+      "source": "722e2837-a364-32bf-962b-cc5b1cf1ed58",
+      "sourceOutput": 0,
+      "target": "d7b4d405-0f86-3667-a437-55fbe01a2190",
+      "targetInput": 1
+    },
+    {
+      "id": "12e02d90-bfb4-3b1f-9194-0ad56beb4ede",
+      "source": "26b30d0e-ae79-3ea8-be45-93941c03bdef",
+      "sourceOutput": 0,
+      "target": "722e2837-a364-32bf-962b-cc5b1cf1ed58",
+      "targetInput": 1
+    },
+    {
+      "id": "4a6eaea9-7f5e-3baf-8fdc-c73b8ea9b223",
+      "source": "6a72fdbb-d8c8-355a-b649-1abfa11c5813",
+      "sourceOutput": 0,
+      "target": "d7b4d405-0f86-3667-a437-55fbe01a2190",
+      "targetInput": 0
+    },
+    {
+      "id": "6ba0f54f-58b1-3086-80b2-dcd22836c015",
+      "source": "6a72fdbb-d8c8-355a-b649-1abfa11c5813",
+      "sourceOutput": 1,
+      "target": "7e395688-269d-389e-b11d-df6c189272ac",
+      "targetInput": 0
+    },
+    {
+      "id": "70739c3a-325e-39d7-b869-cd97086e03e8",
+      "source": "d7b4d405-0f86-3667-a437-55fbe01a2190",
+      "sourceOutput": 1,
+      "target": "7e395688-269d-389e-b11d-df6c189272ac",
+      "targetInput": 0
+    },
+    {
+      "id": "707dac55-7a39-3fe3-8690-66bd5d4d5fc9",
+      "source": "69a80193-c0a3-3830-89e3-31605b83937b",
+      "sourceOutput": 0,
+      "target": "6a72fdbb-d8c8-355a-b649-1abfa11c5813",
+      "targetInput": 1
+    }
+  ],
+  "pools": [],
+  "drawers": [],
+  "extentPins": {},
+  "spares": {}
+}

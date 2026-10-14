@@ -1,0 +1,111 @@
+{
+  "mode": "AUTO",
+  "machines": [
+    {
+      "id": "cc04474d-0eb5-349f-b8e1-7a2d9cb2e0b7",
+      "name": "large chemical reactor",
+      "durationTicks": 160.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 0,
+          "name": "sulfuric acid",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 1,
+          "name": "acetic acid",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 2,
+          "name": "ethenone",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 3,
+          "name": "diluted sulfuric acid",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "da622cef-8824-3c29-8311-c846b356537e",
+      "name": "distillation tower",
+      "durationTicks": 600.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 3000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 3,
+          "name": "diluted sulfuric acid",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 2000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 0,
+          "name": "sulfuric acid",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 4,
+          "name": "water",
+          "free": true
+        }
+      ],
+      "countFixed": true,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "b3020cab-1bf9-3650-9ff8-30738e8376e5",
+      "source": "da622cef-8824-3c29-8311-c846b356537e",
+      "sourceOutput": 0,
+      "target": "cc04474d-0eb5-349f-b8e1-7a2d9cb2e0b7",
+      "targetInput": 0
+    },
+    {
+      "id": "bfec72ce-7dfb-349c-89b4-f92540fab3ad",
+      "source": "cc04474d-0eb5-349f-b8e1-7a2d9cb2e0b7",
+      "sourceOutput": 1,
+      "target": "da622cef-8824-3c29-8311-c846b356537e",
+      "targetInput": 0
+    }
+  ],
+  "pools": [],
+  "drawers": [],
+  "extentPins": {},
+  "spares": {}
+}

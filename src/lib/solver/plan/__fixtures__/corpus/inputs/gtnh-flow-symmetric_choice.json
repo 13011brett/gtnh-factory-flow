@@ -1,0 +1,194 @@
+{
+  "mode": "AUTO",
+  "machines": [
+    {
+      "id": "a034eec7-be3a-38f0-a383-701aef071b64",
+      "name": "final assembler",
+      "durationTicks": 20.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 15.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 0,
+          "name": "plate",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 1,
+          "name": "machine casing",
+          "free": false
+        }
+      ],
+      "countFixed": true,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "f63bb967-9536-388c-8750-84e154bd28d1",
+      "name": "alpha bender",
+      "durationTicks": 20.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 2,
+          "name": "alpha ingot",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 0,
+          "name": "plate",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "fd873f71-0560-35ec-a715-9b20ab23b34d",
+      "name": "beta bender",
+      "durationTicks": 20.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 3,
+          "name": "beta ingot",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 0,
+          "name": "plate",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "12b90a39-00ce-3fae-9fea-989a69ae2978",
+      "name": "alpha blast furnace",
+      "durationTicks": 20.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 4,
+          "name": "alpha dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 2,
+          "name": "alpha ingot",
+          "free": false
+        }
+      ],
+      "countFixed": true,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "3694eeed-afb4-38bb-b856-fb7f28bd589c",
+      "name": "beta blast furnace",
+      "durationTicks": 20.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 5,
+          "name": "beta dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 3,
+          "name": "beta ingot",
+          "free": false
+        }
+      ],
+      "countFixed": true,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "d530eea7-32d1-329d-85fc-7496960f847e",
+      "source": "3694eeed-afb4-38bb-b856-fb7f28bd589c",
+      "sourceOutput": 0,
+      "target": "fd873f71-0560-35ec-a715-9b20ab23b34d",
+      "targetInput": 0
+    },
+    {
+      "id": "eb52e6f1-5ccf-3c91-8fcb-2494fd528c76",
+      "source": "f63bb967-9536-388c-8750-84e154bd28d1",
+      "sourceOutput": 0,
+      "target": "a034eec7-be3a-38f0-a383-701aef071b64",
+      "targetInput": 0
+    },
+    {
+      "id": "206ccce6-7948-34be-b39b-0c151d398d26",
+      "source": "12b90a39-00ce-3fae-9fea-989a69ae2978",
+      "sourceOutput": 0,
+      "target": "f63bb967-9536-388c-8750-84e154bd28d1",
+      "targetInput": 0
+    },
+    {
+      "id": "5790500e-c80e-3efe-9ae9-f95bfa8d0ef7",
+      "source": "fd873f71-0560-35ec-a715-9b20ab23b34d",
+      "sourceOutput": 0,
+      "target": "a034eec7-be3a-38f0-a383-701aef071b64",
+      "targetInput": 0
+    }
+  ],
+  "pools": [],
+  "drawers": [],
+  "extentPins": {},
+  "spares": {}
+}

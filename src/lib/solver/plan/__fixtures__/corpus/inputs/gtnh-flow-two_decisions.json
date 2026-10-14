@@ -1,0 +1,377 @@
+{
+  "mode": "AUTO",
+  "machines": [
+    {
+      "id": "9128a70e-e466-31d2-a8f5-f8a06cf5d4ae",
+      "name": "alpha bender",
+      "durationTicks": 20.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 0,
+          "name": "alpha ingot",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 1,
+          "name": "plate",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "99506cc3-b935-3b64-86d9-d441c1de1646",
+      "name": "final assembler",
+      "durationTicks": 20.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 15.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 2,
+          "name": "rotor",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 3,
+          "name": "machine hull",
+          "free": false
+        }
+      ],
+      "countFixed": true,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "9fc6659d-4d41-3827-b08f-660bc8298cf2",
+      "name": "gamma blast furnace",
+      "durationTicks": 20.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 4,
+          "name": "gamma dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 5,
+          "name": "gamma ingot",
+          "free": false
+        }
+      ],
+      "countFixed": true,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "b4c771b2-fd35-3fd6-a57b-48c371fd7842",
+      "name": "alpha blast furnace",
+      "durationTicks": 20.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 6,
+          "name": "alpha dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 0,
+          "name": "alpha ingot",
+          "free": false
+        }
+      ],
+      "countFixed": true,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "b4ced5aa-ef6b-3970-9290-030eb9db923d",
+      "name": "delta bender",
+      "durationTicks": 20.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 7,
+          "name": "delta ingot",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 2,
+          "name": "rotor",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "be4832cf-b083-333c-a794-36da05c388c4",
+      "name": "final assembler",
+      "durationTicks": 20.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 15.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 1,
+          "name": "plate",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 8,
+          "name": "machine casing",
+          "free": false
+        }
+      ],
+      "countFixed": true,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "e9f362c0-7a42-3c33-ab86-51f12b8bf378",
+      "name": "gamma bender",
+      "durationTicks": 20.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 5,
+          "name": "gamma ingot",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 2,
+          "name": "rotor",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "38b74777-ee11-368c-8b4a-93afb1f03714",
+      "name": "beta blast furnace",
+      "durationTicks": 20.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 9,
+          "name": "beta dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 10,
+          "name": "beta ingot",
+          "free": false
+        }
+      ],
+      "countFixed": true,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "3d36e5fd-5797-356f-813b-3155788078bf",
+      "name": "beta bender",
+      "durationTicks": 20.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 10,
+          "name": "beta ingot",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 1,
+          "name": "plate",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "4637f2ed-068b-3583-99c4-3e7a4c6b746d",
+      "name": "delta blast furnace",
+      "durationTicks": 20.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 11,
+          "name": "delta dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 7,
+          "name": "delta ingot",
+          "free": false
+        }
+      ],
+      "countFixed": true,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "cc2a94bb-3b97-3cf1-8d5b-eac9b930384f",
+      "source": "b4ced5aa-ef6b-3970-9290-030eb9db923d",
+      "sourceOutput": 0,
+      "target": "99506cc3-b935-3b64-86d9-d441c1de1646",
+      "targetInput": 0
+    },
+    {
+      "id": "d4a7c4ea-eaba-3046-980e-6f34553eac37",
+      "source": "3d36e5fd-5797-356f-813b-3155788078bf",
+      "sourceOutput": 0,
+      "target": "be4832cf-b083-333c-a794-36da05c388c4",
+      "targetInput": 0
+    },
+    {
+      "id": "eef40916-929f-3bff-a26c-83a735a6ed4e",
+      "source": "b4c771b2-fd35-3fd6-a57b-48c371fd7842",
+      "sourceOutput": 0,
+      "target": "9128a70e-e466-31d2-a8f5-f8a06cf5d4ae",
+      "targetInput": 0
+    },
+    {
+      "id": "1fd16c2f-b343-3b2d-91b9-bdfbc721d0f9",
+      "source": "9128a70e-e466-31d2-a8f5-f8a06cf5d4ae",
+      "sourceOutput": 0,
+      "target": "be4832cf-b083-333c-a794-36da05c388c4",
+      "targetInput": 0
+    },
+    {
+      "id": "22ef99b8-22d9-3091-b648-f32b0459ba1d",
+      "source": "4637f2ed-068b-3583-99c4-3e7a4c6b746d",
+      "sourceOutput": 0,
+      "target": "b4ced5aa-ef6b-3970-9290-030eb9db923d",
+      "targetInput": 0
+    },
+    {
+      "id": "2d1b7dec-c880-3742-8700-39c450aaf994",
+      "source": "9fc6659d-4d41-3827-b08f-660bc8298cf2",
+      "sourceOutput": 0,
+      "target": "e9f362c0-7a42-3c33-ab86-51f12b8bf378",
+      "targetInput": 0
+    },
+    {
+      "id": "5b2c804a-d487-313a-ae25-333f555b3195",
+      "source": "38b74777-ee11-368c-8b4a-93afb1f03714",
+      "sourceOutput": 0,
+      "target": "3d36e5fd-5797-356f-813b-3155788078bf",
+      "targetInput": 0
+    },
+    {
+      "id": "5b8d12ef-85af-34c4-a0b6-6784df8fbd32",
+      "source": "e9f362c0-7a42-3c33-ab86-51f12b8bf378",
+      "sourceOutput": 0,
+      "target": "99506cc3-b935-3b64-86d9-d441c1de1646",
+      "targetInput": 0
+    }
+  ],
+  "pools": [],
+  "drawers": [],
+  "extentPins": {},
+  "spares": {}
+}

@@ -1,0 +1,3191 @@
+{
+  "mode": "AUTO",
+  "machines": [
+    {
+      "id": "8038c90c-64ef-37ca-ba53-6cde00e3b409",
+      "name": "sifter",
+      "durationTicks": 600.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 0,
+          "name": "rhodium nitrate",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 0.95,
+          "multiplier": 1.0,
+          "resource": 1,
+          "name": "rhodium filter cake dust",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "891a6072-b302-3491-8e71-c4f2db0fcc0e",
+      "name": "fluid heater",
+      "durationTicks": 30.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [],
+      "outputs": [
+        {
+          "amount": 960.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 2,
+          "name": "steam",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "91c3e0b8-d90f-34dd-9acb-e445fd97af7e",
+      "name": "large chemical reactor",
+      "durationTicks": 15.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 3,
+          "name": "hydrochloric acid",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 4,
+          "name": "ammonia",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 5,
+          "name": "ammonium chloride",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "9d56eff9-1145-3e57-b02d-76e0f7561329",
+      "name": "mixer",
+      "durationTicks": 30.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 6,
+          "name": "rhodium salt dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 200.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 7,
+          "name": "rhodium salt solution",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "9f7605a2-891b-3ad2-9016-6eafc50d94e9",
+      "name": "large chemical reactor",
+      "durationTicks": 40.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 8,
+          "name": "carbon dust",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 9,
+          "name": "oxygen",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 10,
+          "name": "carbon monoxide",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "a935f09e-a985-3b4e-a2ae-9c39ad5bcf8a",
+      "name": "electrolyzer",
+      "durationTicks": 27.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 3.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 11,
+          "name": "calcium chloride dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 12,
+          "name": "calcium dust",
+          "free": false
+        },
+        {
+          "amount": 2000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 13,
+          "name": "chlorine",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "af7e0445-4b68-33a9-b04d-e564445aeb16",
+      "name": "large chemical reactor",
+      "durationTicks": 300.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 14,
+          "name": "rhodium filter cake solution",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 15,
+          "name": "reprecipitated rhodium dust",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "b63e1cae-4d76-33aa-a343-fb1c9c21c8d4",
+      "name": "large chemical reactor",
+      "durationTicks": 200.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 16,
+          "name": "sodium dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 3.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 17,
+          "name": "sodium hydroxide dust",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 18,
+          "name": "hydrogen",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "b70db116-1314-3bd1-9f5d-94ec767950a6",
+      "name": "large chemical reactor",
+      "durationTicks": 30.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 6.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 19,
+          "name": "zinc sulfate dust",
+          "free": false
+        },
+        {
+          "amount": 2000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 18,
+          "name": "hydrogen",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 20,
+          "name": "zinc dust",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 21,
+          "name": "sulfuric acid",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "bf16b30d-7dd3-3763-9e24-241e3340ab3e",
+      "name": "large chemical reactor",
+      "durationTicks": 2250.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 9.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 22,
+          "name": "palladium metallic powder dust",
+          "free": false
+        },
+        {
+          "amount": 9000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 23,
+          "name": "palladium enriched ammonia",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 16.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 24,
+          "name": "palladium salt dust",
+          "free": false
+        },
+        {
+          "amount": 2.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 25,
+          "name": "reprecipitated palladium dust",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "c2bd5b41-97b5-3e1e-a62c-ec2ec2d3b894",
+      "name": "large chemical reactor",
+      "durationTicks": 8.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 26,
+          "name": "nitric acid",
+          "free": false
+        },
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 16,
+          "name": "sodium dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 5.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 27,
+          "name": "sodium nitrate dust",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 18,
+          "name": "hydrogen",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "c648f0a3-0109-391a-9043-c8d1d4dc9a43",
+      "name": "large chemical reactor",
+      "durationTicks": 320.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 2000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 28,
+          "name": "nitrogen dioxide",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 9,
+          "name": "oxygen",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 2000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 26,
+          "name": "nitric acid",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "cb065c15-596c-33b5-baa1-d18742f83077",
+      "name": "large chemical reactor",
+      "durationTicks": 250.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 22,
+          "name": "palladium metallic powder dust",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 4,
+          "name": "ammonia",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 23,
+          "name": "palladium enriched ammonia",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "e1fd2a61-480e-3046-8f8b-b6a0b412460f",
+      "name": "centrifuge",
+      "durationTicks": 30.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 2.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 29,
+          "name": "metallic sludge dust residue dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 30,
+          "name": "nickel dust",
+          "free": false
+        },
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 31,
+          "name": "copper dust",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "e2a8af80-cad2-39b8-a2dd-a3b9f4dde5e6",
+      "name": "large chemical reactor",
+      "durationTicks": 2250.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 9.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 32,
+          "name": "PMP",
+          "free": false
+        },
+        {
+          "amount": 9000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 33,
+          "name": "aqua regia",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 34,
+          "name": "platinum residue dust",
+          "free": false
+        },
+        {
+          "amount": 9000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 35,
+          "name": "platinum concentrate",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "e3110aef-b131-304a-a257-499585947e3b",
+      "name": "large chemical reactor",
+      "durationTicks": 300.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 3.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 12,
+          "name": "calcium dust",
+          "free": false
+        },
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 36,
+          "name": "iridium chloride dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 29,
+          "name": "metallic sludge dust residue dust",
+          "free": false
+        },
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 37,
+          "name": "iridium dust",
+          "free": false
+        },
+        {
+          "amount": 3000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 38,
+          "name": "calcium chloride",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "ec166cf6-2f2d-3e94-b834-2b2d5bbb3c2b",
+      "name": "distillation tower",
+      "durationTicks": 1500.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 9000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 39,
+          "name": "hot ruthenium tetroxide solution",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 6.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 40,
+          "name": "salt",
+          "free": false
+        },
+        {
+          "amount": 7200.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 41,
+          "name": "ruthenium tetroxide",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "f2aefc70-1c9a-39b7-8ed8-af86a37aa3e1",
+      "name": "mixer",
+      "durationTicks": 300.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 1,
+          "name": "rhodium filter cake dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 14,
+          "name": "rhodium filter cake solution",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "f90b9c5a-047a-3134-bd52-b47daf01540c",
+      "name": "large chemical reactor",
+      "durationTicks": 320.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 4000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 9,
+          "name": "oxygen",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 42,
+          "name": "nitrogen",
+          "free": false
+        },
+        {
+          "amount": 3000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 18,
+          "name": "hydrogen",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 26,
+          "name": "nitric acid",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "fc46ffe4-0ed7-369c-940b-8e35515a8bb1",
+      "name": "large chemical reactor",
+      "durationTicks": 300.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 6000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 3,
+          "name": "hydrochloric acid",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 43,
+          "name": "osmium solution",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 44,
+          "name": "osmium dust",
+          "free": false
+        },
+        {
+          "amount": 7000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 13,
+          "name": "chlorine",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "fe6bb3cc-515b-3fbd-969e-1bc17d778fd3",
+      "name": "large chemical reactor",
+      "durationTicks": 15.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 10,
+          "name": "carbon monoxide",
+          "free": false
+        },
+        {
+          "amount": 3.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 17,
+          "name": "sodium hydroxide dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 45,
+          "name": "sodium formate",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "00dbd63c-0478-327b-84dc-12e43375d054",
+      "name": "fluid solidifier",
+      "durationTicks": 36.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 38,
+          "name": "calcium chloride",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 11,
+          "name": "calcium chloride dust",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "0da4e6a9-d9b9-31dd-b7e2-88b070c3f528",
+      "name": "large chemical reactor",
+      "durationTicks": 300.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 15,
+          "name": "reprecipitated rhodium dust",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 3,
+          "name": "hydrochloric acid",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 46,
+          "name": "rhodium dust",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 4,
+          "name": "ammonia",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 13,
+          "name": "chlorine",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "114ff202-19a8-3275-abab-8a3ef478efa5",
+      "name": "large chemical reactor",
+      "durationTicks": 1400.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 3600.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 5,
+          "name": "ammonium chloride",
+          "free": false
+        },
+        {
+          "amount": 18000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 35,
+          "name": "platinum concentrate",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 16.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 47,
+          "name": "platinum salt dust",
+          "free": false
+        },
+        {
+          "amount": 4.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 48,
+          "name": "reprecipitated platinum dust",
+          "free": false
+        },
+        {
+          "amount": 3600.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 23,
+          "name": "palladium enriched ammonia",
+          "free": false
+        },
+        {
+          "amount": 9000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 28,
+          "name": "nitrogen dioxide",
+          "free": false
+        },
+        {
+          "amount": 9000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 49,
+          "name": "diluted sulfuric acid",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "1925daad-d02e-3700-bd3e-dcc1ae324ecf",
+      "name": "mixer",
+      "durationTicks": 30.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 49,
+          "name": "diluted sulfuric acid",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 26,
+          "name": "nitric acid",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 2000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 33,
+          "name": "aqua regia",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "1b048efb-ce66-309a-8813-01332f2eba42",
+      "name": "sifter",
+      "durationTicks": 600.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 24,
+          "name": "palladium salt dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 0.95,
+          "multiplier": 1.0,
+          "resource": 22,
+          "name": "palladium metallic powder dust",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "1c1bc987-a192-3f3d-9659-5413fd1c2976",
+      "name": "macerator",
+      "durationTicks": 39.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 50,
+          "name": "potassium ingot",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 51,
+          "name": "potassium dust",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "1e287ddd-b630-3627-a023-ad463ddad469",
+      "name": "large chemical reactor",
+      "durationTicks": 300.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 52,
+          "name": "iridium dioxide dust",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 3,
+          "name": "hydrochloric acid",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 53,
+          "name": "acidic iridium solution",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "213c2ed1-05a9-337e-9856-265508ec83eb",
+      "name": "electric blast furnace",
+      "durationTicks": 200.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 54,
+          "name": "refined platinum salt dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 32,
+          "name": "PMP",
+          "free": false
+        },
+        {
+          "amount": 87.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 13,
+          "name": "chlorine",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "224a47ec-b3ab-34cd-b79b-9d0ac05a4db9",
+      "name": "large chemical reactor",
+      "durationTicks": 300.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 6000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 3,
+          "name": "hydrochloric acid",
+          "free": false
+        },
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 55,
+          "name": "ruthenium tetroxide dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 56,
+          "name": "ruthenium dust",
+          "free": false
+        },
+        {
+          "amount": 6000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 13,
+          "name": "chlorine",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "2636c67a-6155-3874-80e7-1af89176127e",
+      "name": "fluid solidifier",
+      "durationTicks": 32.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 144.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 57,
+          "name": "molten potassium",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 50,
+          "name": "potassium ingot",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "2b3cf353-4bf9-3bf8-94c3-d15338771ec2",
+      "name": "large chemical reactor",
+      "durationTicks": 250.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 4000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 58,
+          "name": "formic acid",
+          "free": false
+        },
+        {
+          "amount": 4.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 25,
+          "name": "reprecipitated palladium dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 2.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 59,
+          "name": "palladium dust",
+          "free": false
+        },
+        {
+          "amount": 4000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 4,
+          "name": "ammonia",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 60,
+          "name": "ethylene",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {
+        "0": 1.0
+      },
+      "targetInputRates": {}
+    },
+    {
+      "id": "2ede4e4d-0e60-382e-b145-376d7d27c9c1",
+      "name": "large chemical reactor",
+      "durationTicks": 300.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 61,
+          "name": "rhodium sulfate solution",
+          "free": false
+        },
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 20,
+          "name": "zinc dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 6.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 19,
+          "name": "zinc sulfate dust",
+          "free": false
+        },
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 62,
+          "name": "crude rhodium metal dust",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "327290e2-5317-3dcb-9c53-de1b8fe4ef0e",
+      "name": "centrifuge",
+      "durationTicks": 45.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 5.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 63,
+          "name": "sludge dust residue dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 2.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 64,
+          "name": "gold dust",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "43932a79-9e5b-3d39-84bb-3a7653dc89d5",
+      "name": "large chemical reactor",
+      "durationTicks": 320.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 42,
+          "name": "nitrogen",
+          "free": false
+        },
+        {
+          "amount": 3000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 18,
+          "name": "hydrogen",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 4,
+          "name": "ammonia",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "43b9c7da-bc96-3734-a6b9-4fcaf71f65c3",
+      "name": "large chemical reactor",
+      "durationTicks": 1200.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 39600.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 65,
+          "name": "rhodium sulfate",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 39600.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 61,
+          "name": "rhodium sulfate solution",
+          "free": false
+        },
+        {
+          "amount": 7200.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 57,
+          "name": "molten potassium",
+          "free": false
+        },
+        {
+          "amount": 4.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 66,
+          "name": "leach residue dust",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "44651d86-b223-381e-8522-f037fcb9b133",
+      "name": "electric blast furnace",
+      "durationTicks": 100.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 67,
+          "name": "iridium metal residue dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 63,
+          "name": "sludge dust residue dust",
+          "free": false
+        },
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 52,
+          "name": "iridium dioxide dust",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "451642d6-2f3f-350e-a286-adfb60a06e68",
+      "name": "large chemical reactor",
+      "durationTicks": 30.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 12,
+          "name": "calcium dust",
+          "free": false
+        },
+        {
+          "amount": 4.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 48,
+          "name": "reprecipitated platinum dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 2.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 68,
+          "name": "platinum dust",
+          "free": false
+        },
+        {
+          "amount": 3.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 11,
+          "name": "calcium chloride dust",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "47c8538a-ab69-3cb1-a5b8-2d51b6d2d576",
+      "name": "industrial sifter",
+      "durationTicks": 600.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 47,
+          "name": "platinum salt dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 0.95,
+          "multiplier": 1.0,
+          "resource": 54,
+          "name": "refined platinum salt dust",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "4a7e34db-7937-3ee6-b771-4a2ec8bc74a6",
+      "name": "large chemical reactor",
+      "durationTicks": 300.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 3000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 5,
+          "name": "ammonium chloride",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 53,
+          "name": "acidic iridium solution",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 36,
+          "name": "iridium chloride dust",
+          "free": false
+        },
+        {
+          "amount": 3000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 4,
+          "name": "ammonia",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "4c101919-141f-3e11-adfe-15d519d85335",
+      "name": "electric blast furnace",
+      "durationTicks": 200.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 66,
+          "name": "leach residue dust",
+          "free": false
+        },
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 69,
+          "name": "saltpeter",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 70,
+          "name": "salt water",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 3.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 71,
+          "name": "sodium ruthenate dust",
+          "free": false
+        },
+        {
+          "amount": 6.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 72,
+          "name": "rarest metal residue dust",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "5009260b-5251-3a02-aafb-8d24572836ca",
+      "name": "electrolyzer",
+      "durationTicks": 392.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 21,
+          "name": "sulfuric acid",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 2000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 18,
+          "name": "hydrogen",
+          "free": false
+        },
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 73,
+          "name": "sulfur dust",
+          "free": false
+        },
+        {
+          "amount": 4000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 9,
+          "name": "oxygen",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "5018bbab-c3e1-32c4-9751-46f08271d4aa",
+      "name": "fluid extractor",
+      "durationTicks": 23.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 74,
+          "name": "potassium disulfate dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 144.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 75,
+          "name": "molten potassium disulfate",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "5213332f-671b-35c7-be3b-d78dee6fc561",
+      "name": "distillation tower",
+      "durationTicks": 150.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 76,
+          "name": "acidic osmium solution",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 100.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 43,
+          "name": "osmium solution",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "54a60aec-fcc0-395d-8aee-ca5e9a1236a3",
+      "name": "large chemical reactor",
+      "durationTicks": 42.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 2.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 73,
+          "name": "sulfur dust",
+          "free": false
+        },
+        {
+          "amount": 2.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 51,
+          "name": "potassium dust",
+          "free": false
+        },
+        {
+          "amount": 7000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 9,
+          "name": "oxygen",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 11.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 74,
+          "name": "potassium disulfate dust",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "56d356c0-7d8f-35bb-920a-c2835e6b1ffc",
+      "name": "electric blast furnace",
+      "durationTicks": 100.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 62,
+          "name": "crude rhodium metal dust",
+          "free": false
+        },
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 40,
+          "name": "salt",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 13,
+          "name": "chlorine",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 3.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 6,
+          "name": "rhodium salt dust",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "57697f55-6f88-353b-886c-8c08984ab743",
+      "name": "large chemical reactor",
+      "durationTicks": 15.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 21,
+          "name": "sulfuric acid",
+          "free": false
+        },
+        {
+          "amount": 2000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 45,
+          "name": "sodium formate",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 7.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 77,
+          "name": "sodium sulfate dust",
+          "free": false
+        },
+        {
+          "amount": 2000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 58,
+          "name": "formic acid",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "57b297a1-8f3b-3b4c-aadd-67a7bfd9064b",
+      "name": "large chemical reactor",
+      "durationTicks": 300.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 7,
+          "name": "rhodium salt solution",
+          "free": false
+        },
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 27,
+          "name": "sodium nitrate dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 0,
+          "name": "rhodium nitrate",
+          "free": false
+        },
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 40,
+          "name": "salt",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "59370509-c5de-384a-a879-4e67802f8273",
+      "name": "large chemical reactor",
+      "durationTicks": 300.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 6.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 71,
+          "name": "sodium ruthenate dust",
+          "free": false
+        },
+        {
+          "amount": 3000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 13,
+          "name": "chlorine",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 9000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 78,
+          "name": "ruthenium tetroxide solution",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "6510cbc7-71c7-35b8-b489-24f462e385ab",
+      "name": "electric blast furnace",
+      "durationTicks": 200.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 34,
+          "name": "platinum residue dust",
+          "free": false
+        },
+        {
+          "amount": 360.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 75,
+          "name": "molten potassium disulfate",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 66,
+          "name": "leach residue dust",
+          "free": false
+        },
+        {
+          "amount": 360.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 65,
+          "name": "rhodium sulfate",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "69c1f267-af02-3731-9148-2a8f46d477af",
+      "name": "mixer",
+      "durationTicks": 50.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 40,
+          "name": "salt",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 250.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 70,
+          "name": "salt water",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "6b680623-d6be-3a65-9b89-7feb7acc1e56",
+      "name": "large chemical reactor",
+      "durationTicks": 30.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 7.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 77,
+          "name": "sodium sulfate dust",
+          "free": false
+        },
+        {
+          "amount": 2000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 18,
+          "name": "hydrogen",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 21,
+          "name": "sulfuric acid",
+          "free": false
+        },
+        {
+          "amount": 2.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 16,
+          "name": "sodium dust",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "75abadaa-8a8f-3c54-8d48-f0629702408b",
+      "name": "oil cracker",
+      "durationTicks": 150.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 2,
+          "name": "steam",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 78,
+          "name": "ruthenium tetroxide solution",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 2000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 39,
+          "name": "hot ruthenium tetroxide solution",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "78297bae-5575-30b7-9cda-f3e9fb46c641",
+      "name": "electric blast furnace",
+      "durationTicks": 100.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 2.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 72,
+          "name": "rarest metal residue dust",
+          "free": false
+        },
+        {
+          "amount": 500.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 3,
+          "name": "hydrochloric acid",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 67,
+          "name": "iridium metal residue dust",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 76,
+          "name": "acidic osmium solution",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "7a255dd8-fcb2-3108-bc71-252dab0dc18b",
+      "name": "fluid solidifier",
+      "durationTicks": 33.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 41,
+          "name": "ruthenium tetroxide",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 55,
+          "name": "ruthenium tetroxide dust",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "7f2e9f89-8200-350d-aa5a-f67805a5d60d",
+      "name": "large chemical reactor",
+      "durationTicks": 60.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 18,
+          "name": "hydrogen",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 13,
+          "name": "chlorine",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 3,
+          "name": "hydrochloric acid",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "844b1889-d507-3000-a261-fc5b00fca117",
+      "source": "54a60aec-fcc0-395d-8aee-ca5e9a1236a3",
+      "sourceOutput": 0,
+      "target": "5018bbab-c3e1-32c4-9751-46f08271d4aa",
+      "targetInput": 0
+    },
+    {
+      "id": "848f84e3-65cc-35b0-a6e9-50f4ae23eb0d",
+      "source": "8038c90c-64ef-37ca-ba53-6cde00e3b409",
+      "sourceOutput": 0,
+      "target": "f2aefc70-1c9a-39b7-8ed8-af86a37aa3e1",
+      "targetInput": 0
+    },
+    {
+      "id": "84ac3e7e-61fb-329a-9188-f5bdaf2c2f47",
+      "source": "213c2ed1-05a9-337e-9856-265508ec83eb",
+      "sourceOutput": 1,
+      "target": "56d356c0-7d8f-35bb-920a-c2835e6b1ffc",
+      "targetInput": 2
+    },
+    {
+      "id": "875b3ac9-67b1-30ae-9810-04ead68df5fe",
+      "source": "f90b9c5a-047a-3134-bd52-b47daf01540c",
+      "sourceOutput": 0,
+      "target": "c2bd5b41-97b5-3e1e-a62c-ec2ec2d3b894",
+      "targetInput": 0
+    },
+    {
+      "id": "87f75d69-714b-3fa2-8579-7caba506d9a6",
+      "source": "56d356c0-7d8f-35bb-920a-c2835e6b1ffc",
+      "sourceOutput": 0,
+      "target": "9d56eff9-1145-3e57-b02d-76e0f7561329",
+      "targetInput": 0
+    },
+    {
+      "id": "89cfb648-35a5-3be9-9997-9f55c1cfe9fe",
+      "source": "0da4e6a9-d9b9-31dd-b7e2-88b070c3f528",
+      "sourceOutput": 1,
+      "target": "cb065c15-596c-33b5-baa1-d18742f83077",
+      "targetInput": 1
+    },
+    {
+      "id": "8a3b0d10-5239-3c3e-9ac8-dfc539afdbcf",
+      "source": "5018bbab-c3e1-32c4-9751-46f08271d4aa",
+      "sourceOutput": 0,
+      "target": "6510cbc7-71c7-35b8-b489-24f462e385ab",
+      "targetInput": 1
+    },
+    {
+      "id": "8af4e3b3-7a6f-32b5-b4b1-129b176615a0",
+      "source": "4a7e34db-7937-3ee6-b771-4a2ec8bc74a6",
+      "sourceOutput": 1,
+      "target": "cb065c15-596c-33b5-baa1-d18742f83077",
+      "targetInput": 1
+    },
+    {
+      "id": "8c1b58dd-308e-38b6-9ac8-0ccd4570b08c",
+      "source": "a935f09e-a985-3b4e-a2ae-9c39ad5bcf8a",
+      "sourceOutput": 0,
+      "target": "451642d6-2f3f-350e-a286-adfb60a06e68",
+      "targetInput": 0
+    },
+    {
+      "id": "8e187dbe-0df9-3282-b50e-bc8a5f0b0550",
+      "source": "b63e1cae-4d76-33aa-a343-fb1c9c21c8d4",
+      "sourceOutput": 1,
+      "target": "43932a79-9e5b-3d39-84bb-3a7653dc89d5",
+      "targetInput": 1
+    },
+    {
+      "id": "8eae122f-d60c-3b23-9f6f-4ac973a95fa7",
+      "source": "a935f09e-a985-3b4e-a2ae-9c39ad5bcf8a",
+      "sourceOutput": 0,
+      "target": "e3110aef-b131-304a-a257-499585947e3b",
+      "targetInput": 0
+    },
+    {
+      "id": "8fb82eb8-a0ac-331f-a5cf-30d758d47a1d",
+      "source": "43b9c7da-bc96-3734-a6b9-4fcaf71f65c3",
+      "sourceOutput": 0,
+      "target": "2ede4e4d-0e60-382e-b145-376d7d27c9c1",
+      "targetInput": 0
+    },
+    {
+      "id": "9016a00e-4491-34f1-8473-0665e3bf855d",
+      "source": "57b297a1-8f3b-3b4c-aadd-67a7bfd9064b",
+      "sourceOutput": 1,
+      "target": "56d356c0-7d8f-35bb-920a-c2835e6b1ffc",
+      "targetInput": 1
+    },
+    {
+      "id": "9042dc2e-f751-3c1c-a5c7-0bfdd10c9f1c",
+      "source": "114ff202-19a8-3275-abab-8a3ef478efa5",
+      "sourceOutput": 3,
+      "target": "c648f0a3-0109-391a-9043-c8d1d4dc9a43",
+      "targetInput": 0
+    },
+    {
+      "id": "943b3518-961e-3f5c-bc82-0ef64ddd2deb",
+      "source": "75abadaa-8a8f-3c54-8d48-f0629702408b",
+      "sourceOutput": 0,
+      "target": "ec166cf6-2f2d-3e94-b834-2b2d5bbb3c2b",
+      "targetInput": 0
+    },
+    {
+      "id": "96ac9fba-1842-3ed1-b6c7-76f4525acf6e",
+      "source": "6b680623-d6be-3a65-9b89-7feb7acc1e56",
+      "sourceOutput": 1,
+      "target": "b63e1cae-4d76-33aa-a343-fb1c9c21c8d4",
+      "targetInput": 0
+    },
+    {
+      "id": "9b25a512-7360-324b-bafc-f0bc4a9395ab",
+      "source": "57b297a1-8f3b-3b4c-aadd-67a7bfd9064b",
+      "sourceOutput": 1,
+      "target": "69c1f267-af02-3731-9148-2a8f46d477af",
+      "targetInput": 0
+    },
+    {
+      "id": "9b475019-4a02-3ee9-b53e-c68b09420e19",
+      "source": "5009260b-5251-3a02-aafb-8d24572836ca",
+      "sourceOutput": 0,
+      "target": "f90b9c5a-047a-3134-bd52-b47daf01540c",
+      "targetInput": 2
+    },
+    {
+      "id": "9f179ebd-bfa6-35f9-b174-9bdfa345392d",
+      "source": "213c2ed1-05a9-337e-9856-265508ec83eb",
+      "sourceOutput": 0,
+      "target": "e2a8af80-cad2-39b8-a2dd-a3b9f4dde5e6",
+      "targetInput": 0
+    },
+    {
+      "id": "a2871cac-4e4e-3825-9708-9f830340112f",
+      "source": "2ede4e4d-0e60-382e-b145-376d7d27c9c1",
+      "sourceOutput": 1,
+      "target": "56d356c0-7d8f-35bb-920a-c2835e6b1ffc",
+      "targetInput": 0
+    },
+    {
+      "id": "a42a1714-799a-38bd-ab24-f8aeff8dc91e",
+      "source": "1925daad-d02e-3700-bd3e-dcc1ae324ecf",
+      "sourceOutput": 0,
+      "target": "e2a8af80-cad2-39b8-a2dd-a3b9f4dde5e6",
+      "targetInput": 1
+    },
+    {
+      "id": "a4650220-d870-3eb2-871c-b11a58c4fba6",
+      "source": "a935f09e-a985-3b4e-a2ae-9c39ad5bcf8a",
+      "sourceOutput": 1,
+      "target": "7f2e9f89-8200-350d-aa5a-f67805a5d60d",
+      "targetInput": 1
+    },
+    {
+      "id": "a4d8afbb-2529-3dd6-adeb-3bd5e0da4c7d",
+      "source": "1b048efb-ce66-309a-8813-01332f2eba42",
+      "sourceOutput": 0,
+      "target": "bf16b30d-7dd3-3763-9e24-241e3340ab3e",
+      "targetInput": 0
+    },
+    {
+      "id": "a59135e6-5648-39a7-b323-13387539e3d8",
+      "source": "ec166cf6-2f2d-3e94-b834-2b2d5bbb3c2b",
+      "sourceOutput": 1,
+      "target": "7a255dd8-fcb2-3108-bc71-252dab0dc18b",
+      "targetInput": 0
+    },
+    {
+      "id": "a9121e92-52c1-3ed0-85ea-d73c1eb3cbca",
+      "source": "9f7605a2-891b-3ad2-9016-6eafc50d94e9",
+      "sourceOutput": 0,
+      "target": "fe6bb3cc-515b-3fbd-969e-1bc17d778fd3",
+      "targetInput": 0
+    },
+    {
+      "id": "aa23bb66-1929-37ac-8c3d-7951cb6358be",
+      "source": "213c2ed1-05a9-337e-9856-265508ec83eb",
+      "sourceOutput": 1,
+      "target": "7f2e9f89-8200-350d-aa5a-f67805a5d60d",
+      "targetInput": 1
+    },
+    {
+      "id": "aef87f03-504f-3776-ace5-9e3c64e450e4",
+      "source": "5009260b-5251-3a02-aafb-8d24572836ca",
+      "sourceOutput": 0,
+      "target": "7f2e9f89-8200-350d-aa5a-f67805a5d60d",
+      "targetInput": 0
+    },
+    {
+      "id": "b0286da8-4b51-33e6-b766-64c0e2d422ae",
+      "source": "f2aefc70-1c9a-39b7-8ed8-af86a37aa3e1",
+      "sourceOutput": 0,
+      "target": "af7e0445-4b68-33a9-b04d-e564445aeb16",
+      "targetInput": 0
+    },
+    {
+      "id": "b0d1296e-6a2c-392a-a068-372ddb8c695f",
+      "source": "5009260b-5251-3a02-aafb-8d24572836ca",
+      "sourceOutput": 0,
+      "target": "43932a79-9e5b-3d39-84bb-3a7653dc89d5",
+      "targetInput": 1
+    },
+    {
+      "id": "b0d2489b-565b-37ee-a783-cfb2f6b64793",
+      "source": "cb065c15-596c-33b5-baa1-d18742f83077",
+      "sourceOutput": 0,
+      "target": "bf16b30d-7dd3-3763-9e24-241e3340ab3e",
+      "targetInput": 1
+    },
+    {
+      "id": "b3b5b615-dd41-3a19-bf53-72d5bea44ded",
+      "source": "47c8538a-ab69-3cb1-a5b8-2d51b6d2d576",
+      "sourceOutput": 0,
+      "target": "213c2ed1-05a9-337e-9856-265508ec83eb",
+      "targetInput": 0
+    },
+    {
+      "id": "b47c8315-9a6e-3752-86ff-6ec974f041b1",
+      "source": "78297bae-5575-30b7-9cda-f3e9fb46c641",
+      "sourceOutput": 0,
+      "target": "44651d86-b223-381e-8522-f037fcb9b133",
+      "targetInput": 0
+    },
+    {
+      "id": "b52aebed-7003-3972-8e39-b9fc571861d8",
+      "source": "7f2e9f89-8200-350d-aa5a-f67805a5d60d",
+      "sourceOutput": 0,
+      "target": "91c3e0b8-d90f-34dd-9acb-e445fd97af7e",
+      "targetInput": 0
+    },
+    {
+      "id": "b5e03280-40d7-3df5-a835-75292e3424b7",
+      "source": "bf16b30d-7dd3-3763-9e24-241e3340ab3e",
+      "sourceOutput": 0,
+      "target": "1b048efb-ce66-309a-8813-01332f2eba42",
+      "targetInput": 0
+    },
+    {
+      "id": "b5ea9d5a-7a8f-33b7-b704-c7df6ea8e7c4",
+      "source": "224a47ec-b3ab-34cd-b79b-9d0ac05a4db9",
+      "sourceOutput": 1,
+      "target": "59370509-c5de-384a-a879-4e67802f8273",
+      "targetInput": 1
+    },
+    {
+      "id": "b650fa7c-35dd-30b4-855a-42fa3dec23c8",
+      "source": "7a255dd8-fcb2-3108-bc71-252dab0dc18b",
+      "sourceOutput": 0,
+      "target": "224a47ec-b3ab-34cd-b79b-9d0ac05a4db9",
+      "targetInput": 1
+    },
+    {
+      "id": "b676e58f-2c52-3732-bd5e-5b659b906c3f",
+      "source": "c2bd5b41-97b5-3e1e-a62c-ec2ec2d3b894",
+      "sourceOutput": 1,
+      "target": "6b680623-d6be-3a65-9b89-7feb7acc1e56",
+      "targetInput": 1
+    },
+    {
+      "id": "b7c2781f-b038-35a4-acfa-69033ab277b7",
+      "source": "fc46ffe4-0ed7-369c-940b-8e35515a8bb1",
+      "sourceOutput": 1,
+      "target": "7f2e9f89-8200-350d-aa5a-f67805a5d60d",
+      "targetInput": 1
+    },
+    {
+      "id": "ba42d40f-eb3c-3b30-8217-cd352825db0f",
+      "source": "91c3e0b8-d90f-34dd-9acb-e445fd97af7e",
+      "sourceOutput": 0,
+      "target": "4a7e34db-7937-3ee6-b771-4a2ec8bc74a6",
+      "targetInput": 0
+    },
+    {
+      "id": "beaf42a2-1549-35ea-a7ee-4095824fe21b",
+      "source": "b63e1cae-4d76-33aa-a343-fb1c9c21c8d4",
+      "sourceOutput": 1,
+      "target": "6b680623-d6be-3a65-9b89-7feb7acc1e56",
+      "targetInput": 1
+    },
+    {
+      "id": "c0e6adf6-1635-3f8d-a6a7-e492e9aa8913",
+      "source": "6b680623-d6be-3a65-9b89-7feb7acc1e56",
+      "sourceOutput": 0,
+      "target": "57697f55-6f88-353b-886c-8c08984ab743",
+      "targetInput": 0
+    },
+    {
+      "id": "c1943871-83d1-3dae-a146-29c842f77506",
+      "source": "5009260b-5251-3a02-aafb-8d24572836ca",
+      "sourceOutput": 2,
+      "target": "9f7605a2-891b-3ad2-9016-6eafc50d94e9",
+      "targetInput": 1
+    },
+    {
+      "id": "c1c258c8-af7c-34ea-8b01-648d181e097b",
+      "source": "43b9c7da-bc96-3734-a6b9-4fcaf71f65c3",
+      "sourceOutput": 2,
+      "target": "4c101919-141f-3e11-adfe-15d519d85335",
+      "targetInput": 0
+    },
+    {
+      "id": "c42b2dd6-46a8-38f9-b765-16e2d6771901",
+      "source": "ec166cf6-2f2d-3e94-b834-2b2d5bbb3c2b",
+      "sourceOutput": 0,
+      "target": "69c1f267-af02-3731-9148-2a8f46d477af",
+      "targetInput": 0
+    },
+    {
+      "id": "c4af0b7a-276c-3fea-be70-b110c0fbb816",
+      "source": "114ff202-19a8-3275-abab-8a3ef478efa5",
+      "sourceOutput": 0,
+      "target": "47c8538a-ab69-3cb1-a5b8-2d51b6d2d576",
+      "targetInput": 0
+    },
+    {
+      "id": "c8ab0097-886f-32f4-a803-8ebc0ab947ae",
+      "source": "0da4e6a9-d9b9-31dd-b7e2-88b070c3f528",
+      "sourceOutput": 2,
+      "target": "56d356c0-7d8f-35bb-920a-c2835e6b1ffc",
+      "targetInput": 2
+    },
+    {
+      "id": "c9a12087-a9b3-303f-bd16-c08cfe897986",
+      "source": "c2bd5b41-97b5-3e1e-a62c-ec2ec2d3b894",
+      "sourceOutput": 1,
+      "target": "b70db116-1314-3bd1-9f5d-94ec767950a6",
+      "targetInput": 1
+    },
+    {
+      "id": "c9cc3ac6-177e-3331-8819-3d9e22dd13b6",
+      "source": "e3110aef-b131-304a-a257-499585947e3b",
+      "sourceOutput": 0,
+      "target": "e1fd2a61-480e-3046-8f8b-b6a0b412460f",
+      "targetInput": 0
+    },
+    {
+      "id": "caeeedc0-3c6f-3cce-a646-6afe2ecd330e",
+      "source": "91c3e0b8-d90f-34dd-9acb-e445fd97af7e",
+      "sourceOutput": 0,
+      "target": "114ff202-19a8-3275-abab-8a3ef478efa5",
+      "targetInput": 0
+    },
+    {
+      "id": "ccdaa26c-758d-3d66-a107-26b3f75da5ed",
+      "source": "fc46ffe4-0ed7-369c-940b-8e35515a8bb1",
+      "sourceOutput": 1,
+      "target": "56d356c0-7d8f-35bb-920a-c2835e6b1ffc",
+      "targetInput": 2
+    },
+    {
+      "id": "cce77054-afff-3dbe-b8c2-eea1cc9d695a",
+      "source": "891a6072-b302-3491-8e71-c4f2db0fcc0e",
+      "sourceOutput": 0,
+      "target": "75abadaa-8a8f-3c54-8d48-f0629702408b",
+      "targetInput": 0
+    },
+    {
+      "id": "cfab1638-623a-3c25-a7c9-f879a7721f7d",
+      "source": "43932a79-9e5b-3d39-84bb-3a7653dc89d5",
+      "sourceOutput": 0,
+      "target": "cb065c15-596c-33b5-baa1-d18742f83077",
+      "targetInput": 1
+    },
+    {
+      "id": "d0f3a177-6d3c-3ba3-a3e8-2c9059421a82",
+      "source": "ec166cf6-2f2d-3e94-b834-2b2d5bbb3c2b",
+      "sourceOutput": 0,
+      "target": "56d356c0-7d8f-35bb-920a-c2835e6b1ffc",
+      "targetInput": 1
+    },
+    {
+      "id": "d2fb4741-56e7-3359-a8c3-88276dafe74a",
+      "source": "e2a8af80-cad2-39b8-a2dd-a3b9f4dde5e6",
+      "sourceOutput": 0,
+      "target": "6510cbc7-71c7-35b8-b489-24f462e385ab",
+      "targetInput": 0
+    },
+    {
+      "id": "d910cde0-0827-3c7e-af4f-c7a45b180bf7",
+      "source": "224a47ec-b3ab-34cd-b79b-9d0ac05a4db9",
+      "sourceOutput": 1,
+      "target": "7f2e9f89-8200-350d-aa5a-f67805a5d60d",
+      "targetInput": 1
+    },
+    {
+      "id": "ded023f9-1502-3cb7-8792-f84e41cd0622",
+      "source": "57697f55-6f88-353b-886c-8c08984ab743",
+      "sourceOutput": 0,
+      "target": "6b680623-d6be-3a65-9b89-7feb7acc1e56",
+      "targetInput": 0
+    },
+    {
+      "id": "e1e8b30d-fb3f-3756-8136-9a99abfee360",
+      "source": "a935f09e-a985-3b4e-a2ae-9c39ad5bcf8a",
+      "sourceOutput": 1,
+      "target": "59370509-c5de-384a-a879-4e67802f8273",
+      "targetInput": 1
+    },
+    {
+      "id": "e2af7e60-30cb-3aba-b246-738ceb3096fb",
+      "source": "b63e1cae-4d76-33aa-a343-fb1c9c21c8d4",
+      "sourceOutput": 1,
+      "target": "b70db116-1314-3bd1-9f5d-94ec767950a6",
+      "targetInput": 1
+    },
+    {
+      "id": "e3168ef2-8f35-308b-837d-95992c848255",
+      "source": "44651d86-b223-381e-8522-f037fcb9b133",
+      "sourceOutput": 0,
+      "target": "327290e2-5317-3dcb-9c53-de1b8fe4ef0e",
+      "targetInput": 0
+    },
+    {
+      "id": "e349e324-e7e4-31fa-b6ad-609e3bc9b00b",
+      "source": "f90b9c5a-047a-3134-bd52-b47daf01540c",
+      "sourceOutput": 0,
+      "target": "1925daad-d02e-3700-bd3e-dcc1ae324ecf",
+      "targetInput": 1
+    },
+    {
+      "id": "eb9f49eb-071c-308f-8916-459f997d40a1",
+      "source": "a935f09e-a985-3b4e-a2ae-9c39ad5bcf8a",
+      "sourceOutput": 1,
+      "target": "56d356c0-7d8f-35bb-920a-c2835e6b1ffc",
+      "targetInput": 2
+    },
+    {
+      "id": "ed8f71c7-7299-3a5b-ac3e-a5c441c3571a",
+      "source": "c2bd5b41-97b5-3e1e-a62c-ec2ec2d3b894",
+      "sourceOutput": 1,
+      "target": "f90b9c5a-047a-3134-bd52-b47daf01540c",
+      "targetInput": 2
+    },
+    {
+      "id": "f26d64e5-a26a-3b43-8876-9b7141750fe1",
+      "source": "6510cbc7-71c7-35b8-b489-24f462e385ab",
+      "sourceOutput": 0,
+      "target": "4c101919-141f-3e11-adfe-15d519d85335",
+      "targetInput": 0
+    },
+    {
+      "id": "f27ba376-f7ae-3961-b8a7-e46d95d7c9be",
+      "source": "5009260b-5251-3a02-aafb-8d24572836ca",
+      "sourceOutput": 2,
+      "target": "54a60aec-fcc0-395d-8aee-ca5e9a1236a3",
+      "targetInput": 2
+    },
+    {
+      "id": "f850b661-23e2-346f-a650-abd106270720",
+      "source": "6b680623-d6be-3a65-9b89-7feb7acc1e56",
+      "sourceOutput": 1,
+      "target": "c2bd5b41-97b5-3e1e-a62c-ec2ec2d3b894",
+      "targetInput": 1
+    },
+    {
+      "id": "f8c98242-62ef-3819-b7f2-df5d6b85c2b7",
+      "source": "0da4e6a9-d9b9-31dd-b7e2-88b070c3f528",
+      "sourceOutput": 1,
+      "target": "91c3e0b8-d90f-34dd-9acb-e445fd97af7e",
+      "targetInput": 1
+    },
+    {
+      "id": "fbf05fd6-029d-31c0-b999-6929b482c772",
+      "source": "5009260b-5251-3a02-aafb-8d24572836ca",
+      "sourceOutput": 0,
+      "target": "6b680623-d6be-3a65-9b89-7feb7acc1e56",
+      "targetInput": 1
+    },
+    {
+      "id": "fdb24565-1dee-31eb-a5f7-42d895c4fb64",
+      "source": "9d56eff9-1145-3e57-b02d-76e0f7561329",
+      "sourceOutput": 0,
+      "target": "57b297a1-8f3b-3b4c-aadd-67a7bfd9064b",
+      "targetInput": 0
+    },
+    {
+      "id": "ff2e04eb-3ba6-348c-b7d2-958a256b40c9",
+      "source": "6510cbc7-71c7-35b8-b489-24f462e385ab",
+      "sourceOutput": 1,
+      "target": "43b9c7da-bc96-3734-a6b9-4fcaf71f65c3",
+      "targetInput": 0
+    },
+    {
+      "id": "018f8122-4761-3caa-9c72-a7e89530c6aa",
+      "source": "c2bd5b41-97b5-3e1e-a62c-ec2ec2d3b894",
+      "sourceOutput": 1,
+      "target": "7f2e9f89-8200-350d-aa5a-f67805a5d60d",
+      "targetInput": 0
+    },
+    {
+      "id": "01e8eedf-f951-3849-b027-e4d1ef58eb96",
+      "source": "6b680623-d6be-3a65-9b89-7feb7acc1e56",
+      "sourceOutput": 0,
+      "target": "5009260b-5251-3a02-aafb-8d24572836ca",
+      "targetInput": 0
+    },
+    {
+      "id": "06275046-aaeb-3b28-9fd6-03547a7324e8",
+      "source": "c648f0a3-0109-391a-9043-c8d1d4dc9a43",
+      "sourceOutput": 0,
+      "target": "c2bd5b41-97b5-3e1e-a62c-ec2ec2d3b894",
+      "targetInput": 0
+    },
+    {
+      "id": "092e81c1-3fd7-3641-bf52-b596d76e43c7",
+      "source": "2ede4e4d-0e60-382e-b145-376d7d27c9c1",
+      "sourceOutput": 0,
+      "target": "b70db116-1314-3bd1-9f5d-94ec767950a6",
+      "targetInput": 0
+    },
+    {
+      "id": "0a242ac7-cb4e-3b79-b2bb-a735cf9e045a",
+      "source": "7f2e9f89-8200-350d-aa5a-f67805a5d60d",
+      "sourceOutput": 0,
+      "target": "224a47ec-b3ab-34cd-b79b-9d0ac05a4db9",
+      "targetInput": 0
+    },
+    {
+      "id": "0a4c1075-81c4-3a2e-8efc-c2aad7bf1462",
+      "source": "43932a79-9e5b-3d39-84bb-3a7653dc89d5",
+      "sourceOutput": 0,
+      "target": "91c3e0b8-d90f-34dd-9acb-e445fd97af7e",
+      "targetInput": 1
+    },
+    {
+      "id": "0b856f1a-46a7-312a-b936-0013d07ca250",
+      "source": "69c1f267-af02-3731-9148-2a8f46d477af",
+      "sourceOutput": 0,
+      "target": "4c101919-141f-3e11-adfe-15d519d85335",
+      "targetInput": 2
+    },
+    {
+      "id": "12b6b026-60ee-3b1a-8b1e-02f4e2d0f287",
+      "source": "b63e1cae-4d76-33aa-a343-fb1c9c21c8d4",
+      "sourceOutput": 1,
+      "target": "f90b9c5a-047a-3134-bd52-b47daf01540c",
+      "targetInput": 2
+    },
+    {
+      "id": "15223a57-411b-38e2-8780-50728f2197a2",
+      "source": "451642d6-2f3f-350e-a286-adfb60a06e68",
+      "sourceOutput": 1,
+      "target": "a935f09e-a985-3b4e-a2ae-9c39ad5bcf8a",
+      "targetInput": 0
+    },
+    {
+      "id": "15ff4177-651e-38a5-a047-9f6ffc2a929c",
+      "source": "57b297a1-8f3b-3b4c-aadd-67a7bfd9064b",
+      "sourceOutput": 0,
+      "target": "8038c90c-64ef-37ca-ba53-6cde00e3b409",
+      "targetInput": 0
+    },
+    {
+      "id": "195a5680-b315-32c7-8407-f0bd4b7f9c0d",
+      "source": "5213332f-671b-35c7-be3b-d78dee6fc561",
+      "sourceOutput": 0,
+      "target": "fc46ffe4-0ed7-369c-940b-8e35515a8bb1",
+      "targetInput": 1
+    },
+    {
+      "id": "19e35837-87be-3bc2-82b2-8ed6dccbdcbd",
+      "source": "fe6bb3cc-515b-3fbd-969e-1bc17d778fd3",
+      "sourceOutput": 0,
+      "target": "57697f55-6f88-353b-886c-8c08984ab743",
+      "targetInput": 1
+    },
+    {
+      "id": "1dd3d19d-73d6-3437-9b56-887da8ed6d30",
+      "source": "114ff202-19a8-3275-abab-8a3ef478efa5",
+      "sourceOutput": 2,
+      "target": "bf16b30d-7dd3-3763-9e24-241e3340ab3e",
+      "targetInput": 1
+    },
+    {
+      "id": "20e1b7a4-c6d2-33a5-a4e5-6f59c6ba661c",
+      "source": "4c101919-141f-3e11-adfe-15d519d85335",
+      "sourceOutput": 0,
+      "target": "59370509-c5de-384a-a879-4e67802f8273",
+      "targetInput": 0
+    },
+    {
+      "id": "21c285fc-d986-35c3-b058-737d0d1add39",
+      "source": "fc46ffe4-0ed7-369c-940b-8e35515a8bb1",
+      "sourceOutput": 1,
+      "target": "59370509-c5de-384a-a879-4e67802f8273",
+      "targetInput": 1
+    },
+    {
+      "id": "22b9b0bb-ffa0-32eb-b059-188552fbb580",
+      "source": "c2bd5b41-97b5-3e1e-a62c-ec2ec2d3b894",
+      "sourceOutput": 1,
+      "target": "43932a79-9e5b-3d39-84bb-3a7653dc89d5",
+      "targetInput": 1
+    },
+    {
+      "id": "2777db24-9a9c-30b0-a121-3c52a76a40cd",
+      "source": "af7e0445-4b68-33a9-b04d-e564445aeb16",
+      "sourceOutput": 0,
+      "target": "0da4e6a9-d9b9-31dd-b7e2-88b070c3f528",
+      "targetInput": 0
+    },
+    {
+      "id": "295b5d9e-6c91-3100-8b5d-48774fa2b265",
+      "source": "7f2e9f89-8200-350d-aa5a-f67805a5d60d",
+      "sourceOutput": 0,
+      "target": "fc46ffe4-0ed7-369c-940b-8e35515a8bb1",
+      "targetInput": 0
+    },
+    {
+      "id": "2a93255b-abdf-30fd-814e-db017f8691d6",
+      "source": "bf16b30d-7dd3-3763-9e24-241e3340ab3e",
+      "sourceOutput": 1,
+      "target": "2b3cf353-4bf9-3bf8-94c3-d15338771ec2",
+      "targetInput": 1
+    },
+    {
+      "id": "330a6bf3-120a-31e3-b7b0-357d740b7f97",
+      "source": "1b048efb-ce66-309a-8813-01332f2eba42",
+      "sourceOutput": 0,
+      "target": "cb065c15-596c-33b5-baa1-d18742f83077",
+      "targetInput": 0
+    },
+    {
+      "id": "359309a8-c28a-3c1d-bfa3-8d3f5f822d0e",
+      "source": "7f2e9f89-8200-350d-aa5a-f67805a5d60d",
+      "sourceOutput": 0,
+      "target": "78297bae-5575-30b7-9cda-f3e9fb46c641",
+      "targetInput": 1
+    },
+    {
+      "id": "37e0f726-8766-3725-bc15-d4b74af5917d",
+      "source": "b63e1cae-4d76-33aa-a343-fb1c9c21c8d4",
+      "sourceOutput": 0,
+      "target": "fe6bb3cc-515b-3fbd-969e-1bc17d778fd3",
+      "targetInput": 1
+    },
+    {
+      "id": "3e36c3b2-b928-38ec-a0af-ad7712350793",
+      "source": "7f2e9f89-8200-350d-aa5a-f67805a5d60d",
+      "sourceOutput": 0,
+      "target": "0da4e6a9-d9b9-31dd-b7e2-88b070c3f528",
+      "targetInput": 1
+    },
+    {
+      "id": "3f4df32e-3d51-3b40-83b9-adae2dd580f3",
+      "source": "b70db116-1314-3bd1-9f5d-94ec767950a6",
+      "sourceOutput": 1,
+      "target": "57697f55-6f88-353b-886c-8c08984ab743",
+      "targetInput": 0
+    },
+    {
+      "id": "403250bf-ba5e-34b6-8eb9-edebbc13863f",
+      "source": "59370509-c5de-384a-a879-4e67802f8273",
+      "sourceOutput": 0,
+      "target": "75abadaa-8a8f-3c54-8d48-f0629702408b",
+      "targetInput": 1
+    },
+    {
+      "id": "4622cafa-01f8-3f21-839e-00231e8f3632",
+      "source": "0da4e6a9-d9b9-31dd-b7e2-88b070c3f528",
+      "sourceOutput": 2,
+      "target": "59370509-c5de-384a-a879-4e67802f8273",
+      "targetInput": 1
+    },
+    {
+      "id": "467d670b-bbab-319c-93e2-9343a0615804",
+      "source": "1e287ddd-b630-3627-a023-ad463ddad469",
+      "sourceOutput": 0,
+      "target": "4a7e34db-7937-3ee6-b771-4a2ec8bc74a6",
+      "targetInput": 1
+    },
+    {
+      "id": "499894b2-7d3e-3ed8-adea-dff384edc491",
+      "source": "4c101919-141f-3e11-adfe-15d519d85335",
+      "sourceOutput": 1,
+      "target": "78297bae-5575-30b7-9cda-f3e9fb46c641",
+      "targetInput": 0
+    },
+    {
+      "id": "4a443342-42bd-37e1-8f10-54c6d9e88d8d",
+      "source": "7f2e9f89-8200-350d-aa5a-f67805a5d60d",
+      "sourceOutput": 0,
+      "target": "1e287ddd-b630-3627-a023-ad463ddad469",
+      "targetInput": 1
+    },
+    {
+      "id": "4aa674f2-1639-33ec-843b-0491c880585b",
+      "source": "0da4e6a9-d9b9-31dd-b7e2-88b070c3f528",
+      "sourceOutput": 2,
+      "target": "7f2e9f89-8200-350d-aa5a-f67805a5d60d",
+      "targetInput": 1
+    },
+    {
+      "id": "50480494-63c2-3fde-815f-51f2d751b043",
+      "source": "1c1bc987-a192-3f3d-9659-5413fd1c2976",
+      "sourceOutput": 0,
+      "target": "54a60aec-fcc0-395d-8aee-ca5e9a1236a3",
+      "targetInput": 1
+    },
+    {
+      "id": "5256c56e-f0ab-3961-9d7c-6d16a338295d",
+      "source": "114ff202-19a8-3275-abab-8a3ef478efa5",
+      "sourceOutput": 1,
+      "target": "451642d6-2f3f-350e-a286-adfb60a06e68",
+      "targetInput": 1
+    },
+    {
+      "id": "541595d8-e065-3745-b42c-23b540e7ebe5",
+      "source": "5009260b-5251-3a02-aafb-8d24572836ca",
+      "sourceOutput": 0,
+      "target": "b70db116-1314-3bd1-9f5d-94ec767950a6",
+      "targetInput": 1
+    },
+    {
+      "id": "59b05630-f1d2-3035-b352-1c85745ff2cc",
+      "source": "2b3cf353-4bf9-3bf8-94c3-d15338771ec2",
+      "sourceOutput": 1,
+      "target": "cb065c15-596c-33b5-baa1-d18742f83077",
+      "targetInput": 1
+    },
+    {
+      "id": "5a7556eb-5a47-38b7-aa6e-2935dcba87b4",
+      "source": "4a7e34db-7937-3ee6-b771-4a2ec8bc74a6",
+      "sourceOutput": 1,
+      "target": "91c3e0b8-d90f-34dd-9acb-e445fd97af7e",
+      "targetInput": 1
+    },
+    {
+      "id": "5bcf33e1-0913-34ef-a96b-bf9e0a3cd2bd",
+      "source": "5009260b-5251-3a02-aafb-8d24572836ca",
+      "sourceOutput": 2,
+      "target": "f90b9c5a-047a-3134-bd52-b47daf01540c",
+      "targetInput": 0
+    },
+    {
+      "id": "5be26bcc-cc45-3506-b9a5-43d5bccbbf7d",
+      "source": "57697f55-6f88-353b-886c-8c08984ab743",
+      "sourceOutput": 1,
+      "target": "2b3cf353-4bf9-3bf8-94c3-d15338771ec2",
+      "targetInput": 0
+    },
+    {
+      "id": "5db04057-41a3-356e-b781-79d42c606ed3",
+      "source": "2b3cf353-4bf9-3bf8-94c3-d15338771ec2",
+      "sourceOutput": 1,
+      "target": "91c3e0b8-d90f-34dd-9acb-e445fd97af7e",
+      "targetInput": 1
+    },
+    {
+      "id": "5e50c0e9-d353-31ac-9601-a2504533482f",
+      "source": "78297bae-5575-30b7-9cda-f3e9fb46c641",
+      "sourceOutput": 1,
+      "target": "5213332f-671b-35c7-be3b-d78dee6fc561",
+      "targetInput": 0
+    },
+    {
+      "id": "62af3acc-8aef-3e42-ba6c-35565c049305",
+      "source": "224a47ec-b3ab-34cd-b79b-9d0ac05a4db9",
+      "sourceOutput": 1,
+      "target": "56d356c0-7d8f-35bb-920a-c2835e6b1ffc",
+      "targetInput": 2
+    },
+    {
+      "id": "6543dc8f-453a-39d5-b7c8-20db1becf504",
+      "source": "44651d86-b223-381e-8522-f037fcb9b133",
+      "sourceOutput": 1,
+      "target": "1e287ddd-b630-3627-a023-ad463ddad469",
+      "targetInput": 0
+    },
+    {
+      "id": "6602ac02-8bff-3369-a6e7-c281d16ade00",
+      "source": "5009260b-5251-3a02-aafb-8d24572836ca",
+      "sourceOutput": 1,
+      "target": "54a60aec-fcc0-395d-8aee-ca5e9a1236a3",
+      "targetInput": 0
+    },
+    {
+      "id": "66d7f0b2-c214-3ea1-96cd-619c2896af54",
+      "source": "213c2ed1-05a9-337e-9856-265508ec83eb",
+      "sourceOutput": 1,
+      "target": "59370509-c5de-384a-a879-4e67802f8273",
+      "targetInput": 1
+    },
+    {
+      "id": "69c83101-5e19-39df-961c-15faea9b385e",
+      "source": "00dbd63c-0478-327b-84dc-12e43375d054",
+      "sourceOutput": 0,
+      "target": "a935f09e-a985-3b4e-a2ae-9c39ad5bcf8a",
+      "targetInput": 0
+    },
+    {
+      "id": "6a2af693-6839-3e71-8328-a577ed1ea9c7",
+      "source": "5009260b-5251-3a02-aafb-8d24572836ca",
+      "sourceOutput": 2,
+      "target": "c648f0a3-0109-391a-9043-c8d1d4dc9a43",
+      "targetInput": 1
+    },
+    {
+      "id": "6a42317f-3345-3b30-9af6-0c6862f19f91",
+      "source": "c648f0a3-0109-391a-9043-c8d1d4dc9a43",
+      "sourceOutput": 0,
+      "target": "1925daad-d02e-3700-bd3e-dcc1ae324ecf",
+      "targetInput": 1
+    },
+    {
+      "id": "6a6bf6c3-9199-342c-b15d-4c4f234d7de6",
+      "source": "114ff202-19a8-3275-abab-8a3ef478efa5",
+      "sourceOutput": 4,
+      "target": "1925daad-d02e-3700-bd3e-dcc1ae324ecf",
+      "targetInput": 0
+    },
+    {
+      "id": "6a804c93-2cc8-3046-b324-4e88a578b4ab",
+      "source": "b70db116-1314-3bd1-9f5d-94ec767950a6",
+      "sourceOutput": 0,
+      "target": "2ede4e4d-0e60-382e-b145-376d7d27c9c1",
+      "targetInput": 1
+    },
+    {
+      "id": "6ba0c444-9626-34ac-985c-ffbd7a311ea1",
+      "source": "e2a8af80-cad2-39b8-a2dd-a3b9f4dde5e6",
+      "sourceOutput": 1,
+      "target": "114ff202-19a8-3275-abab-8a3ef478efa5",
+      "targetInput": 1
+    },
+    {
+      "id": "73a022dd-bf23-3c06-8f05-0f7fa4a6610f",
+      "source": "c2bd5b41-97b5-3e1e-a62c-ec2ec2d3b894",
+      "sourceOutput": 0,
+      "target": "57b297a1-8f3b-3b4c-aadd-67a7bfd9064b",
+      "targetInput": 1
+    },
+    {
+      "id": "744ece97-3eb7-36ed-9aeb-e05a98bbf933",
+      "source": "2636c67a-6155-3874-80e7-1af89176127e",
+      "sourceOutput": 0,
+      "target": "1c1bc987-a192-3f3d-9659-5413fd1c2976",
+      "targetInput": 0
+    },
+    {
+      "id": "764764d8-db1a-3bf6-9687-e07f773effb4",
+      "source": "e3110aef-b131-304a-a257-499585947e3b",
+      "sourceOutput": 2,
+      "target": "00dbd63c-0478-327b-84dc-12e43375d054",
+      "targetInput": 0
+    },
+    {
+      "id": "765c0cbc-f246-367d-8f4b-ab4fd3bab2d0",
+      "source": "43b9c7da-bc96-3734-a6b9-4fcaf71f65c3",
+      "sourceOutput": 1,
+      "target": "2636c67a-6155-3874-80e7-1af89176127e",
+      "targetInput": 0
+    },
+    {
+      "id": "772830bb-d409-3eac-8a24-94856bb5bc94",
+      "source": "b70db116-1314-3bd1-9f5d-94ec767950a6",
+      "sourceOutput": 1,
+      "target": "5009260b-5251-3a02-aafb-8d24572836ca",
+      "targetInput": 0
+    },
+    {
+      "id": "7ad41d8a-bd40-3509-9135-3fbe5a9bf231",
+      "source": "4a7e34db-7937-3ee6-b771-4a2ec8bc74a6",
+      "sourceOutput": 0,
+      "target": "e3110aef-b131-304a-a257-499585947e3b",
+      "targetInput": 1
+    },
+    {
+      "id": "7da0e51f-affe-3a09-a5c9-199117af3324",
+      "source": "b63e1cae-4d76-33aa-a343-fb1c9c21c8d4",
+      "sourceOutput": 1,
+      "target": "7f2e9f89-8200-350d-aa5a-f67805a5d60d",
+      "targetInput": 0
+    }
+  ],
+  "pools": [],
+  "drawers": [],
+  "extentPins": {},
+  "spares": {}
+}

@@ -1,0 +1,239 @@
+{
+  "mode": "AUTO",
+  "machines": [
+    {
+      "id": "8a4d03ad-9bec-32c9-b709-78a4c0b268d2",
+      "name": "LCR",
+      "durationTicks": 1400.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 0,
+          "name": "palladium metallic powder dust",
+          "free": false
+        },
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 1,
+          "name": "ammonia",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 2,
+          "name": "palladium enriched ammonia",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "d3be8598-67ad-37b0-828e-125d549aad4b",
+      "name": "LCR",
+      "durationTicks": 1400.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 2,
+          "name": "palladium enriched ammonia",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 3,
+          "name": "palladium salt dust",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "0d0b872a-a379-31d3-81ba-60aecb807198",
+      "name": "sifter",
+      "durationTicks": 1400.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 3,
+          "name": "palladium salt dust",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 0.95,
+          "multiplier": 1.0,
+          "resource": 0,
+          "name": "palladium metallic powder dust",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    },
+    {
+      "id": "2cf4549a-8ea3-3b8c-acfc-ef8765d89b5d",
+      "name": "large chemical reactor",
+      "durationTicks": 2250.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 9.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 0,
+          "name": "palladium metallic powder dust",
+          "free": false
+        },
+        {
+          "amount": 9000.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 2,
+          "name": "palladium enriched ammonia",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 16.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 3,
+          "name": "palladium salt dust",
+          "free": false
+        },
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 4,
+          "name": "reprecipitated palladium dust",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {
+        "1": 2.0
+      },
+      "targetInputRates": {}
+    },
+    {
+      "id": "5c6c01a9-c1ca-3dd1-9d78-d15802a585d4",
+      "name": "large chemical reactor",
+      "durationTicks": 1400.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [],
+      "outputs": [
+        {
+          "amount": 3600.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 2,
+          "name": "palladium enriched ammonia",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "a74f58ba-2b80-3c32-8938-9e692cf25e38",
+      "source": "0d0b872a-a379-31d3-81ba-60aecb807198",
+      "sourceOutput": 0,
+      "target": "8a4d03ad-9bec-32c9-b709-78a4c0b268d2",
+      "targetInput": 0
+    },
+    {
+      "id": "b4b6aafc-6cbc-30a8-8221-2f2b65e2a11a",
+      "source": "2cf4549a-8ea3-3b8c-acfc-ef8765d89b5d",
+      "sourceOutput": 0,
+      "target": "0d0b872a-a379-31d3-81ba-60aecb807198",
+      "targetInput": 0
+    },
+    {
+      "id": "f4dbfff0-dc4a-33e4-bfd3-1b24b255659f",
+      "source": "8a4d03ad-9bec-32c9-b709-78a4c0b268d2",
+      "sourceOutput": 0,
+      "target": "2cf4549a-8ea3-3b8c-acfc-ef8765d89b5d",
+      "targetInput": 1
+    },
+    {
+      "id": "f5e43285-6efc-3f97-a5af-67522232b571",
+      "source": "d3be8598-67ad-37b0-828e-125d549aad4b",
+      "sourceOutput": 0,
+      "target": "0d0b872a-a379-31d3-81ba-60aecb807198",
+      "targetInput": 0
+    },
+    {
+      "id": "2cf47d63-0fd6-32c4-82ca-bbf26ee53047",
+      "source": "5c6c01a9-c1ca-3dd1-9d78-d15802a585d4",
+      "sourceOutput": 0,
+      "target": "2cf4549a-8ea3-3b8c-acfc-ef8765d89b5d",
+      "targetInput": 1
+    },
+    {
+      "id": "5da20597-2e0b-3cdc-a7ff-3dc66731df24",
+      "source": "5c6c01a9-c1ca-3dd1-9d78-d15802a585d4",
+      "sourceOutput": 0,
+      "target": "d3be8598-67ad-37b0-828e-125d549aad4b",
+      "targetInput": 0
+    },
+    {
+      "id": "6138b633-33f7-3adc-9089-cabced1d41ed",
+      "source": "8a4d03ad-9bec-32c9-b709-78a4c0b268d2",
+      "sourceOutput": 0,
+      "target": "d3be8598-67ad-37b0-828e-125d549aad4b",
+      "targetInput": 0
+    },
+    {
+      "id": "7d16c7f4-d2b1-330e-b4a0-35096139384e",
+      "source": "0d0b872a-a379-31d3-81ba-60aecb807198",
+      "sourceOutput": 0,
+      "target": "2cf4549a-8ea3-3b8c-acfc-ef8765d89b5d",
+      "targetInput": 0
+    }
+  ],
+  "pools": [],
+  "drawers": [],
+  "extentPins": {},
+  "spares": {}
+}

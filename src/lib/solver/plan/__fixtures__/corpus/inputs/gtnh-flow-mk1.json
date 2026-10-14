@@ -1,0 +1,129 @@
+{
+  "mode": "AUTO",
+  "machines": [
+    {
+      "id": "8f2eeaeb-bbe0-3a78-9d21-651486b92dd5",
+      "name": "fusion reactor",
+      "durationTicks": 5.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 30.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 0,
+          "name": "heavy naquadah fuel",
+          "free": false
+        },
+        {
+          "amount": 65.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 1,
+          "name": "light naquadah fuel",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 100.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 2,
+          "name": "naquadah fuel mk1",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {
+        "0": 10.0
+      },
+      "targetInputRates": {}
+    },
+    {
+      "id": "0fa87c81-5a2b-3c6b-9879-360e0ff81c98",
+      "name": "distillation tower",
+      "durationTicks": 20.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 20.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 3,
+          "name": "naquadah solution",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 2.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 4,
+          "name": "naquadah asphalt",
+          "free": false
+        },
+        {
+          "amount": 5.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 0,
+          "name": "heavy naquadah fuel",
+          "free": false
+        },
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 1,
+          "name": "light naquadah fuel",
+          "free": false
+        },
+        {
+          "amount": 10.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 5,
+          "name": "water",
+          "free": true
+        },
+        {
+          "amount": 60.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 6,
+          "name": "naquadah gas",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "c020de3b-e8e0-3011-aaa4-097d66b256aa",
+      "source": "0fa87c81-5a2b-3c6b-9879-360e0ff81c98",
+      "sourceOutput": 2,
+      "target": "8f2eeaeb-bbe0-3a78-9d21-651486b92dd5",
+      "targetInput": 1
+    },
+    {
+      "id": "63d7ef46-9fc9-3dc5-a2d3-77f59941fd5b",
+      "source": "0fa87c81-5a2b-3c6b-9879-360e0ff81c98",
+      "sourceOutput": 1,
+      "target": "8f2eeaeb-bbe0-3a78-9d21-651486b92dd5",
+      "targetInput": 0
+    }
+  ],
+  "pools": [],
+  "drawers": [],
+  "extentPins": {},
+  "spares": {}
+}

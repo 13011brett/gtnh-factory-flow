@@ -1,0 +1,82 @@
+{
+  "mode": "AUTO",
+  "machines": [
+    {
+      "id": "bfc73d1a-588c-3055-8b6d-5b367f8e0846",
+      "name": "craft",
+      "durationTicks": 300.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 0,
+          "name": "iron ingot",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 9.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 1,
+          "name": "iron nugget",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {
+        "0": 9.0
+      },
+      "targetInputRates": {}
+    },
+    {
+      "id": "fb1e4db9-1286-3473-ab73-f5502583ca6f",
+      "name": "smelt",
+      "durationTicks": 300.0,
+      "energyPerTick": 0.0,
+      "throughputFactor": 1,
+      "inputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 2,
+          "name": "iron ore",
+          "free": false
+        }
+      ],
+      "outputs": [
+        {
+          "amount": 1.0,
+          "chance": 1.0,
+          "multiplier": 1.0,
+          "resource": 0,
+          "name": "iron ingot",
+          "free": false
+        }
+      ],
+      "countFixed": false,
+      "machineCount": 1,
+      "targetOutputRates": {},
+      "targetInputRates": {}
+    }
+  ],
+  "edges": [
+    {
+      "id": "137c8e30-c3fe-3ad9-a8d2-05790f56c911",
+      "source": "fb1e4db9-1286-3473-ab73-f5502583ca6f",
+      "sourceOutput": 0,
+      "target": "bfc73d1a-588c-3055-8b6d-5b367f8e0846",
+      "targetInput": 0
+    }
+  ],
+  "pools": [],
+  "drawers": [],
+  "extentPins": {},
+  "spares": {}
+}

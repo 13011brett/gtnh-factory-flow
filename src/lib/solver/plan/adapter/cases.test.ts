@@ -400,3 +400,29 @@ describe("unanchored", () => {
     expect([...run(p).result.plan!.unanchored].sort()).toEqual(["in1", "n", "out1"]);
   });
 });
+
+describe("terminals", () => {
+  it("an unwired port with a drawer on it is not a free terminal", () => {
+    const p = project({
+      recipes: [recipe("a", [["x", 1]], [["y", 1], ["w", 1]])],
+      nodes: [node("n", "a", { solvePin: 1 })],
+      storages: [drawer("in", "x")],
+      edges: [wire("i", "in", "n", "x", {}, { fromDrawer: true })],
+    });
+    const { result } = run(p, () =>
+      solved({
+        extentsPerSecond: { n: 1 },
+        machineCounts: { n: 1 },
+        terminalInputs: [{ port: { node: "n", port: 0, input: true }, ratePerSecond: 1 }],
+        terminalOutputs: [
+          { port: { node: "n", port: 0, input: false }, ratePerSecond: 1 },
+          { port: { node: "n", port: 1, input: false }, ratePerSecond: 1 },
+        ],
+      }),
+    );
+    expect(result.plan!.terminals.map((t) => t.portKey)).toEqual([
+      "n|o|output:item:y",
+      "n|o|output:item:w",
+    ]);
+  });
+});

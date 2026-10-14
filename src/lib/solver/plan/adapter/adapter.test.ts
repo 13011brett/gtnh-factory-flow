@@ -11,6 +11,7 @@ import type {
   SolveInput,
 } from "../types";
 import type { FactoryProject } from "../../../model/types";
+import { solveForTest } from "../__fixtures__/solve-entry";
 import { setSolveCore } from "./engine";
 
 afterEach(() => setSolveCore(undefined));
@@ -268,5 +269,27 @@ describe("the SolveInput the adapter builds", () => {
     expect(key).not.toContain("gone");
     expect(key).toContain("alloy:i:0");
     expect(key.split("|")).toHaveLength(2);
+  });
+});
+
+describe.skipIf(solveForTest === null)("with the real solver core", () => {
+  it("the forced-flows mock comes out as the mock has it", async () => {
+    setSolveCore((input) => solveForTest!(input) as Answer);
+    const out = calculateThroughput(mockForced.project, { generatedAt: "t" });
+    for (const node of mockForced.project.nodes) {
+      expect(out.nodes[node.id]!.theoreticalMachinesRequired, node.id).toBeCloseTo(
+        mockForced.result.nodes[node.id]!.theoreticalMachinesRequired,
+        9,
+      );
+    }
+    for (const edge of mockForced.project.edges) {
+      expect(out.edges[edge.id]!.transferredPerSecond, edge.id).toBeCloseTo(
+        mockForced.result.edges[edge.id]!.transferredPerSecond,
+        9,
+      );
+    }
+    const byPort = <T extends { portKey: string }>(list: T[]) =>
+      [...list].sort((a, b) => a.portKey.localeCompare(b.portKey));
+    expect(byPort(out.plan!.forced)).toEqual(byPort(mockForced.result.plan!.forced));
   });
 });

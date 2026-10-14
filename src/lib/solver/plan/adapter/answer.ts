@@ -120,10 +120,13 @@ export function readAnswer(model: PlanModel, answer: Answer): PlanReading {
       perSecond: e.perSecond,
     }));
 
+  // An unwired port with a drawer on it is that drawer's, not a free terminal.
   const terminals: PlanTerminal[] = [
     ...external(solution.terminalInputs, "in"),
     ...external(solution.terminalOutputs, "out"),
-  ].map((e) => ({ nodeId: e.node, portKey: e.portKey, side: e.side, perSecond: e.perSecond }));
+  ]
+    .filter((e) => !model.drawerPorts.has(e.portKey))
+    .map((e) => ({ nodeId: e.node, portKey: e.portKey, side: e.side, perSecond: e.perSecond }));
 
   const leftovers = solution.spares.flatMap((spare) => readLeftover(model, spare));
 

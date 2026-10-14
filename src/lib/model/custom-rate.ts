@@ -1,4 +1,5 @@
 import type { CustomRateMode, FactoryNode, Recipe, ResourceAmount } from "./types";
+import { getFluidTankSlot, isFluidTankRecipe, releaseFluidTanks } from "./fluid-tank";
 
 /**
  * The custom rate node: a source/sink you dial by hand. Supply mode makes a
@@ -28,13 +29,14 @@ export function isCustomRateRecipe(
 }
 
 /**
- * Is this card a custom rate card? The CARD is the socket, not the port id it
- * is showing: a card holding water still accepts a drop of lava.
+ * Is this card a custom rate card, or an empty fluid tank (the other holder)? The CARD is the socket, not the
+ * port id it is showing: a card holding water still accepts a drop of lava. A tank holding a Tank recipe is an
+ * ordinary card whose ports wire like any other.
  */
 export function isCustomRateNodeId(
   project: {
     nodes: Array<Pick<FactoryNode, "id" | "recipeId">>;
-    recipes: Array<Pick<Recipe, "id" | "machineType">>;
+    recipes: Array<Pick<Recipe, "id" | "machineType"> & Partial<Pick<Recipe, "inputs" | "outputs" | "source">>>;
   },
   nodeId: string | null | undefined,
 ): boolean {
@@ -45,7 +47,11 @@ export function isCustomRateNodeId(
   if (!node) {
     return false;
   }
-  return isCustomRateRecipe(project.recipes.find((entry) => entry.id === node.recipeId));
+  const recipe = project.recipes.find((entry) => entry.id === node.recipeId);
+  return (
+    isCustomRateRecipe(recipe) ||
+    (isFluidTankRecipe(recipe) && !getFluidTankSlot({ inputs: recipe?.inputs ?? [], outputs: recipe?.outputs ?? [] }))
+  );
 }
 
 export function getCustomRateSlot(
@@ -107,6 +113,17 @@ export function getCustomRateDial(
  * far-end delete, undo) can leave a card stuck on an unconnected resource.
  */
 export function releaseCustomRates<
+  Project extends {
+    nodes: FactoryNode[];
+    recipes: Recipe[];
+    edges: Array<{ source: string; target: string }>;
+  },
+>(project: Project): Project {
+  // The fluid tank card is the same kind of holder: it lets go the same way.
+  return releaseFluidTanks(releaseCustomRateSlots(project));
+}
+
+function releaseCustomRateSlots<
   Project extends {
     nodes: FactoryNode[];
     recipes: Recipe[];

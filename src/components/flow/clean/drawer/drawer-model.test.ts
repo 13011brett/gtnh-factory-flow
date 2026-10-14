@@ -16,9 +16,9 @@ describe("which drawers are clean", () => {
       expect(supportsCleanDrawer({ kind: "item" }, role)).toBe(true);
     }
   });
-  it("leaves power drawers and buffers to the classic card", () => {
-    expect(supportsCleanDrawer({ kind: "power" }, "product")).toBe(false);
-    expect(supportsCleanDrawer({ kind: "item" }, "buffer")).toBe(false);
+  it("draws power drawers and buffers too: the classic drawer is no longer reachable", () => {
+    expect(supportsCleanDrawer({ kind: "power" }, "product")).toBe(true);
+    expect(supportsCleanDrawer({ kind: "item" }, "buffer")).toBe(true);
   });
   it("folds a byproduct into a product, as the mod does", () => {
     expect(drawerKindFor("byproduct", {})).toBe("product");

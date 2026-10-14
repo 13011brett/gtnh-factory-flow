@@ -61,9 +61,10 @@ export const states = [
       await wait(c, 1200);
     },
   },
-  // ---- cards the clean look does not cover yet (classic fallback) ----
+  // ---- the special clean cards: a generator and the two holders ----
   { id: "power-card-lgt", ref: "power-card-large-gas-turbine", plan: EMPTY, target: lastNodeId, add: async (c) => { await c.page.evaluate(() => window.__ccStore.getState().addPowerSourceNode("large-gas-turbine")); await wait(c, 1200); }, setup: none },
   { id: "custom-rate", ref: "custom-rate-card-empty-holder", plan: EMPTY, target: lastNodeId, add: async (c) => { await c.page.evaluate(() => window.__ccStore.getState().addCustomRateNode()); await wait(c, 1200); }, setup: none },
+  { id: "fluid-tank", ref: "fluid-tank-card-empty-holder", plan: EMPTY, target: lastNodeId, add: async (c) => { await c.page.evaluate(() => window.__ccStore.getState().addFluidTankNode()); await wait(c, 1200); }, setup: none },
   // ---- drawers (232 x 96 px at 2 px per GUI px in the mod; the website's footprint is 120 x 80 css) ----
   { id: "drawer-product-atleast", ref: "drawer-product-atleast-aniline", plan: drawerPlan, node: "aniline", anchor: { x: 34, y: 20 }, drawer: true, setup: none },
   { id: "drawer-source-atmost", ref: "drawer-source-atmost-rule", plan: drawerPlan, node: "acid", anchor: { x: 34, y: 20 }, drawer: true, setup: none },

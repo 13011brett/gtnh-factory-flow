@@ -296,6 +296,7 @@ import {
   isCustomRateNodeId,
   isCustomRateRecipe,
 } from "@/lib/model/custom-rate";
+import { getFluidTankSlot, isFluidTankRecipe } from "@/lib/model/fluid-tank";
 import { isTrashRecipe, TRASH_ANY_RESOURCE_ID } from "@/lib/model/trash";
 import { GT_VOLTAGE_TIERS } from "@/lib/model/tiers";
 import { GT_TIER_COLORS } from "./tier-colors";
@@ -12036,7 +12037,8 @@ function findNodeDropTargetOnSide(
   // A custom rate card takes anything. Unset, the drop lands on its universal
   // socket; set, on the port it shows, and the card adopts the new resource.
   // Only the side it faces answers; turning it round is the dial's job.
-  if (isCustomRateRecipe(recipe)) {
+  // An empty fluid tank takes anything on its universal sockets, as a custom rate card does.
+  if (isCustomRateRecipe(recipe) || (isFluidTankRecipe(recipe) && !getFluidTankSlot(contextualRecipe))) {
     if (draggingUniversalPort) {
       return undefined;
     }

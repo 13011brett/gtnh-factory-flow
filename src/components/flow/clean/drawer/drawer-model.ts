@@ -21,14 +21,17 @@ export const TO_PRODUCT = "Keep it (product)";
 const WORDS = 76;
 
 /**
- * Whether the clean drawer draws this one. Power drawers (EU is not a material) and buffers (fed and drawn,
- * the ratio editor and mode swap) keep the classic component, one drawer at a time.
+ * Whether the clean drawer draws this one: every drawer. A power drawer is the same source or product drawer with
+ * EU in it (its picture the bolt in its amber box); a buffer, which the plan converts to plain wires, reads as the
+ * product drawer it is wired like. The classic drawer is no longer reachable from the board.
  */
 export function supportsCleanDrawer(
-  storage: Pick<FactoryStorage, "kind">,
-  role: StorageRole,
+  _storage: Pick<FactoryStorage, "kind">,
+  _role: StorageRole,
 ): boolean {
-  return storage.kind !== "power" && role !== "buffer";
+  void _storage;
+  void _role;
+  return true;
 }
 
 /** The mod's kind: trash is steel, a source blue, everything that leaves the plan orange. */

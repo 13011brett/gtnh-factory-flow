@@ -63,6 +63,8 @@ import {
   withCustomRateSlot,
   type CustomRateMode,
 } from "@/lib/model/custom-rate";
+import { createFluidTankPlaceholderRecipe, isFluidTankRecipe } from "@/lib/model/fluid-tank";
+import { fetchFluidTankRecipe } from "@/lib/datasets/tank-recipe";
 import {
   createTrashPlaceholderRecipe,
   isTrashRecipe,
@@ -409,6 +411,8 @@ interface FactoryStore {
   setPowerSetting: (nodeId: string, settingId: string, value: string) => void;
   /** A dial-a-rate source/sink node; adopts its resource from the first wire. */
   addCustomRateNode: () => void;
+  /** A fluid tank card: a free, instant converter between a cell and its fluid; adopts a Tank recipe from the first wire. */
+  addFluidTankNode: () => void;
   /** Rate stored per second. Flipping the mode reverses direction and drops wires. */
   setCustomRateConfig: (
     nodeId: string,
@@ -1780,6 +1784,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
         isPowerRecipe(entry) ||
         isCropFarmRecipe(entry) ||
         isCustomRateRecipe(entry) ||
+        isFluidTankRecipe(entry) ||
         isEecRecipe(entry);
       if (ownsRecipe(primary) || ownsRecipe(recipe)) {
         return state;
@@ -2135,6 +2140,11 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
       addRecipeNodeToState(state, createCustomRatePlaceholderRecipe(createId("recipe"))),
     );
   },
+  addFluidTankNode: () => {
+    set((state) =>
+      addRecipeNodeToState(state, createFluidTankPlaceholderRecipe(createId("recipe"))),
+    );
+  },
   setCustomRateConfig: (nodeId, patch) => {
     set((state) => {
       const node = state.project.nodes.find((entry) => entry.id === nodeId);
@@ -2175,6 +2185,63 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
     });
   },
   connectCustomRate: (customNodeId, customSide, machine, resource) => {
+    // An empty fluid tank is the other holder: it takes the Tank recipe the dropped port fits, then wires.
+    {
+      const current = get().project;
+      const holder = current.nodes.find((entry) => entry.id === customNodeId);
+      const holderRecipe = holder ? current.recipes.find((entry) => entry.id === holder.recipeId) : undefined;
+      if (holderRecipe && isFluidTankRecipe(holderRecipe)) {
+        void (async () => {
+          const state = get();
+          const version = state.datasetManifest?.versions.find(
+            (entry) => entry.id === state.selectedDatasetVersionId,
+          );
+          if (!version) return;
+          // The tank's own side: an input takes what the machine makes.
+          const recipe = await fetchFluidTankRecipe(version, resource, customSide === "input");
+          if (!recipe) return;
+          set((latest) => {
+            const node = latest.project.nodes.find((entry) => entry.id === customNodeId);
+            if (!node) return latest;
+            const handle = makeResourceHandleId(customSide, { kind: resource.kind, id: resource.id });
+            const takes = customSide === "input";
+            const edge: FactoryEdge = {
+              id: createId("edge"),
+              source: takes ? machine.nodeId : customNodeId,
+              target: takes ? customNodeId : machine.nodeId,
+              resourceKind: resource.kind,
+              resourceId: resource.id,
+              label: resource.displayName,
+              sourceHandle: takes ? machine.handleId : handle,
+              targetHandle: takes ? handle : machine.handleId,
+            };
+            if (findDuplicateEdge(latest.project.edges, edge)) return latest;
+            const project = touchProject({
+              ...latest.project,
+              nodes: latest.project.nodes.map((entry) =>
+                entry.id === customNodeId ? { ...entry, recipeId: recipe.id } : entry,
+              ),
+              // The card's own empty recipe goes with the swap (nothing else uses it).
+              recipes: [
+                ...latest.project.recipes.filter(
+                  (entry) =>
+                    entry.id !== holderRecipe.id ||
+                    latest.project.nodes.some((other) => other.id !== customNodeId && other.recipeId === entry.id),
+                ),
+                ...(latest.project.recipes.some((entry) => entry.id === recipe.id) ? [] : [recipe]),
+              ],
+              edges: [...latest.project.edges, edge],
+            });
+            return withProjectHistory(latest, {
+              project,
+              selectedNodeId: customNodeId,
+              lastResult: solveBooks(project),
+            });
+          });
+        })();
+        return;
+      }
+    }
     set((state) => {
       const node = state.project.nodes.find((entry) => entry.id === customNodeId);
       const recipe = node
@@ -3555,7 +3622,11 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
       }
       const recipesById = new Map(state.project.recipes.map((recipe) => [recipe.id, recipe]));
       const ownsRecipe = (recipe: Recipe | undefined) =>
-        !recipe || isPowerRecipe(recipe) || isCropFarmRecipe(recipe) || isCustomRateRecipe(recipe);
+        !recipe ||
+        isPowerRecipe(recipe) ||
+        isCropFarmRecipe(recipe) ||
+        isCustomRateRecipe(recipe) ||
+        isFluidTankRecipe(recipe);
       if (cards.some((card) => ownsRecipe(recipesById.get(card.recipeId)))) {
         return state;
       }

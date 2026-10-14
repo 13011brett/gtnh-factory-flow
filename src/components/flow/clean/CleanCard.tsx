@@ -14,6 +14,8 @@ import { usePortRowBrowse } from "../use-port-row-browse";
 import { isWiringConnection } from "../connection-drag";
 import { MenuShell } from "../EnergyHatchMenu";
 import { checklistLocked } from "../RecipeNode";
+import { MobPickerMenu } from "../MobPickerMenu";
+import { isControllerSlotInput } from "@/lib/model/free-input";
 import type { CleanCardActions, CleanCardContext, CleanCardView, CleanChipView, CleanPortView } from "./clean-model";
 import { tierChipColors } from "./tokens";
 import { ensureInteractionHost, useClickSlop, tipAttrs, type TipSpec } from "./interaction";
@@ -30,7 +32,7 @@ import { anchorOf, type MenuAnchor } from "./menus/MenuPortal";
 import { countRowsTip, machineNameTip, powerRowTip, stripTip, tierChipTip, useCardTipFacts } from "./menus/card-tips";
 import { recipeHeatNeed, settingControls, settingPatch, steppedOption, type SettingControl } from "./menus/settings-model";
 
-function glyph(event: { stopPropagation: () => void }) {
+export function glyph(event: { stopPropagation: () => void }) {
   event.stopPropagation();
 }
 
@@ -51,6 +53,7 @@ export function CleanPortRow({
   const resourceLit = useFactoryStore(
     (state) => (state.hoveredFlowResourceKey ?? state.selectedFlowResourceKey) === p.resourceKey,
   );
+  const [mobOpen, setMobOpen] = useState(false);
   const { port } = p;
   const isInput = p.side === "input";
   const browse = (mode: PortBrowseMode) => {
@@ -85,16 +88,45 @@ export function CleanPortRow({
   } as const;
 
   if (port.free) {
+    // The item in a machine's controller slot (the Extreme Entity Crusher's spawner) names its mob: pressing it picks another.
+    const controller = port.resource !== undefined && isControllerSlotInput(port.resource);
     // The game gives this one away: shown so it is set down beside the machine, nothing to wire.
     return (
-      <div className="cc-row" data-side={p.side} title={`${p.name}: free input, no supply needed`} style={{ opacity: 0.6 }}>
+      <div
+        className="cc-row"
+        data-side={p.side}
+        data-controller={controller ? "" : undefined}
+        title={controller ? undefined : `${p.name}: free input, no supply needed`}
+        style={{ opacity: controller ? 0.85 : 0.6 }}
+        {...(controller
+          ? {
+              role: "button",
+              tabIndex: 0,
+              "data-mob-picker-toggle": "",
+              "aria-haspopup": "dialog" as const,
+              "aria-expanded": mobOpen,
+              ...tipAttrs({
+                id: `${p.nodeId}|controller|${p.handleId}`,
+                title: p.name,
+                sub: "Controller slot",
+                notes: [{ text: "Goes in the machine's controller slot. Never used up.", tone: "muted" }],
+                actions: [{ input: "left", label: "Put in another mob" }],
+              }),
+              onClick: (event: MouseEvent) => {
+                event.stopPropagation();
+                if (wasClick(event) && !checklistLocked()) setMobOpen((open) => !open);
+              },
+            }
+          : {})}
+      >
         {port.resource ? <PortIcon resource={port.resource} iconProps={iconProps} /> : null}
         <span className="cc-num" data-small="" data-unit="">
-          free
+          {controller ? "in controller" : "free"}
         </span>
         <span className="cc-pname" data-small={p.nameSmall || undefined} data-clip={p.nameClipped || undefined}>
           {p.name}
         </span>
+        {controller && mobOpen ? <MobPickerMenu nodeId={p.nodeId} onClose={() => setMobOpen(false)} /> : null}
       </div>
     );
   }
@@ -158,7 +190,7 @@ export function CleanPortRow({
           <span className="cc-pname">Forced</span>
         </div>
       ) : null}
-      {!p.wired && !p.forced ? <PortRateControls p={p} unset={unset} wasClick={wasClick} /> : null}
+      {!p.wired && !p.forced && port.kind !== "power" ? <PortRateControls p={p} unset={unset} wasClick={wasClick} /> : null}
       <Handle
         id={p.handleId}
         type={isInput ? "target" : "source"}
@@ -195,7 +227,11 @@ function Words({ p, iconProps }: { p: CleanPortView; iconProps: Record<string, u
   const { port } = p;
   return (
     <>
-      {port.resource ? <PortIcon resource={port.resource} iconProps={iconProps as Record<string, unknown>} /> : null}
+      {port.kind === "power" ? (
+        <span className="cc-bolt" />
+      ) : port.resource ? (
+        <PortIcon resource={port.resource} iconProps={iconProps as Record<string, unknown>} />
+      ) : null}
       <span
         className="cc-num"
         data-unit={p.unit}
@@ -212,7 +248,7 @@ function Words({ p, iconProps }: { p: CleanPortView; iconProps: Record<string, u
   );
 }
 
-function CountBox({
+export function CountBox({
   view,
   tip,
   onSet,
@@ -286,7 +322,7 @@ function CountBox({
   );
 }
 
-function TierChip({
+export function TierChip({
   label,
   tip,
   fixed,
@@ -343,7 +379,7 @@ function TierChip({
   );
 }
 
-function AmpsChip({
+export function AmpsChip({
   amps,
   tier,
   tip,
@@ -426,7 +462,7 @@ function AmpsChip({
   );
 }
 
-function StripChip({
+export function StripChip({
   chip,
   nodeId,
   control,

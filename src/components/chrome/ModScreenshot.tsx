@@ -56,9 +56,7 @@ export function ModScreenshot({ onClose }: { onClose: () => void }) {
   const [detail, setDetail] = useState<Detail>(chosen.detail);
   const [title, setTitle] = useState(chosen.title);
   const [io, setIo] = useState(chosen.io);
-  const [capture, setCapture] = useState<FlowExportCapture>();
-  const [capturing, setCapturing] = useState(true);
-  const [problem, setProblem] = useState<string>();
+  const [taken, setTaken] = useState<{ key: string; capture?: FlowExportCapture; problem?: string }>();
   const [status, setStatus] = useState<{ text: string; good: boolean }>();
   const [keeping, setKeeping] = useState(false);
   const planName = project.name || activeTabName || "My factory";
@@ -120,10 +118,13 @@ export function ModScreenshot({ onClose }: { onClose: () => void }) {
     [],
   );
 
+  // What the picture needs to be taken again for: the cards' look, and the rate unit the board prints.
+  const wantKey = `${detail}|${rateUnit}`;
+  const capturing = taken?.key !== wantKey;
+  const capture = taken?.capture;
+  const problem = taken?.key === wantKey ? taken.problem : undefined;
   useEffect(() => {
     let cancelled = false;
-    setCapturing(true);
-    setProblem(undefined);
     const attempt = (retriesLeft: number) => {
       void requestBoardCapture(detail).then((outcome) => {
         if (cancelled) return;
@@ -132,12 +133,10 @@ export function ModScreenshot({ onClose }: { onClose: () => void }) {
             window.setTimeout(() => !cancelled && attempt(retriesLeft - 1), 700);
             return;
           }
-          setCapturing(false);
-          setProblem(outcome.error ?? "The board could not be captured.");
+          setTaken({ key: wantKey, problem: outcome.error ?? "The board could not be captured." });
           return;
         }
-        setCapture(outcome.capture);
-        setCapturing(false);
+        setTaken({ key: wantKey, capture: outcome.capture });
       });
     };
     const frame = requestAnimationFrame(() => attempt(2));
@@ -146,7 +145,7 @@ export function ModScreenshot({ onClose }: { onClose: () => void }) {
       cancelAnimationFrame(frame);
     };
     // The rate unit repaints the board, not the request: the photograph is taken again.
-  }, [requestBoardCapture, detail, rateUnit]);
+  }, [requestBoardCapture, detail, wantKey]);
 
   const previewUrl = useMemo(() => (capture?.blob ? URL.createObjectURL(capture.blob) : undefined), [capture]);
   useEffect(() => () => (previewUrl ? URL.revokeObjectURL(previewUrl) : undefined), [previewUrl]);
@@ -166,15 +165,13 @@ export function ModScreenshot({ onClose }: { onClose: () => void }) {
   }, []);
 
   const [footerElement, setFooterElement] = useState<HTMLDivElement | null>(null);
-  const [footerHeight, setFooterHeight] = useState(0);
+  const [measuredFooter, setFooterHeight] = useState(0);
+  const footerHeight = footerElement ? measuredFooter : 0;
   useEffect(() => {
-    if (!footerElement || typeof ResizeObserver === "undefined") {
-      setFooterHeight(0);
-      return;
-    }
+    if (!footerElement || typeof ResizeObserver === "undefined") return;
+    // Observing reports the first size at once.
     const observer = new ResizeObserver(() => setFooterHeight(footerElement.offsetHeight));
     observer.observe(footerElement);
-    setFooterHeight(footerElement.offsetHeight);
     return () => observer.disconnect();
   }, [footerElement]);
 

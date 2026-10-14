@@ -5,7 +5,6 @@ import "./power-picker.css";
 
 import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { useDropdownDismiss } from "@/lib/hooks/use-dropdown-dismiss";
 import { playBoardSound } from "@/lib/board-sounds";
 import { getUiScale } from "@/lib/ui-scale";
 import { GT_VOLTAGE_TIERS } from "@/lib/model";
@@ -83,7 +82,9 @@ export function ModPowerPicker() {
   }, [open, closePowerMenu]);
 
   // Opens fresh: no search, no filters.
-  useEffect(() => {
+  const [wasOpen, setWasOpen] = useState(open);
+  if (open !== wasOpen) {
+    setWasOpen(open);
     if (!open) {
       setQuery("");
       setGroupFilter("all");
@@ -91,7 +92,7 @@ export function ModPowerPicker() {
       setMenu(undefined);
       setPreview(undefined);
     }
-  }, [open]);
+  }
 
   // Over the overview and the board only: the items list beside them stays bright.
   useEffect(() => {

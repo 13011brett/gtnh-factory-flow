@@ -7,7 +7,7 @@ import { SEE_THROUGH_STEP } from "@/lib/device-settings";
 
 /** The mod's Board "Size" choices (Tiny, Small, Normal, Large) as the interface size's percent. */
 export const SIZE_NAMES = ["Tiny", "Small", "Normal", "Large"] as const;
-export const SIZE_PERCENT: readonly number[] = [70, 85, DEFAULT_UI_SCALE_PERCENT, 125];
+export const SIZE_PERCENT: readonly number[] = [70, 90, DEFAULT_UI_SCALE_PERCENT, 130];
 
 /** Which Size choice a percent is, or -1 when it sits between them (a custom size from before). */
 export function sizeIndexOf(percent: number): number {

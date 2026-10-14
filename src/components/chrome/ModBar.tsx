@@ -18,6 +18,7 @@ import { stampOpened } from "@/lib/library/last-open";
 import { ensureInteractionHost } from "@/components/flow/clean/interaction";
 import { tipAttrs } from "@/components/flow/clean/interaction";
 import { isEditableKeyboardTarget } from "@/components/flow/keyboard";
+import { downloadPlanFile } from "@/lib/import-export/open-plan-file";
 import { PastePlanDialog } from "@/components/export/PastePlanDialog";
 import { arrangeLabel, pressArrange, getBoardCommands, useArrangeState } from "./board-commands";
 import { ChromeMenu, chromeAnchorOf, MENU_ANCHOR_ATTR, type ChromeAnchor, type MenuEntry } from "./ChromeMenu";
@@ -246,6 +247,7 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
   const shareEntries: MenuEntry[] = [
     { label: linkedPost ? "Update in library..." : "Share to library...", onSelect: onShare, disabled: isReadOnly },
     { label: "Copy plan code", onSelect: () => void copyPlanCode() },
+    { label: "Export plan file (.json)", onSelect: () => downloadPlanFile(useFactoryStore.getState().project) },
     { label: "Screenshot...", onSelect: onScreenshot },
   ];
 

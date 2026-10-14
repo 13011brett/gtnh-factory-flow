@@ -49,6 +49,7 @@ export function ChromeMenu({
   title,
   minWidth,
   align = "left",
+  zIndex,
   onClose,
 }: {
   anchor: ChromeAnchor;
@@ -58,6 +59,8 @@ export function ChromeMenu({
   minWidth?: number;
   /** `right` hangs the menu's right edge from the anchor's right edge (the keys at the bar's end). */
   align?: "left" | "right";
+  /** Over a column that stacks above the bar's menus (the items column). */
+  zIndex?: number;
   onClose: () => void;
 }) {
   const ref = useRef<HTMLDivElement>(null);
@@ -91,6 +94,7 @@ export function ChromeMenu({
     minWidth: minWidth ?? 100,
     maxHeight: Math.max(80, spaceBelow),
     top: shell(anchor.bottom) + 2,
+    ...(zIndex === undefined ? {} : { zIndex }),
   };
   if (align === "right" && anchor.right !== undefined) {
     style.right = Math.max(2, vw - shell(anchor.right));

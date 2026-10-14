@@ -21,6 +21,8 @@ export interface BoardNotice {
   severity: NoticeSeverity;
   text: string;
   focus: string[];
+  /** A notice the player can put away (the plan conversion's): the row shows a Dismiss key. */
+  dismiss?: () => void;
 }
 
 function isNote(arg: NoteArg | undefined): arg is Note {

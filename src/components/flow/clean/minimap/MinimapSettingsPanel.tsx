@@ -31,31 +31,31 @@ export function zoomLabel(index: number): string {
 export function MinimapSettingsRows({ className = "" }: { className?: string }) {
   const s = useMinimapSettings();
   return (
-    <div className={`mm-rows ${className}`} role="group" aria-label="Minimap settings">
-      <div className="mm-row">
-        <span className="mm-row-name">
-          Show the minimap <kbd className="mm-kbd">N</kbd>
+    <div className={`mmap-rows ${className}`} role="group" aria-label="Minimap settings">
+      <div className="mmap-row">
+        <span className="mmap-row-name">
+          Show the minimap <kbd className="mmap-kbd">N</kbd>
         </span>
         <div
           role="switch"
           aria-checked={s.show}
           tabIndex={0}
-          className="mm-switch"
+          className="mmap-switch"
           data-on={s.show ? "" : undefined}
           onClick={() => setMinimap({ show: !s.show })}
           onKeyDown={(e) => (e.key === " " || e.key === "Enter") && setMinimap({ show: !s.show })}
         />
       </div>
-      <div className="mm-row">
-        <span className="mm-row-name">Size</span>
-        <div className="mm-seg" role="radiogroup" aria-label="Size">
+      <div className="mmap-row">
+        <span className="mmap-row-name">Size</span>
+        <div className="mmap-seg" role="radiogroup" aria-label="Size">
           {SIZES.map((size) => (
             <div
               key={size}
               role="radio"
               aria-checked={s.size === size}
               tabIndex={0}
-              className="mm-seg-item"
+              className="mmap-seg-item"
               data-on={s.size === size ? "" : undefined}
               onClick={() => setMinimap({ size })}
             >
@@ -64,16 +64,16 @@ export function MinimapSettingsRows({ className = "" }: { className?: string }) 
           ))}
         </div>
       </div>
-      <div className="mm-row">
-        <span className="mm-row-name">Shape</span>
-        <div className="mm-seg" role="radiogroup" aria-label="Shape">
+      <div className="mmap-row">
+        <span className="mmap-row-name">Shape</span>
+        <div className="mmap-seg" role="radiogroup" aria-label="Shape">
           {SHAPES.map((shape) => (
             <div
               key={shape}
               role="radio"
               aria-checked={s.shape === shape}
               tabIndex={0}
-              className="mm-seg-item"
+              className="mmap-seg-item"
               data-on={s.shape === shape ? "" : undefined}
               onClick={() => setMinimap({ shape })}
             >
@@ -82,10 +82,10 @@ export function MinimapSettingsRows({ className = "" }: { className?: string }) 
           ))}
         </div>
       </div>
-      <div className="mm-row">
-        <span className="mm-row-name">Position</span>
-        <span className="mm-row-aside">{MINIMAP_CORNER_LABELS[s.corner]}</span>
-        <div className="mm-corners" role="radiogroup" aria-label="Position">
+      <div className="mmap-row">
+        <span className="mmap-row-name">Position</span>
+        <span className="mmap-row-aside">{MINIMAP_CORNER_LABELS[s.corner]}</span>
+        <div className="mmap-corners" role="radiogroup" aria-label="Position">
           {CORNERS.map((corner) => (
             <div
               key={corner}
@@ -93,20 +93,20 @@ export function MinimapSettingsRows({ className = "" }: { className?: string }) 
               aria-checked={s.corner === corner}
               aria-label={MINIMAP_CORNER_LABELS[corner]}
               tabIndex={0}
-              className="mm-corner"
+              className="mmap-corner"
               data-on={s.corner === corner ? "" : undefined}
               onClick={() => setMinimap({ corner })}
             />
           ))}
         </div>
       </div>
-      <div className="mm-row">
-        <span className="mm-row-name">
-          Zoom <kbd className="mm-kbd">[</kbd> <kbd className="mm-kbd">]</kbd>
+      <div className="mmap-row">
+        <span className="mmap-row-name">
+          Zoom <kbd className="mmap-kbd">[</kbd> <kbd className="mmap-kbd">]</kbd>
         </span>
         <input
           type="range"
-          className="mm-slider"
+          className="mmap-slider"
           min={0}
           max={MINIMAP_ZOOMS.length - 1}
           step={1}
@@ -114,25 +114,25 @@ export function MinimapSettingsRows({ className = "" }: { className?: string }) 
           aria-label="Zoom"
           onChange={(e) => setMinimap({ zoom: Number(e.target.value) })}
         />
-        <span className="mm-row-value">{zoomLabel(s.zoom)}</span>
+        <span className="mmap-row-value">{zoomLabel(s.zoom)}</span>
       </div>
-      <div className="mm-row">
-        <span className="mm-row-name">Centre on the card you select</span>
+      <div className="mmap-row">
+        <span className="mmap-row-name">Centre on the card you select</span>
         <div
           role="switch"
           aria-checked={s.follow}
           tabIndex={0}
-          className="mm-switch"
+          className="mmap-switch"
           data-on={s.follow ? "" : undefined}
           onClick={() => setMinimap({ follow: !s.follow })}
           onKeyDown={(e) => (e.key === " " || e.key === "Enter") && setMinimap({ follow: !s.follow })}
         />
       </div>
-      <div className="mm-row">
-        <span className="mm-row-name">See-through</span>
+      <div className="mmap-row">
+        <span className="mmap-row-name">See-through</span>
         <input
           type="range"
-          className="mm-slider"
+          className="mmap-slider"
           min={0}
           max={MINIMAP_FADE_MAX}
           step={MINIMAP_FADE_STEP}
@@ -140,7 +140,7 @@ export function MinimapSettingsRows({ className = "" }: { className?: string }) 
           aria-label="Minimap see-through"
           onChange={(e) => setMinimap({ fade: Number(e.target.value) })}
         />
-        <span className="mm-row-value">{s.fade}%</span>
+        <span className="mmap-row-value">{s.fade}%</span>
       </div>
     </div>
   );
@@ -153,7 +153,7 @@ export function MinimapSettingsPanel({ onClose }: { onClose: () => void }) {
     const onDown = (event: PointerEvent) => {
       const target = event.target as Node | null;
       if (target && ref.current?.contains(target)) return;
-      if (target instanceof Element && target.closest(".mm-gear")) return;
+      if (target instanceof Element && target.closest(".mmap-gear")) return;
       onClose();
     };
     const onKey = (event: KeyboardEvent) => event.key === "Escape" && onClose();
@@ -165,10 +165,10 @@ export function MinimapSettingsPanel({ onClose }: { onClose: () => void }) {
     };
   }, [onClose]);
   return (
-    <div ref={ref} className="mm-panel nodrag nopan nowheel" role="dialog" aria-label="Minimap settings">
-      <div className="mm-panel-head">
+    <div ref={ref} className="mmap-panel nodrag nopan nowheel" role="dialog" aria-label="Minimap settings">
+      <div className="mmap-panel-head">
         <span>Minimap</span>
-        <div role="button" aria-label="Close" className="mm-panel-x" onClick={onClose} />
+        <div role="button" aria-label="Close" className="mmap-panel-x" onClick={onClose} />
       </div>
       <MinimapSettingsRows />
     </div>

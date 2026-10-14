@@ -7,7 +7,12 @@ import type { FactoryProject } from "@/lib/model/types";
 // settle: a board routed here is slow by definition, so a one-time wasm
 // fetch is always the better trade than a minutes-long homegrown walk. A
 // failed load resolves too - solves then run on the homegrown simplex.
-const engineReady = initLpEngine({ glueUrl: "/highs.js", wasmUrl: "/highs.wasm" });
+// The route serves them from the package in any start mode; public/ (copied by predev and prebuild) is the fallback.
+const engineReady = initLpEngine({
+  glueUrl: "/api/highs/highs.js",
+  wasmUrl: "/api/highs/highs.wasm",
+  fallback: { glueUrl: "/highs.js", wasmUrl: "/highs.wasm" },
+});
 
 /**
  * The solver, off the main thread. One message in (a plan and the content key

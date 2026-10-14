@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
+import "./chrome/mod-panel.css";
 import { Download, Play, X } from "lucide-react";
 
 /**
@@ -86,7 +87,7 @@ export function ModAnnouncement() {
         role="dialog"
         aria-modal="true"
         aria-labelledby="mod-announcement-title"
-        className="flex max-h-[calc(94*var(--ui-vh))] w-full max-w-5xl flex-col overflow-hidden rounded-lg border border-line-strong bg-surface shadow-2xl"
+        className="pn-skin flex max-h-[calc(94*var(--ui-vh))] w-full max-w-5xl flex-col overflow-hidden border border-line-strong bg-surface"
         onClick={(event) => event.stopPropagation()}
       >
         <div className="relative shrink-0 px-7 pb-5 pt-6 compact:px-4 compact:pb-4 compact:pt-5">
@@ -100,7 +101,7 @@ export function ModAnnouncement() {
           </button>
           <h2
             id="mod-announcement-title"
-            className="pr-8 text-4xl font-black leading-tight tracking-tight compact:text-2xl"
+            className="pr-8 text-[22px] leading-tight compact:text-[16px]"
           >
             GTNH <span className="text-cyan-400">Planner</span> is now in the game!
           </h2>

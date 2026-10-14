@@ -2,6 +2,7 @@
 
 import { decodePlanCode, readPlanCodeFromHash } from "@/lib/import-export/plan-code";
 import { applyPlanView } from "@/lib/plan-view";
+import { looksLikePlanJson, openPlanJsonText } from "@/lib/import-export/open-plan-file";
 import { useDesignStore } from "@/store/design-store";
 
 /**
@@ -10,6 +11,11 @@ import { useDesignStore } from "@/store/design-store";
  * the caller to show.
  */
 export async function openPlanCode(text: string): Promise<void> {
+  // A plan file's JSON pasted as it is opens the same way a file does.
+  if (looksLikePlanJson(text)) {
+    await openPlanJsonText(text);
+    return;
+  }
   const project = await decodePlanCode(text);
   await useDesignStore.getState().importProjectAsDesign(project, project.name);
   applyPlanView(project.view);

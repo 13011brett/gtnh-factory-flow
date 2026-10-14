@@ -4,7 +4,7 @@
  * Controls are div role=button (globals.css forces `font: inherit` on buttons); state on data attributes.
  */
 
-.mm {
+.mmap {
   --mm-ink: #e8e9ee;
   --mm-muted: #9a9ca4;
   --mm-gold: #ffd257;
@@ -22,36 +22,36 @@
   user-select: none;
   touch-action: none;
 }
-.mm[data-shape="circle"] {
+.mmap[data-shape="circle"] {
   border-radius: 50%;
 }
-.mm[data-corner="top-left"] {
+.mmap[data-corner="top-left"] {
   top: 64px;
   left: 14px;
 }
-.mm[data-corner="top-right"] {
+.mmap[data-corner="top-right"] {
   top: 64px;
   right: 14px;
 }
-.mm[data-corner="bottom-left"] {
+.mmap[data-corner="bottom-left"] {
   bottom: 64px;
   left: 14px;
 }
-.mm[data-corner="bottom-right"] {
+.mmap[data-corner="bottom-right"] {
   bottom: 64px;
   right: 14px;
 }
 
-.mm-canvas {
+.mmap-canvas {
   display: block;
   cursor: grab;
 }
-.mm-canvas:active {
+.mmap-canvas:active {
   cursor: grabbing;
 }
 
 /* The plan's name, on a 69% black strip: top left of the square, under the circle. */
-.mm-title {
+.mmap-title {
   position: absolute;
   left: 2px;
   top: 2px;
@@ -66,13 +66,13 @@
   text-overflow: ellipsis;
   pointer-events: none;
 }
-.mm-title[data-circle] {
+.mmap-title[data-circle] {
   top: calc(100% + 4px);
   left: 50%;
   transform: translateX(-50%);
 }
 
-.mm-gear {
+.mmap-gear {
   position: absolute;
   top: 2px;
   right: 2px;
@@ -84,16 +84,16 @@
     url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'><path fill='%23e8e9ee' d='M7 1h2l.4 1.9 1.3.6 1.6-1.1 1.4 1.4-1.1 1.6.6 1.3L15 7v2l-1.9.4-.6 1.3 1.1 1.6-1.4 1.4-1.6-1.1-1.3.6L9 15H7l-.4-1.9-1.3-.6-1.6 1.1-1.4-1.4 1.1-1.6-.6-1.3L1 9V7l1.9-.4.6-1.3-1.1-1.6 1.4-1.4 1.6 1.1 1.3-.6zM8 5.5A2.5 2.5 0 1 0 8 10.5 2.5 2.5 0 0 0 8 5.5z'/></svg>")
     center / 12px 12px no-repeat;
 }
-.mm:hover .mm-gear,
-.mm-gear:focus-visible {
+.mmap:hover .mmap-gear,
+.mmap-gear:focus-visible {
   display: block;
 }
-.mm-gear:hover {
+.mmap-gear:hover {
   background-color: rgba(60, 62, 69, 0.9);
 }
 
 /* The settings popover and the rows (also used inside the settings dialog). */
-.mm-panel {
+.mmap-panel {
   position: absolute;
   z-index: 2;
   width: 340px;
@@ -102,19 +102,19 @@
   box-shadow: 4px 4px 0 rgba(0, 0, 0, 0.45);
   font-size: 12px;
 }
-.mm[data-corner$="right"] .mm-panel {
+.mmap[data-corner$="right"] .mmap-panel {
   right: calc(100% + 10px);
 }
-.mm[data-corner$="left"] .mm-panel {
+.mmap[data-corner$="left"] .mmap-panel {
   left: calc(100% + 10px);
 }
-.mm[data-corner^="bottom"] .mm-panel {
+.mmap[data-corner^="bottom"] .mmap-panel {
   bottom: 0;
 }
-.mm[data-corner^="top"] .mm-panel {
+.mmap[data-corner^="top"] .mmap-panel {
   top: 0;
 }
-.mm-panel-head {
+.mmap-panel-head {
   display: flex;
   align-items: center;
   justify-content: space-between;
@@ -123,7 +123,7 @@
   border-bottom: 1px solid #2c2e34;
   font-size: 13px;
 }
-.mm-panel-x {
+.mmap-panel-x {
   width: 16px;
   height: 16px;
   cursor: pointer;
@@ -131,11 +131,11 @@
     linear-gradient(45deg, transparent 45%, var(--mm-muted) 45% 55%, transparent 55%),
     linear-gradient(-45deg, transparent 45%, var(--mm-muted) 45% 55%, transparent 55%);
 }
-.mm-panel-x:hover {
+.mmap-panel-x:hover {
   filter: brightness(1.5);
 }
 
-.mm-rows {
+.mmap-rows {
   display: flex;
   flex-direction: column;
   padding: 2px 10px 6px;
@@ -143,41 +143,41 @@
   font-family: var(--font-minecraft), monospace;
   font-size: 12px;
 }
-.mm-row {
+.mmap-row {
   display: flex;
   align-items: center;
   gap: 8px;
   min-height: 32px;
   border-top: 1px solid #2c2e34;
 }
-.mm-row:first-child {
+.mmap-row:first-child {
   border-top: 0;
 }
-.mm-row-name {
+.mmap-row-name {
   flex: 1;
   white-space: nowrap;
 }
-.mm-row-aside {
+.mmap-row-aside {
   color: var(--mm-muted);
 }
-.mm-row-value {
+.mmap-row-value {
   width: 34px;
   text-align: right;
 }
-.mm-kbd {
+.mmap-kbd {
   color: var(--mm-muted);
   font-family: inherit;
   font-size: 11px;
 }
 
-.mm-switch {
+.mmap-switch {
   position: relative;
   width: 44px;
   height: 22px;
   background: #34363c;
   cursor: pointer;
 }
-.mm-switch::after {
+.mmap-switch::after {
   content: "";
   position: absolute;
   top: 3px;
@@ -186,31 +186,31 @@
   height: 16px;
   background: #cfd0d6;
 }
-.mm-switch[data-on] {
+.mmap-switch[data-on] {
   background: #3d9b78;
 }
-.mm-switch[data-on]::after {
+.mmap-switch[data-on]::after {
   left: 25px;
 }
 
-.mm-seg {
+.mmap-seg {
   display: flex;
   border: 1px solid #34363c;
 }
-.mm-seg-item {
+.mmap-seg-item {
   padding: 3px 9px;
   color: var(--mm-muted);
   cursor: pointer;
 }
-.mm-seg-item:hover {
+.mmap-seg-item:hover {
   color: var(--mm-ink);
 }
-.mm-seg-item[data-on] {
+.mmap-seg-item[data-on] {
   background: #484b53;
   color: var(--mm-ink);
 }
 
-.mm-corners {
+.mmap-corners {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 2px;
@@ -220,18 +220,18 @@
   background: #1a1b1f;
   border: 1px solid #34363c;
 }
-.mm-corner {
+.mmap-corner {
   background: #34363c;
   cursor: pointer;
 }
-.mm-corner:hover {
+.mmap-corner:hover {
   background: #484b53;
 }
-.mm-corner[data-on] {
+.mmap-corner[data-on] {
   background: var(--mm-gold);
 }
 
-.mm-slider {
+.mmap-slider {
   width: 130px;
   accent-color: #cfd0d6;
 }

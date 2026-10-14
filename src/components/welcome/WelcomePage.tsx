@@ -21,9 +21,11 @@ import { openSidebarTab } from "@/lib/sidebar-tab";
 import { APP_VERSION } from "@/lib/version";
 import { leaveWelcomeTab, setWelcomeOnStartup, useWelcomeTab } from "@/lib/welcome/welcome-tab";
 import { writeWorkspaceView } from "@/lib/workspace-view";
+import { UNTITLED_DESIGN_NAME } from "@/lib/designs/design-library";
 import { useDesignStore } from "@/store/design-store";
 import { useFactoryStore } from "@/store/factory-store";
 import { WelcomeBackdrop } from "./WelcomeBackdrop";
+import "../chrome/mod-panel.css";
 
 /**
  * The Welcome tab. It COVERS the board (see FactoryPlannerApp) rather than
@@ -82,7 +84,7 @@ export function WelcomePage() {
   const backdropIcons = useBackdropIcons();
 
   return (
-    <div className="relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-canvas text-fg">
+    <div className="pn-skin relative flex h-full min-h-0 w-full flex-col overflow-hidden bg-canvas text-fg">
       <WelcomeBackdrop icons={backdropIcons} />
       {/* A dark wash under the words so the backdrop stays a backdrop; the
           edges are left clear so the animation shows through on both sides
@@ -99,10 +101,10 @@ export function WelcomePage() {
         <div className="mx-auto flex w-full max-w-[880px] flex-col gap-6 px-6 pb-8 pt-8 compact:px-4 compact:pt-6">
           <header className="flex flex-col items-start gap-3">
             <div className="flex items-baseline gap-3">
-              <h1 className="text-[32px] font-black leading-none tracking-tight text-white compact:text-[26px]">
+              <h1 className="text-[22px] leading-none text-white compact:text-[18px]">
                 <span className="text-cyan-300">GTNH</span> Planner
               </h1>
-              <span className="rounded border border-line-strong px-1.5 py-0.5 text-[11px] text-fg-muted">
+              <span className="border border-line-strong px-1.5 py-0.5 text-[11px] text-fg-muted">
                 v{APP_VERSION}
               </span>
             </div>
@@ -118,6 +120,13 @@ export function WelcomePage() {
                   // Step off first: adding a design does not, and the new
                   // tab would otherwise sit under this page unseen.
                   leaveWelcomeTab();
+                  // An empty untitled plan already open is the new design: a second one would only sit beside it.
+                  const { project } = useFactoryStore.getState();
+                  const blank =
+                    project.nodes.length === 0 && (project.storages ?? []).length === 0 && (project.annotations ?? []).length === 0;
+                  const open = useDesignStore.getState();
+                  const current = open.designs.find((design) => design.id === open.activeDesignId);
+                  if (blank && current?.name === UNTITLED_DESIGN_NAME && !current.closed) return;
                   void addDesign();
                 }}
               >
@@ -168,7 +177,7 @@ export function WelcomePage() {
 
 function SectionTitle({ children }: { children: ReactNode }) {
   return (
-    <h2 className="flex items-center gap-2 text-[11px] font-black uppercase tracking-[0.14em] text-[#aebccd]">
+    <h2 className="flex items-center gap-2 text-[11px] uppercase text-[#aebccd]">
       {children}
     </h2>
   );
@@ -187,7 +196,7 @@ function PrimaryButton({
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex h-9 items-center gap-2 border-2 border-cyan-300 bg-cyan-400 px-3.5 text-[13px] font-bold text-[#062026] shadow-[4px_4px_0_rgba(0,0,0,0.45)] hover:bg-cyan-300 active:translate-x-px active:translate-y-px active:shadow-[2px_2px_0_rgba(0,0,0,0.45)]"
+      className="inline-flex items-center gap-2 bg-cyan-400 text-[#062026]"
     >
       <Icon className="h-4 w-4" aria-hidden />
       {children}
@@ -208,7 +217,7 @@ function SecondaryButton({
     <button
       type="button"
       onClick={onClick}
-      className="inline-flex h-9 items-center gap-2 border-2 border-line-strong bg-[#151a21]/85 px-3.5 text-[13px] font-bold text-fg-subtle shadow-[4px_4px_0_rgba(0,0,0,0.45)] hover:border-cyan-500/60 hover:text-white active:translate-x-px active:translate-y-px active:shadow-[2px_2px_0_rgba(0,0,0,0.45)]"
+      className="inline-flex items-center gap-2 border border-line-strong"
     >
       <Icon className="h-4 w-4" aria-hidden />
       {children}

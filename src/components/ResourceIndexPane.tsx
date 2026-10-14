@@ -28,6 +28,8 @@ import { useIsCompactViewport } from "@/lib/compact-view";
 import { isEchoOfTouch } from "@/lib/pointer-kind";
 import { isFromBrowseMenu, useBrowseMenu } from "./browse-menu";
 import { ControlsCard } from "./ControlsCard";
+import { ModPick } from "./chrome/ModPick";
+import "./chrome/mod-panel.css";
 import { MinecraftTooltip } from "./nei/MinecraftTooltip";
 import { isSwatchFluid, ResourceIcon, spriteArtPixels } from "./nei/ResourceIcon";
 
@@ -274,7 +276,7 @@ export function ResourceIndexPane({
 
   const browseResource = onBrowse;
   return (
-    <div className="flex min-h-0 flex-1 flex-col" onWheel={handleResourceWheel}>
+    <div className="pn-column flex min-h-0 flex-1 flex-col" onWheel={handleResourceWheel}>
         {/* The same card other column views put their search and filters in. */}
         <ControlsCard>
           <div className="flex items-center gap-1.5">
@@ -283,7 +285,7 @@ export function ResourceIndexPane({
                 out is a pinch. */}
             <label
               className={[
-                "flex h-9 min-w-0 flex-1 items-center gap-2 rounded-[4px] border border-neutral-700 bg-[#17191d] px-2 text-sm compact:text-base text-neutral-200 shadow-[inset_1px_1px_0_rgba(255,255,255,0.08)]",
+                "pn-search min-w-0 flex-1 compact:text-base",
                 isSearchFlashing ? "search-box-flash" : "",
               ].join(" ")}
             >
@@ -327,7 +329,7 @@ export function ResourceIndexPane({
 
           {/* Six exclusive filters, three across in two rows so full names stay
               readable in the narrow panel. Sort gets its own full-width row. */}
-          <div className="mt-1 grid grid-cols-3 gap-1">
+          <div className="pn-chips" data-grid="">
             {RESOURCE_FILTER_CHOICES.map((choice) => (
               <button
                 key={choice.mode}
@@ -335,31 +337,20 @@ export function ResourceIndexPane({
                 onClick={() => setResourceFilter(choice.mode)}
                 title={choice.title}
                 aria-pressed={resourceFilter === choice.mode}
-                className={[
-                  "h-6 min-w-0 truncate rounded-[4px] border text-[11px] font-medium",
-                  resourceFilter === choice.mode
-                    ? "border-cyan-500 bg-cyan-500/15 text-cyan-300"
-                    : "border-neutral-700 bg-[#17191d] text-neutral-400 hover:text-neutral-200",
-                ].join(" ")}
+                className="pn-chip"
+                data-on={resourceFilter === choice.mode ? "" : undefined}
               >
                 {choice.label}
               </button>
             ))}
-            <select
-              value={resourceSort}
-              onChange={(event) => setResourceSort(event.target.value as ResourceSortMode)}
-              title="Sort results"
-              aria-label="Sort results"
-              className="col-span-3 h-6 min-w-0 rounded-[4px] border border-neutral-700 bg-[#17191d] px-1.5 text-[11px] text-neutral-100 outline-none"
-            >
-              <option value="popular">Most popular</option>
-              <option value="relevance">Best match</option>
-              <option value="name">Name A–Z</option>
-              <option value="mod">By mod</option>
-              <option value="made">Most ways to make</option>
-              <option value="uses">Most used</option>
-            </select>
           </div>
+          <ModPick
+            value={resourceSort}
+            onChange={setResourceSort}
+            label="Sort results"
+            title="Sort results"
+            options={RESOURCE_SORT_CHOICES}
+          />
         </ControlsCard>
 
         <div className="min-h-0 flex-1 overflow-hidden px-2 pb-1 pt-2">
@@ -425,6 +416,15 @@ const RESOURCE_PAGER_HEIGHT = 31;
 const RESOURCE_WHEEL_PAGE_DELTA = 80;
 
 type ResourceSortMode = "relevance" | "popular" | "name" | "mod" | "made" | "uses";
+
+const RESOURCE_SORT_CHOICES: ReadonlyArray<{ value: ResourceSortMode; label: string }> = [
+  { value: "popular", label: "Most popular" },
+  { value: "relevance", label: "Best match" },
+  { value: "name", label: "Name A–Z" },
+  { value: "mod", label: "By mod" },
+  { value: "made", label: "Most ways to make" },
+  { value: "uses", label: "Most used" },
+];
 
 /**
  * The list's filter: six mutually exclusive answers, because the kind and
@@ -963,20 +963,22 @@ function ResourcePager({
         type="button"
         onClick={onPreviousPage}
         disabled={currentPage === 0}
-        className="flex h-6 w-7 items-center justify-center rounded-[4px] border border-neutral-700 bg-[#17191d] text-neutral-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+        className="pn-chip flex-none disabled:cursor-not-allowed disabled:opacity-35"
+        style={{ width: 28, flex: "none" }}
         aria-label="Previous resource page"
         title="Previous page"
       >
         <ChevronLeft className="h-3.5 w-3.5" />
       </button>
-      <div className="min-w-0 flex-1 truncate text-center text-[11px] text-neutral-400">
+      <div className="pn-dim min-w-0 flex-1 truncate text-center text-[11px]">
         Page {Math.min(currentPage + 1, pageCount)} of {pageCount}
       </div>
       <button
         type="button"
         onClick={onNextPage}
         disabled={currentPage >= pageCount - 1}
-        className="flex h-6 w-7 items-center justify-center rounded-[4px] border border-neutral-700 bg-[#17191d] text-neutral-300 hover:text-white disabled:cursor-not-allowed disabled:opacity-35"
+        className="pn-chip flex-none disabled:cursor-not-allowed disabled:opacity-35"
+        style={{ width: 28, flex: "none" }}
         aria-label="Next resource page"
         title="Next page"
       >

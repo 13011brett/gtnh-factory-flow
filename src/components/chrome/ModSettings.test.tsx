@@ -76,7 +76,7 @@ describe("the settings box", () => {
   it("Minimap is a section of the minimap's own rows", () => {
     render(<ModSettings onClose={vi.fn()} />);
     fireEvent.click(screen.getByText("Minimap"));
-    const names = [...document.querySelectorAll(".mm-row-name")].map((element) => (element.firstChild?.textContent ?? "").trim());
+    const names = [...document.querySelectorAll(".mmap-row-name")].map((element) => (element.firstChild?.textContent ?? "").trim());
     expect(names.length).toBeGreaterThanOrEqual(6);
     expect(names.slice(0, 5)).toEqual(["Show the minimap", "Size", "Shape", "Position", "Zoom"]);
   });

@@ -26,17 +26,19 @@ describe("the dispatch seam in calculateThroughput", () => {
     expect(() => calculateThroughput(build as typeof mockForced.project, { generatedAt: "t" })).not.toThrow();
   });
 
-  it("planMode on: reaches the stub, which says so", () => {
-    expect(() => calculateThroughput(mockForced.project, { generatedAt: "t" })).toThrow(/not implemented/);
+  it("planMode on: reaches the plan solver and answers with plan extras", () => {
+    const result = calculateThroughput(mockForced.project, { generatedAt: "t" });
+    expect(result.plan).toBeDefined();
+    expect(result.nodes["mac"]!.theoreticalMachinesRequired).toBeCloseTo(3, 9);
   });
 
-  it("a converted Build project reaches the stub too", () => {
+  it("a converted Build project reaches the plan solver too", () => {
     const { solveMode: _s, planMode: _p, ...build } = mockForced.project;
     void _s;
     void _p;
     const plan = convertBuildToPlan(build as typeof mockForced.project);
     expect(plan.planMode).toBe(true);
-    expect(() => calculateThroughput(plan)).toThrow(/not implemented/);
+    expect(calculateThroughput(plan).plan).toBeDefined();
   });
 });
 

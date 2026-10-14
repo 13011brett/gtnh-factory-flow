@@ -32,7 +32,6 @@ export function planSolveWith(
 }
 
 export function planSolveAdapter(args: PlanSolveArgs): ThroughputResult {
-  // Fail first and cheaply when no core is installed.
   return planSolveWith(args, getSolveCore());
 }
 

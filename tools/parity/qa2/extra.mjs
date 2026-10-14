@@ -101,9 +101,9 @@ export default function ({ page, wait, rec, check, shot, nodeSel, focus, idle, s
     const after = await page.locator(`${nodeSel(ids.an)} .cc-forced`).count();
     check("forced-drag", "the Forced row goes once the drawer takes it", after === 0, `forced rows left ${after}`);
     // forced row tooltip wording
-    await loadPlan(page, plans.forcedPlan);
-    await focus(ids.an, 500, 250);
-    const r2 = page.locator(`${nodeSel(ids.an)} .cc-forced`).first();
+    const ids2 = await loadPlan(page, plans.forcedPlan);
+    await focus(ids2.an, 500, 250);
+    const r2 = page.locator(`${nodeSel(ids2.an)} .cc-forced`).first();
     const b2 = await r2.boundingBox();
     await page.mouse.move(b2.x + 6, b2.y + 6);
     await wait(1300);

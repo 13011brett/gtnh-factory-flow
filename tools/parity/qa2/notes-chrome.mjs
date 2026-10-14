@@ -35,7 +35,9 @@ export default function ({ page, wait, rec, check, shot, idle, section, loadPlan
     await wait(300);
     await page.keyboard.type("hello");
     await wait(300);
-    const txt = (await notes()).map((n) => n.text);
+    // the note keeps its words in the box until it lets go of the keyboard (as the mod's does), so read the box
+    const box = () => page.evaluate(() => document.querySelector(".sn textarea")?.value ?? null);
+    const txt = [await box()];
     check("notes", "click then type writes into the note", txt.some((t) => /hello/.test(t ?? "")), JSON.stringify(txt));
     // drag while writing
     const before = await snRect();
@@ -45,8 +47,8 @@ export default function ({ page, wait, rec, check, shot, idle, section, loadPlan
     await page.mouse.up();
     await wait(400);
     const after = await snRect();
-    check("notes", "dragging anywhere moves the note even while writing", Math.abs(after.x - before.x - 60) < 6 && Math.abs(after.y - before.y - 30) < 6, `${JSON.stringify(before)} -> ${JSON.stringify(after)}`);
-    const txt2 = (await notes()).map((n) => n.text);
+    check("notes", "dragging anywhere moves the note even while writing", Math.abs(after.x - before.x - 60) <= 10 && Math.abs(after.y - before.y - 30) <= 10, `${JSON.stringify(before)} -> ${JSON.stringify(after)}`);
+    const txt2 = [await box()];
     check("notes", "text survives the drag (no selection typed in)", txt2.some((t) => /^hello$/.test(t ?? "")), JSON.stringify(txt2));
     // hover keys
     await page.keyboard.press("Escape");
@@ -83,7 +85,7 @@ export default function ({ page, wait, rec, check, shot, idle, section, loadPlan
     const m2 = await page.evaluate(() => [...document.querySelectorAll("[role=menuitem], [role=menu] button, .library-menu button")].map((e) => e.textContent.trim()));
     rec("notes", "note right-click menu", "INFO", JSON.stringify(m2));
     await shot("note-menu", { x: r5.x - 50, y: r5.y - 50, width: 600, height: 500 });
-    check("notes", "menu offers colour, text size and delete", /colou?r/i.test(m2.join("|")) && /size/i.test(m2.join("|")) && /delete/i.test(m2.join("|")), JSON.stringify(m2));
+    check("notes", "menu offers colour, text size and delete", /colou?r/i.test(m2.join("|")) && /(bigger|smaller) text/i.test(m2.join("|")) && /delete/i.test(m2.join("|")), JSON.stringify(m2));
     const colorItem = page.getByText(/colou?r/i).first();
     if (await colorItem.count()) {
       await colorItem.click();

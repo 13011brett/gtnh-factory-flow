@@ -155,14 +155,16 @@ section("drawer-prompt", async () => {
   await focus(ids.aniline);
   const sel = nodeSel(ids.aniline);
   const r = await rectOf(page, sel);
-  const clip = { x: r.x, y: r.y, width: r.w, height: r.h };
+  // the rate box only: the words' own pixels change, the drawer around them does not
+  const rb = await rectOf(page, sel + " .cd-box");
+  const clip = { x: rb.x, y: rb.y, width: rb.w, height: rb.h };
   const samples = [];
   for (let i = 0; i < 12; i++) {
     const p = path.join(OUT, `pulse-${i}.png`);
     await page.screenshot({ path: p, clip });
     const png = readPng(p);
     let sum = 0, n = 0;
-    for (let y = Math.round(png.height * 0.6); y < png.height; y++) for (let x = Math.round(png.width * 0.3); x < png.width; x++) { const q = px(png, x, y); sum += q[0] + q[1] + q[2]; n++; }
+    for (let y = 0; y < png.height; y++) for (let x = 0; x < png.width; x++) { const q = px(png, x, y); sum += q[0] + q[1] + q[2]; n++; }
     samples.push(Math.round(sum / n));
     await wait(150);
   }

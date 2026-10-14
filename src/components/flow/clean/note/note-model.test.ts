@@ -195,13 +195,13 @@ describe("notes as the website's text annotations", () => {
     expect(annotations.filter(isStickyNote)).toHaveLength(2);
   });
 
-  it("a new note is yellow, 180 by 120, empty, a text annotation", () => {
+  it("a new note is yellow, 220 by 140 (the mod's 180 by 120 beside its 320 card), empty, a text annotation", () => {
     expect(newStickyNote({ x: 40, y: 60 })).toEqual({
       kind: "text",
       colorTag: "yellow",
       text: "",
       position: { x: 40, y: 60 },
-      size: { width: 180, height: 120 },
+      size: { width: 220, height: 140 },
     });
   });
 

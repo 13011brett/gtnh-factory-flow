@@ -6238,7 +6238,7 @@ export function FactoryFlow() {
         // DRAG. A card's buttons drag the card like its background does (only
         // text inputs and wire handles are nodrag), so a jittery click must
         // still count as one.
-        nodeClickDistance={4}
+        nodeClickDistance={3}
         onConnect={isReadOnly ? undefined : handleConnect}
         nodesConnectable={!isReadOnly}
         onConnectStart={isReadOnly ? undefined : handleConnectStart}
@@ -6258,8 +6258,9 @@ export function FactoryFlow() {
         connectionLineStyle={connectionLineStyle}
         connectionMode={ConnectionMode.Loose}
         connectionRadius={18}
-        // A press moves a card only past 3 px (the mod's click slop); within it, it is a click.
-        nodeDragThreshold={3}
+        // A press carries a card from where it went down, 1:1 (a threshold would start the carry late and lose that
+        // travel); the click slop above (3 px) keeps a jittery press a click, and the grid swallows what it moves.
+        nodeDragThreshold={0}
         elevateNodesOnSelect={false}
         edgesReconnectable={false}
         // Delete/Backspace go through the board's own keydown handler and the

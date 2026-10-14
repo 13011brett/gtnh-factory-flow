@@ -553,24 +553,25 @@
   position: fixed;
   z-index: 9999;
   box-sizing: border-box;
-  width: 110px;
+  width: 156px;
   padding: 2px 0;
   background: #2b2d33;
   box-shadow:
     inset 0 0 0 1px #111317,
     4px 4px 0 rgba(0, 0, 0, 0.35);
   color: var(--cc-ink);
-  font-family: var(--app-font, ui-sans-serif, system-ui, sans-serif);
-  font-size: 11px;
-  line-height: 14px;
+  font-family: var(--cc-font);
+  font-size: 9px;
+  line-height: 12px;
+  -webkit-font-smoothing: none;
 }
 .cd-menu-row {
   display: flex;
   align-items: center;
   gap: 6px;
   box-sizing: border-box;
-  height: 20px;
-  padding: 0 8px;
+  height: 24px;
+  padding: 0 10px;
   cursor: pointer;
   white-space: nowrap;
 }

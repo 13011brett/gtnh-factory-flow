@@ -2,6 +2,7 @@
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import { readDeviceSettings, resetDeviceSettingsForTests, writeDeviceSettings } from "@/lib/device-settings";
+import { DEFAULT_SEE_THROUGH, readSeeThrough, setSeeThrough } from "@/components/flow/clean/seethrough/see-through";
 import { DEFAULT_UI_SCALE_PERCENT, UI_SCALE_STORAGE_KEY } from "@/lib/ui-scale-boot";
 import { getUiScalePercent } from "@/lib/ui-scale";
 import { areBoardSoundsEnabled, getBoardSoundVolume } from "@/lib/board-sounds";
@@ -19,6 +20,7 @@ beforeAll(() => {
 beforeEach(() => {
   window.localStorage.clear();
   resetDeviceSettingsForTests();
+  setSeeThrough(DEFAULT_SEE_THROUGH);
 });
 afterEach(() => cleanup());
 
@@ -29,7 +31,7 @@ describe("the settings box", () => {
   it("is a centred box with the mod's sections and a picture beside the rows", () => {
     render(<ModSettings onClose={vi.fn()} />);
     expect(screen.getByRole("dialog", { name: "Settings" })).toBeTruthy();
-    expect(sections()).toEqual(["Board", "Sound", "Controls"]);
+    expect(sections()).toEqual(["Board", "Minimap", "Sound", "Controls"]);
     expect(rowLabels().slice(0, 4)).toEqual(["Size", "Names when zoomed out", "Circuit as an input", "See-through"]);
     expect(document.querySelector(".ms-preview .sp-board")).toBeTruthy();
   });
@@ -59,16 +61,24 @@ describe("the settings box", () => {
     expect(document.querySelector(".sp-board")?.hasAttribute("data-names")).toBe(false);
   });
 
-  it("See-through is a 0 to 100 slider in fives that saves as boardSeeThrough and fades the picture's board", () => {
+  it("See-through is a 0 to 100 slider in fives that saves through the board's one See-through setting and fades the picture's board", () => {
     render(<ModSettings onClose={vi.fn()} />);
     const slider = screen.getByLabelText("See-through") as HTMLInputElement;
     expect(slider.max).toBe("20");
-    expect(slider.value).toBe("6");
-    expect(document.querySelector(".ms-value")?.textContent).toBe("30%");
+    expect(slider.value).toBe("0");
+    expect(document.querySelector(".ms-value")?.textContent).toBe("0%");
     fireEvent.change(slider, { target: { value: "10" } });
-    expect(readDeviceSettings().boardSeeThrough).toBe(50);
+    expect(readSeeThrough()).toBe(50);
     expect(document.querySelector(".ms-value")?.textContent).toBe("50%");
     expect((document.querySelector(".sp-board") as HTMLElement).style.getPropertyValue("--sp-solid")).toBe("0.5");
+  });
+
+  it("Minimap is a section of the minimap's own rows", () => {
+    render(<ModSettings onClose={vi.fn()} />);
+    fireEvent.click(screen.getByText("Minimap"));
+    const names = [...document.querySelectorAll(".mm-row-name")].map((element) => (element.firstChild?.textContent ?? "").trim());
+    expect(names.length).toBeGreaterThanOrEqual(6);
+    expect(names.slice(0, 5)).toEqual(["Show the minimap", "Size", "Shape", "Position", "Zoom"]);
   });
 
   it("opens on the section it was left on", () => {
@@ -109,8 +119,4 @@ describe("the settings box", () => {
     expect(close).toHaveBeenCalledTimes(2);
   });
 
-  it("writeDeviceSettings stamps the see-through as a CSS variable for whatever draws it", () => {
-    writeDeviceSettings({ boardSeeThrough: 80 });
-    expect(document.documentElement.style.getPropertyValue("--board-see-through")).toBe("0.8");
-  });
 });

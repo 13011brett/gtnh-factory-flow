@@ -431,3 +431,12 @@
   transform-origin: left center;
   width: 12px;
 }
+
+/* The Minimap section is the minimap's own rows (flow/clean/minimap), drawn at the settings' row height. */
+.ms-rows .ms-minimap {
+  zoom: 0.7;
+  padding: 0 14px 0 14px;
+}
+.ms-rows {
+  overflow-y: auto;
+}

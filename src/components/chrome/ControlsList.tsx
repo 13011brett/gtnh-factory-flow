@@ -5,6 +5,7 @@ import "./chrome.css";
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
 import { useDropdownDismiss } from "@/lib/hooks/use-dropdown-dismiss";
+import { getUiScale } from "@/lib/ui-scale";
 
 /** Every gesture on the board, in one list (the mod's "How the board works"). */
 export const CONTROLS: ReadonlyArray<readonly [string, string]> = [
@@ -34,6 +35,11 @@ export function ControlsList({ onClose }: { onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
   useDropdownDismiss(true, { refs: [ref], onClose, insideSelector: "[data-menu-anchor]" });
   useEffect(() => ref.current?.focus(), []);
+  // Hung from the Help key's right edge, as its menu is: the items column sits at the window's right edge now, and a
+  // panel pinned to the window would slide under it.
+  const scale = getUiScale();
+  const helpKey = typeof document === "undefined" ? null : document.querySelector(".mb-key[data-mb='help']");
+  const right = helpKey ? Math.max(2, (window.innerWidth - helpKey.getBoundingClientRect().right) / scale) : 8;
   return createPortal(
     <div
       ref={ref}
@@ -41,7 +47,7 @@ export function ControlsList({ onClose }: { onClose: () => void }) {
       aria-label="How the board works"
       tabIndex={-1}
       className="mm mc-controls ui-zoom nodrag nowheel"
-      style={{ top: 24, right: 8 }}
+      style={{ top: 24, right }}
       onPointerDown={(event) => event.stopPropagation()}
     >
       <div className="mm-title">HOW THE BOARD WORKS</div>

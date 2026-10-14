@@ -24,7 +24,7 @@ describe("the notices' sentences", () => {
       {
         id: "unmet:steel",
         severity: "warn",
-        text: "The Steel Plate drawer wants 10/s, but the plan can only make 6/s",
+        text: "The Steel Plate drawer wants 10 /s, but the plan can only make 6 /s",
         focus: ["steel"],
       },
     ]);
@@ -35,20 +35,20 @@ describe("the notices' sentences", () => {
       notes: [note("DRAWER_UNMET", "Steel Plate", note("RULE_EXACTLY"), 10, 6)],
     });
     expect(buildNotices(mockUnneeded.project, exact)[0]!.text).toBe(
-      "The Steel Plate drawer wants exactly 10/s, but the plan can only make 6/s",
+      "The Steel Plate drawer wants exactly 10 /s, but the plan can only make 6 /s",
     );
     const over = withExtras(mockUnneeded, {
       notes: [note("DRAWER_UNMET", "Steel Plate", note("RULE_AT_MOST"), 6, 10)],
     });
     expect(buildNotices(mockUnneeded.project, over)[0]!.text).toBe(
-      "The Steel Plate drawer allows at most 6/s, but the plan makes 10/s",
+      "The Steel Plate drawer allows at most 6 /s, but the plan makes 10 /s",
     );
     const supply = withExtras(mockUnneeded, {
       unmetDrawers: ["iron"],
       notes: [note("DRAWER_UNMET", "Iron Ingot", note("RULE_AT_MOST"), 12, 15)],
     });
     expect(buildNotices(mockUnneeded.project, supply)[0]).toMatchObject({
-      text: "The Iron Ingot supply allows at most 12/s, but the plan needs 15/s",
+      text: "The Iron Ingot supply allows at most 12 /s, but the plan needs 15 /s",
       focus: ["iron"],
     });
     const short = withExtras(mockUnneeded, {
@@ -56,7 +56,7 @@ describe("the notices' sentences", () => {
       notes: [note("DRAWER_UNMET", "Iron Ingot", note("RULE_EXACTLY"), 12, 9)],
     });
     expect(buildNotices(mockUnneeded.project, short)[0]!.text).toBe(
-      "The Iron Ingot supply should give exactly 12/s, but the plan can only use 9/s",
+      "The Iron Ingot supply should give exactly 12 /s, but the plan can only use 9 /s",
     );
   });
 
@@ -84,7 +84,7 @@ describe("the notices' sentences", () => {
       {
         id: "overshoot:furn:Iron Ingot",
         severity: "warn",
-        text: "The Furnace makes 3/s of Iron Ingot, more than its 2/s target, because another of its outputs needs more",
+        text: "The Furnace makes 3 /s of Iron Ingot, more than its 2 /s target, because another of its outputs needs more",
         focus: ["furn"],
       },
     ]);

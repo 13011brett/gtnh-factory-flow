@@ -48,7 +48,8 @@ function contains(note: Note, ...kinds: string[]): boolean {
 
 function rate(perSecond: number, kind: ResourceKind): string {
   const value = perSecond * rateMultiplierForKind(kind);
-  return `${formatCompact(value)}${rateSuffixForKind(kind)}`;
+  const suffix = rateSuffixForKind(kind);
+  return `${formatCompact(value)}${suffix.startsWith(" ") ? suffix : ` ${suffix}`}`;
 }
 
 const text = (arg: NoteArg | undefined): string =>

@@ -486,7 +486,6 @@ function lineTip(line: RailLine, text: string): TipContent {
     sub: text,
     actions: [
       { input: "left", label: "Go to the cards that make or use it, one by one" },
-      { input: "middle", label: "Go to the cards that make or use it" },
       { input: "right", label: "Find public plans that make it" },
     ],
   };

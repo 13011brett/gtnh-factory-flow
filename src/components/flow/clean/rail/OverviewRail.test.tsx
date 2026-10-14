@@ -458,3 +458,75 @@ it("shows no bar for a plan with nothing to say", () => {
   const { container } = render(<PlanNoticeStack />);
   expect(container.querySelector(".rail-notice")).toBeNull();
 });
+
+it("keeps a control's clicks to itself: the row does not walk to a card or open the library", () => {
+  load(mockUnneeded);
+  const frame = vi.fn();
+  useFactoryStore.setState({ frameBoardNodes: frame });
+  const { container } = render(<OverviewRail />);
+  const iron = container.querySelector('[data-resource-row="item:Iron Ingot"]')!;
+  fireEvent.click(iron.querySelector(".rail-box")!);
+  const input = container.querySelector("input.rail-box-edit") as HTMLInputElement;
+  fireEvent.click(input);
+  fireEvent.keyDown(input, { key: "Escape" });
+  fireEvent.contextMenu(iron.querySelector(".rail-box, .rail-rule")!);
+  expect(frame).not.toHaveBeenCalled();
+  // The row itself still walks.
+  fireEvent.click(iron);
+  expect(frame).toHaveBeenCalledTimes(1);
+});
+
+it("steps a rate with the wheel: shown at once, one undo step when the wheel goes still", () => {
+  vi.useFakeTimers();
+  try {
+    load(mockUnneeded);
+    const { container } = render(<OverviewRail />);
+    const box = container.querySelector(
+      '[data-resource-row="item:Iron Ingot"] .rail-box',
+    ) as HTMLElement;
+    const wheel = (deltaY: number, init: WheelEventInit = {}) =>
+      act(() => {
+        box.dispatchEvent(
+          new WheelEvent("wheel", { deltaY, bubbles: true, cancelable: true, ...init }),
+        );
+      });
+    wheel(-100);
+    wheel(-100);
+    expect(box.textContent).toBe("14");
+    // Nothing is in the plan yet.
+    expect(useFactoryStore.getState().undoHistory).toHaveLength(0);
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+    const storage = useFactoryStore.getState().project.storages!.find((s) => s.id === "iron")!;
+    expect(Math.abs(storage.targetPerSecond!)).toBe(14);
+    expect(useFactoryStore.getState().undoHistory).toHaveLength(1);
+    // Shift takes steps of a hundred.
+    wheel(-100, { shiftKey: true });
+    act(() => {
+      vi.advanceTimersByTime(400);
+    });
+    expect(
+      Math.abs(
+        useFactoryStore.getState().project.storages!.find((s) => s.id === "iron")!.targetPerSecond!,
+      ),
+    ).toBe(114);
+  } finally {
+    vi.useRealTimers();
+  }
+});
+
+it("lets a wheel that is scrolling the list keep scrolling it past a box", () => {
+  load(mockUnneeded);
+  const { container } = render(<OverviewRail />);
+  const list = container.querySelector(".rail-list") as HTMLElement;
+  const box = container.querySelector(
+    '[data-resource-row="item:Iron Ingot"] .rail-box',
+  ) as HTMLElement;
+  // The first notch lands on empty list: it scrolls, and records that it did.
+  list.dispatchEvent(new WheelEvent("wheel", { deltaY: 100, bubbles: true, cancelable: true }));
+  const second = new WheelEvent("wheel", { deltaY: -100, bubbles: true, cancelable: true });
+  box.dispatchEvent(second);
+  // Within 400 ms of a scroll the box does not take it: the event is left alone.
+  expect(second.defaultPrevented).toBe(false);
+});

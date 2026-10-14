@@ -65,14 +65,20 @@ export function RuleKey({
       ref={wheelRef(onWheel)}
       {...tipProps(`rule|${label}`, tip)}
       onMouseDown={noAutoscroll}
-      onClick={onClick}
+      onClick={(event) => {
+        // A control on a row is its own thing: the row's click (walk the cards) is not for it.
+        event.stopPropagation();
+        onClick?.(event);
+      }}
       onContextMenu={(event) => {
-        if (!onContext) return;
         event.preventDefault();
-        onContext(event);
+        event.stopPropagation();
+        onContext?.(event);
       }}
       onAuxClick={(event) => {
-        if (event.button === 1) onMiddle?.(event);
+        if (event.button !== 1) return;
+        event.stopPropagation();
+        onMiddle?.(event);
       }}
     >
       <span>{mark}</span>
@@ -140,9 +146,18 @@ export function RateBox({
       ref={wheelRef(onWheel)}
       {...tipProps(`box|${label}`, tip)}
       onMouseDown={noAutoscroll}
-      onClick={onStartEdit}
+      onClick={(event) => {
+        event.stopPropagation();
+        onStartEdit();
+      }}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        event.stopPropagation();
+      }}
       onAuxClick={(event) => {
-        if (event.button === 1) onMiddle?.();
+        if (event.button !== 1) return;
+        event.stopPropagation();
+        onMiddle?.();
       }}
     >
       <span>{gold ? text : placeholder}</span>
@@ -197,6 +212,8 @@ function RateEditor({
       spellCheck={false}
       onChange={(event) => setValue(event.target.value)}
       onBlur={() => finish(true)}
+      onClick={(event) => event.stopPropagation()}
+      onContextMenu={(event) => event.stopPropagation()}
       onKeyDown={(event) => {
         event.stopPropagation();
         if (event.key === "Enter") finish(true);

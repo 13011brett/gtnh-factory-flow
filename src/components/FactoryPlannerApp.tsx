@@ -43,6 +43,7 @@ import { PowerSourceOverlay } from "./PowerSourceOverlay";
 import { FactoryFlow } from "./flow/FactoryFlow";
 import { useBoardSoundEffects } from "./flow/use-board-sound-effects";
 import { InspectorPanel } from "./InspectorPanel";
+import { OverviewRail, useRailColumnWidth } from "./flow/clean/rail/OverviewRail";
 import { PanelDrawer } from "./PanelDrawer";
 import { RecipeBrowser } from "./RecipeBrowser";
 
@@ -418,7 +419,11 @@ function ColumnWorkspace({ workspace, onLoadDatasetVersion }: WorkspaceProps) {
   const covering = useCoveringPage();
   const poolMode = useFactoryStore((state) => state.project.poolMode === true);
   const worksheet = poolMode;
-  const rightPanelShown = workspace.rightPanelOpen && !covering && !worksheet;
+  // Plan mode wears the mod's overview: a column LEFT of the board (folds to a strip),
+  // and the right-hand resource column steps aside.
+  const planMode = useFactoryStore((state) => state.project.planMode === true) && !covering && !worksheet;
+  const railWidth = useRailColumnWidth();
+  const rightPanelShown = workspace.rightPanelOpen && !covering && !worksheet && !planMode;
 
   return (
     <>
@@ -435,10 +440,11 @@ function ColumnWorkspace({ workspace, onLoadDatasetVersion }: WorkspaceProps) {
             : "0px",
           gridTemplateColumns: [
             workspace.leftPanelOpen ? "256px" : `${RAIL_WIDTH}px`,
+            ...(planMode ? [`${railWidth}px`] : []),
             "minmax(0,1fr)",
             // With a page over the board the resource column is not folded, it is
             // GONE: nothing to open, no rail to hint that there is.
-            rightPanelShown ? "234px" : covering || worksheet ? "0px" : `${RAIL_WIDTH}px`,
+            rightPanelShown ? "234px" : covering || worksheet || planMode ? "0px" : `${RAIL_WIDTH}px`,
           ].join(" "),
         } as CSSProperties}
       >
@@ -449,10 +455,11 @@ function ColumnWorkspace({ workspace, onLoadDatasetVersion }: WorkspaceProps) {
         ) : (
           <PanelRail side="left" label="Items" />
         )}
+        {planMode ? <OverviewRail /> : null}
         <BoardColumn />
         {rightPanelShown ? (
           <InspectorPanel />
-        ) : covering || worksheet ? null : (
+        ) : covering || worksheet || planMode ? null : (
           <PanelRail side="right" label="Resources" />
         )}
       </main>
@@ -470,7 +477,8 @@ function CompactWorkspace({ workspace, onLoadDatasetVersion }: WorkspaceProps) {
   const covering = useCoveringPage();
   const poolMode = useFactoryStore((state) => state.project.poolMode === true);
   const worksheet = poolMode;
-  const openLeft = () => writeWorkspaceView({ leftPanelOpen: true, rightPanelOpen: false });
+  const planMode = useFactoryStore((state) => state.project.planMode === true);
+  const openLeft =() => writeWorkspaceView({ leftPanelOpen: true, rightPanelOpen: false });
   const openRight = () => writeWorkspaceView({ leftPanelOpen: false, rightPanelOpen: true });
 
   return (
@@ -493,7 +501,7 @@ function CompactWorkspace({ workspace, onLoadDatasetVersion }: WorkspaceProps) {
           onOpen={openRight}
           onClose={() => writeWorkspaceView({ rightPanelOpen: false })}
         >
-          <InspectorPanel />
+          {planMode ? <OverviewRail forceOpen /> : <InspectorPanel />}
         </PanelDrawer>
       )}
     </main>

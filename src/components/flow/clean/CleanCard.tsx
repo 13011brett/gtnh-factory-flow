@@ -18,6 +18,8 @@ import { MenuShell } from "../EnergyHatchMenu";
 import { checklistLocked } from "../RecipeNode";
 import type { CleanCardActions, CleanCardContext, CleanCardView, CleanChipView, CleanPortView } from "./clean-model";
 import { tierChipColors } from "./tokens";
+import { openSparePopupForPort } from "./rail/SparePopup";
+import { makePortKey } from "@/lib/solver/plan/port-key";
 
 /** A press that moved this far (screen px) before release is a drag, not a click. */
 const CLICK_SLOP = 3;
@@ -135,7 +137,17 @@ export function CleanPortRow({ p, wasClick }: { p: CleanPortView; wasClick: (eve
         <Words p={p} iconProps={iconProps} />
       )}
       {p.forced ? (
-        <div className="cc-forced" data-kind={isInput ? "in" : "out"} title="The plan brings this in here with nothing to supply it. Drag it out to make a drawer.">
+        <div
+          className="cc-forced"
+          data-kind={isInput ? "in" : "out"}
+          title="The plan brings this in here with nothing to supply it. Drag it out to make a drawer."
+          onClick={(event) => {
+            // A leftover with somewhere else to go opens its split (rail/SparePopup.tsx).
+            if (wasClick(event) && openSparePopupForPort(makePortKey(p.nodeId, isInput ? "i" : "o", p.handleId), event.clientX, event.clientY)) {
+              event.stopPropagation();
+            }
+          }}
+        >
           {port.resource ? (
             <ResourceIcon {...iconProps} resource={{ ...port.resource, amount: 1, chance: undefined }} className="cc-icon" />
           ) : null}

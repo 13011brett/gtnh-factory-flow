@@ -1,0 +1,460 @@
+// @vitest-environment jsdom
+import { afterEach, beforeAll, beforeEach, expect, it, vi } from "vitest";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
+import {
+  mockForced,
+  mockLeftovers,
+  mockUnneeded,
+} from "@/lib/solver/plan/__fixtures__/mock-extras";
+import type { FactoryProject, ThroughputResult } from "@/lib/model/types";
+import type { PlanNote } from "@/lib/solver/plan/types";
+import { useFactoryStore } from "@/store/factory-store";
+import { OverviewRail } from "./OverviewRail";
+import { PlanNoticeStack } from "./NoticeBar";
+import { RAIL_VIEW_STORAGE_KEY, resetRailViewForTests, writeRailView } from "./rail-view";
+import { SparePopupHost, closeSparePopup, openSparePopupForPort } from "./SparePopup";
+
+vi.mock("@/lib/compact-view", () => ({ isCompactViewport: () => false }));
+
+/**
+ * The mock answers stand in for the solver: every solve hands back the answer the test loaded, its leftovers
+ * following the stored split as the real solver's would.
+ */
+const solver = vi.hoisted(() => ({
+  answer: undefined as undefined | ThroughputResult,
+}));
+vi.mock("@/store/solve-books", async (original) => {
+  const real = await original<typeof import("@/store/solve-books")>();
+  return {
+    ...real,
+    solveBooks: (project: FactoryProject): ThroughputResult => {
+      const base = solver.answer;
+      if (!base) return real.solveBooks(project);
+      const stored = project.spareShares ?? {};
+      const leftovers = (base.plan?.leftovers ?? []).map((l) => {
+        const split = stored[l.key];
+        if (!split) return l;
+        const total = l.bearers.reduce((t, b) => t + (split[b.portKey] ?? 0), 0) || 1;
+        return {
+          ...l,
+          custom: true,
+          bearers: l.bearers.map((b) => ({ ...b, share: (split[b.portKey] ?? 0) / total })),
+        };
+      });
+      return { ...base, plan: base.plan ? { ...base.plan, leftovers } : undefined };
+    },
+  };
+});
+
+beforeAll(() => {
+  globalThis.ResizeObserver ??= class {
+    observe() {}
+    unobserve() {}
+    disconnect() {}
+  } as unknown as typeof ResizeObserver;
+});
+
+function load(mock: typeof mockLeftovers, result: ThroughputResult = mock.result) {
+  solver.answer = result;
+  useFactoryStore.setState({
+    project: mock.project,
+    lastResult: result,
+    isReadOnly: false,
+    undoHistory: [],
+    redoHistory: [],
+  });
+}
+
+beforeEach(() => {
+  window.localStorage.clear();
+  resetRailViewForTests();
+});
+const realFrame = useFactoryStore.getState().frameBoardNodes;
+afterEach(() => {
+  useFactoryStore.setState({ frameBoardNodes: realFrame });
+  closeSparePopup();
+  cleanup();
+});
+
+it("lists the plan's sections, lines and machines", () => {
+  load(mockLeftovers);
+  const { container } = render(<OverviewRail />);
+  const titles = [...container.querySelectorAll(".rail-sec-title")].map((e) => e.textContent);
+  expect(titles).toEqual(["INPUTS", "OUTPUTS", "INTERNAL", "MACHINES"]);
+  expect(screen.getByText("Copper Dust")).toBeTruthy();
+  expect(screen.getByText("Tin Ore")).toBeTruthy();
+  // Spare blocks: "Forced" with Split and Auto, once for the imports and once for the surplus.
+  expect(container.querySelectorAll(".rail-spare")).toHaveLength(2);
+  expect(screen.getAllByText("Split")).toHaveLength(2);
+  // The machine group and its four lines.
+  expect(container.querySelectorAll(".rail-machine")).toHaveLength(4);
+  expect(container.querySelector(".rail-tier")?.textContent).toBe("LV");
+});
+
+it("folds to a strip and remembers it per device", () => {
+  load(mockLeftovers);
+  const { container } = render(<OverviewRail />);
+  fireEvent.click(screen.getByLabelText("Fold the overview"));
+  expect(container.querySelector(".rail-strip")).toBeTruthy();
+  expect(JSON.parse(window.localStorage.getItem(RAIL_VIEW_STORAGE_KEY)!).open).toBe(false);
+  // Back open.
+  fireEvent.click(screen.getByLabelText("Open the overview"));
+  expect(container.querySelector(".rail-root")).toBeTruthy();
+  // A section folds and stays folded.
+  fireEvent.click(container.querySelector(".rail-sec")!);
+  expect(JSON.parse(window.localStorage.getItem(RAIL_VIEW_STORAGE_KEY)!).folded).toEqual([
+    "INPUTS",
+  ]);
+  cleanup();
+  resetRailViewForTests();
+  const again = render(<OverviewRail />);
+  expect(again.container.querySelector(".rail-sec")?.getAttribute("data-folded")).toBe("");
+});
+
+it("opens folded away when asked to stay open (the compact drawer)", () => {
+  load(mockLeftovers);
+  writeRailView({ open: false });
+  const { container } = render(<OverviewRail forceOpen />);
+  expect(container.querySelector(".rail-root")).toBeTruthy();
+});
+
+it("lights a resource on the board while its row is hovered", () => {
+  load(mockLeftovers);
+  const { container } = render(<OverviewRail />);
+  const row = container.querySelector('[data-resource-row="item:Copper Dust"]')!;
+  fireEvent.pointerEnter(row);
+  expect(useFactoryStore.getState().hoveredFlowResourceKey).toBe("item:Copper Dust");
+  fireEvent.pointerLeave(row);
+  expect(useFactoryStore.getState().hoveredFlowResourceKey).toBeUndefined();
+});
+
+it("frames the next card that makes or uses a resource on click and on middle click, going round", () => {
+  load(mockLeftovers);
+  const { container } = render(<OverviewRail />);
+  const row = container.querySelector('[data-resource-row="item:Tin Dust"]')!;
+  const framed: string[][] = [];
+  const unsubscribe = useFactoryStore.subscribe((state) => {
+    const request = state.boardFocusRequest;
+    if (request && framed.length < 10 && request.nodeIds.length > 0) {
+      const last = framed.at(-1);
+      if (!last || last[0] !== request.nodeIds[0] || request.token !== (framed.length ? -1 : 0))
+        framed.push(request.nodeIds);
+    }
+  });
+  fireEvent.click(row);
+  fireEvent(row, new MouseEvent("auxclick", { bubbles: true, button: 1 }));
+  fireEvent.click(row);
+  unsubscribe();
+  // Two crushers make Tin Dust: one, the other, then round to the first again.
+  expect(framed.map((ids) => ids[0])).toEqual(["crush", "crush2", "crush"]);
+});
+
+it("splits a spare evenly in one undo step, and Auto puts it back", () => {
+  load(mockLeftovers);
+  const { container } = render(<OverviewRail />);
+  const importing = container.querySelectorAll(".rail-spare")[0]!;
+  const split = [...importing.querySelectorAll(".rail-key")].find(
+    (k) => k.textContent === "Split",
+  )!;
+  fireEvent.click(split);
+  const state = useFactoryStore.getState();
+  expect(Object.values(state.project.spareShares ?? {})).toEqual([
+    { "alloy|i|input:item:Copper%20Dust": 0.5, "alloy2|i|input:item:Copper%20Dust": 0.5 },
+  ]);
+  expect(state.undoHistory).toHaveLength(1);
+  // Undo gives the stored 25/75 back.
+  act(() => useFactoryStore.getState().undo());
+  expect(Object.values(useFactoryStore.getState().project.spareShares ?? {})[0]).toEqual({
+    "alloy|i|input:item:Copper%20Dust": 0.25,
+    "alloy2|i|input:item:Copper%20Dust": 0.75,
+  });
+});
+
+it("puts all of a spare at a place when its row is clicked, and Auto clears the choice", () => {
+  load(mockLeftovers);
+  const { container } = render(<OverviewRail />);
+  const importing = container.querySelectorAll(".rail-spare")[0]!;
+  const rows = importing.querySelectorAll(".rail-spare-row");
+  fireEvent.click(rows[1]!);
+  expect(Object.values(useFactoryStore.getState().project.spareShares!)[0]).toEqual({
+    "alloy|i|input:item:Copper%20Dust": 0,
+    "alloy2|i|input:item:Copper%20Dust": 1,
+  });
+  const auto = [
+    ...container.querySelectorAll(".rail-spare")[0]!.querySelectorAll(".rail-key"),
+  ].find((k) => k.textContent === "Auto")!;
+  expect(auto.getAttribute("aria-disabled")).toBeNull();
+  fireEvent.click(auto);
+  expect(useFactoryStore.getState().project.spareShares).toBeUndefined();
+  expect(useFactoryStore.getState().undoHistory).toHaveLength(2);
+});
+
+it("greys Auto until the split is custom", () => {
+  load(mockLeftovers);
+  const { container } = render(<OverviewRail />);
+  const outputs = container.querySelectorAll(".rail-spare")[1]!;
+  const auto = [...outputs.querySelectorAll(".rail-key")].find((k) => k.textContent === "Auto")!;
+  expect(auto.getAttribute("aria-disabled")).toBe("true");
+});
+
+it("holds a spare's bar in hand: no undo step while it moves, one when let go", () => {
+  load(mockLeftovers);
+  const { container } = render(<OverviewRail />);
+  const bar = container.querySelector(".rail-spare-bar") as HTMLElement;
+  bar.getBoundingClientRect = () => ({
+    left: 100,
+    width: 78,
+    top: 0,
+    right: 178,
+    bottom: 20,
+    height: 20,
+    x: 100,
+    y: 0,
+    toJSON: () => ({}),
+  });
+  bar.setPointerCapture = () => {};
+  bar.releasePointerCapture = () => {};
+  fireEvent.pointerDown(bar, { button: 0, clientX: 105, pointerId: 1 });
+  fireEvent.pointerMove(bar, { clientX: 139, pointerId: 1 });
+  const mid = useFactoryStore.getState();
+  expect(
+    Object.values(mid.project.spareShares!)[0]!["alloy|i|input:item:Copper%20Dust"],
+  ).toBeCloseTo(0.5, 9);
+  expect(mid.undoHistory).toHaveLength(0);
+  fireEvent.pointerMove(bar, { clientX: 178, pointerId: 1 });
+  fireEvent.pointerUp(bar, { clientX: 178, pointerId: 1 });
+  const end = useFactoryStore.getState();
+  expect(Object.values(end.project.spareShares!)[0]!["alloy|i|input:item:Copper%20Dust"]).toBe(1);
+  expect(end.undoHistory).toHaveLength(1);
+  act(() => useFactoryStore.getState().undo());
+  expect(
+    Object.values(useFactoryStore.getState().project.spareShares!)[0]![
+      "alloy|i|input:item:Copper%20Dust"
+    ],
+  ).toBe(0.25);
+});
+
+it("lets go of a bar that did not move: nothing to undo", () => {
+  load(mockLeftovers);
+  const { container } = render(<OverviewRail />);
+  // The surplus's first place already bears all of it: a press at the far end and a release makes no edit.
+  const bar = container
+    .querySelectorAll(".rail-spare")[1]!
+    .querySelector(".rail-spare-bar") as HTMLElement;
+  bar.getBoundingClientRect = () => ({
+    left: 100,
+    width: 80,
+    top: 0,
+    right: 180,
+    bottom: 20,
+    height: 20,
+    x: 100,
+    y: 0,
+    toJSON: () => ({}),
+  });
+  bar.setPointerCapture = () => {};
+  bar.releasePointerCapture = () => {};
+  fireEvent.pointerDown(bar, { button: 0, clientX: 190, pointerId: 1 });
+  fireEvent.pointerUp(bar, { clientX: 190, pointerId: 1 });
+  expect(useFactoryStore.getState().undoHistory).toHaveLength(0);
+  // Back to what it was: the stored split of the other spare is untouched, the surplus has none.
+  expect(Object.keys(useFactoryStore.getState().project.spareShares!)).toHaveLength(1);
+});
+
+function typeInto(container: HTMLElement, key: string, text: string) {
+  const row = container.querySelector(`[data-resource-row="${key}"]`)!;
+  fireEvent.click(row.querySelector(".rail-box")!);
+  const input = container.querySelector("input.rail-box-edit") as HTMLInputElement;
+  fireEvent.change(input, { target: { value: text } });
+  fireEvent.keyDown(input, { key: "Enter" });
+}
+
+it("types a rate on a line nothing sets: its one open port takes it, as on the card", () => {
+  load(mockForced);
+  const { container } = render(<OverviewRail />);
+  const clay = container.querySelector('[data-resource-row="item:Clay"]')!;
+  expect(clay.querySelector(".rail-rule")?.textContent).toBe("~");
+  expect(clay.querySelector(".rail-box")?.textContent).toBe("Set");
+  typeInto(container, "item:Clay", "2");
+  const wash = useFactoryStore.getState().project.nodes.find((n) => n.id === "wash")!;
+  expect(wash.portRates).toEqual({ "output:item:Clay": 2 });
+  expect(wash.solvePin).toBeUndefined();
+  expect(useFactoryStore.getState().undoHistory).toHaveLength(1);
+});
+
+it("lists a port set to a rate on its card under its resource, and its key lets the plan decide", () => {
+  const project = structuredClone(mockForced.project);
+  project.nodes.find((n) => n.id === "wash")!.portRates = { "output:item:Clay": 2 };
+  load({ ...mockForced, project });
+  const { container } = render(<OverviewRail />);
+  const clay = container.querySelector('[data-resource-row="item:Clay"]')!;
+  expect(clay.querySelector(".rail-rule")?.textContent).toBe("=");
+  expect(clay.querySelector(".rail-box")?.textContent).toBe("2");
+  fireEvent.click(clay.querySelector(".rail-rule")!);
+  expect(
+    useFactoryStore.getState().project.nodes.find((n) => n.id === "wash")!.portRates,
+  ).toBeUndefined();
+});
+
+it("makes one drawer for a line with several open ports, wired to all of them", () => {
+  load(mockLeftovers);
+  const { container } = render(<OverviewRail />);
+  const before = useFactoryStore.getState().project;
+  typeInto(container, "item:Tin Dust", "3");
+  const after = useFactoryStore.getState().project;
+  const made = after.storages!.filter((s) => !before.storages!.some((b) => b.id === s.id));
+  expect(made).toHaveLength(1);
+  expect(made[0]).toMatchObject({
+    resourceId: "Tin Dust",
+    targetMode: "at-least",
+    targetPerSecond: 3,
+  });
+  const wired = after.edges
+    .filter((e) => e.target === made[0]!.id)
+    .map((e) => e.source)
+    .sort();
+  expect(wired).toEqual(["crush", "crush2"]);
+});
+
+it("shows a drawer's rule and rate, and a click types a new one", () => {
+  load(mockUnneeded);
+  const { container } = render(<OverviewRail />);
+  const iron = container.querySelector('[data-resource-row="item:Iron Ingot"]')!;
+  expect(iron.querySelector(".rail-rule")?.textContent).toBe("≤");
+  expect(iron.querySelector(".rail-box")?.textContent).toBe("12");
+  fireEvent.click(iron.querySelector(".rail-box")!);
+  const input = container.querySelector("input.rail-box-edit") as HTMLInputElement;
+  expect(input.value).toBe("12");
+  fireEvent.change(input, { target: { value: "1.5k" } });
+  fireEvent.keyDown(input, { key: "Enter" });
+  const storage = useFactoryStore.getState().project.storages!.find((s) => s.id === "iron")!;
+  expect(Math.abs(storage.targetPerSecond!)).toBe(1500);
+  expect(storage.targetMode).toBe("at-most");
+});
+
+it("ignores text that is not a number", () => {
+  load(mockUnneeded);
+  const { container } = render(<OverviewRail />);
+  const iron = container.querySelector('[data-resource-row="item:Iron Ingot"]')!;
+  fireEvent.click(iron.querySelector(".rail-box")!);
+  const input = container.querySelector("input.rail-box-edit") as HTMLInputElement;
+  fireEvent.change(input, { target: { value: "lots" } });
+  fireEvent.keyDown(input, { key: "Enter" });
+  expect(useFactoryStore.getState().undoHistory).toHaveLength(0);
+  expect(container.querySelector("input.rail-box-edit")).toBeNull();
+});
+
+it("pins a machine's count from its line and lets it go again", () => {
+  load(mockUnneeded);
+  const { container } = render(<OverviewRail />);
+  const machine = container.querySelector(".rail-machine")!;
+  expect(machine.querySelector(".rail-rule")?.textContent).toBe("=");
+  // Pinned at 6: the key lets the plan decide.
+  fireEvent.click(machine.querySelector(".rail-rule")!);
+  expect(
+    useFactoryStore.getState().project.nodes.find((n) => n.id === "comp")!.solvePin,
+  ).toBeUndefined();
+});
+
+it("steps a drawer's rule with a right click and picks one from its menu", () => {
+  load(mockUnneeded);
+  const { container } = render(<OverviewRail />);
+  const iron = container.querySelector('[data-resource-row="item:Iron Ingot"]')!;
+  fireEvent.contextMenu(iron.querySelector(".rail-rule")!);
+  // at-most steps back to exactly.
+  expect(
+    useFactoryStore.getState().project.storages!.find((s) => s.id === "iron")!.targetMode,
+  ).toBe("exact");
+  fireEvent.click(iron.querySelector(".rail-rule")!);
+  const items = document.querySelectorAll(".rail-menu-item");
+  expect([...items].map((i) => i.textContent)).toEqual([
+    "~Any",
+    "≥At least",
+    "=Exactly",
+    "≤At most",
+  ]);
+  fireEvent.click(items[1]!);
+  expect(
+    useFactoryStore.getState().project.storages!.find((s) => s.id === "iron")!.targetMode,
+  ).toBe("at-least");
+});
+
+it("opens a card's Forced row as the spare popup when its leftover has a choice", () => {
+  load(mockLeftovers);
+  const { container } = render(<SparePopupHost />);
+  expect(container.querySelector(".rail-popup")).toBeNull();
+  // The input port of the first alloy smelter is one of the two places.
+  const portKey = "alloy|i|input:item:Copper%20Dust";
+  act(() => {
+    expect(openSparePopupForPort(portKey, 100, 100)).toBe(true);
+  });
+  const popup = document.querySelector(".rail-popup")!;
+  expect(popup).toBeTruthy();
+  expect(popup.textContent).toContain("(here)");
+  expect(popup.textContent).toContain("or put a drawer here");
+  act(() => closeSparePopup());
+  expect(document.querySelector(".rail-popup")).toBeNull();
+  // A port that is not part of a choice opens nothing.
+  expect(openSparePopupForPort("nobody|i|input:item:x", 1, 1)).toBe(false);
+});
+
+it("hangs a hovered place's ports on the hover scope", () => {
+  load(mockLeftovers);
+  const { container } = render(<OverviewRail />);
+  const row = container.querySelectorAll(".rail-spare")[0]!.querySelectorAll(".rail-spare-row")[1]!;
+  fireEvent.pointerEnter(row);
+  expect(useFactoryStore.getState().hoveredFlowScope).toEqual({
+    edges: {},
+    ports: { "alloy2|input:item:Copper%20Dust": true },
+    nodes: { alloy2: true },
+  });
+  fireEvent.pointerLeave(row);
+  expect(useFactoryStore.getState().hoveredFlowScope).toBeUndefined();
+});
+
+it("leaves the old modes' result alone: no plan extras, no spare blocks", () => {
+  load(mockForced, { ...mockForced.result, plan: undefined });
+  const { container } = render(<OverviewRail />);
+  expect(container.querySelectorAll(".rail-spare")).toHaveLength(0);
+});
+
+// ---------------------------------------------------------------------------
+// Notices
+// ---------------------------------------------------------------------------
+
+const note = (message: PlanNote["message"], ...args: PlanNote["args"]): PlanNote => ({
+  message,
+  args,
+});
+
+it("shows the notices bar: a row per notice, at most four, the rest counted", () => {
+  const many: PlanNote[] = Array.from({ length: 6 }, (_, i) =>
+    note("DRAWER_NOT_CONNECTED", `Thing ${i}`, `id${i}`),
+  );
+  load(mockUnneeded, {
+    ...mockUnneeded.result,
+    plan: { ...mockUnneeded.result.plan!, unmetDrawers: [], notes: many },
+  });
+  const { container } = render(<PlanNoticeStack />);
+  const rows = [...container.querySelectorAll(".rail-notice")];
+  expect(rows).toHaveLength(5);
+  expect(rows[0]!.textContent).toContain(
+    "The Thing 0 drawer has a rate, but nothing is wired to it",
+  );
+  expect(rows[4]!.textContent).toBe("+2 more");
+});
+
+it("frames what a notice is about when Show me is pressed, one card at a time when they are far apart", () => {
+  load(mockUnneeded);
+  const frame = vi.fn();
+  useFactoryStore.setState({ frameBoardNodes: frame });
+  const { container } = render(<PlanNoticeStack />);
+  fireEvent.click(container.querySelector(".rail-notice-show")!);
+  expect(frame).toHaveBeenCalledWith(["steel"], expect.anything());
+});
+
+it("shows no bar for a plan with nothing to say", () => {
+  load(mockForced);
+  const { container } = render(<PlanNoticeStack />);
+  expect(container.querySelector(".rail-notice")).toBeNull();
+});

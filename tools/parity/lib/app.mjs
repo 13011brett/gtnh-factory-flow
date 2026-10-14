@@ -7,7 +7,7 @@ export const PAGE_URL = `${BASE}/dev/clean-card`;
 /** The mod's reference shots are 2 device px per GUI px, so a 320 GUI card is 640 px wide. */
 export const MOD_CARD_PX = 640;
 /** Website card width in css px at board zoom 1. */
-export const WEB_CARD_CSS = 380;
+export const WEB_CARD_CSS = 320;
 /** deviceScaleFactor that makes the website's card the same pixel width as the mod's reference card. */
 export const DSF = MOD_CARD_PX / WEB_CARD_CSS;
 
@@ -225,7 +225,7 @@ export async function panTo(page, id, sx, sy) {
   return rectOf(page, sel);
 }
 
-/** Board zoom as the card's css width / 380. */
+/** Board zoom as the card css width / 320. */
 export async function zoomOf(page, id) {
   const r = await rectOf(page, `.react-flow__node[data-id="${id}"]`);
   return r ? r.w / WEB_CARD_CSS : null;

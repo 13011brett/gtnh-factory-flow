@@ -75,6 +75,7 @@ import {
   BOARD_WINDOW_MIN_HEIGHT,
   BOARD_WINDOW_MIN_WIDTH,
   BOARD_WINDOW_TITLE_HEIGHT,
+  CLASSIC_NODE_WIDTH,
   RECIPE_NODE_WIDTH,
   STORAGE_NODE_HEIGHT,
   STORAGE_NODE_WIDTH,
@@ -4026,7 +4027,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
         })),
         ...memberPockets.map((entry) => ({
           ...entry.position,
-          width: entry.expanded ? boardWindowSize(entry).width : RECIPE_NODE_WIDTH,
+          width: entry.expanded ? boardWindowSize(entry).width : CLASSIC_NODE_WIDTH,
           height: entry.expanded ? boardWindowSize(entry).height : BOARD_GRID * 12,
         })),
       ];
@@ -4995,7 +4996,7 @@ function projectBlockerRects(project: FactoryProject): PlacementRect[] {
     }
     rects.push({
       ...absolutize(pocket.position, pocket.parentPocketId),
-      width: pocket.expanded ? boardWindowSize(pocket).width : RECIPE_NODE_WIDTH,
+      width: pocket.expanded ? boardWindowSize(pocket).width : CLASSIC_NODE_WIDTH,
       height: pocket.expanded ? boardWindowSize(pocket).height : BOARD_GRID * 14,
     });
   }

@@ -6,7 +6,7 @@ import { Handle, Position } from "@xyflow/react";
 import { useEffect, useRef, useState, type CSSProperties, type MouseEvent, type WheelEvent } from "react";
 import { Copy, Plus, RefreshCw, Trash2 } from "lucide-react";
 import type { FactoryNode, Recipe } from "@/lib/model/types";
-import { fluidArtPixels, isSwatchFluid, ResourceIcon } from "@/components/nei/ResourceIcon";
+import { fluidArtPixels, getFallbackFluidColor, isSwatchFluid, ResourceIcon } from "@/components/nei/ResourceIcon";
 import { type BrowseMode as PortBrowseMode } from "@/components/browse-menu";
 import { useFactoryStore } from "@/store/factory-store";
 import { buildPortFlowScope } from "../flow-scope";
@@ -93,7 +93,7 @@ export function CleanPortRow({
     // The game gives this one away: shown so it is set down beside the machine, nothing to wire.
     return (
       <div className="cc-row" data-side={p.side} title={`${p.name}: free input, no supply needed`} style={{ opacity: 0.6 }}>
-        {port.resource ? <ResourceIcon {...iconProps} resource={{ ...port.resource, amount: 1, chance: undefined }} className="cc-icon" /> : null}
+        {port.resource ? <PortIcon resource={port.resource} iconProps={iconProps} /> : null}
         <span className="cc-num" data-small="" data-unit="">
           free
         </span>
@@ -156,9 +156,7 @@ export function CleanPortRow({
             }
           }}
         >
-          {port.resource ? (
-            <ResourceIcon {...iconProps} resource={{ ...port.resource, amount: 1, chance: undefined }} className="cc-icon" />
-          ) : null}
+          {port.resource ? <PortIcon resource={port.resource} iconProps={iconProps} /> : null}
           <span className="cc-num" data-unit={p.forced.unit}>
             {p.forced.number}
           </span>
@@ -185,18 +183,24 @@ export function CleanPortRow({
   );
 }
 
+/**
+ * A port's picture: an item's sprite, or for a fluid the mod's flat square in the fluid's own colour
+ * (one span, no art, no bevel).
+ */
+function PortIcon({ resource, iconProps }: { resource: NonNullable<CleanPortView["port"]["resource"]>; iconProps: Record<string, unknown> }) {
+  if (resource.kind === "fluid") {
+    const color = resource.dominantColor ?? resource.iconAtlas?.dominantColor ?? getFallbackFluidColor(resource.id);
+    return <span className="cc-icon cc-swatch" role="img" aria-label={resource.displayName} style={{ backgroundColor: color }} />;
+  }
+  return <ResourceIcon {...(iconProps as object)} resource={{ ...resource, amount: 1, chance: undefined }} className="cc-icon" />;
+}
+
 /** Icon, figure, name: the three things a row says. */
 function Words({ p, iconProps }: { p: CleanPortView; iconProps: Record<string, unknown> }) {
   const { port } = p;
   return (
     <>
-      {port.resource ? (
-        <ResourceIcon
-          {...(iconProps as object)}
-          resource={{ ...port.resource, amount: 1, chance: undefined }}
-          className="cc-icon"
-        />
-      ) : null}
+      {port.resource ? <PortIcon resource={port.resource} iconProps={iconProps as Record<string, unknown>} /> : null}
       <span
         className="cc-num"
         data-unit={p.unit}
@@ -389,7 +393,7 @@ function AmpsChip({
       role="button"
       tabIndex={0}
       className="cc-chip nowheel"
-      style={{ ...style, minWidth: 50, width: "max-content" }}
+      style={{ ...style, minWidth: 48, width: "max-content" }}
       {...tipAttrs(tip)}
       onClick={(event) => {
         glyph(event);
@@ -555,7 +559,6 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
           style={{ "--cc-name-size": `${view.nameSize}px` } as CSSProperties}
           data-picker={view.hasPicker ? "" : undefined}
           data-open={listOpen ? "" : undefined}
-          data-clip={view.nameSize <= 9 ? "" : undefined}
           data-machine-menu-toggle={view.hasPicker ? "" : undefined}
           data-wheel-steps={view.hasPicker ? "" : undefined}
           {...tipAttrs(nameTip(view))}

@@ -160,7 +160,7 @@ it("lays strip chips out on whole-cell rows inside the card", () => {
   expect(height % 20).toBe(0);
   for (const chip of chips) {
     expect(chip.x).toBeGreaterThanOrEqual(8);
-    expect(chip.x + chip.width).toBeLessThanOrEqual(380 - 8);
+    expect(chip.x + chip.width).toBeLessThanOrEqual(320 - 8);
     expect((chip.y - 10) % 20).toBe(0);
   }
   expect(layoutStrip([]).height).toBe(0);

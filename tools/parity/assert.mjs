@@ -67,33 +67,34 @@ const rgb = (s) => {
 // ---- reference card: LCR IV 1A, 4 inputs + power, 2 outputs ----
 const m = await measure(refChain, "nb");
 const W = m.card.w;
-add("HARD", "card width", 380, m.card.w);
+add("HARD", "card width (the mod's 320)", 320, m.card.w);
 add("HARD", "card height is whole 20 px cells", 0, m.card.h % 20);
 add("HARD", "head height", 40, m.head?.h ?? 0);
 add("HARD", "rail width (input)", 112, m.rails[0]?.w ?? 0);
 add("HARD", "rail width (output)", 112, m.rails[1]?.w ?? 0);
 add("HARD", "rail x inset", 4, m.rails[0]?.x ?? 0);
-add("HARD", "output rail right edge at 376", 376, (m.rails[1]?.x ?? 0) + (m.rails[1]?.w ?? 0));
+add("HARD", "output rail right edge at 316", 316, (m.rails[1]?.x ?? 0) + (m.rails[1]?.w ?? 0));
 const centreOnGrid = (rows, rail) => rows.every((r) => Math.abs(((r.y + r.h / 2 - rail.y) % 40) - 20) <= 1);
 add("HARD", "input row centres sit on the 40 px grid (20, 60, ...)", 1, centreOnGrid(m.rowsIn, m.rails[0]) ? 1 : 0, 0, JSON.stringify(m.rowsIn.map((r) => Math.round(r.y + r.h / 2 - m.rails[0].y))));
 add("HARD", "output row centres sit on the 40 px grid", 1, centreOnGrid(m.rowsOut, m.rails[1]) ? 1 : 0, 0, JSON.stringify(m.rowsOut.map((r) => Math.round(r.y + r.h / 2 - m.rails[1].y))));
 add("HARD", "port icon size", 32, m.icon?.w ?? 0);
-add("HARD", "key width", 24, m.keys[0]?.w ?? 0);
-add("HARD", "key height", 24, m.keys[0]?.h ?? 0);
+add("HARD", "key width (mod 20)", 20, m.keys[0]?.w ?? 0);
+add("HARD", "key height (mod 20)", 20, m.keys[0]?.h ?? 0);
 for (const [i, c] of m.chips.entries()) {
-  add("HARD", `chip ${i} width`, 50, c.w, 1);
-  add("HARD", `chip ${i} height`, 24, c.h);
+  add("HARD", `chip ${i} width (mod 48)`, 48, c.w, 1);
+  add("HARD", `chip ${i} height (mod 20)`, 20, c.h);
 }
 add("HARD", "tier chip bg is IV #5555FF", "#5555FF", rgb(m.chips[1]?.bg));
 add("HARD", "amps chip bg is IV #5555FF", "#5555FF", rgb(m.chips[0]?.bg));
 add("HARD", "card face #23252A", "#23252A", rgb(m.surface));
-add("HARD", "port number font 14px/600", "14px 600", m.num.font);
-add("HARD", "port name font 9px", "9px", m.pname.font);
+add("HARD", "port number font 13px (mod x1.5 of 8, widened to Monocraft digit width)", "13px 400", m.num.font);
+add("HARD", "port name font 8px (mod x1)", "8px", m.pname.font);
+add("HARD", "typeface is Monocraft", 1, /monocraft/i.test(m.num.family) ? 1 : 0, 0, m.num.family);
 add("HARD", "DOM budget <= 70", 1, m.domCount <= 70 ? 1 : 0, 0, `elements: ${m.domCount}`);
 
 // RATIO: the mod's proportions as a share of its 320 GUI px card (spec-ui section 1; header 32, row pitch 42,
 // rail 112, key 20, chip 48 x 20, icon 32 all re-measured on card-clean-solved-default.png at 2 px per GUI px).
-const modW = 320;
+const modW = 320; // the card is the mod's width now, so a px is a GUI px
 const ratio = (name, modPx, webPx, note) => {
   const e = modPx / modW, a = webPx / W;
   rows.push({ kind: "RATIO", name, expected: Math.round(e * 1000) / 1000, actual: Math.round(a * 1000) / 1000, ok: Math.abs(e - a) <= 0.012, note: note ?? "" });
@@ -162,10 +163,20 @@ add('BEHAVIOUR', 'clicking the coil chip opens a list with a Filter box', 1, fil
 const idle = await page.evaluate((sel) => { const n = document.querySelector(sel + ' .cc-rail .cc-row .cc-num'); return n ? getComputedStyle(n).color : null; }, sel2);
 add('BEHAVIOUR', 'zero rate number is idle grey #A8AFBB', '#A8AFBB', rgb(idle), 0, 'mod card-ebf-unset: grey zeros');
 // zoom 0.5 keeps the full card (mod glances only below 0.42)
-await setZoom(page, ids2.ebf, 0.52);
+// The board's zoom carries the interface scale (ui-scale.ts, 1.17 by default), so the mod's zoom is real zoom / scale.
+const uiScale = await page.evaluate(() => parseFloat(getComputedStyle(document.documentElement).getPropertyValue("--ui-scale")) || 1);
+await setZoom(page, ids2.ebf, 0.44 * uiScale);
 await page.waitForTimeout(500);
 const glance = await page.evaluate(() => (document.querySelector('.factory-flow-board')?.getAttribute('data-detail-level') === 'glance' ? 'glance' : 'full'));
-add('BEHAVIOUR', 'card at zoom 0.52 still shows ports (not glance)', 'full', glance, 0, 'mod shows full detail down to 0.42');
+add('BEHAVIOUR', 'card at mod zoom 0.44 still shows ports (not glance)', 'full', glance, 0, 'mod shows full detail down to 0.42');
+await setZoom(page, ids2.ebf, 0.45 * uiScale);
+await page.waitForTimeout(500);
+const glance45 = await page.evaluate(() => (document.querySelector('.factory-flow-board')?.getAttribute('data-detail-level') === 'glance' ? 'glance' : 'full'));
+add('BEHAVIOUR', 'card at zoom 0.45 still full detail (mod glances at <= 0.42)', 'full', glance45, 0, 'mod RecipeCard.GLANCE_ZOOM');
+await setZoom(page, ids2.ebf, 0.38 * uiScale);
+await page.waitForTimeout(500);
+const glance38 = await page.evaluate(() => (document.querySelector('.factory-flow-board')?.getAttribute('data-detail-level') === 'glance' ? 'glance' : 'full'));
+add('BEHAVIOUR', 'card at zoom 0.38 is the glance view', 'glance', glance38, 0, 'mod glance below 0.42');
 
 await browser.close();
 fs.mkdirSync(path.join(here, "out"), { recursive: true });

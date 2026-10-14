@@ -4,7 +4,7 @@ import { Handle, Position, type Node, type NodeProps } from "@xyflow/react";
 import { memo, useState, type CSSProperties } from "react";
 import { Copy, Maximize2, PackageOpen } from "lucide-react";
 import type { FactoryPocket } from "@/lib/model/types";
-import { RECIPE_NODE_WIDTH } from "@/lib/board-grid";
+import { CLASSIC_NODE_WIDTH } from "@/lib/board-grid";
 import { fluidArtPixels, isSwatchFluid, ResourceIcon } from "@/components/nei/ResourceIcon";
 import {
   captureBoardSelection,
@@ -38,7 +38,7 @@ export type PocketFlowNode = Node<PocketNodeData, "pocketNode">;
  * Wires crossing the border still land on the card, docking anywhere on its
  * perimeter like a drawer's.
  */
-export const POCKET_NODE_WIDTH = RECIPE_NODE_WIDTH;
+export const POCKET_NODE_WIDTH = CLASSIC_NODE_WIDTH;
 
 /**
  * The inert anchors every crossing wire lands on. React Flow needs an

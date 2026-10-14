@@ -36,24 +36,24 @@ export const CC = {
   promptOff: "#6F737C",
 } as const;
 
-/** Geometry in CSS px at zoom 1. The website's grid stays: 380 card, 20 cell, 112 rails. */
+/** Geometry in CSS px at zoom 1: the mod's card exactly, 320 wide (16 cells), 112 rails, 32 icons; rows stay two cells. */
 export const CC_GEOMETRY = {
-  cardWidth: 380,
+  cardWidth: 320,
   cell: 20,
   headHeight: 40,
   rowHeight: 40,
   railWidth: 112,
   railInset: 4,
-  pictureWidth: 148,
-  pictureMinHeight: 80,
-  pictureArtMax: 96,
+  pictureWidth: 88,
+  pictureMinHeight: 100,
+  pictureArtMax: 88,
   iconSize: 32,
   iconInset: 4,
   wordsX: 40,
   wordsWidth: 70,
-  keySize: 24,
-  chipWidth: 50,
-  chipHeight: 24,
+  keySize: 20,
+  chipWidth: 48,
+  chipHeight: 20,
   stripGap: 6,
   stripPad: 4,
   stripChipHeight: 18,

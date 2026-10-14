@@ -156,7 +156,7 @@ import {
 import {
   BOARD_GRID,
   PICTURE_MIN_HEIGHT,
-  RECIPE_NODE_WIDTH,
+  CLASSIC_NODE_WIDTH,
   RECIPE_RAIL_AREA_WIDTH,
 } from "@/lib/board-grid";
 import { CropPickerMenu } from "./CropPickerMenu";
@@ -1363,7 +1363,7 @@ function RecipeNodeComponent({ data, selected, controlsOnly = false, renderEdito
       style={{
         // A fixed whole-cell width, so the card's right edge and every output
         // coupling sit on the grid.
-        width: RECIPE_NODE_WIDTH,
+        width: CLASSIC_NODE_WIDTH,
         // The colour, all of it: the ramp on the shell reaches every element
         // inside the card.
         ...((nodeRamp ??

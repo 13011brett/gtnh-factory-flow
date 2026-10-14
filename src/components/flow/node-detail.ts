@@ -28,12 +28,12 @@ export const NODE_DETAIL_GLANCE = 1;
 export type NodeDetailLevel = typeof NODE_DETAIL_FULL | typeof NODE_DETAIL_GLANCE;
 
 /**
- * Below this the board drops to the glance view: roughly where a port row's
- * lettering falls under six screen pixels and the card stops being readable.
+ * Below this the board drops to the glance view. It is the mod's own threshold
+ * (RecipeCard.GLANCE_ZOOM, 0.42): full detail all the way down to it.
  */
-export const NODE_GLANCE_ENTER_ZOOM = 0.45;
+export const NODE_GLANCE_ENTER_ZOOM = 0.42;
 /** And above this it comes back. The gap is the anti-flicker dead zone. */
-export const NODE_GLANCE_LEAVE_ZOOM = 0.5;
+export const NODE_GLANCE_LEAVE_ZOOM = 0.44;
 
 /**
  * The level for this zoom, given the level currently in force.

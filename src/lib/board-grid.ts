@@ -47,7 +47,12 @@ export function cells(n: number): number {
 /* Card geometry — the sizes every node component builds itself out of.    */
 /* ---------------------------------------------------------------------- */
 
-/** Every recipe card is this wide: 19 cells.
+/** The clean recipe card is this wide: 16 cells, the mod's 320 exactly (rails 112, picture 88, 4 inset each side). */
+export const RECIPE_NODE_WIDTH = cells(16); // 320
+
+/**
+ * The classic bevelled card (the fallback for cards the clean look has no design for yet) and a
+ * minimized board are 19 cells wide.
  *
  * The machine picture is the flex-1 middle between the two rails and must
  * stay 96px, the size a structure render reads at; re-check it first if this
@@ -55,13 +60,13 @@ export function cells(n: number): number {
  * the price is the chip's 70px name column: names wrap to two lines and long
  * ones clip on the second (the hover shows the whole name).
  */
-export const RECIPE_NODE_WIDTH = cells(19); // 380
+export const CLASSIC_NODE_WIDTH = cells(19); // 380
 
 /** Card padding either side of the rails (inside the 2px frame). */
 export const RECIPE_NODE_PAD_X = 8;
 
-/** Inner width available to the rails after frame and padding. */
-export const RECIPE_RAIL_AREA_WIDTH = RECIPE_NODE_WIDTH - 2 * (2 + RECIPE_NODE_PAD_X); // 360
+/** Inner width available to the classic card's rails after frame and padding. */
+export const RECIPE_RAIL_AREA_WIDTH = CLASSIC_NODE_WIDTH - 2 * (2 + RECIPE_NODE_PAD_X); // 360
 
 /** The input chip, and the chip half of an output row. */
 export const PORT_CHIP_WIDTH = 112;

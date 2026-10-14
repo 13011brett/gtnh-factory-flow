@@ -242,8 +242,11 @@ export function buildRailModel(
   const looks = new Map<string, Look>();
   const pinsByLine = new Map<string, RailPin[]>();
   const openByLine = new Map<string, RailOpenPort[]>();
+  // A failed solve (nothing set, nothing to calculate) leaves each card's nominal single craft in its result: those
+  // are not flows of the plan, so nothing is counted until the plan has an answer.
+  const answered = result.plan?.failure === undefined;
   for (const node of Object.values(result.nodes)) {
-    if (!node.enabled) continue;
+    if (!node.enabled || !answered) continue;
     const { cardId } = splitResultNodeId(node.nodeId);
     const projectNode = nodesById.get(cardId);
     const recipe = recipes.get(node.recipeId);

@@ -206,3 +206,16 @@ describe("the rail's layout", () => {
     expect(visibleSlice(placed, 1e6, 2e6)).toEqual([]);
   });
 });
+
+describe("a plan with no answer", () => {
+  it("counts no flows while the solve has failed (nothing set yet)", () => {
+    const failed = {
+      ...mockUnneeded.result,
+      plan: { ...mockUnneeded.result.plan!, failure: { message: "NO_PIN", args: [] } },
+    } as typeof mockUnneeded.result;
+    const rail = buildRailModel(mockUnneeded.project, failed);
+    expect(rail.outputs.filter((l) => l.amount > 0)).toEqual([]);
+    expect(rail.internal).toEqual([]);
+    expect(rail.inputs.filter((l) => l.amount > 0)).toEqual([]);
+  });
+});

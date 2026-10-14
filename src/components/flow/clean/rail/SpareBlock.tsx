@@ -35,7 +35,7 @@ import type { SpareBearerView, SpareView } from "./spare-model";
  * edit when it is let go. Used in the overview and in the card's popup.
  */
 
-export const SPARE_BAR_W = 78;
+export const SPARE_BAR_W = 62;
 
 const SURFACE = CC.surface;
 

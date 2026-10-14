@@ -153,5 +153,19 @@ export function PlanBoardOverlays() {
  */
 export function PlanNoticeSwitch({ children }: { children: ReactNode }) {
   const planMode = useFactoryStore((state) => state.project.planMode === true);
-  return planMode ? <PlanBoardOverlays /> : <>{children}</>;
+  return planMode ? null : <>{children}</>;
+}
+
+/**
+ * The plan-mode notices, stacked at the TOP of the board as the mod stacks them (under its top bar), left aligned and
+ * just below the board's toolbars so they never cover a key. Mounted once, beside the board's other overlays.
+ */
+export function PlanTopNotices() {
+  const planMode = useFactoryStore((state) => state.project.planMode === true);
+  if (!planMode) return null;
+  return (
+    <div className="rail-notices-top nodrag pointer-events-none absolute z-30">
+      <PlanBoardOverlays />
+    </div>
+  );
 }

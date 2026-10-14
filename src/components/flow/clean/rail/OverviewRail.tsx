@@ -54,6 +54,7 @@ import {
   type Setter,
 } from "./rail-layout";
 import { steppedRate } from "./rail-math";
+import { measureClean } from "../text-measure";
 import { useRailData } from "./rail-data";
 import type { RailDrawer, RailLine, RailMachine, RailPin } from "./rail-model";
 import { hideTip, tipProps, type TipContent } from "./rail-tip";
@@ -71,6 +72,12 @@ import { SpareBlock } from "./SpareBlock";
 
 export const RAIL_WIDTH = 234;
 export const RAIL_FOLDED_WIDTH = 26;
+/** The rail's type: Monocraft at 10 px (the mod's 8 px at the rail's 234 against its 198, to whole pixels). */
+export const RAIL_FONT = 10;
+/** A rule key, a gap and a rate box: the controls' block at a line's right (the mod's 26% of the rail). */
+export const CONTROLS_W = 62;
+/** A machine line's room between its left indent (30) and the right padding (8). */
+const MACHINE_INNER = RAIL_WIDTH - 30 - 8;
 
 const INK: Record<string, string> = {
   INPUTS: CC.source,
@@ -981,13 +988,27 @@ const MachineRow = memo(function MachineRow({
   const used = peak ? entry.euT : entry.avgEuT;
   const steam = peak ? entry.steamLs : entry.avgSteamLs;
   const tooLow = entry.state === "under-powered";
+  // What it draws, grey beside the tier: the unit is dropped when there is no room for it (the mod's rule).
+  const tierLabel = entry.tier
+    ? `${entry.tier}${entry.isMultiblock && (entry.amps ?? 0) > 1 ? ` ${entry.amps}A` : ""}`
+    : "";
+  const countText = `×${machinesText(entry.count)}`;
+  const room =
+    MACHINE_INNER -
+    CONTROLS_W -
+    18 -
+    3 -
+    (tierLabel ? measureClean(tierLabel, RAIL_FONT, 600) + 10 : 0) -
+    measureClean(countText, RAIL_FONT);
+  const withUnit = (number: string, unit: string) =>
+    measureClean(`${number} ${unit}`, RAIL_FONT) <= room ? `${number} ${unit}` : number;
   let eu = "";
   if (tooLow) eu = "TIER!";
   else if (made !== undefined && made > 0)
-    eu = `+${formatCompact(powerDisplayFromEuT(made))} ${powerDisplaySuffix()}`;
-  else if (steam !== undefined) eu = `${formatCompact(steam)} L/s`;
+    eu = withUnit(`+${formatCompact(powerDisplayFromEuT(made))}`, powerDisplaySuffix());
+  else if (steam !== undefined) eu = withUnit(formatCompact(steam), "L/s");
   else if (used !== undefined)
-    eu = `${formatCompact(powerDisplayFromEuT(used))} ${powerDisplaySuffix()}`;
+    eu = withUnit(formatCompact(powerDisplayFromEuT(used)), powerDisplaySuffix());
   const togglePin = () => pinCount(entry.nodeId, entry.pinned ? 0 : base);
   const go = () => frameCards([entry.nodeId]);
   const wheelCount = (direction: 1 | -1) => {
@@ -1027,8 +1048,7 @@ const MachineRow = memo(function MachineRow({
             data-underline={colors.underline ? "" : undefined}
             style={{ background: colors.background, borderColor: colors.border, color: colors.ink }}
           >
-            {entry.tier}
-            {entry.isMultiblock && (entry.amps ?? 0) > 1 ? ` ${entry.amps}A` : ""}
+            {tierLabel}
           </span>
         ) : null}
         <span
@@ -1038,7 +1058,7 @@ const MachineRow = memo(function MachineRow({
         >
           {eu}
         </span>
-        <span className="rail-count">×{machinesText(entry.count)}</span>
+        <span className="rail-count">{countText}</span>
         <div className="rail-controls" onClick={(event) => event.stopPropagation()}>
           <RuleKey
             mark={set ? "=" : "~"}

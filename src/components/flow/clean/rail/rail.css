@@ -24,8 +24,8 @@
   background: #202226;
   border-right: 1px solid #0c0d10;
   color: var(--rail-ink);
-  font-family: var(--font-sans, Inter, ui-sans-serif, system-ui, sans-serif);
-  font-size: 11px;
+  font-family: var(--cc-font);
+  font-size: 10px;
   line-height: 14px;
   user-select: none;
   overflow: hidden;
@@ -41,7 +41,7 @@
 }
 .rail-head-title {
   flex: 1;
-  font-size: 11px;
+  font-size: 10px;
   letter-spacing: 0.06em;
   color: var(--rail-muted);
 }
@@ -54,7 +54,7 @@
   background: #15171c;
   border: 1px solid #111317;
   color: var(--rail-ink);
-  font-size: 11px;
+  font-size: 10px;
   outline: none;
 }
 .rail-filter::placeholder {
@@ -111,7 +111,7 @@
   cursor: pointer;
 }
 .rail-key span {
-  font-size: 11px;
+  font-size: 10px;
   line-height: 14px;
   color: var(--rail-ink);
 }
@@ -163,7 +163,7 @@
   border-right: 0;
 }
 .rail-sec-title {
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   letter-spacing: 0.04em;
   color: var(--ink);
@@ -188,7 +188,7 @@
 .rail-empty {
   padding: 5px 8px;
   color: #6a6c74;
-  font-size: 11px;
+  font-size: 10px;
 }
 
 /* A resource line. */
@@ -218,8 +218,9 @@
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
+  text-overflow: ellipsis;
   color: var(--rail-ink);
-  font-size: 11px;
+  font-size: 10px;
 }
 .rail-line[data-hot] .rail-name,
 .rail-machine[data-hot] .rail-name {
@@ -228,7 +229,7 @@
 .rail-num {
   flex: none;
   text-align: right;
-  font-size: 11px;
+  font-size: 10px;
   font-variant-numeric: tabular-nums;
   color: var(--ink);
 }
@@ -242,7 +243,7 @@
 }
 .rail-controls {
   flex: none;
-  width: 78px;
+  width: 62px;
   display: flex;
   gap: 2px;
   justify-content: flex-end;
@@ -267,7 +268,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
+  width: 16px;
   height: 18px;
   background: #34373e;
   border: 1px solid #111317;
@@ -293,7 +294,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 56px;
+  width: 44px;
   height: 18px;
   background: #0f1114;
   border: 1px solid #5a5e68;
@@ -302,11 +303,12 @@
   overflow: hidden;
 }
 .rail-box span {
-  font-size: 11px;
+  font-size: 10px;
   line-height: 14px;
   font-variant-numeric: tabular-nums;
   color: #6f737c;
   white-space: nowrap;
+  text-overflow: ellipsis;
 }
 .rail-box[data-set] span {
   color: var(--rail-gold);
@@ -324,7 +326,7 @@
 input.rail-box-edit {
   padding: 0 3px;
   text-align: center;
-  font-size: 11px;
+  font-size: 10px;
   color: var(--rail-ink);
   background: #15171c;
   border-color: var(--rail-gold);
@@ -344,7 +346,7 @@ input.rail-box-edit {
 }
 .rail-spare-title {
   flex: 1;
-  font-size: 11px;
+  font-size: 10px;
   color: var(--sp-ink);
   cursor: default;
 }
@@ -374,7 +376,8 @@ input.rail-box-edit {
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
-  font-size: 11px;
+  text-overflow: ellipsis;
+  font-size: 10px;
   color: var(--rail-ink);
 }
 .rail-spare-row[data-off] .rail-spare-name {
@@ -386,7 +389,7 @@ input.rail-box-edit {
 }
 .rail-spare-amount {
   flex: none;
-  font-size: 11px;
+  font-size: 10px;
   font-variant-numeric: tabular-nums;
   color: var(--sp-ink);
 }
@@ -397,7 +400,7 @@ input.rail-box-edit {
 .rail-spare-bar {
   flex: none;
   position: relative;
-  width: 78px;
+  width: 62px;
   height: 20px;
   background: #15171c;
   cursor: ew-resize;
@@ -430,8 +433,8 @@ input.rail-box-edit {
     inset 1px 1px 0 #4a4c54,
     inset -1px -1px 0 #17191d,
     2px 3px 6px rgba(0, 0, 0, 0.35);
-  font-family: var(--font-sans, Inter, ui-sans-serif, system-ui, sans-serif);
-  font-size: 11px;
+  font-family: var(--cc-font);
+  font-size: 10px;
   color: var(--rail-ink, #e8e9ee);
   user-select: none;
 }
@@ -461,7 +464,7 @@ input.rail-box-edit {
     inset 1px 1px 0 #4a4c54,
     inset -1px -1px 0 #17191d,
     2px 3px 6px rgba(0, 0, 0, 0.35);
-  font-family: var(--font-sans, Inter, ui-sans-serif, system-ui, sans-serif);
+  font-family: var(--cc-font);
   color: #e8e9ee;
 }
 .rail-menu-item {
@@ -476,7 +479,7 @@ input.rail-box-edit {
   background: rgba(232, 179, 74, 0.14);
 }
 .rail-menu-item span {
-  font-size: 11px;
+  font-size: 10px;
 }
 .rail-menu-item b {
   width: 14px;
@@ -509,7 +512,7 @@ input.rail-box-edit {
   height: 16px;
   padding: 0 4px;
   border: 1px solid;
-  font-size: 11px;
+  font-size: 10px;
   line-height: 14px;
   font-weight: 600;
 }
@@ -521,7 +524,8 @@ input.rail-box-edit {
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
-  font-size: 11px;
+  text-overflow: ellipsis;
+  font-size: 10px;
   color: var(--rail-muted);
 }
 .rail-eu[data-make] {
@@ -532,7 +536,7 @@ input.rail-box-edit {
 }
 .rail-count {
   flex: none;
-  font-size: 11px;
+  font-size: 10px;
   font-variant-numeric: tabular-nums;
   color: var(--rail-ink);
   text-align: right;
@@ -586,7 +590,7 @@ input.rail-box-edit {
     inset 1px 1px 0 #4a4c54,
     inset -1px -1px 0 #17191d,
     2px 3px 6px rgba(0, 0, 0, 0.2);
-  font-family: var(--font-sans, Inter, ui-sans-serif, system-ui, sans-serif);
+  font-family: var(--cc-font);
   font-size: 12px;
   line-height: 16px;
   color: #e5e5e5;
@@ -657,7 +661,7 @@ input.rail-box-edit {
   padding: 0 10px 0 7px;
   background: rgba(24, 26, 31, 0.88);
   border-left: 3px solid var(--sev);
-  font-family: var(--font-sans, Inter, ui-sans-serif, system-ui, sans-serif);
+  font-family: var(--cc-font);
   color: #e8e9ee;
 }
 .rail-notice[data-severity="error"] {
@@ -670,6 +674,7 @@ input.rail-box-edit {
   min-width: 0;
   overflow: hidden;
   white-space: nowrap;
+  text-overflow: ellipsis;
   font-size: 12px;
   line-height: 16px;
   -webkit-mask-image: linear-gradient(to right, #000 calc(100% - 12px), transparent);
@@ -709,4 +714,14 @@ input.rail-box-edit {
 }
 .rail-spare-name {
   text-overflow: ellipsis;
+}
+
+/* The notices ride the top of the board, under its toolbars (the mod stacks them under its top bar). */
+.rail-notices-top {
+  left: var(--toolbar-inset, 0.75rem);
+  top: 3.6rem;
+  max-width: calc(var(--board-width, calc(100 * var(--ui-vw))) - 1.5rem);
+}
+.rail-notices-top .rail-notices {
+  max-width: 100%;
 }

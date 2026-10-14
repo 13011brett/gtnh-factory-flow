@@ -14,7 +14,7 @@ export default function ({ page, wait, rec, check, shot, nodeSel, focus, idle, s
       const root = r(".rail-root"), flow = r(".react-flow"), items = r("aside:not(.inspector-panel):last-of-type");
       const search = [...document.querySelectorAll("input")].find((i) => /Search item or fluid/i.test(i.placeholder))?.getBoundingClientRect();
       const insp = document.querySelector("aside.inspector-panel");
-      return { root: root && { x: root.x, w: root.width }, flow: flow && { x: flow.x, w: flow.width }, searchX: search?.x, inspector: !!insp, vw: innerWidth, parentW: document.querySelector(".rail-root")?.parentElement?.getBoundingClientRect().width };
+      return { root: root && { x: root.x, w: document.querySelector(".rail-root").offsetWidth }, flow: flow && { x: flow.x, w: flow.width }, searchX: search?.x, inspector: !!insp, vw: innerWidth, parentW: document.querySelector(".rail-root")?.parentElement?.offsetWidth };
     });
     rec("layout", "geometry", "INFO", JSON.stringify(g));
     check("layout", "overview rail is on the left", g.root && g.root.x < 10, JSON.stringify(g.root));

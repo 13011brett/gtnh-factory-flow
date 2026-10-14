@@ -222,7 +222,7 @@ import { type RecipeFlowNode } from "./RecipeNode";
 import { RecipeNodeSwitch } from "./clean/CleanRecipeNode";
 import { StorageNodeSwitch } from "./clean/drawer/CleanStorageNode";
 import { CleanDrawerFace } from "./clean/drawer/CleanDrawer";
-import { PlanNoticeSwitch } from "./clean/rail/NoticeBar";
+import { PlanNoticeSwitch, PlanTopNotices } from "./clean/rail/NoticeBar";
 import { GT_NODE_COLORS, GT_NODE_COLOR_PALETTE, flowRampColor } from "./node-colors";
 import {
   CANVAS_PATTERNS,
@@ -6440,6 +6440,7 @@ export function FactoryFlow() {
         onFitView={handleFitView}
       />
       <HopMapLegend />
+      <PlanTopNotices />
       {/* The notices share one column, so none sits on top of another.
           Unwired goes UNDER the dead loop (unfinished work, not a fault); the
           transient add chips ride on top. */}

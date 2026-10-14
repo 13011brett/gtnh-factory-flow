@@ -20,7 +20,6 @@ import {
   BOARD_TIMELAPSE_PRESETS,
   runBoardTimelapsePreset,
 } from "@/components/flow/board-timelapse";
-import { getNewBoard, setNewBoard } from "@/lib/new-board";
 import { useFactoryStore } from "@/store/factory-store";
 import {
   areBoardSoundsEnabled,
@@ -36,10 +35,16 @@ import {
  * Owned by AppHeader (like the share dialog) so the compact menu can close
  * without unmounting it.
  */
-export function SettingsDialog({ onClose }: { onClose: () => void }) {
+export function SettingsDialog({
+  onClose,
+  onOpenMachineList,
+}: {
+  onClose: () => void;
+  /** Opens the machine list sheet, which the header owns; see AppHeader. */
+  onOpenMachineList?: () => void;
+}) {
   const [font, setFont] = useState<AppFontId>(() => getStoredAppFont());
   const [sounds, setSounds] = useState<boolean>(() => areBoardSoundsEnabled());
-  const [newBoard, setNewBoardState] = useState<boolean>(() => getNewBoard());
   const [volume, setVolume] = useState<number>(() => getBoardSoundVolume());
   const canPlayTimelapse = useFactoryStore(
     (state) => state.project.nodes.length + (state.project.storages?.length ?? 0) >= 2,
@@ -172,15 +177,20 @@ export function SettingsDialog({ onClose }: { onClose: () => void }) {
             </span>
           </Row>
 
-          {/* Only the default for designs made from now on; a plan keeps its own mode. */}
-          <ToggleRow
-            label="New board"
-            on={newBoard}
-            onChange={(next) => {
-              setNewBoard(next);
-              setNewBoardState(next);
-            }}
-          />
+          {onOpenMachineList ? (
+            <Row label="Machine list">
+              <button
+                type="button"
+                onClick={() => {
+                  onClose();
+                  onOpenMachineList();
+                }}
+                className={`h-7 border-2 border-[var(--mc-15)] px-2.5 text-sm ${FACE_OFF}`}
+              >
+                Open
+              </button>
+            </Row>
+          ) : null}
 
           {/* The build timelapse. Each preset applies its whole look for the
               run and restores your settings when it ends. The dialog closes

@@ -79,7 +79,7 @@ describe("input percentages and export", () => {
     let project = setStorageRatioPercentage(twoFeeds(), "split", "in", 80, "input");
     project = setStorageRatioPercentage(project, "split", "branch0", 75);
     project = setStorageRatioPercentage(project, "split", undefined, 20);
-    useFactoryStore.getState().setProject(project);
+    useFactoryStore.getState().setProject(project, { keepMode: true });
     const history = useFactoryStore.getState().undoHistory.length;
     useFactoryStore.getState().equalizeRatioBranches("split", "output");
     const equal = useFactoryStore.getState().project;
@@ -195,7 +195,7 @@ describe("input percentages and export", () => {
     expect(setStorageRatioPercentage(updated, "split", "branch0", 75)).toBe(updated);
   });
   it("saves both sides and export, edits all weights in one undo step, and protects locked plans", () => {
-    useFactoryStore.getState().setProject(twoFeeds());
+    useFactoryStore.getState().setProject(twoFeeds(), { keepMode: true });
     const original = useFactoryStore.getState().project;
     const history = useFactoryStore.getState().undoHistory.length;
     useFactoryStore.getState().setRatioBranchPercentage("split", undefined, 25);
@@ -226,7 +226,7 @@ describe("input percentages and export", () => {
   });
   it("inserting a drawer preserves the target's input percentage", () => {
     const project = setStorageRatioPercentage(twoFeeds(), "split", "in", 80, "input");
-    useFactoryStore.getState().setProject(project);
+    useFactoryStore.getState().setProject(project, { keepMode: true });
     useFactoryStore
       .getState()
       .insertStorageOnEdge(["in"], { x: 200, y: 200 }, { kind: "item", id: "iron" });
@@ -338,7 +338,7 @@ describe("ratio drawers", () => {
     expect(result.edges.branch2.transferredPerSecond).toBeCloseTo(50, 3);
   });
   it("changes a whole channel in one undo step and respects read-only plans", () => {
-    useFactoryStore.getState().setProject(board());
+    useFactoryStore.getState().setProject(board(), { keepMode: true });
     const history = useFactoryStore.getState().undoHistory.length;
     useFactoryStore.getState().setRatioBranchWeight("split", ["branch0"], 1000);
     expect(useFactoryStore.getState().undoHistory.length).toBe(history + 1);
@@ -372,7 +372,7 @@ describe("ratio drawers", () => {
     expect(project.edges.find((e) => e.id === "branch1")!.ratioWeight).toBe(1);
   });
   it("inserting a drawer into a ratio branch preserves its upstream parts", () => {
-    useFactoryStore.getState().setProject(board([1000, 20]));
+    useFactoryStore.getState().setProject(board([1000, 20]), { keepMode: true });
     useFactoryStore
       .getState()
       .insertStorageOnEdge(["branch0"], { x: 200, y: 200 }, { kind: "item", id: "iron" });
@@ -383,7 +383,7 @@ describe("ratio drawers", () => {
   });
   it("survives schema validation and saved-plan normalization", () => {
     const saved = JSON.parse(JSON.stringify(board([1000, 20])));
-    const restored = normalizeLoadedProject(factoryProjectSchema.parse(saved));
+    const restored = normalizeLoadedProject(factoryProjectSchema.parse(saved), { keepMode: true });
     expect(restored.storages!.find((s) => s.id === "split")!.bufferMode).toBe("ratio");
     expect(restored.edges.find((e) => e.id === "branch0")!.ratioWeight).toBe(1000);
     expect(run(restored).edges.branch1.transferredPerSecond).toBeCloseTo((100 * 20) / 1020, 3);

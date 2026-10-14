@@ -19,6 +19,7 @@ import { BoardActions } from "./BoardActions";
 import { ExportImageDialog } from "./export/ExportImageDialog";
 import { DevMenu } from "./DevMenu";
 import { SettingsDialog } from "./SettingsDialog";
+import { MachineListDialog } from "./MachineListDialog";
 import { HeaderLinks, SupportButton } from "./HeaderLinks";
 
 /**
@@ -65,6 +66,7 @@ export function AppHeader({ onLoadDatasetVersion }: AppHeaderProps) {
   // Settings lives up here for the same reason as the share dialog: the
   // compact menu closes behind it without unmounting it.
   const [isSettingsOpen, setSettingsOpen] = useState(false);
+  const [isMachineListOpen, setMachineListOpen] = useState(false);
   // Narrow windows keep the name and the version chip and fold the rest into
   // one menu — see AppMenu for why a bar that overflows costs a phone more than
   // the buttons that fall off the end of it.
@@ -126,13 +128,20 @@ export function AppHeader({ onLoadDatasetVersion }: AppHeaderProps) {
       {isDevMenuOpen ? <DevMenu onClose={() => setDevMenuOpen(false)} /> : null}
       {isShareOpen ? <SharePlanDialog onClose={() => setShareOpen(false)} /> : null}
       {isExportOpen ? <ExportImageDialog onClose={() => setExportOpen(false)} /> : null}
-      {isSettingsOpen ? <SettingsDialog onClose={() => setSettingsOpen(false)} /> : null}
+      {isSettingsOpen ? (
+        <SettingsDialog
+          onClose={() => setSettingsOpen(false)}
+          onOpenMachineList={() => setMachineListOpen(true)}
+        />
+      ) : null}
+      {isMachineListOpen ? <MachineListDialog onClose={() => setMachineListOpen(false)} /> : null}
       {isCompact ? (
         <AppMenu
           onLoadDatasetVersion={onLoadDatasetVersion}
           onShare={() => setShareOpen(true)}
           onExportImage={() => setExportOpen(true)}
           onOpenSettings={() => setSettingsOpen(true)}
+          onOpenMachineList={() => setMachineListOpen(true)}
         />
       ) : (
         // The global `font: inherit` reset outranks any text-* on a button, so

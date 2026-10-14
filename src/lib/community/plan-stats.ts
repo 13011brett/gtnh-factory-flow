@@ -1,6 +1,7 @@
 import type { FactoryProject, MachineTier, ThroughputResult } from "@/lib/model/types";
 import { GT_VOLTAGE_TIERS, getVoltageTierIndex } from "@/lib/model/tiers";
 import { getNodeMachineBuildCount } from "@/lib/model/passive-production";
+import { buildMachineList } from "@/lib/model/machine-list";
 import {
   COMMUNITY_RESOURCE_STAT_LIMIT,
   type CommunityPlanStats,
@@ -46,6 +47,15 @@ export function computeCommunityPlanStats(
         highestTier = node.overclockTier;
       }
     }
+  }
+
+  if (project.planMode) {
+    // On the plan board a card's count is the solver's answer, not what was
+    // built: the machines to buy are the solved counts rounded up per card.
+    machineCount = buildMachineList(project, result).reduce(
+      (sum, entry) => sum + Math.max(0, Math.ceil(entry.count - 0.000001)),
+      0,
+    );
   }
 
   const icons = buildResourceIconIndex(project);

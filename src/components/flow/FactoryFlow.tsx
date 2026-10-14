@@ -39,7 +39,6 @@ import {
   ViewportPortal,
 } from "@xyflow/react";
 import { toBlob, toSvg } from "html-to-image";
-import { MinecraftTooltip } from "@/components/nei/MinecraftTooltip";
 import {
   Activity,
   AlignJustify,
@@ -70,9 +69,6 @@ import {
   TriangleAlert,
   Type,
   Undo2,
-  Blocks,
-  Sigma,
-  Waves,
   X,
   Zap,
   Play,
@@ -91,7 +87,6 @@ import {
   type CSSProperties,
   type MouseEvent as ReactMouseEvent,
   type PointerEvent as ReactPointerEvent,
-  type WheelEvent as ReactWheelEvent,
 } from "react";
 import {
   FLOW_IMAGE_EXPORT_COMPLETE_EVENT,
@@ -142,7 +137,7 @@ import {
   type BoardFraming,
 } from "@/store/factory-store";
 import { getAutoSolve, setAutoSolve, subscribeAutoSolve } from "@/store/solve-books";
-import { hasAnySolveNumbers } from "@/lib/solver/throughput";
+import { PlanConversionNotice } from "./PlanConversionNotice";
 import { getStorageRoles } from "@/lib/model/storage-role";
 import { useBlueprintStore } from "@/store/blueprint-store";
 import {
@@ -6376,9 +6371,6 @@ export function FactoryFlow() {
         onViewChange={writeBoardView}
         onAutoArrange={handleAutoArrange}
         folded={toolbarFold.paint}
-        foldAll={toolbarFold.paintFoldsAll}
-        modesInBuild={toolbarFold.build}
-        modeIconsOnly={toolbarFold.modeIconsOnly}
         openGroup={openToolGroup}
         onToggleGroup={handleToolGroupToggle}
         shiftedDown={false}
@@ -6465,8 +6457,8 @@ export function FactoryFlow() {
         <UnwiredNotice onShow={handleShowNodes} />
         <DeathSpiralNotice onShow={handleShowNodes} />
         <ClogLockNotice onShow={handleShowNodes} />
-        <SolveModeNotice onShow={handleShowNodes} />
         </PlanNoticeSwitch>
+        <PlanConversionNotice />
         <RecipeAddChips />
       </div>
       {isProjectImporting ? <FlowLoadingOverlay /> : null}
@@ -7059,335 +7051,6 @@ function playRateDial(unit: RateUnit, step: number): void {
   playBoardSound(unit === "eu" ? "dialEnergy" : "dialRate", { step });
 }
 
-/** Product drawers with no typed rate: what SolveModeNotice's Show me frames. */
-const missingProductIds = (project: FactoryProject): string[] => {
-  const roles = getStorageRoles(project);
-  return (project.storages ?? [])
-    .filter(
-      (storage) =>
-        roles.get(storage.id) === "product" && !((storage.targetPerSecond ?? 0) > 0),
-    )
-    .map((storage) => storage.id);
-};
-
-/**
- * Solve or Pool mode with no number typed anywhere has nothing to solve FOR,
- * so the board keeps showing plan figures and this banner says why, in the
- * notice stack's anatomy and the active mode's colour. No dismiss: it clears
- * itself once any rate or pin lands, and until then it explains the zeros.
- */
-const SolveModeNotice = memo(function SolveModeNotice({
-  onShow,
-}: {
-  onShow: (nodeIds: string[]) => void;
-}) {
-  // A primitive out of each selector, so the role walk (per store write,
-  // one subscriber) never re-renders on an unchanged answer.
-  const asking = useFactoryStore(
-    (state) => state.project.solveMode === true && !hasAnySolveNumbers(state.project),
-  );
-  const poolMode = useFactoryStore((state) => state.project.poolMode === true);
-  const missingCount = useFactoryStore((state) =>
-    state.project.solveMode === true && !hasAnySolveNumbers(state.project)
-      ? missingProductIds(state.project).length
-      : 0,
-  );
-  if (!asking) {
-    return null;
-  }
-  return (
-    // One line on a desktop (wider than its siblings so the button never
-    // folds onto a second row); only a phone wraps it.
-    <div className={`nodrag pointer-events-auto flex max-w-[min(calc(94*var(--ui-vw)),760px)] flex-wrap items-center justify-center gap-x-3 gap-y-1.5 border-2 px-3 py-2 font-mono text-[13px] ${poolMode
-      ? "border-[#6f9cff] bg-[#1a2233] text-[#d3dff4] shadow-[inset_2px_2px_0_#3e567d,inset_-2px_-2px_0_#101622,4px_4px_0_rgba(0,0,0,0.35)]"
-      : "border-[#9a6fd1] bg-[#241a2e] text-[#e0d3ec] shadow-[inset_2px_2px_0_#5a4380,inset_-2px_-2px_0_#150e1c,4px_4px_0_rgba(0,0,0,0.35)]"}`}>
-      <span className={`shrink-0 font-bold tracking-[0.5px] ${poolMode ? "text-[#adc7ff]" : "text-[#d9b8ff]"}`}>
-        {poolMode ? "POOL MODE" : "SOLVE MODE"}
-      </span>
-      {/* One line, never a count: what the solve needs is one number,
-          anywhere. The button still points at the products missing theirs. */}
-      <span className="whitespace-nowrap compact:whitespace-normal">Set an input/output rate or pin a machine count.</span>
-      {missingCount > 0 ? (
-        <button
-          type="button"
-          onClick={() => onShow(missingProductIds(useFactoryStore.getState().project))}
-          className={`shrink-0 border px-2 py-0.5 font-bold ${poolMode
-            ? "border-[#6f9cff] bg-[#273957] text-[#dce7ff] hover:bg-[#334b70]"
-            : "border-[#9a6fd1] bg-[#3a2a52] text-[#ead9ff] hover:bg-[#4a3766]"}`}
-        >
-          Show me
-        </button>
-      ) : null}
-    </div>
-  );
-});
-
-
-/**
- * The board's three modes on one switch, exactly one lit. Each step hands
- * the planner more of the work:
- *
- * - BUILD: you set the machines, the counts and the wires; the board
- *   reports what flows.
- * - SOLVE: you set the machines and the wires and type what you want; the
- *   board counts the machines.
- * - POOL: you add recipes to the list and type what you want; the planner
- *   counts machines, shares resources and imports missing inputs for you.
- *
- * The lit key takes no click. Under the hood build is both flags off, solve
- * is solveMode, pool is solveMode plus poolMode. Each mode has its own sound.
- */
-type BoardMode = "build" | "solve" | "pool";
-
-const MODE_KEYS: Array<{
-  mode: BoardMode;
-  label: string;
-  setup: string;
-  result: string;
-  details?: string[];
-  note?: string;
-  Icon: LucideIcon;
-  ink: string;
-  /** The ink while NOT engaged: the same colour, a deeper shade - never a fade. */
-  dim: string;
-  /** The pane of light that slides onto the engaged key: its colour, faint. */
-  glass: string;
-}> = [
-  {
-    mode: "build",
-    label: "Build mode",
-    setup: "Set machine counts and connect inputs and outputs.",
-    result: "Production rates for the connected machines.",
-    note: "Switching modes keeps your setup and existing wires. Recipes added in Pool need wiring here.",
-    Icon: Blocks,
-    ink: "text-[#f5b642]",
-    dim: "text-[#b48a3b]",
-    glass: "rgba(245,182,66,0.16)",
-  },
-  {
-    mode: "solve",
-    label: "Solve mode",
-    setup: "Connect machines and set input or output rates.",
-    result: "Required machine counts.",
-    note: "Switching modes keeps your setup and existing wires. Recipes added in Pool need wiring here.",
-    Icon: Sigma,
-    // Violet, not cyan: cyan and pool's blue read as one colour.
-    ink: "text-[#c78bff]",
-    dim: "text-[#8f68b8]",
-    glass: "rgba(199,139,255,0.16)",
-  },
-  {
-    mode: "pool",
-    label: "Pool mode",
-    setup: "Add recipes and set input or output rates.",
-    result: "Required machine counts.",
-    details: ["Resources are shared without wires.", "Inputs with no producer are imported automatically."],
-    note: "Switching modes keeps your setup and existing wires. Pool shares materials automatically; Build and Solve need wires.",
-    Icon: Waves,
-    ink: "text-[#6f9cff]",
-    dim: "text-[#5273b8]",
-    glass: "rgba(111,156,255,0.18)",
-  },
-];
-
-const ModeKeys = memo(function ModeKeys({ forceIcons = false }: { forceIcons?: boolean }) {
-  const compact = useIsCompactViewport();
-  const iconsOnly = forceIcons || compact;
-  const modeStep = iconsOnly ? 44 : 96;
-  const mode = useFactoryStore((state): BoardMode =>
-    state.project.poolMode === true ? "pool" : state.project.solveMode === true ? "solve" : "build",
-  );
-  const setBoardMode = useFactoryStore((state) => state.setBoardMode);
-  const index = Math.max(0, MODE_KEYS.findIndex((entry) => entry.mode === mode));
-  const pick = useCallback(
-    (key: BoardMode) => {
-      const current = useFactoryStore.getState().project;
-      const now: BoardMode = current.poolMode ? "pool" : current.solveMode ? "solve" : "build";
-      if (key === now) {
-        return;
-      }
-      // One sound per mode, never a ladder that follows the direction.
-      playBoardSound(key === "pool" ? "poolOn" : key === "solve" ? "solveOn" : "buildOn");
-      // The switch waits one task: it re-solves and re-renders every card,
-      // and Firefox flushes audio only when the scheduling task ends, so a
-      // sound in the same task as that freeze arrives late or clipped
-      // (board-sounds.ts).
-      window.setTimeout(() => setBoardMode(key), 0);
-    },
-    [setBoardMode],
-  );
-  // THREE JOINED KEYS with a pane of GLASS over the engaged one. The glass
-  // follows the pointer while dragged along the row; letting go engages the
-  // nearest key. A plain click slides it to that key.
-  const rowRef = useRef<HTMLDivElement | null>(null);
-  const [dragX, setDragX] = useState<number | undefined>(undefined);
-  // A press is a CLICK until the pointer has travelled DRAG_START_PX, so a
-  // click moves the glass once, not twice (under the pointer, then to the key).
-  const pressRef = useRef<{ x: number; dragging: boolean } | undefined>(undefined);
-  const DRAG_START_PX = 4;
-  const xToIndex = (x: number) =>
-    Math.max(0, Math.min(MODE_KEYS.length - 1, Math.floor(x / modeStep)));
-  // Read the rendered scale so pointer picking includes the compact toolbar.
-  const localX = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const row = rowRef.current;
-    if (!row) return 0;
-    const rect = row.getBoundingClientRect();
-    return (event.clientX - rect.left) * row.offsetWidth / rect.width - 2;
-  };
-  const onPointerDown = (event: ReactPointerEvent<HTMLDivElement>) => {
-    if (event.button !== 0 || !rowRef.current) {
-      return;
-    }
-    rowRef.current.setPointerCapture(event.pointerId);
-    pressRef.current = { x: localX(event), dragging: false };
-  };
-  const onPointerMove = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const press = pressRef.current;
-    if (!press) {
-      return;
-    }
-    const x = localX(event);
-    if (!press.dragging && Math.abs(x - press.x) < DRAG_START_PX) {
-      return;
-    }
-    press.dragging = true;
-    setDragX(x);
-  };
-  const onPointerUp = (event: ReactPointerEvent<HTMLDivElement>) => {
-    const press = pressRef.current;
-    if (!press) {
-      return;
-    }
-    pressRef.current = undefined;
-    const x = localX(event);
-    if (press.dragging) {
-      setDragX(undefined);
-    }
-    pick(MODE_KEYS[xToIndex(x)]!.mode);
-  };
-  // The WHEEL walks the modes too: down is next, up the one before, no wrap.
-  // Gated on DISTANCE, never time: a mouse notch (~100 units) is one step
-  // however fast notches come, and a trackpad's small deltas add up.
-  const wheelAccRef = useRef(0);
-  const onWheel = (event: ReactWheelEvent<HTMLDivElement>) => {
-    const acc = wheelAccRef.current;
-    // A change of direction starts over: leftover from the other way must
-    // not make the first notch back a dead one.
-    wheelAccRef.current = (acc > 0) === (event.deltaY > 0) ? acc + event.deltaY : event.deltaY;
-    const NOTCH = 60;
-    let steps = Math.trunc(wheelAccRef.current / NOTCH);
-    if (steps === 0) {
-      return;
-    }
-    wheelAccRef.current -= steps * NOTCH;
-    const current = useFactoryStore.getState().project;
-    const at = current.poolMode ? 2 : current.solveMode ? 1 : 0;
-    const next = Math.max(0, Math.min(MODE_KEYS.length - 1, at + Math.sign(steps)));
-    if (next !== at) {
-      pick(MODE_KEYS[next]!.mode);
-    }
-    steps = 0;
-  };
-  const width = modeStep * MODE_KEYS.length;
-  const glassLeft =
-    dragX === undefined
-      ? index * modeStep
-      : Math.max(0, Math.min(width - modeStep, dragX - modeStep / 2));
-  const shown = dragX === undefined ? index : xToIndex(dragX);
-  return (
-    <div
-      ref={rowRef}
-      role="radiogroup"
-      aria-label="Board mode"
-      onPointerDown={onPointerDown}
-      onPointerMove={onPointerMove}
-      onPointerUp={onPointerUp}
-      onPointerCancel={() => {
-        pressRef.current = undefined;
-        setDragX(undefined);
-      }}
-      onWheel={onWheel}
-      className={[
-        "pointer-events-auto relative z-10 flex h-8 shrink-0 touch-none select-none border-2 border-[var(--mc-15)]",
-        dragX === undefined ? "" : "cursor-grabbing",
-      ].join(" ")}
-    >
-      {MODE_KEYS.map(({ mode: key, label, setup, result, details, note, Icon, ink, dim }, at) => (
-        <MinecraftTooltip
-          key={key}
-          content={
-            <div className="w-[340px] max-w-[calc(100*var(--ui-vw)-44px)] space-y-3 text-sm leading-5 text-fg-subtle">
-              <div className={`text-base font-semibold leading-6 ${ink}`}>{label}</div>
-              <p>
-                <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-fg-muted">Setup</span>
-                {setup}
-              </p>
-              <p>
-                <span className="mb-1 block text-xs font-semibold uppercase tracking-wide text-fg-muted">Calculates</span>
-                {result}
-              </p>
-              {details && (
-                <ul className="list-disc space-y-1 pl-4 marker:text-fg-muted">
-                  {details.map((detail) => <li key={detail}>{detail}</li>)}
-                </ul>
-              )}
-              {note && <p className="border-t border-line pt-2.5 text-fg-muted">{note}</p>}
-              {/* Canvas modes keep their flow picture; Pool uses the list. */}
-              {key !== "pool" && <div className="border-t border-line pt-3">
-                <img
-                  src={`/mode-art/${key}.webp`}
-                  alt=""
-                  width={640}
-                  draggable={false}
-                  className="mx-auto block w-[300px] max-w-full select-none"
-                  // Desaturated and dimmed so it sits with the grey text.
-                  style={{ filter: "saturate(0.45) brightness(0.88)" }}
-                />
-              </div>}
-            </div>
-          }
-        >
-          <button
-            type="button"
-            role="radio"
-            aria-checked={mode === key}
-            onClick={() => pick(key)}
-            aria-label={label}
-            aria-description={`${setup} Calculates ${result.charAt(0).toLowerCase()}${result.slice(1)}${details ? ` ${details.join(" ")}` : ""}${note ? ` ${note}` : ""}`}
-            className={[
-              "flex h-full shrink-0 items-center justify-center gap-2 font-mono text-[11px] font-black tracking-wide transition-colors duration-200",
-              TOOL_FACE_OFF,
-              at > 0 ? "border-l-2 border-[var(--mc-15)]" : "",
-              // Each key in its own colour always: a deeper shade at rest, full
-              // when engaged. Never faded, which reads as disabled.
-              shown === at ? ink : `${dim} hover:brightness-125`,
-            ].join(" ")}
-            style={{ width: modeStep }}
-          >
-            <Icon className="h-4 w-4" />
-            {!iconsOnly && label.replace(" mode", "").toUpperCase()}
-          </button>
-        </MinecraftTooltip>
-      ))}
-      {/* The glass slides on LEFT, not transform: the shell is CSS-zoomed
-          (ui-scale.ts), and Chrome runs a transform transition on the
-          compositor in unzoomed pixels, overshooting then snapping. A left
-          transition resolves in zoomed units. */}
-      <span
-        aria-hidden
-        className={[
-          "pointer-events-none absolute top-0 h-full shadow-[inset_0_2px_0_rgba(255,255,255,0.18)] ease-out",
-          dragX === undefined ? "transition-[left,background-color] duration-200" : "",
-        ].join(" ")}
-        style={{
-          width: modeStep,
-          left: glassLeft,
-          backgroundColor: MODE_KEYS[shown]!.glass,
-        }}
-      />
-    </div>
-  );
-});
 
 /**
  * The left toolbar: undo/redo on their own plate, then (foldable) the rate
@@ -7491,7 +7154,6 @@ const SourceToolbar = memo(function SourceToolbar({
         label="build tools"
         side="left"
       >
-      {folded && !readOnly ? <ToolTray helpAnchor="rules"><ModeKeys forceIcons /></ToolTray> : null}
       {/* How the numbers read: ONE key wearing the current unit, opening
           the units as a named list. */}
       <ToolTray raised={isRateMenuOpen || isPowerUnitMenuOpen}>
@@ -8558,9 +8220,6 @@ const PaintToolbar = memo(function PaintToolbar({
   onViewChange,
   onAutoArrange,
   folded,
-  foldAll,
-  modesInBuild,
-  modeIconsOnly,
   openGroup,
   onToggleGroup,
   shiftedDown,
@@ -8580,13 +8239,6 @@ const PaintToolbar = memo(function PaintToolbar({
   /** Runs the arrange; the fold-out's setting rides along per press. */
   onAutoArrange: (options: { keepBoards: boolean }) => void;
   folded: boolean;
-  /**
-   * The whole row folds into the brush, the bin and whole-board keys
-   * included: a board too narrow for the folded row (toolbar-fold.ts).
-   */
-  foldAll: boolean;
-  modesInBuild: boolean;
-  modeIconsOnly: boolean;
   openGroup?: ToolGroupId;
   onToggleGroup: (group: ToolGroupId | undefined) => void;
   shiftedDown: boolean;
@@ -8805,21 +8457,6 @@ const PaintToolbar = memo(function PaintToolbar({
 
   return (
     <>
-    {/* Center on the canvas width shared by all modes so hiding the resource
-        column in Pool cannot move the next mode out from under the pointer. */}
-    {!modesInBuild && (
-    <div
-      data-board-toolbar-centre
-      className={[
-        "nodrag pointer-events-none absolute left-[var(--toolbar-mode-left)] z-20",
-        shiftedDown ? "top-14" : "top-3",
-      ].join(" ")}
-    >
-      <ToolTray helpAnchor="rules">
-        <ModeKeys forceIcons={modeIconsOnly} />
-      </ToolTray>
-    </div>
-    )}
     <div
       data-board-toolbar
       className={[

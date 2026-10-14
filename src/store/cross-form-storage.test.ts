@@ -33,7 +33,7 @@ function project(fluidToCell: boolean, storageSource = true): FactoryProject {
 
 describe.each([true, false])("storage conversion wire survival (fluid to cell: %s)", fluidToCell => {
   it.each([true, false])("keeps the buffer and all wires after an unrelated tier edit (storage source: %s)", storageSource => {
-    useFactoryStore.getState().setProject(project(fluidToCell, storageSource));
+    useFactoryStore.getState().setProject(project(fluidToCell, storageSource), { keepMode: true });
     const before = useFactoryStore.getState().project;
     expect(getStorageRole(before, "buffer")).toBe("buffer");
     useFactoryStore.getState().updateNode("furnace", { overclockTier: "HV" });
@@ -45,7 +45,7 @@ describe.each([true, false])("storage conversion wire survival (fluid to cell: %
     expect(useFactoryStore.getState().project.edges).toEqual(before.edges);
     useFactoryStore.getState().redo();
     expect(useFactoryStore.getState().project.edges).toEqual(before.edges);
-    useFactoryStore.getState().setProject(JSON.parse(JSON.stringify(after)));
+    useFactoryStore.getState().setProject(JSON.parse(JSON.stringify(after)), { keepMode: true });
     useFactoryStore.getState().updateNode("taker", { machineCount: 2 });
     expect(useFactoryStore.getState().project.edges).toEqual(before.edges);
   });
@@ -57,13 +57,13 @@ describe.each([true, false])("storage conversion wire survival (fluid to cell: %
     taker.recipeId = "furnace";
     const wire = p.edges.find(e => e.target === "taker")!;
     wire.targetHandle = sectionHandleId(1, wire.targetHandle!);
-    useFactoryStore.getState().setProject(p);
+    useFactoryStore.getState().setProject(p, { keepMode: true });
     useFactoryStore.getState().updateNode("furnace", { overclockTier: "HV" });
     expect(useFactoryStore.getState().project.edges).toEqual(p.edges);
   });
 
   it("still removes a wire whose receiving recipe no longer accepts its cell or fluid", () => {
-    useFactoryStore.getState().setProject(project(fluidToCell));
+    useFactoryStore.getState().setProject(project(fluidToCell), { keepMode: true });
     useFactoryStore.getState().updateNode("taker", { recipeId: "furnace" });
     expect(useFactoryStore.getState().project.edges.map(e => e.id)).toEqual(["feed", "wire-taker2"]);
     expect(getStorageRole(useFactoryStore.getState().project, "buffer")).toBe("buffer");

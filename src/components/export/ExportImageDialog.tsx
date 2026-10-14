@@ -83,7 +83,6 @@ const CHECKER_STYLE: React.CSSProperties = {
 export function ExportImageDialog({ onClose }: { onClose: () => void }) {
   const project = useFactoryStore((state) => state.project);
   const result = useFactoryStore((state) => state.lastResult);
-  const setScreenshotMode = useFactoryStore((state) => state.setScreenshotMode);
   const mode = project.poolMode ? "pool" : project.solveMode ? "solve" : "build";
   const activeTabName = useDesignStore(
     (state) =>
@@ -481,30 +480,6 @@ export function ExportImageDialog({ onClose }: { onClose: () => void }) {
 
         <div className="mt-3 space-y-3 text-sm">
           <div className="flex flex-wrap items-center gap-x-6 gap-y-3">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-medium text-fg-subtle">Mode</span>
-              <div role="group" aria-label="Screenshot mode" className="flex overflow-hidden rounded border border-line-strong">
-                {(["build", "solve", "pool"] as const).map((entry) => (
-                  <button
-                    key={entry}
-                    type="button"
-                    disabled={isCapturing || Boolean(busy)}
-                    onClick={() => {
-                      if (entry === mode) return;
-                      setCapturing(true);
-                      setScreenshotMode(entry);
-                    }}
-                    aria-pressed={mode === entry}
-                    className={[
-                      "px-2.5 py-1 text-xs capitalize disabled:opacity-50",
-                      mode === entry ? "bg-cyan-600 font-medium text-white" : "bg-surface text-fg-subtle hover:bg-surface-raised",
-                    ].join(" ")}
-                  >
-                    {entry}
-                  </button>
-                ))}
-              </div>
-            </div>
             <div className="flex items-center gap-2">
               <span className="text-xs font-medium text-fg-subtle">Type</span>
               <div className="flex overflow-hidden rounded border border-line-strong">

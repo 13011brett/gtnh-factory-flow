@@ -47,6 +47,7 @@ describe("a Build plan on the plan board", () => {
           "utf8",
         ),
       ),
+      { keepMode: true },
     );
 
   it("runs as its conversion and leaves the stored plan alone", () => {

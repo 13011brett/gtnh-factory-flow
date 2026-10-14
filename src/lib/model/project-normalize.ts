@@ -11,13 +11,61 @@ import { resynthesizePowerRecipes } from "@/lib/power/power-recipe";
 import { snapPositionToGrid, snapSizeUpToGrid } from "@/lib/board-grid";
 import { sectionNodeView, splitSectionHandleId } from "./shared-machine";
 import { repairWiredInputOverrides } from "./edge-input-overrides";
+import { openAsPlan, type PlanConversionNotice } from "@/lib/solver/plan/to-plan";
 
 /**
  * Everything a project must go through on its way in, whether it arrives from
  * IndexedDB, a JSON import, an embedded plan image or the community hub.
  * One funnel on purpose, so no load path can skip a migration.
  */
-export function normalizeLoadedProject(project: FactoryProject): FactoryProject {
+export function normalizeLoadedProject(
+  project: FactoryProject,
+  options?: LoadOptions,
+): FactoryProject {
+  return normalizeLoadedProjectWithNotice(project, options).project;
+}
+
+/**
+ * `keepMode` skips the conversion to the one mode. Nothing in the app passes
+ * it; the old Build, Solve and Pool code stays in the tree and its tests load
+ * their plans this way.
+ */
+export interface LoadOptions {
+  keepMode?: boolean;
+}
+
+let legacyModes = false;
+
+/**
+ * Tests of the old Build, Solve and Pool code switch the conversion off for
+ * the whole test file (each file runs in its own module scope). The app never
+ * calls this.
+ */
+export function allowLegacyModesForTests(on = true): void {
+  legacyModes = on;
+}
+
+/**
+ * The funnel, plus what its last step had to say. There is one mode, so a
+ * Build, Solve or Pool plan comes out as a plan-mode project (`openAsPlan`)
+ * and the notice names what that could not carry over. Nothing is written
+ * anywhere: the converted plan is saved by the player's first edit.
+ */
+export function normalizeLoadedProjectWithNotice(
+  project: FactoryProject,
+  options?: LoadOptions,
+): {
+  project: FactoryProject;
+  notice?: PlanConversionNotice;
+} {
+  if (options?.keepMode ?? legacyModes) {
+    return { project: normalizeLegacyProject(project) };
+  }
+  const opened = openAsPlan(normalizeLegacyProject(project));
+  return { project: opened.project, notice: opened.notice };
+}
+
+function normalizeLegacyProject(project: FactoryProject): FactoryProject {
   project = normalizeProductionGroups(project);
   project = repairWiredInputOverrides(project);
   return normalizeProjectHatchInputs(

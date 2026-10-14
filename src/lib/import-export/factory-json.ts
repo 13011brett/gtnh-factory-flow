@@ -1,6 +1,6 @@
 import { ZodError } from "zod";
 import { normalizeProjectFuelProfiles } from "../model/fuels";
-import { normalizeLoadedProject } from "../model/project-normalize";
+import { normalizeLoadedProject, type LoadOptions } from "../model/project-normalize";
 import { factoryProjectSchema } from "../model/schemas";
 import type { FactoryProject } from "../model/types";
 
@@ -11,7 +11,13 @@ export class FactoryJsonError extends Error {
   }
 }
 
-export function parseFactoryProjectJson(source: string): FactoryProject {
+/**
+ * A plan's JSON as a project. It keeps the mode the plan was saved in: every
+ * plan that arrives lands on the board through the store (`markHydratedProject`,
+ * `loadViewedProject`), and that is where it becomes a plan-mode project, so
+ * the one conversion also gets to tell the player what it could not carry over.
+ */
+export function parseFactoryProjectJson(source: string, options?: LoadOptions): FactoryProject {
   let raw: unknown;
 
   try {
@@ -23,7 +29,7 @@ export function parseFactoryProjectJson(source: string): FactoryProject {
   }
 
   try {
-    return normalizeLoadedProject(factoryProjectSchema.parse(raw));
+    return normalizeLoadedProject(factoryProjectSchema.parse(raw), { keepMode: true, ...options });
   } catch (error) {
     if (error instanceof ZodError) {
       const issues = error.issues

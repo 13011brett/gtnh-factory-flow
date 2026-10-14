@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { factoryProjectSchema } from "@/lib/model/schemas";
 import { calculateThroughput } from "@/lib/solver";
+import { normalizeLoadedProject } from "@/lib/model/project-normalize";
 import { ensurePlanEngine } from "@/lib/server/plan-engine";
 import { computeCommunityPlanStats } from "@/lib/community/plan-stats";
 import { APP_VERSION } from "@/lib/version";
@@ -299,9 +300,12 @@ export async function POST(request: Request) {
       );
     }
 
-    // Stats are always derived server-side from the validated plan.
-    await ensurePlanEngine(project);
-    const stats = computeCommunityPlanStats(project, calculateThroughput(project));
+    // Stats are always derived server-side from the validated plan, as the
+    // plan board runs it: there is one mode, so an older plan is converted
+    // first (the stored plan stays as uploaded).
+    const solved = normalizeLoadedProject(project);
+    await ensurePlanEngine(solved);
+    const stats = computeCommunityPlanStats(solved, calculateThroughput(solved));
 
     const db = getCommunityDb();
     const row = {

@@ -1,8 +1,7 @@
 "use client";
 
 import { create } from "zustand";
-import { createEmptyProject } from "@/examples";
-import { withNewBoardDefault } from "@/lib/new-board";
+import { createNewProject } from "@/examples";
 import {
   UNTITLED_DESIGN_NAME,
   conflictCopyName,
@@ -235,6 +234,7 @@ function landOnDesign(
   rest?: Partial<DesignStore>,
 ) {
   beginDesignCameraHandover();
+  useFactoryStore.getState().dismissPlanNotice();
   writeActiveDesignId(record.id);
   set({ ...rest, activeDesignId: record.id, publicView: undefined });
   showProject(record.project, record.id);
@@ -247,6 +247,7 @@ function landOnDesign(
  * it under so it cannot be written anywhere.
  */
 function landOnNothing(set: (partial: Partial<DesignStore>) => void, rest?: Partial<DesignStore>) {
+  useFactoryStore.getState().dismissPlanNotice();
   writeActiveDesignId(undefined);
   set({ ...rest, activeDesignId: undefined });
   openLibrary();
@@ -419,7 +420,7 @@ export const useDesignStore = create<DesignStore>((set, get) => ({
       ?? openDesigns(get().designs)[0];
     if (target) { await get().switchToDesign(target.id); return; }
     set({ publicView: undefined });
-    showProject(createEmptyProject());
+    showProject(createNewProject());
     landOnNothing(set);
   },
   viewPublicProject: async (post, project) => {
@@ -429,6 +430,7 @@ export const useDesignStore = create<DesignStore>((set, get) => ({
     // No design record is created, and autosave has no design to write into.
     const view = { id: post.id, name: post.name, authorName: post.authorName, project };
     set({ activeDesignId: undefined, publicView: view, publicViews: get().publicViews.some((entry) => entry.id === post.id) ? get().publicViews.map((entry) => entry.id === post.id ? view : entry) : [...get().publicViews, view] });
+    useFactoryStore.getState().dismissPlanNotice();
     useFactoryStore.getState().loadViewedProject(project);
     applyPlanView(project.view, "board");
     leaveWelcomeTab();
@@ -553,7 +555,7 @@ export const useDesignStore = create<DesignStore>((set, get) => ({
     const { activeDesignId, designs } = get();
     await flushCanvasInto(designs.find((design) => design.id === activeDesignId));
 
-    const record = createDesignRecord(withNewBoardDefault(createEmptyProject()), UNTITLED_DESIGN_NAME);
+    const record = createDesignRecord(createNewProject(), UNTITLED_DESIGN_NAME);
     await writeDesign(record);
     landOnDesign(set, record);
     leaveLibrary();
@@ -704,7 +706,7 @@ export const useDesignStore = create<DesignStore>((set, get) => ({
     if (library.designs.length === 0) {
       // A library with nothing in it is seeded rather than shown empty: the
       // canvas has to belong to some record for autosave to have a home.
-      const seeded = createDesignRecord(withNewBoardDefault(createEmptyProject()), UNTITLED_DESIGN_NAME);
+      const seeded = createDesignRecord(createNewProject(), UNTITLED_DESIGN_NAME);
       await writeDesign(seeded);
       library = { ...library, designs: [seeded] };
       landOnDesign(set, seeded, library);
@@ -1050,7 +1052,7 @@ async function backfillSummaryIcons(
 async function seedFirstDesign(): Promise<DesignSummary> {
   const legacy = readLegacyProject();
   const record = createDesignRecord(
-    legacy ?? createEmptyProject(),
+    legacy ?? createNewProject(),
     legacy?.name ?? UNTITLED_DESIGN_NAME,
   );
   await writeDesign(record);

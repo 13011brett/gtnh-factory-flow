@@ -11,7 +11,7 @@ import { isEecRecipe } from "@/lib/machines/extreme-entity-crusher";
 import { carryMachineVoltage, normalizeProjectHatchInputs } from "@/lib/solver/hatch-input";
 
 import { create, type StateCreator, type StoreApi } from "zustand";
-import { createEmptyProject } from "@/examples";
+import { createNewProject } from "@/examples";
 import type { DatasetManifest, RecipeDataset } from "@/lib/datasets";
 import {
   canonicalizeResourceHandleId,
@@ -31,7 +31,12 @@ import {
   sharedHandlersWith,
   splitSectionHandleId,
 } from "@/lib/model/shared-machine";
-import { normalizeLoadedProject } from "@/lib/model/project-normalize";
+import {
+  normalizeLoadedProjectWithNotice,
+  type LoadOptions,
+} from "@/lib/model/project-normalize";
+import type { PlanConversionNotice } from "@/lib/solver/plan/to-plan";
+import { planClipboard } from "@/lib/solver/plan/convert";
 import { playBoardSound, quietBoardSoundsFor, suppressBoardSound } from "@/lib/board-sounds";
 import { GT_VOLTAGE_TIERS } from "@/lib/model/tiers";
 import {
@@ -162,6 +167,9 @@ interface FactoryStore {
   /** Public viewing sessions never accept edits to their project. */
   isReadOnly: boolean;
   loadViewedProject: (project: FactoryProject) => void;
+  /** What turning the plan that just arrived into a plan-mode one could not carry over; null once read. */
+  planNotice: PlanConversionNotice | null;
+  dismissPlanNotice: () => void;
   checklistMode: boolean;
   setChecklistMode: (active: boolean) => void;
   toggleChecklist: (kind: "cards" | "edges", ids: string[]) => void;
@@ -259,7 +267,7 @@ interface FactoryStore {
   setPowerDisplayUnit: (unit: PowerDisplayUnit) => void;
   /** Recalculate the books by hand: what the solve key does while automatic recalculation is off. */
   solveNow: () => void;
-  setProject: (project: FactoryProject) => void;
+  setProject: (project: FactoryProject, options?: LoadOptions) => void;
   markHydratedProject: (project: FactoryProject) => void;
   undo: () => void;
   redo: () => void;
@@ -765,7 +773,7 @@ interface FactoryStore {
   renameProject: (name: string) => void;
 }
 
-const initialProject = createEmptyProject();
+const initialProject = createNewProject();
 
 /**
  * What Ctrl+C lifts off the board: the selected items verbatim, the wires
@@ -1014,9 +1022,11 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
   isReadOnly: false,
   loadViewedProject: (project) => {
     quietBoardSoundsFor(1500);
-    const nextProject = normalizeLoadedProject(project);
+    const { project: nextProject, notice } = normalizeLoadedProjectWithNotice(project);
     write({
       isReadOnly: true,
+      // Only a conversion speaks here; the design store clears it when another plan lands.
+      ...(notice ? { planNotice: notice } : {}),
       project: nextProject,
       lastResult: solveBooks(nextProject),
       undoHistory: [], redoHistory: [],
@@ -1026,6 +1036,8 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
       recipeBrowserResource: undefined, powerMenuOpen: false,
     });
   },
+  planNotice: null,
+  dismissPlanNotice: () => set({ planNotice: null }),
   checklistMode: false,
   setChecklistMode: (checklistMode) => set({ checklistMode, ...(checklistMode ? { nodeColorPaintMode: undefined, pendingResourceConnection: undefined } : {}) }),
   toggleChecklist: (kind, ids) => setPresentation((state) => {
@@ -1110,12 +1122,14 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
   solveNow: () => {
     set({ lastResult: solveBooksNow(get().project) });
   },
-  setProject: (project) => {
+  setProject: (project, options) => {
     // A plan ARRIVING (import, tab switch, setup open) is not an action;
     // its writes must not be mistaken for a giant paste and swept audibly.
     quietBoardSoundsFor(1500);
-    const nextProject = touchProject(normalizeLoadedProject(project));
+    const { project: loaded, notice } = normalizeLoadedProjectWithNotice(project, options);
+    const nextProject = touchProject(loaded);
     set({
+      ...(notice ? { planNotice: notice } : {}),
       project: nextProject,
       selectedNodeId: nextProject.nodes[0]?.id,
       selectedRecipeId: nextProject.nodes[0]?.recipeId ?? nextProject.recipes[0]?.id,
@@ -1128,9 +1142,10 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
   },
   markHydratedProject: (project) => {
     quietBoardSoundsFor(1500);
-    const nextProject = normalizeLoadedProject(project);
+    const { project: nextProject, notice } = normalizeLoadedProjectWithNotice(project);
     write({
       isReadOnly: false,
+      ...(notice ? { planNotice: notice } : {}),
       project: nextProject,
       selectedNodeId: nextProject.nodes[0]?.id,
       selectedRecipeId: nextProject.nodes[0]?.recipeId ?? nextProject.recipes[0]?.id,
@@ -2628,6 +2643,8 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
   },
   setPoolMode: (poolMode) => {
     set((state) => {
+      // There is one mode: a plan-mode project never leaves it.
+      if (state.project.planMode) return state;
       // Pool mode is the deeper solve mode: it cannot be on without it.
       const project = touchProject({
         ...state.project,
@@ -2827,6 +2844,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
   },
   setSolveMode: (solveMode) => {
     set((state) => {
+      if (state.project.planMode) return state;
       const project = touchProject({
         ...state.project,
         solveMode: solveMode ? true : undefined,
@@ -3354,9 +3372,12 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
       });
     });
   },
-  pasteBoardItems: (payload, offset) => {
+  pasteBoardItems: (clipboard, offset) => {
     const pastedIds: string[] = [];
     set((state) => {
+      // Plan mode has no buffers, ratios, pool sides or groups: what an older
+      // board copied is converted on the way in, like a plan that arrives.
+      const payload = state.project.planMode ? planClipboard(clipboard) : clipboard;
       const shift = (position: { x: number; y: number }) =>
         snapPositionToGrid({ x: position.x + offset.x, y: position.y + offset.y });
       const payloadRecipesById = new Map(payload.recipes.map((recipe) => [recipe.id, recipe]));
@@ -4601,6 +4622,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
       return;
     }
     setPresentation((state) => {
+      if (state.project.planMode) return state;
       const solveMode = mode !== "build" ? true : undefined;
       const poolMode = mode === "pool" ? true : undefined;
       if (Boolean(state.project.solveMode) === Boolean(solveMode) &&
@@ -4611,6 +4633,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
   },
   setBoardMode: (mode) => {
     set((state) => {
+      if (state.project.planMode) return state;
       const solveMode = mode === "solve" || mode === "pool" ? true : undefined;
       const poolMode = mode === "pool" ? true : undefined;
       if (

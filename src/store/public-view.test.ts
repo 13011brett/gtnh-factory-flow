@@ -1,6 +1,10 @@
 import { afterEach, describe, expect, it } from "vitest";
 import { createEmptyProject } from "@/examples";
 import { useFactoryStore } from "./factory-store";
+import { allowLegacyModesForTests } from "@/lib/model/project-normalize";
+
+// These tests exercise the old Build, Solve and Pool code, which the app no longer reaches.
+allowLegacyModesForTests();
 
 afterEach(() => useFactoryStore.getState().markHydratedProject(createEmptyProject()));
 

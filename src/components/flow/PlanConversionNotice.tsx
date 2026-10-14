@@ -13,7 +13,9 @@ import { useFactoryStore } from "@/store/factory-store";
 export const PlanConversionNotice = memo(function PlanConversionNotice() {
   const notice = useFactoryStore((state) => state.planNotice);
   const dismiss = useFactoryStore((state) => state.dismissPlanNotice);
-  if (!notice) {
+  // Plan boards say it in the notices bar (clean/rail/NoticeBar); this dress is for any board that has none.
+  const inBar = useFactoryStore((state) => state.project.planMode === true);
+  if (!notice || inBar) {
     return null;
   }
   return (

@@ -1,7 +1,7 @@
 "use client";
 
-import { Gauge, Sprout, Zap, Container } from "lucide-react";
 import type { ReactNode } from "react";
+import "./chrome/mod-panel.css";
 import { useFactoryStore } from "@/store/factory-store";
 
 /**
@@ -19,8 +19,7 @@ export function SpawnKeys({ leading }: { leading?: ReactNode }) {
   // The columns' own hide keys' dress (the right column's "Hide" key): no
   // ground of their own, the column's border, a plain lift on hover - keys that act,
   // a step apart from the filter chips under them, which only narrow.
-  const key =
-    "flex h-7 min-w-0 flex-auto items-center justify-center gap-1 whitespace-nowrap rounded border border-neutral-700 px-1 text-[12px]! leading-3 font-medium text-neutral-300 hover:border-neutral-500 hover:text-neutral-100";
+  const key = "pn-chip flex items-center justify-center gap-1";
   if (isReadOnly) return <div className="mx-2 mt-2 flex shrink-0 gap-1">{leading}</div>;
   return (
     <div className="mx-2 mt-2 flex shrink-0 gap-1">
@@ -32,7 +31,6 @@ export function SpawnKeys({ leading }: { leading?: ReactNode }) {
         title="Place a generator"
         aria-label="Place a generator"
       >
-        <Zap className="h-3 w-3 shrink-0" />
         Power
       </button>
       <button
@@ -42,7 +40,6 @@ export function SpawnKeys({ leading }: { leading?: ReactNode }) {
         title="Add custom rate node"
         aria-label="Add custom rate node"
       >
-        <Gauge className="h-3 w-3 shrink-0" />
         Custom
       </button>
       <button
@@ -52,7 +49,6 @@ export function SpawnKeys({ leading }: { leading?: ReactNode }) {
         title="Add a fluid tank: empties cells into their fluid and fills them"
         aria-label="Add fluid tank"
       >
-        <Container className="h-3 w-3 shrink-0" />
         Tank
       </button>
       <button
@@ -62,7 +58,6 @@ export function SpawnKeys({ leading }: { leading?: ReactNode }) {
         title="Add crop farm"
         aria-label="Add crop farm"
       >
-        <Sprout className="h-3 w-3 shrink-0" />
         Farm
       </button>
     </div>

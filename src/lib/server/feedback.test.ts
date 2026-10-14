@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from "vitest";
 import { PROJECT_SCHEMA_VERSION } from "@/lib/model/types";
 import {
   FROM_GAME_LABEL,
+  FROM_WEB_LABEL,
   issueBody,
   issueLabels,
   issueTitle,
@@ -39,6 +40,37 @@ function parsed(overrides: Record<string, unknown> = {}): FeedbackReport {
   if ("error" in r) throw new Error(r.error);
   return r;
 }
+
+describe("feedback reports from the web planner", () => {
+  const web = {
+    origin: "web",
+    deviceId: "web-0b6c1c7e-8f0a-4c43-9a51-6f2d0c1e2b3a",
+    versions: { mod: "3.12.0", pack: "", java: "", os: "Win32" },
+  };
+
+  it("labels the issue from web, with the kind's label, and says so in the body", () => {
+    const r = parsed(web);
+    expect(r.origin).toBe("web");
+    expect(issueLabels(r)).toEqual([FROM_WEB_LABEL, "bug"]);
+    expect(FROM_WEB_LABEL).toBe("from web");
+    const { body } = issueBody(r, { plans: [] });
+    expect(body).toContain("sent from the web planner");
+    expect(body).toContain("GTNH Planner web 3.12.0");
+    expect(body).not.toContain("Java");
+  });
+
+  it("refuses a log or a crash report from the web", () => {
+    expect("error" in (parseFeedback(report({ ...web, log: "x" })) as object)).toBe(true);
+    expect("error" in (parseFeedback(report({ ...web, crash: "x" })) as object)).toBe(true);
+  });
+
+  it("keeps the game's path as it was: no origin means the game", () => {
+    const r = parsed();
+    expect(r.origin).toBe("game");
+    expect(issueLabels(r)).toEqual([FROM_GAME_LABEL, "bug"]);
+    expect(issueBody(r, { plans: [] }).body).toContain("sent from the game");
+  });
+});
 
 describe("feedback reports from the game", () => {
   it("reads a report with its plans and picture", () => {

@@ -25,7 +25,7 @@ export function planSolveWith(
         args: [{ message: "SOLVER_BUDGET", args: [error instanceof Error ? error.message : String(error)] }],
       },
       notes: [],
-      drawers: { rates: {}, unmet: [], shortfalls: [] },
+      drawers: { rates: {}, unmet: [], shortfalls: [], ports: {} },
     };
   }
   return finalizePlanResult(args, model, readAnswer(model, answer));

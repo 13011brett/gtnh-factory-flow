@@ -9,7 +9,7 @@ import { customRecipe, drawer, handle, node, project, recipe, wire } from "./tes
 
 afterEach(() => setSolveCore(undefined));
 
-const idle = { rates: {}, unmet: [], shortfalls: [] };
+const idle = { rates: {}, unmet: [], shortfalls: [], ports: {} };
 
 function view(partial: Partial<SolutionView> = {}): SolutionView {
   return {

@@ -53,14 +53,18 @@ export interface DrawerRow {
   extentQty: number[];
   /** Wired links: connected-port indices. */
   externalPorts: number[];
-  /** Every valid link, wired or not, in link order. */
+  /** Every valid link, wired or not, in link order (a buffer's makers, then its users). */
   links: PortRef[];
+  /** A buffer's edges, whose flows are its total; empty for every other kind (Java `DrawerRow.flowEdges`). */
+  flowEdges: number[];
 }
 
 export interface ModelData {
   machines: MachineData[];
   machineIndex: Map<Id, number>;
   edges: EdgeData[];
+  /** How many of `edges` are the plan's own wires; the buffers' edges come after them (Java `drawnEdges`). */
+  drawnEdges: number;
   connectedPorts: ConnectedPort[];
   /** `portKey(machine, portIndex, input)` -> connected-port index. */
   portLookup: Map<number, number>;
@@ -79,6 +83,14 @@ export function portKey(machine: number, portIndex: number, input: boolean): num
 
 export function drawerLinksInputs(kind: DrawerKind): boolean {
   return kind === "SOURCE";
+}
+
+/**
+ * A buffer edge's id: the text the Java hashes into a UUID (`ModelData.bufferEdgeId`). Only the island merge reads
+ * it, and only within one language, so the text itself serves.
+ */
+export function bufferEdgeId(drawer: Id, from: { node: Id; port: number }, to: { node: Id; port: number }): Id {
+  return `buffer:${drawer}:${from.node}#${from.port}>${to.node}#${to.port}`;
 }
 
 function extentFor(targets: Record<number, number>, qty: readonly number[]): number {
@@ -156,6 +168,40 @@ export function buildModel(input: SolveInput): ModelData {
     connectedPorts[srcPort]!.edges.push(e);
     connectedPorts[dstPort]!.edges.push(e);
   }
+  const drawnEdges = edges.length;
+
+  // A buffer is wiring (Java `buildBuffers`): an edge from each maker to each user of the same ingredient, after the
+  // drawn edges, in drawer, link and taker order; its rule is a row over their flows.
+  const usable = (link: { node: Id; port: number }, isInput: boolean): number | undefined => {
+    const m = machineIndex.get(link.node);
+    if (m === undefined) return undefined;
+    const md = machines[m]!;
+    if (!hasPort(md, link.port, isInput)) return undefined;
+    const qty = isInput ? md.inQty[link.port]! : md.outQty[link.port]!;
+    return qty > 0 ? m : undefined;
+  };
+  const bufferEdges: number[][] = [];
+  for (const drawer of input.drawers) {
+    const made: number[] = [];
+    bufferEdges.push(made);
+    if (drawer.kind !== "BUFFER") continue;
+    for (const from of drawer.links) {
+      const src = usable(from, false);
+      if (src === undefined) continue;
+      for (const to of drawer.takers ?? []) {
+        const dst = usable(to, true);
+        if (dst === undefined) continue;
+        if (machines[src]!.spec.outputs[from.port]!.resource !== machines[dst]!.spec.inputs[to.port]!.resource) continue;
+        const srcPort = intern(src, from.port, false);
+        const dstPort = intern(dst, to.port, true);
+        const e = edges.length;
+        edges.push({ id: bufferEdgeId(drawer.id, from, to), srcPort, dstPort });
+        connectedPorts[srcPort]!.edges.push(e);
+        connectedPorts[dstPort]!.edges.push(e);
+        made.push(e);
+      }
+    }
+  }
 
   const pools: PoolData[] = [];
   for (const pool of input.pools) {
@@ -170,7 +216,29 @@ export function buildModel(input: SolveInput): ModelData {
   }
 
   const drawers: DrawerRow[] = [];
-  for (const drawer of input.drawers) {
+  input.drawers.forEach((drawer, at) => {
+    if (drawer.kind === "BUFFER") {
+      const refs: PortRef[] = [];
+      for (const link of drawer.links) {
+        if (usable(link, false) !== undefined) refs.push({ node: link.node, port: link.port, input: false });
+      }
+      for (const link of drawer.takers ?? []) {
+        if (usable(link, true) !== undefined) refs.push({ node: link.node, port: link.port, input: true });
+      }
+      drawers.push({
+        id: drawer.id,
+        label: drawer.label,
+        kind: drawer.kind,
+        rule: drawer.rule,
+        rate: drawer.rate,
+        extentMachines: [],
+        extentQty: [],
+        externalPorts: [],
+        links: refs,
+        flowEdges: bufferEdges[at]!,
+      });
+      return;
+    }
     const isInput = drawerLinksInputs(drawer.kind);
     const perMachine = new Map<number, number>();
     const ports: number[] = [];
@@ -202,8 +270,9 @@ export function buildModel(input: SolveInput): ModelData {
       extentQty: sorted.map((x) => x[1]),
       externalPorts: ports,
       links: refs,
+      flowEdges: [],
     });
-  }
+  });
 
   const { portComponent, portGate, gates } = buildGates(connectedPorts, edges);
   const weightless = machines.map(() => false);
@@ -212,5 +281,18 @@ export function buildModel(input: SolveInput): ModelData {
     if (m !== undefined) weightless[m] = true;
   }
   const portSteps = portStepsOf(machines.length, connectedPorts, portComponent, weightless);
-  return { machines, machineIndex, edges, connectedPorts, portLookup, gates, pools, drawers, portGate, portComponent, portSteps };
+  return {
+    machines,
+    machineIndex,
+    edges,
+    drawnEdges,
+    connectedPorts,
+    portLookup,
+    gates,
+    pools,
+    drawers,
+    portGate,
+    portComponent,
+    portSteps,
+  };
 }

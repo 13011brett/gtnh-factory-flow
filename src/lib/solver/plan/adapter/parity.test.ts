@@ -32,7 +32,7 @@ function adapterInput(path: string): SolveInput {
       kind: "failed",
       failure: { message: "NO_PIN", args: [] },
       notes: [],
-      drawers: { rates: {}, unmet: [], shortfalls: [] },
+      drawers: { rates: {}, unmet: [], shortfalls: [], ports: {} },
     };
   });
   calculateThroughput(convertBuildToPlan(project), { generatedAt: "t" });

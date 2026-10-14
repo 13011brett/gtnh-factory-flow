@@ -30,7 +30,7 @@ export interface PlanReading {
   extras: PlanSolveExtras;
 }
 
-const EMPTY_DRAWERS: DrawerReadout = { rates: {}, unmet: [], shortfalls: [] };
+const EMPTY_DRAWERS: DrawerReadout = { rates: {}, unmet: [], shortfalls: [], ports: {} };
 
 /** Rates below this share of the port's own rate are solver dust. */
 const DUST = 1e-9;

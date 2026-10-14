@@ -50,19 +50,32 @@ export interface Piece {
 
 /** `DrawerReadout.NONE` / `unsolved`: nothing solved, only what the context already knew was unmet. */
 export function unsolvedReadout(ctx: SolveContext): DrawerReadout {
-  return { rates: {}, unmet: [...ctx.unmetDrawers], shortfalls: [...ctx.shortfalls] };
+  return { rates: {}, unmet: [...ctx.unmetDrawers], shortfalls: [...ctx.shortfalls], ports: {} };
 }
 
 /** The read-out at a committed point: every drawer's total, checked against its bounds. */
 export function drawerReadout(ctx: SolveContext, point: StageOutcome): DrawerReadout {
   const rates: Record<string, number> = {};
   const unmet = [...ctx.unmetDrawers];
+  const ports: Record<string, External[]> = {};
   ctx.model.drawers.forEach((drawer, d) => {
-    const total = ctx.drawerTotal(d, point.extents, point.externals);
+    const total = ctx.drawerTotal(d, point.extents, point.flows, point.externals);
     rates[drawer.id] = total;
     if (!ctx.drawerHolds(d, total) && !unmet.includes(drawer.id)) unmet.push(drawer.id);
+    if (drawer.kind === "BUFFER") {
+      // Each port of the buffer and the flow on its edges there: what each of its wires carries.
+      ports[drawer.id] = drawer.links.map((ref) => {
+        let rate = 0;
+        for (const e of drawer.flowEdges) {
+          const edge = ctx.model.edges[e]!;
+          const at = ctx.refOf(ref.input ? edge.dstPort : edge.srcPort);
+          if (at.node === ref.node && at.port === ref.port && at.input === ref.input) rate += point.flows[e]!;
+        }
+        return { port: ref, ratePerSecond: rate };
+      });
+    }
   });
-  return { rates, unmet, shortfalls: [...ctx.shortfalls] };
+  return { rates, unmet, shortfalls: [...ctx.shortfalls], ports };
 }
 
 /**
@@ -220,9 +233,8 @@ export function buildSolutionView(ctx: SolveContext, spares: Leftover[] = []): S
     machineCounts[md.spec.id] = (point.extents[m]! * md.durTicks) / TICKS_PER_SECOND;
     if (Number.isNaN(ctx.pinnedExtent[m]!) && point.extents[m]! <= tol) unneeded.push(md.spec.id);
   });
-  model.edges.forEach((edge, e) => {
-    edgeFlowsPerSecond[edge.id] = point.flows[e]!;
-  });
+  // The plan's own wires only: a buffer's edges are the solver's, read out per port on the drawer.
+  for (let e = 0; e < model.drawnEdges; e++) edgeFlowsPerSecond[model.edges[e]!.id] = point.flows[e]!;
   const gatedSources: External[] = [];
   const gatedSinks: External[] = [];
   let externalQuantity = 0;
@@ -277,7 +289,7 @@ export function solvePiece(input: SolveInput, ext: CoreExtensions = {}): Piece {
     answer: { kind: "failed", failure, notes: [...notes], drawers },
   });
   if (first.model.machines.length === 0) {
-    return failed(first, note("EMPTY_GRAPH"), [], { rates: {}, unmet: [], shortfalls: [] });
+    return failed(first, note("EMPTY_GRAPH"), [], { rates: {}, unmet: [], shortfalls: [], ports: {} });
   }
   if (!first.anchored) {
     // Idle, not broken: wiring, nothing sets the plan's size.

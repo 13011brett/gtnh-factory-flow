@@ -74,10 +74,10 @@ export interface PoolIn {
   exact: boolean;
 }
 
-export type DrawerKind = "SOURCE" | "PRODUCT" | "BYPRODUCT" | "TRASH";
+export type DrawerKind = "SOURCE" | "PRODUCT" | "BYPRODUCT" | "TRASH" | "BUFFER";
 export type DrawerRule = "ANY" | "AT_LEAST" | "EXACTLY" | "AT_MOST";
 
-/** SOURCE links point at INPUT ports, every other kind at OUTPUT ports. */
+/** SOURCE links point at INPUT ports, every other kind at OUTPUT ports; a BUFFER's `takers` are INPUT ports. */
 export interface DrawerLink {
   node: Id;
   port: number;
@@ -93,6 +93,11 @@ export interface DrawerIn {
   /** Units/s (L/s for fluids); meaningless under ANY. */
   rate: number;
   links: DrawerLink[];
+  /**
+   * A BUFFER's users: the input ports it feeds (its `links` are the output ports feeding it). Absent or empty for
+   * every other kind, as in the mod's dump (`SolveInputJson` writes it only when non-empty).
+   */
+  takers?: DrawerLink[];
 }
 
 export interface PortRef {
@@ -196,6 +201,11 @@ export interface DrawerReadout {
   /** Drawers whose rule the point does not keep. */
   unmet: Id[];
   shortfalls: Shortfall[];
+  /**
+   * Per buffer, each port linked to it and what it puts in (a maker's output) or takes out (a user's input), makers
+   * first, in link order: what each of its wires carries. Empty for a plan with no buffer.
+   */
+  ports: Record<Id, External[]>;
 }
 
 export interface SolutionView {

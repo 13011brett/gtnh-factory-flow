@@ -91,7 +91,7 @@ export class SolveContext {
       const row = this.model.drawers[i]!;
       if (row.rule === "ANY") continue;
       const asksForFlow = row.rule !== "AT_MOST" && row.rate > 0;
-      const hasTerms = row.extentMachines.length > 0 || row.externalPorts.length > 0;
+      const hasTerms = row.extentMachines.length > 0 || row.flowEdges.length > 0 || row.externalPorts.length > 0;
       if (!hasTerms) {
         // Nothing reaches it: a rule asking for flow cannot be met and would only break the plan.
         if (asksForFlow) {
@@ -131,11 +131,17 @@ export class SolveContext {
     return false;
   }
 
-  /** A drawer's total at a point: unwired links' machine rates plus its wired links' externals. */
-  drawerTotal(drawer: number, extents: ArrayLike<number>, externals: ArrayLike<number>): number {
+  /** A drawer's total at a point: unwired links' machine rates plus its wired links' externals; a buffer's, its edges' flows. */
+  drawerTotal(
+    drawer: number,
+    extents: ArrayLike<number>,
+    flows: ArrayLike<number>,
+    externals: ArrayLike<number>,
+  ): number {
     const row = this.model.drawers[drawer]!;
     let total = 0;
     for (let i = 0; i < row.extentMachines.length; i++) total += extents[row.extentMachines[i]!]! * row.extentQty[i]!;
+    for (const e of row.flowEdges) total += flows[e]!;
     for (const p of row.externalPorts) total += externals[p]!;
     return total;
   }

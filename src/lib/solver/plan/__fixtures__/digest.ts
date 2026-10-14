@@ -41,6 +41,7 @@ const readout = (d: DrawerReadout) => ({
     limitingDrawers: setSorted(s.limitingDrawers),
     limitingGroups: s.limitingGroups,
   })),
+  ports: Object.fromEntries(Object.entries(d.ports).map(([id, list]) => [id, list.map(external)])),
 });
 const bearer = (b: Bearer) => ({
   anchor: port(b.anchor),

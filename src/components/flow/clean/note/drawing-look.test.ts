@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import type { FactoryAnnotation } from "@/lib/model/types";
 import {
   DRAWING,
-  K,
   arrowEnds,
   arrowFromEnds,
   arrowHead,
@@ -47,7 +46,7 @@ describe("drawing look", () => {
   });
 
   it("sizes are the mod's times the card scale", () => {
-    expect(DRAWING.line).toBeCloseTo(2 * K);
+    expect(DRAWING.line).toBe(2);
     expect(withAlpha("#ffffff", 20)).toBe("#ffffff14");
   });
 
@@ -72,8 +71,8 @@ describe("drawing look", () => {
   });
 
   it("an arrow is two mod px thick with one head unless it says otherwise", () => {
-    expect(arrowStyle({})).toEqual({ width: 2 * K, both: false });
-    expect(arrowStyle({ arrowWidth: 4, arrowHeads: "both" })).toEqual({ width: 4 * K, both: true });
+    expect(arrowStyle({})).toEqual({ width: 2, both: false });
+    expect(arrowStyle({ arrowWidth: 4, arrowHeads: "both" })).toEqual({ width: 4, both: true });
   });
 
   it("choosing a fill keeps a legacy mark; marks and fill are separate choices", () => {

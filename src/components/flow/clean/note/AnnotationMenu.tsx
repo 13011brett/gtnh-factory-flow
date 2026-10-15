@@ -5,7 +5,7 @@ import { BoardMenu, MenuLine, MenuRow } from "../menus/BoardMenu";
 import { GT_NODE_COLORS } from "../../node-colors";
 import type { FactoryAnnotation, FactoryNodeColorTag } from "@/lib/model/types";
 import { useFactoryStore } from "@/store/factory-store";
-import { K, arrowStyle, boxStyleWith, drawingLook } from "./drawing-look";
+import { arrowStyle, boxStyleWith, drawingLook } from "./drawing-look";
 import { NOTE_COLOR_MENU } from "./note-model";
 
 type View = "main" | "colour" | "fill" | "border" | "marks" | "thickness" | "heads";
@@ -37,7 +37,7 @@ export function AnnotationMenu({
   const look = drawingLook(annotation);
   const arrow = annotation.kind === "arrow";
   const arrowLook = arrowStyle(annotation);
-  const thick = Math.round(arrowLook.width / K);
+  const thick = Math.round(arrowLook.width);
   const word = (s: string) => s[0].toUpperCase() + s.slice(1);
 
   if (view === "colour") {

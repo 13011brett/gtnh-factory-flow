@@ -1,6 +1,6 @@
 /*
  * Groups on a plan board (docs/groups.md; the mod's GroupPaint draws the same): the clean card's flat, square look
- * with 1 px chrome. Sizes are the mod's board px times 380/320 (group-model.ts GROUP), colours come in as custom
+ * with 1 px chrome. Sizes are the mod's board px one to one (group-model.ts GROUP), colours come in as custom
  * properties computed with mixHex. The body is painted by the floor layer under the wires (BoardFloors); the frame
  * node draws the border, the title strip and the grips, and lets clicks through everywhere else.
  */

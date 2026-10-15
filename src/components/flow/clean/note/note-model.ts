@@ -6,36 +6,28 @@ import { GT_NODE_COLORS } from "../../node-colors";
 /**
  * The mod's sticky note (`ui/note/NoteCard`, `NoteColors`, `NoteText`) as pure
  * functions. A note is the website's text annotation (kind "text", a colour tag,
- * a font size), so plans keep carrying it both ways. The mod's chrome numbers
- * are in its board pixels (card 320 wide); the website's card is 380 wide, so
- * each is scaled by 380/320 and rounded. The note's own size is NOT scaled: the
- * mod stores it in the same numbers the website does.
+ * a font size), so plans keep carrying it both ways. Its chrome numbers are the
+ * mod's board pixels one to one: the board places and sizes everything as the
+ * mod does (a card 320 wide), so a note looks the same in both.
  */
-
-const SCALE = 380 / 320;
-const px = (modPixels: number) => Math.round(modPixels * SCALE);
 
 export const NOTE = {
   /** Folded corner, at most (shrinks on a small note). */
-  fold: px(14),
+  fold: 14,
   /** How deep the edges that resize reach in, in screen px (kept however far out the board is). */
-  edge: px(10),
+  edge: 10,
   /** The three keys: side, gap between the two on the right, inset from the edge. */
-  key: px(9),
+  key: 9,
   keyGap: 2,
-  keyInset: px(3),
+  keyInset: 3,
   /** The glued strip along the top, where the keys sit. */
-  band: px(11),
+  band: 11,
   /** The text's margin from the edges, and its first line's top. */
-  pad: px(7),
-  textTop: px(11) + px(4),
-  /**
-   * The note's own units (the mod and the website share them): new size, smallest, text sizes and their step. The mod's
-   * new note is 180 by 120 beside a 320 card (0.56 of its width); the website's card is 380, so the same share is 214 by
-   * 143, taken to the 20 px grid.
-   */
-  defaultWidth: 220,
-  defaultHeight: 140,
+  pad: 7,
+  textTop: 11 + 4,
+  /** The note's own units (the mod and the website share them): new size, smallest, text sizes and their step. */
+  defaultWidth: 180,
+  defaultHeight: 120,
   minWidth: 100,
   minHeight: 40,
   defaultFont: 14,
@@ -45,9 +37,9 @@ export const NOTE = {
   defaultColor: "yellow" as FactoryNodeColorTag,
   /** A press let go within this many screen px is a click, not a carry. */
   slop: 3,
-  /** The text at the default size in website px: 10 high (the mod's 9 at its pixel font, a touch more for the app face), a 13 px line (the mod's 11). */
-  glyphAtDefault: 10,
-  lineAtDefault: px(11),
+  /** The text at the default size in board px: 9 high (the mod's pixel font), an 11 px line, as the mod's. */
+  glyphAtDefault: 9,
+  lineAtDefault: 11,
 } as const;
 
 /** The colours the note menu offers, in the mod's order, with its names. */

@@ -28,13 +28,13 @@ here, so a zone only arrives with an imported plan.
 | Field | Kinds | Meaning |
 | --- | --- | --- |
 | `id`, `kind` | all | `box`, `zone`, `arrow`, `text`, `image` |
-| `position`, `size` | all | top-left and bounding box, website board px (the mod scales by 320/380 like cards). An arrow's size may be 0 on one axis: a level arrow |
+| `position`, `size` | all | top-left and bounding box, board px (the website's and the mod's are one to one since 2026-10-15). An arrow's size may be 0 on one axis: a level arrow |
 | `colorTag` | all | one of the 22 colour tags; absent = yellow |
 | `text` | text, image | note body; an image's caption (kept, not shown) |
 | `fontSize` | text | 8..96, 14 default |
 | `arrowDirection` | arrow | `down-right` (default), `down-left`, `up-right`, `up-left`: tail to head across the bounding box. Dragging an end past the other flips it |
 | `arrowHeads` | arrow | `end` (default, a head at the head end) or `both` |
-| `arrowWidth` | arrow | the line's thickness in the mod's board px: 1 thin, 2 normal (default), 4 thick; 1..8 allowed. The website multiplies by 380/320 |
+| `arrowWidth` | arrow | the line's thickness in board px: 1 thin, 2 normal (default), 4 thick; 1..8 allowed |
 | `points` | zone | closed outline, vertices relative to `position` (3 or more) |
 | `imageUrl` | image | kept, unused |
 | `style.border` | box, zone | `solid` (default), `dashed`, `none` (a plan can carry it; the menu offers solid and dashed) |
@@ -42,15 +42,16 @@ here, so a zone only arrives with an imported plan.
 | `style.fill` | box, zone | `tint` (default), `solid`, `none`; the legacy mark names (`dots`, `grid`, `graph`, `ruled`, `hatch`) mean tint wearing that mark, `paper` means solid. Choosing a fill from the menu keeps a legacy mark |
 | `style.marks` | box, zone | `none`, `dots`, `grid`, `graph`, `ruled`, `hatch` |
 | `style.fillTheme` | box, zone | a textured paper; not drawn, kept in the data (a menu colour pick drops it) |
-| `pocketId` | all | the board it lives on; plans flatten boards on import, so the mod does not keep it |
+| `pocketId` | all | the group (board) it lives in, its position measured from that group's frame (docs/design/groups.md) |
 
 Nothing here takes part in the solve, the wiring or Arrange. The website keeps unknown fields; the mod keeps the ones
 above. Old builds ignore `arrowHeads` and `arrowWidth` and draw a normal one-headed arrow.
 
 ## The look (the clean card's: flat, square, 1 px chrome, Monocraft)
 
-Colours are the colour tag's swatch (`GT_NODE_COLORS` / `NoteColors.SWATCH`, same 22). Sizes are in the mod's board
-px; the website multiplies by 380/320 (1.1875) so a plan looks the same in both.
+Colours are the colour tag's swatch (`GT_NODE_COLORS` / `NoteColors.SWATCH`, same 22). Sizes are in board px, the
+website's and the mod's one to one since the website's board draws the mod's card (2026-10-15; its `drawing-look.ts`
+`DRAWING`).
 
 - **Box**: a square rectangle. Border 2 px in the border colour (`dashed`: 8 on, 6 off), nothing rounded, no
   shadow. Surface: `tint` is the fill colour at 8% alpha (`0x14`), `solid` at 28% (`0x47`), flat; `none` is empty.
@@ -91,8 +92,9 @@ opens a short list with the current choice ticked; a pick is one undoable step. 
 ## Plan JSON both ways
 
 Import keeps every field above (mod `importer/FfPlanParser` to `FfConverter.placeNotes`); export writes them back
-(`library/PlanExport.note`). Positions and sizes are scaled by the card scale and snapped to whole cells (an arrow's
-0 axis stays 0); zone points are scaled with them. The mod saves them as a `kind` on its note
+(`library/PlanExport.note`). Positions are board px one to one and sizes are snapped to whole 20 px cells (an arrow's
+0 axis stays 0); zone points are as they are. Shared plans carry each drawing exactly, with the game's data on it
+(docs/design/cloud-live.md, Game mapping). The mod saves them as a `kind` on its note
 (`data/flowchart/Note`), so older saves are all text.
 
 ## Where it is (code)

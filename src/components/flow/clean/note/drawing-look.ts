@@ -9,19 +9,18 @@ import { GT_NODE_COLORS } from "../../node-colors";
 /**
  * How the drawn annotations (box, zone, arrow, image) look on a plan board: the clean card's flat, square,
  * thin-chrome style, identical to the mod's `ui/note/DrawingPaint` (docs/annotations.md). Sizes are the mod's board
- * px times `K`, the same factor as the cards (380 against 320).
+ * px one to one, as the cards are (320 wide on both).
  */
-export const K = 380 / 320;
 
 export const DRAWING = {
   /** Border and arrow line, 2 mod px. */
-  line: 2 * K,
+  line: 2,
   /** Dashes: 8 on, 6 off, in mod px. */
-  dashOn: 8 * K,
-  dashOff: 6 * K,
+  dashOn: 8,
+  dashOff: 6,
   /** Arrowhead: length and full width. */
-  headLength: 14 * K,
-  headWidth: 10 * K,
+  headLength: 14,
+  headWidth: 10,
   /** Surface alphas, in 256ths: a tint and a solid. */
   tintAlpha: 0x14,
   solidAlpha: 0x47,
@@ -159,7 +158,7 @@ export function arrowStyle(annotation: Pick<FactoryAnnotation, "arrowWidth" | "a
   both: boolean;
 } {
   const mod = annotation.arrowWidth && annotation.arrowWidth > 0 ? annotation.arrowWidth : 2;
-  return { width: mod * K, both: annotation.arrowHeads === "both" };
+  return { width: mod, both: annotation.arrowHeads === "both" };
 }
 
 type Pt = { x: number; y: number };

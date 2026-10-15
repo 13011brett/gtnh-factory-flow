@@ -107,7 +107,7 @@ describe("StickyNote", () => {
   });
 
   it("hides its keys when they do not fit", () => {
-    const { container } = renderNote(note({ size: { width: 40, height: 20 } }));
+    const { container } = renderNote(note({ size: { width: 30, height: 20 } }));
     expect(container.querySelectorAll(".sn-key")).toHaveLength(0);
   });
 
@@ -160,11 +160,11 @@ describe("StickyNote", () => {
   it("the keys: bigger and smaller text by the website's step, delete at the top left", () => {
     const { container } = renderNote(note({ fontSize: 20 }));
     const root = container.querySelector<HTMLElement>(".sn")!;
-    // 180 wide: bigger at 180 - 4 - 11 = 165, smaller 13 + 2 further left; delete at x 4, y 1, 11 square.
-    click(root, 170, 6);
+    // 180 wide: bigger at 180 - 3 - 9 = 168, smaller 9 + 2 further left (157); delete at x 3, y 1, 9 square.
+    click(root, 172, 6);
     expect(annotations()[0]?.fontSize).toBe(22);
     act(() => useFactoryStore.getState().updateAnnotation("n1", { fontSize: 20 }));
-    click(root, 152, 6);
+    click(root, 161, 6);
     expect(annotations()[0]?.fontSize).toBe(18);
     click(root, 8, 6);
     expect(annotations()).toHaveLength(0);

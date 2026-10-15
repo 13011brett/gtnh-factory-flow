@@ -20,7 +20,7 @@ The mod's `data/flowchart/BoardGroup` (in `Graph.boardGroups`, saved with the pl
 | `name` | `name` | a new group is "Group N" (N = groups on the plan + 1) |
 | `color` | `colorTag` | one of the 22 colour tags (`NoteColors` / `GT_NODE_COLORS`); null = see Colours |
 | `parent` | `parentPocketId` | nesting; null = the board itself |
-| `x`, `y`, `width`, `height` | `position`, `size` | the frame. The mod keeps absolute board px; the JSON's are relative to the parent's frame and scaled by 380/320 (cards' scale) |
+| `x`, `y`, `width`, `height` | `position`, `size` | the frame. The mod keeps absolute board px; the JSON's are relative to the parent's frame, in the same px (one to one since 2026-10-15) |
 | `collapsed` | `expanded` (negated) | collapsed shows the summary card at the frame's corner; absent `expanded` = collapsed, as before |
 | `theme`, `pattern` | `theme`, `pattern` | kept for the round trip, never drawn |
 | member's `group` (on `Node`, `Drawer`, `Note`) | member's `pocketId` | on `nodes[]`, `storages[]`, `annotations[]`; member positions in the JSON are relative to the group's frame corner |
@@ -56,7 +56,7 @@ sticky note's eleven.
 
 ## The look (the clean card's: flat, square, 1 px chrome, Monocraft)
 
-Sizes in the mod's board px (the website multiplies by 380/320, as for annotations). `C` is the group colour (`mix(a, b, t)` is `t` of `a`, as `Hyb.mix`),
+Sizes in board px, the website's and the mod's one to one since 2026-10-15 (the website's `group-model.ts` `GROUP`). `C` is the group colour (`mix(a, b, t)` is `t` of `a`, as `Hyb.mix`),
 `mix(a, b, t)` the float32 mix (`Hyb.mix` / `mixHex`).
 
 - **Open group.** The body is `C` at alpha `0x14` (8%) over the board; a 1 px border `mix(canvas, C, 0.6)`, the
@@ -162,6 +162,6 @@ this the only behaviour. Wires into a group count as wires into its block.
 | Menus | `ui/popup/PickList` everywhere (`GroupCard.openMenu`, `RecipeCard.openActionsAt`, `DrawerCard.ruleRows`, `NoteCard.openMenu`, `BoardCanvas.openBoardMenu`) | `clean/menus/BoardMenu` everywhere (`GroupMenu`, `CardRows`, the drawer's, `NoteMenu`, `AnnotationMenu`, `BoardContextMenu`) |
 | Wires | `ui/canvas/WireLayer` (`groupBox`: a collapsed group's box takes what it hides) | the old minimized board's inert handles (`board-card-in`, `board-card-out`) |
 | Arrange | `BoardCanvas.arrange` (a top-level group is one box), `collectArrange` moves its contents with it | "Keep boards" always on for plan boards |
-| Plan JSON | `importer/FfPlanParser` (`FfPlan.boards`, `boardOf`), `FfConverter.placeBoards`, `library/PlanExport` (`pockets`, `pocketId`) | native |
+| Plan JSON | `importer/FfPlanParser` (`FfPlan.boards`, `boardOf`), `FfConverter.placeBoards`, `library/PlanExport` (`pockets`, `pocketId`); shared plans `cloud/map` (`PlanRead.pockets`, `Fresh`: each place from its pocket's frame, the game's data on each pocket) | native |
 | Minimap | `ui/world/Minimap.drawGroups` via `PlanSnapshot.groups` | `clean/minimap/minimap-scene.ts`, `minimap-draw.ts` |
 | Tests | `GroupsTest`, `GroupsRoundTripTest` (two public posts with boards, and a round trip), `FfPlanParserTest` | `group-model.test.ts` |

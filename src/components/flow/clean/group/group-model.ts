@@ -24,28 +24,27 @@ import { CC } from "../tokens";
  * the frame's top `BOARD_WINDOW_TITLE_HEIGHT` (two cells) is kept clear for the title strip.
  */
 
-/** The mod's board px to the website's (the card scale, as the drawings use). */
-export const K = 380 / 320;
-const px = (mod: number) => Math.round(mod * K);
-
-/** The chrome in website px: the mod's sizes times `K`. */
+/**
+ * The chrome in board px, the mod's sizes one to one: the board places and sizes cards, drawers, notes and groups
+ * as the mod does, so a plan looks the same in both.
+ */
 export const GROUP = {
   /** Title strip height. */
-  strip: px(20),
+  strip: 20,
   /** The collapse key's side, and how far in from the strip's right end. */
-  key: px(14),
-  keyInset: px(3),
+  key: 14,
+  keyInset: 3,
   /** Where the strip's and the summary's text starts. */
-  textInset: px(6),
+  textInset: 6,
   /** The summary's "N machines" line. */
-  line: px(14),
+  line: 14,
   /** A summary row. */
-  row: px(20),
-  icon: px(16),
+  row: 20,
+  icon: 16,
   /** Under the summary's last row. */
-  pad: px(4),
+  pad: 4,
   /** The resize band, either side of the border. */
-  grip: px(4),
+  grip: 4,
   /** The summary card is a card's width. */
   width: RECIPE_NODE_WIDTH,
 } as const;

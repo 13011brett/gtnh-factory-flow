@@ -66,12 +66,14 @@ export async function openInMod(project: FactoryProject, game?: ModGame): Promis
 /**
  * Whether a game is there to take a plan, asked as the Share menu opens: `found` (it answered), `asks` (the
  * browser asks the player before the page may reach this computer, so it is not probed until the row is
- * picked), `none` (nothing answered), or `checking`.
+ * picked), `blocked` (the player told the browser no: the row copies the code instead), `none` (nothing
+ * answered), or `checking`.
  */
 export type ModReach =
   | { kind: "checking" }
   | { kind: "found"; game: ModGame }
   | { kind: "asks" }
+  | { kind: "blocked" }
   | { kind: "none" };
 
 export function useModReach(active: boolean): ModReach {
@@ -86,8 +88,9 @@ export function useModReach(active: boolean): ModReach {
         if (live) setReach({ kind: "asks" });
         return;
       }
-      const game = permission === "denied" ? undefined : await findModGame();
-      if (live) setReach(game ? { kind: "found", game } : { kind: "none" });
+      // Denied still probes: a page served from this computer needs no permission to reach it.
+      const game = await findModGame();
+      if (live) setReach(game ? { kind: "found", game } : permission === "denied" ? { kind: "blocked" } : { kind: "none" });
     })();
     return () => {
       live = false;
@@ -100,6 +103,13 @@ export function useModReach(active: boolean): ModReach {
 
 /** The Share menu's "Open in the mod" row for what the probe found. */
 export function openInModRow(reach: ModReach, project: () => FactoryProject): MenuEntry {
+  if (reach.kind === "blocked") {
+    return {
+      label: "Open in the mod",
+      tip: "Your browser keeps this page from the game. This copies the plan code for the planner's + tab.",
+      onSelect: () => void copyCodeForMod(project()),
+    };
+  }
   const ready = reach.kind === "found" || reach.kind === "asks";
   return {
     label: "Open in the mod",
@@ -107,4 +117,20 @@ export function openInModRow(reach: ModReach, project: () => FactoryProject): Me
     tip: ready ? "Send this plan to the game. It asks before it opens it." : "Start the game with GTNH Planner installed",
     onSelect: () => void openInMod(project(), reach.kind === "found" ? reach.game : undefined),
   };
+}
+
+/** The fallback when the browser keeps the page from the game: the code, for the planner's + tab. */
+async function copyCodeForMod(project: FactoryProject): Promise<void> {
+  try {
+    const copied = await copyToClipboard(await encodePlanCode(project));
+    flashNotice(
+      copied ? "info" : "warn",
+      copied
+        ? "The plan code is copied. Paste it in the planner's + tab."
+        : "Couldn't copy the plan code. Use Copy plan code and paste it in the planner's + tab.",
+    );
+  } catch (error) {
+    console.error(error);
+    flashNotice("warn", "Couldn't write the plan out.");
+  }
 }

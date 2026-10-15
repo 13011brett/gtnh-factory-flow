@@ -218,6 +218,26 @@ describe("the mod's top bar", () => {
     expect(shareRow("Open in the mod").getAttribute("aria-disabled")).toBeNull();
   });
 
+  it("a browser told no still reaches a game it may, and else the row copies the code for the + tab", async () => {
+    modLink.localNetworkPermission.mockResolvedValue("denied");
+    modLink.findModGame.mockResolvedValue({ port: 25640, version: "0.2.0" });
+    renderBar();
+    await openShare();
+    expect(shareRow("Open in the mod").getAttribute("aria-disabled")).toBeNull();
+    cleanup();
+    modLink.findModGame.mockResolvedValue(undefined);
+    renderBar();
+    await openShare();
+    const row = shareRow("Open in the mod");
+    expect(row.getAttribute("aria-disabled")).toBeNull();
+    expect(row.getAttribute("data-tip")).toContain("copies the plan code");
+    await act(async () => {
+      fireEvent.click(row);
+    });
+    await vi.waitFor(() => expect(clipboard.copyToClipboard).toHaveBeenCalledWith("gtnh1.TEST"));
+    expect(modLink.sendPlanToMod).not.toHaveBeenCalled();
+  });
+
   it("Copy plan link copies this site's link with the plan after #p=, Copy plan code the code alone", async () => {
     renderBar();
     await openShare();

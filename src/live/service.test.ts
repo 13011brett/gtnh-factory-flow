@@ -381,7 +381,11 @@ describe("the live service", { timeout: 30_000 }, () => {
     expect(Number((await storedRow(designId)).seq)).toBe(0);
 
     const second = await startService({ journalDir: first.journalDir });
-    await until(async () => Number((await storedRow(designId)).seq) === 3);
+    // Stored and let go: a timed flush may store it first with the lease still held.
+    await until(async () => {
+      const stored = await storedRow(designId);
+      return Number(stored.seq) === 3 && stored.live_lease_until === null;
+    });
     const row = await storedRow(designId);
     expect((row.plan.tasks as Array<{ title: string }>)[0]!.title).toBe("Edit 3");
     expect(row.live_lease_until).toBeNull();

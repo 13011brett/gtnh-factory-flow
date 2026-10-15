@@ -31,8 +31,6 @@ export function PlanShareDialog({ onClose }: { onClose: () => void }) {
   );
   const removeDesign = useDesignStore((state) => state.removeDesign);
   const me = useLiveSession((state) => state.me);
-  const liveDoc = useLiveSession((state) => state.doc);
-  const liveMembers = useLiveSession((state) => state.members);
 
   const sharedRef = design?.cloud;
   const remoteId = sharedRef?.designId ?? design?.id;
@@ -57,11 +55,11 @@ export function PlanShareDialog({ onClose }: { onClose: () => void }) {
       return;
     }
     let cancelled = false;
-    setLoadError(undefined);
     fetchPlanMembers(remoteId, ownerId).then(
       (loaded) => {
         if (!cancelled) {
           setInfo(loaded);
+          setLoadError(undefined);
         }
       },
       (error: unknown) => {
@@ -75,13 +73,17 @@ export function PlanShareDialog({ onClose }: { onClose: () => void }) {
     };
   }, [user, remoteId, ownerId, synced]);
 
-  // The live room hears sharing changes first.
+  // The live room hears sharing changes first (someone leaving, another tab).
   const ownLiveDoc = me && remoteId ? `${ownerId ?? me.id}:${remoteId}` : undefined;
-  useEffect(() => {
-    if (ownLiveDoc && liveDoc === ownLiveDoc) {
-      setInfo((current) => (current ? { ...current, members: liveMembers } : current));
-    }
-  }, [liveDoc, liveMembers, ownLiveDoc]);
+  useEffect(
+    () =>
+      useLiveSession.subscribe((state, previous) => {
+        if (ownLiveDoc && state.doc === ownLiveDoc && state.members !== previous.members) {
+          setInfo((current) => (current ? { ...current, members: state.members } : current));
+        }
+      }),
+    [ownLiveDoc],
+  );
 
   const members = info?.members ?? [];
   const full = members.length >= LIBRARY_MAX_MEMBERS;
@@ -267,12 +269,9 @@ function AccountSearch({
   useEffect(() => {
     const prefix = query.trim();
     if (!prefix) {
-      setResults(undefined);
-      setSearching(false);
       return;
     }
     const controller = new AbortController();
-    setSearching(true);
     const timer = window.setTimeout(() => {
       searchAccounts(prefix, controller.signal).then(
         (accounts) => {
@@ -295,9 +294,10 @@ function AccountSearch({
     };
   }, [query]);
 
+  const typed = query.trim();
   const shown = useMemo(
-    () => (results ?? []).filter((account) => !exclude.has(account.id)),
-    [results, exclude],
+    () => (typed ? (results ?? []) : []).filter((account) => !exclude.has(account.id)),
+    [typed, results, exclude],
   );
 
   return (
@@ -309,14 +309,17 @@ function AccountSearch({
         id="plan-share-search"
         ref={inputRef}
         value={query}
-        onChange={(event) => setQuery(event.target.value)}
+        onChange={(event) => {
+          setQuery(event.target.value);
+          setSearching(Boolean(event.target.value.trim()));
+        }}
         placeholder="Search by name"
         autoComplete="off"
         maxLength={24}
         className="h-8 w-full rounded border border-line-strong bg-surface-sunken px-2 text-sm outline-none focus:border-cyan-600"
       />
       {error ? <p className="text-xs text-red-400">{error}</p> : null}
-      {query.trim() && !searching && results && shown.length === 0 ? (
+      {typed && !searching && results && shown.length === 0 ? (
         <p className="text-xs text-fg-muted">No one by that name.</p>
       ) : null}
       {shown.length > 0 ? (
@@ -329,6 +332,7 @@ function AccountSearch({
                 onClick={() => {
                   onPick(account);
                   setQuery("");
+                  setResults(undefined);
                 }}
                 className="flex w-full items-center gap-2 rounded px-1.5 py-1 text-left text-sm hover:bg-surface-raised disabled:opacity-50"
               >

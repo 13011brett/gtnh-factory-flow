@@ -26,6 +26,7 @@ import { forgetSharedPlanId, readSharedPlanId, syncSharedPlanAddress } from "@/l
 import { useIsCompactViewport } from "@/lib/compact-view";
 import { startLibrarySync } from "@/lib/library/library-sync";
 import { startDesignTabSync } from "@/store/design-store";
+import { startLiveSessions } from "@/store/live-session";
 import { useLibraryTab } from "@/lib/library/library-tab";
 import { useWelcomeTab } from "@/lib/welcome/welcome-tab";
 import { AppHeader } from "./AppHeader";
@@ -37,6 +38,10 @@ import { SharedAddressSync } from "./SharedAddressSync";
 import { PublicViewBar } from "./community/PublicViewBar";
 import { ViewOnlyNotice } from "./community/ViewOnlyNotice";
 import { TabConflictNotice } from "./TabConflictNotice";
+import { LiveNotice } from "./live/LiveNotice";
+import { TaskBoard, TaskFaceController } from "./tasks/TaskBoard";
+import { isLiveConfigured } from "@/lib/live/live-config";
+import { usePlanFace } from "@/lib/tasks/task-view";
 import { BlueprintSaveDialog } from "./BlueprintSaveDialog";
 import { PowerSourceOverlay } from "./PowerSourceOverlay";
 import { FactoryFlow } from "./flow/FactoryFlow";
@@ -203,6 +208,10 @@ export function FactoryPlannerApp() {
   // Other browser tabs of the planner share this library: keep the open
   // design current with their saves (design-store.ts, canvasBase).
   useEffect(() => startDesignTabSync(), []);
+
+  // A cloud plan on the canvas is edited live with everyone in it. Nothing at
+  // all without NEXT_PUBLIC_LIVE_URL (live-session.ts).
+  useEffect(() => startLiveSessions(), []);
 
   // Recorded here rather than in the resource panel: the charts must not lose
   // their history because the right column happened to be closed, and every
@@ -373,12 +382,17 @@ function BoardColumn() {
   const publicView = useDesignStore((state) => state.publicView);
   // The mod's bar renames in the tab menu and describes in the share box: no identity strip on a desktop board.
   const isCompact = useIsCompactViewport();
+  // The task board is the plan's other face, over the board like the
+  // Library. Only with live plans configured (tasks come with them).
+  const face = usePlanFace();
+  const showTasks = TASKS_ENABLED && face === "tasks" && !covering;
 
   return (
     <div className="grid h-full min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)]">
       <div className="min-w-0">
         {covering ? null : publicView ? <PublicViewBar key={publicView.id} /> : null}
         {covering ? null : <TabConflictNotice />}
+        {covering ? null : <LiveNotice />}
       </div>
       {/*
         Welcome COVERS the board rather than replacing it: unmounting the board
@@ -386,6 +400,12 @@ function BoardColumn() {
       */}
       <div className="relative min-h-0">
         <FactoryFlow />
+        {TASKS_ENABLED ? <TaskFaceController /> : null}
+        {showTasks ? (
+          <div className="absolute inset-0 z-30">
+            <TaskBoard />
+          </div>
+        ) : null}
         {covering === "welcome" ? (
           <div className="absolute inset-0 z-40">
             <WelcomePage />
@@ -551,6 +571,9 @@ export function CompactWorkspace({ workspace, onLoadDatasetVersion }: WorkspaceP
     </main>
   );
 }
+
+/** The task board comes with live plans; without them the app is exactly as before. */
+const TASKS_ENABLED = isLiveConfigured();
 
 /**
  * What a closed side column leaves behind: a 26px rail with the button that

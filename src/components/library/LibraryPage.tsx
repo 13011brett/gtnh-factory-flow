@@ -1,6 +1,6 @@
 "use client";
 
-import { Bookmark, Factory, Folder, FolderPlus, LayoutGrid, Star } from "lucide-react";
+import { Bookmark, Factory, Folder, FolderPlus, LayoutGrid, Star, Users } from "lucide-react";
 import {
   useCallback,
   useEffect,
@@ -28,6 +28,9 @@ import { ArmedMenuItem, LibraryMenu, MenuHeading, MenuItem, MenuRule } from "./l
 import { Face, InlineName, LibraryTile } from "./LibraryTile";
 import { SetupsGrid } from "./SetupsGrid";
 import { SetupsFilterBar, useSetupFilters } from "./SetupsFilterBar";
+import { SharedWithMe } from "@/components/live/SharedWithMe";
+import { isLiveConfigured } from "@/lib/live/live-config";
+import { useCloudLibraryStore } from "@/lib/library/cloud-library";
 import { parsePlanSearch } from "@/lib/community/search-query";
 
 /**
@@ -58,7 +61,10 @@ const SORTS: { value: SortKey; label: string }[] = [
 
 export function LibraryPage() {
   const library = useLibraryTab();
-  const designs = useDesignStore((state) => state.designs);
+  const everyDesign = useDesignStore((state) => state.designs);
+  // Copies of plans shared with us live under Shared with me, not among ours.
+  const designs = useMemo(() => everyDesign.filter((design) => !design.cloud), [everyDesign]);
+  const sharedCount = useCloudLibraryStore((state) => state.shared?.length);
   const folders = useDesignStore((state) => state.folders);
   const switchToDesign = useDesignStore((state) => state.switchToDesign);
   const copyDesign = useDesignStore((state) => state.copyDesign);
@@ -96,6 +102,7 @@ export function LibraryPage() {
   /** The design whose preview page is up, if any. */
   const [detailId, setDetailId] = useState<string>();
   const { posts: myPosts, signedIn } = useMyPosts();
+  const showShared = isLiveConfigured() && signedIn;
   const savedIds = useSavedSetups();
 
   // The library has the search's voice for its pages: a page turned for
@@ -419,6 +426,9 @@ export function LibraryPage() {
                 </option>
               ))}
               <option value="new">New collection…</option>
+              {showShared ? (
+                <option value="shared">Shared with me ({sharedCount ?? 0})</option>
+              ) : null}
               <option value="public">Public setups</option>
               <option value="saved">Saved ({savedIds.length})</option>
             </select>
@@ -500,6 +510,16 @@ export function LibraryPage() {
               <span className="whitespace-nowrap text-[12px] font-bold">New collection</span>
             </button>
 
+            {showShared ? (
+              <RailItem
+                icon={Users}
+                label="Shared with me"
+                count={sharedCount}
+                selected={library.view.kind === "shared"}
+                onClick={() => setLibraryView({ kind: "shared" })}
+              />
+            ) : null}
+
             <div className="mx-1 my-2 border-t-2 border-[#23262d] compact:mx-2 compact:my-0 compact:h-4 compact:border-l compact:border-t-0" />
             <RailItem
               icon={Factory}
@@ -519,7 +539,9 @@ export function LibraryPage() {
 
           {/* THE PAGE. */}
           <section className="flex min-h-0 min-w-0 flex-1 flex-col">
-            {library.view.kind === "public" ? (
+            {library.view.kind === "shared" ? (
+              <SharedWithMe />
+            ) : library.view.kind === "public" ? (
               <SetupsGrid scope="network" presetQuery={library.view.search} />
             ) : library.view.kind === "saved" ? (
               <SetupsGrid scope="saved" />
@@ -996,6 +1018,7 @@ function railValue(view: ReturnType<typeof useLibraryTab>["view"]): string {
     case "saved":
     case "favorites":
     case "all":
+    case "shared":
       return view.kind;
   }
 }
@@ -1004,7 +1027,7 @@ function railView(value: string): Parameters<typeof setLibraryView>[0] {
   if (value.startsWith("folder:")) {
     return { kind: "folder", folderId: value.slice("folder:".length) };
   }
-  if (value === "public" || value === "saved" || value === "favorites") {
+  if (value === "public" || value === "saved" || value === "favorites" || value === "shared") {
     return { kind: value };
   }
   return { kind: "all" };

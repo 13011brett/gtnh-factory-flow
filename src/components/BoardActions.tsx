@@ -24,6 +24,13 @@ import { useFactoryStore } from "@/store/factory-store";
 import { copyToClipboard } from "@/lib/clipboard";
 import { PastePlanDialog } from "./export/PastePlanDialog";
 import { openPlanFile } from "@/lib/import-export/open-plan-file";
+import { isLiveConfigured } from "@/lib/live/live-config";
+
+/**
+ * With live plans, Share invites people into a plan (the plan bar) and
+ * posting a copy to the library is Publish; without, posting is Share.
+ */
+const PUBLISH_LABEL = isLiveConfigured() ? "Publish to the library" : "Share this setup";
 
 interface BoardActionsProps {
   /**
@@ -74,11 +81,12 @@ export function BoardActions({
   // trap, so the button waits until you are looking at the thing it posts.
   const isWelcomeCoveringBoard = useWelcomeTab().active;
   const canShare = !isWelcomeCoveringBoard && project.nodes.length > 0;
+  const shareWord = isLiveConfigured() ? "Publish" : "Share";
   const shareTitle = isWelcomeCoveringBoard
-    ? "Share: open a design tab first"
+    ? `${shareWord}: open a design tab first`
     : project.nodes.length === 0
-      ? "Share: build something first"
-      : "Share";
+      ? `${shareWord}: build something first`
+      : PUBLISH_LABEL;
 
   const selectedCardCount = selectedBoardIds.length;
   const diagnosticsLabel =
@@ -216,7 +224,7 @@ export function BoardActions({
         {onShare ? (
           <MenuAction
             icon={Share2}
-            label="Share this setup"
+            label={PUBLISH_LABEL}
             disabled={!canShare}
             onClick={() => {
               onShare();
@@ -314,7 +322,7 @@ export function BoardActions({
               {onShare ? (
                 <ExportMenuItem
                   icon={Share2}
-                  label="Share this setup"
+                  label={PUBLISH_LABEL}
                   title={shareTitle}
                   disabled={!canShare}
                   onClick={() => {

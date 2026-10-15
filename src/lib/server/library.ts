@@ -1,12 +1,44 @@
 import type { EntryIcon } from "@/lib/model/types";
 import type { RemoteDesignMeta, RemoteFolder } from "@/lib/library/sync-types";
-import { parseEntryIcon } from "./community";
+import type { SupabaseClient } from "@supabase/supabase-js";
+import { isMissingColumnError, parseEntryIcon } from "./community";
 
 /** Everything the list endpoint returns about a design: no plan. */
 export const DESIGN_META_COLUMNS =
   "id,name,icon,folder_id,closed,favorite,sort_order,community_plan_id,created_at,updated_at,plan_updated_at,deleted_at";
 
 export const FOLDER_COLUMNS = "id,name,created_at,updated_at,deleted_at";
+
+/** What the live service keeps on a design (supabase/migrations/2026-10-14-cloud-live.sql). */
+export const DESIGN_LIVE_COLUMNS = "seq,live_lease_until";
+
+export interface DesignLiveRow extends DesignRow {
+  seq?: number | string | null;
+  live_lease_until?: string | null;
+  plan?: unknown;
+}
+
+/**
+ * One design's row, with its live columns and optionally its plan. A
+ * database the cloud migration has not reached yet answers without the live
+ * columns (`cloudColumns` false), so the library keeps working meanwhile.
+ */
+export async function readDesignRow(
+  db: SupabaseClient,
+  ownerId: string,
+  designId: string,
+  withPlan: boolean,
+): Promise<{ data: DesignLiveRow | null; error: { code?: string; message?: string } | null; cloudColumns: boolean }> {
+  const plan = withPlan ? ",plan" : "";
+  const read = (columns: string) =>
+    db.from("library_designs").select(columns).eq("user_id", ownerId).eq("id", designId).maybeSingle();
+  const first = await read(`${DESIGN_META_COLUMNS},${DESIGN_LIVE_COLUMNS}${plan}`);
+  if (first.error && isMissingColumnError(first.error)) {
+    const legacy = await read(`${DESIGN_META_COLUMNS}${plan}`);
+    return { data: legacy.data as DesignLiveRow | null, error: legacy.error, cloudColumns: false };
+  }
+  return { data: first.data as DesignLiveRow | null, error: first.error, cloudColumns: true };
+}
 
 export interface DesignRow {
   id: string;

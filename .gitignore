@@ -66,3 +66,6 @@ next-env.d.ts
 public/highs.wasm
 public/highs.js
 tools/parity/out/
+
+# the live service bundle (npm run build:live)
+/dist-live/

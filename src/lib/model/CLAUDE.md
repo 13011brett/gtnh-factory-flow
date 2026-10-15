@@ -61,3 +61,14 @@ cans to trash drawers, stored setup rules dropped, cross-form wires dropped). Un
 are stripped by the Zod schema on import, paste and server paths, not here; IndexedDB
 loads are not schema-parsed. Old plans must keep opening: add a migration rather than
 breaking a schema.
+
+## Cloud plan additions (schemas.ts)
+
+- `gtnhplanner` on the project, nodes, storages, edges and annotations is the in-game
+  planner's own data: opaque here, kept exactly as written through every edit, at most
+  64 KB a thing. Never strip it or rebuild these things field by field.
+- `primaryView` ("plan" or "tasks") and the task board: `tasks`, `taskItems` (checklist
+  lines, their own things so two people can tick two at once) and `taskComments`, bounded
+  by `PLAN_TASK_LIMITS`. Live editing treats each as a collection (`src/lib/live/ops.ts`).
+- Exam: `plan-additions.test.ts` (schema, export and import, plan links) and the library
+  PUT's `route.test.ts`.

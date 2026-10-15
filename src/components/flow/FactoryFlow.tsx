@@ -7,6 +7,8 @@ import { emitBoardCameraMove } from "@/lib/board-camera-signal";
 import { useDropdownDismiss } from "@/lib/hooks/use-dropdown-dismiss";
 import { useViewerLock } from "./use-viewer-lock";
 import { StorageRatioEditor } from "./StorageRatioEditor";
+import { LivePresenceLayer } from "./LivePresenceLayer";
+import { isLiveConfigured } from "@/lib/live/live-config";
 import { PoolWorksheet } from "../pool/PoolWorksheet";
 import { capturePoolWorksheet } from "../export/capture-pool-worksheet";
 import { formatRatioShare, getProjectRatioBranches } from "@/lib/model/storage-ratios";
@@ -6590,6 +6592,9 @@ export function FactoryFlow() {
         <SeeThroughController />
         <BoardMinimap hidden={isCompact} />
         <TourBridge />
+        {/* Other people in a live plan: pointers and selections, a layer of
+            their own (LivePresenceLayer). Never mounted without live plans. */}
+        {isLiveConfigured() ? <LivePresenceLayer boardRef={boardRef} /> : null}
         <VoidDropGhost />
         {annotationDraft && annotationTool ? (
           <AnnotationDraftPreview
@@ -7362,8 +7367,8 @@ const SourceToolbar = memo(function SourceToolbar({
   // array itself would re-render this toolbar on every project edit.
   const undo = useFactoryStore((state) => state.undo);
   const redo = useFactoryStore((state) => state.redo);
-  const canUndo = useFactoryStore((state) => state.undoHistory.length > 0);
-  const canRedo = useFactoryStore((state) => state.redoHistory.length > 0);
+  const canUndo = useFactoryStore((state) => state.liveUndo ? state.liveUndo.canUndo : state.undoHistory.length > 0);
+  const canRedo = useFactoryStore((state) => state.liveUndo ? state.liveUndo.canRedo : state.redoHistory.length > 0);
   const historyButtonClass = (enabled: boolean) =>
     [
       "pointer-events-auto relative z-10 flex h-8 w-8 items-center justify-center border-2 border-[var(--mc-15)] bg-[var(--mc-49)] text-white shadow-[inset_2px_2px_0_var(--mc-85),inset_-2px_-2px_0_var(--mc-25)]",

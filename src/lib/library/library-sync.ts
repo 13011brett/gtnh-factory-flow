@@ -17,6 +17,8 @@ import { parseFactoryProjectJson } from "@/lib/import-export";
 import { withoutRuntimeTables } from "@/lib/import-export/plan-code";
 import { useCommunityAuthStore } from "@/store/community-auth-store";
 import { useDesignStore } from "@/store/design-store";
+import { isDesignOpenLive } from "@/store/live-edit-gate";
+import { forgetRemoteLibrary, noteRemoteLibrary } from "./cloud-library";
 import {
   deleteRemoteDesign,
   deleteRemoteFolder,
@@ -32,6 +34,7 @@ import {
 } from "./library-deletes";
 import {
   LIBRARY_DESIGN_NAME_MAX_LENGTH,
+  type LibraryListResponse,
   type RemoteDesignMeta,
   type RemoteFolder,
 } from "./sync-types";
@@ -67,6 +70,15 @@ import {
  * WHY SO CAREFUL: every push rewrites the WHOLE plan on a small Supabase
  * instance. Pushing after every autosave, or resending refused plans on
  * every poll, is enough load to stall the database.
+ *
+ * LIVE PLANS (live-session.ts): a design open live, in this tab or another
+ * (`isDesignOpenLive`), is the live service's to write. Its plan body is
+ * never pushed (its metadata still is), and a pull of it moves only its
+ * metadata: the canvas follows the live plan, not the account copy. A push the
+ * account answers with 409 `{ live: true }` (open live somewhere else) is
+ * sent again without the plan: not an error, not a conflict. Copies of plans
+ * shared with this account (`cloud`) are never synced as ours; the account
+ * lists them under `shared`, and a copy whose plan is no longer shared goes.
  */
 
 export interface LibrarySyncStatus {
@@ -230,6 +242,11 @@ let pushDeadline: number | undefined;
  */
 const refusedPushes = new Map<string, { stamp: string; message: string }>();
 
+/** The plan is open live elsewhere (409 `{ live: true }`, LibraryPlanLive): recognised by `live`, as above. */
+function isPlanLiveRefusal(error: unknown): boolean {
+  return error instanceof Error && (error as { live?: unknown }).live === true;
+}
+
 function isRefusal(error: unknown): error is Error {
   return error instanceof Error && (error as { refused?: unknown }).refused === true;
 }
@@ -302,14 +319,17 @@ async function runOnce(): Promise<void> {
   try {
     await drainDeletions();
     const remote = await fetchRemoteLibrary();
-    const [designs, folders] = await Promise.all([listDesignSummaries(), listDesignFolders()]);
+    noteRemoteLibrary(remote);
+    const [summaries, folders] = await Promise.all([listDesignSummaries(), listDesignFolders()]);
+    const designs = summaries.filter((design) => !design.cloud);
+    const dropped = await dropUnsharedCopies(summaries, remote.shared);
     // Folders first, so a pulled design's folder exists when it lands.
     const folderActions = reconcileFolders(folders, remote.folders);
     for (const action of folderActions) {
       await applyFolderAction(action, folders);
     }
     const designActions = reconcileDesigns(designs, remote.designs);
-    let touched = folderActions.length > 0;
+    let touched = folderActions.length > 0 || dropped;
     for (const action of designActions) {
       // A push held back or refused changed nothing here.
       if (await applyDesignAction(action)) {
@@ -342,6 +362,35 @@ async function runOnce(): Promise<void> {
       message: error instanceof Error ? error.message : "Sync failed.",
     });
   }
+}
+
+/**
+ * Copies of plans no longer shared with this account (unshared or deleted
+ * while this device was away) go. Only when the account named its shared
+ * plans: an older server without the list removes nothing.
+ */
+async function dropUnsharedCopies(
+  summaries: DesignSummary[],
+  shared: LibraryListResponse["shared"],
+): Promise<boolean> {
+  if (!Array.isArray(shared)) {
+    return false;
+  }
+  const still = new Set(shared.map((plan) => `${plan.ownerId}:${plan.id}`));
+  let dropped = false;
+  for (const design of summaries) {
+    if (design.cloud && !still.has(`${design.cloud.ownerId}:${design.cloud.designId}`)) {
+      const store = useDesignStore.getState();
+      if (design.id === store.activeDesignId) {
+        await store.removeDesign(design.id, { fromSync: true });
+      } else {
+        await deleteDesign(design.id);
+        forgetDesignCameras([design.id]);
+      }
+      dropped = true;
+    }
+  }
+  return dropped;
 }
 
 async function drainDeletions(): Promise<void> {
@@ -399,6 +448,10 @@ async function applyDesignAction(action: DesignAction): Promise<boolean> {
   const store = useDesignStore.getState();
   switch (action.kind) {
     case "pull-plan": {
+      if (isDesignOpenLive(action.id)) {
+        // The canvas follows the live plan; only the metadata comes across.
+        return applyDesignAction({ kind: "pull-meta", id: action.id, remote: action.remote });
+      }
       const { design, plan } = await fetchRemoteDesignPlan(action.id);
       const project = parseFactoryProjectJson(JSON.stringify(plan));
       const existing = await readDesign(action.id);
@@ -465,8 +518,10 @@ async function applyDesignAction(action: DesignAction): Promise<boolean> {
         return false;
       }
       let result: Awaited<ReturnType<typeof pushRemoteDesign>>;
-      try {
-        result = await pushRemoteDesign(record.id, {
+      // Open live (here or in another tab): the live service writes the plan.
+      const withPlan = action.withPlan && !isDesignOpenLive(record.id);
+      const push = (sendPlan: boolean) =>
+        pushRemoteDesign(record.id, {
           // The account refuses longer names, so clip to its limit.
           name: record.name.trim().slice(0, LIBRARY_DESIGN_NAME_MAX_LENGTH),
           icon: record.icon ?? null,
@@ -481,8 +536,18 @@ async function applyDesignAction(action: DesignAction): Promise<boolean> {
           // Without the GregTech tables the dataset puts back on landing:
           // about half the size, so big plans fit the cap and every push
           // rewrites half as much of the account's row.
-          ...(action.withPlan ? { plan: withoutRuntimeTables(record.project) } : {}),
+          ...(sendPlan ? { plan: withoutRuntimeTables(record.project) } : {}),
         });
+      try {
+        try {
+          result = await push(withPlan);
+        } catch (error) {
+          if (!withPlan || !isPlanLiveRefusal(error)) {
+            throw error;
+          }
+          // Open live on another device: not ours to push, the rest still goes.
+          result = await push(false);
+        }
       } catch (error) {
         if (!isRefusal(error)) {
           throw error;
@@ -570,6 +635,7 @@ export function startLibrarySync(): () => void {
     }
     if (!user) {
       setStatus({ state: "off", message: undefined, lastSyncedAt: undefined });
+      forgetRemoteLibrary();
       return;
     }
     setStatus({ state: "pending", message: undefined, lastSyncedAt: undefined });

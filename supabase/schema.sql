@@ -255,3 +255,25 @@ update community_plans
   where last_activity_at is null;
 create index if not exists community_plans_activity_idx on community_plans (last_activity_at desc);
 create index if not exists community_plans_comments_idx on community_plans (comment_count desc);
+
+-- ---------------------------------------------------------------------------
+-- CLOUD PLANS, LIVE CO-EDITING AND TASK BOARDS (2026-10-14). The same SQL as
+-- supabase/migrations/2026-10-14-cloud-live.sql, which explains each part.
+-- Additive and idempotent.
+alter table library_designs add column if not exists seq bigint not null default 0;
+alter table library_designs add column if not exists live_lease_until timestamptz;
+alter table library_designs add column if not exists live_lease_token text;
+
+create table if not exists library_design_members (
+  owner_id uuid not null references community_users (id) on delete cascade,
+  design_id text not null,
+  member_id uuid not null references community_users (id) on delete cascade,
+  role text not null default 'editor' check (role in ('editor')),
+  added_at timestamptz not null default now(),
+  primary key (owner_id, design_id, member_id),
+  foreign key (owner_id, design_id) references library_designs (user_id, id) on delete cascade
+);
+
+create index if not exists library_design_members_member on library_design_members (member_id);
+
+alter table library_design_members enable row level security;

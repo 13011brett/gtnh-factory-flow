@@ -3,6 +3,9 @@ export async function register() {
     return;
   }
 
+  const { checkServerSetup } = await import("@/lib/server/startup-checks");
+  checkServerSetup();
+
   if (process.env.GTNH_PREWARM_ON_STARTUP !== "1") {
     return;
   }

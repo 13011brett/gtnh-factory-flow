@@ -2,7 +2,8 @@
 
 import { useDropdownDismiss } from "@/lib/hooks/use-dropdown-dismiss";
 
-import { Compass, Library, Plus } from "lucide-react";
+import { Compass, Library, Plus, SquareKanban } from "lucide-react";
+import { isLiveConfigured } from "@/lib/live/live-config";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { getUiScale } from "@/lib/ui-scale";
@@ -60,6 +61,7 @@ export function DesignTabs() {
   const accountSave = accountSaveStatus(signedIn, sync);
   const switchToDesign = useDesignStore((state) => state.switchToDesign);
   const addDesign = useDesignStore((state) => state.addDesign);
+  const addTaskBoard = useDesignStore((state) => state.addTaskBoard);
   const copyDesign = useDesignStore((state) => state.copyDesign);
   const renameDesign = useDesignStore((state) => state.renameDesign);
   const closeDesign = useDesignStore((state) => state.closeDesign);
@@ -712,6 +714,20 @@ export function DesignTabs() {
         >
           <Plus className="h-3.5 w-3.5" aria-hidden />
         </button>
+        {isLiveConfigured() ? (
+          <button
+            type="button"
+            onClick={() => {
+              leaveWelcomeTab();
+              void addTaskBoard();
+            }}
+            aria-label="New task board"
+            title="New task board"
+            className="flex h-[22px] w-[22px] shrink-0 items-center justify-center rounded text-fg-muted hover:bg-surface-sunken hover:text-fg"
+          >
+            <SquareKanban className="h-3.5 w-3.5" aria-hidden />
+          </button>
+        ) : null}
 
         {/* Everything from here is pinned to the right edge. */}
         {/* A library that failed to load or save says so here, in red, rather

@@ -1,7 +1,17 @@
-import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
+import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypto";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { entryIconSchema } from "@/lib/model/schemas";
 import type { CommunityPlanSummary, EntryIcon, PlanResourceStat } from "@/lib/community/types";
+import {
+  assertLocalDbAllowed,
+  isLocalDb,
+  LOCAL_DB_SERVICE_KEY,
+  localDbFetch,
+  localDbUrl,
+} from "./local-db/client";
+import { makeSessionToken, readSessionCookie, SESSION_COOKIE, SESSION_DAYS, verifySessionToken } from "./session";
+
+export { makeSessionToken, SESSION_COOKIE };
 
 /**
  * Server-only Supabase access for the community hub. Uses the service-role
@@ -38,10 +48,19 @@ export function fetchWithDbTimeout(
 }
 
 export function isCommunityConfigured(): boolean {
-  return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+  return isLocalDb() || Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
 export function getCommunityDb(): SupabaseClient {
+  if (!cachedClient && isLocalDb()) {
+    // Local development (LOCAL_DB=1): the database on this machine, never
+    // the hosted project, whatever SUPABASE_URL says. Never in production.
+    assertLocalDbAllowed();
+    cachedClient = createClient(localDbUrl(), LOCAL_DB_SERVICE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { fetch: (input, init) => localDbFetch(input, init, fetchWithDbTimeout) },
+    });
+  }
   if (!cachedClient) {
     const url = process.env.SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
@@ -108,15 +127,9 @@ export async function makeVoterKey(request: Request, deviceId: string): Promise<
 
 // ---------------------------------------------------------------------------
 // Dead-simple accounts: username + password, scrypt-hashed, with an HMAC-signed
-// session cookie. No email, no reset flow — this is a hobby community site.
+// session cookie (session.ts, shared with the live service). No email, no
+// reset flow — this is a hobby community site.
 // ---------------------------------------------------------------------------
-
-export const SESSION_COOKIE = "gtnh_session";
-const SESSION_DAYS = 180;
-
-function authSecret(): string {
-  return process.env.COMMUNITY_HASH_SALT ?? "gtnh-factory-hub";
-}
 
 export function hashPassword(password: string): string {
   const salt = randomBytes(16).toString("hex");
@@ -135,13 +148,6 @@ export function verifyPassword(password: string, stored: string): boolean {
   return candidate.length === expected.length && timingSafeEqual(candidate, expected);
 }
 
-export function makeSessionToken(userId: string): string {
-  const expires = Date.now() + SESSION_DAYS * 24 * 60 * 60 * 1000;
-  const payload = `${userId}.${expires}`;
-  const signature = createHmac("sha256", authSecret()).update(payload).digest("hex");
-  return `${payload}.${signature}`;
-}
-
 export function sessionCookieHeader(token: string, clear = false): string {
   const maxAge = clear ? 0 : SESSION_DAYS * 24 * 60 * 60;
   return `${SESSION_COOKIE}=${token}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${maxAge}`;
@@ -155,23 +161,13 @@ export interface SessionUser {
 
 /** Verifies the session cookie and loads the user, or returns undefined. */
 export async function getSessionUser(request: Request): Promise<SessionUser | undefined> {
-  const cookies = request.headers.get("cookie") ?? "";
-  const match = cookies.match(new RegExp(`(?:^|;\\s*)${SESSION_COOKIE}=([^;]+)`));
-  if (!match) {
-    return undefined;
-  }
+  const token = readSessionCookie(request.headers.get("cookie"));
+  const session = token ? verifySessionToken(token) : undefined;
+  return session ? loadSessionUser(session.userId) : undefined;
+}
 
-  const [userId, expires, signature] = match[1].split(".");
-  if (!userId || !expires || !signature) {
-    return undefined;
-  }
-
-  const payload = `${userId}.${expires}`;
-  const expected = createHmac("sha256", authSecret()).update(payload).digest("hex");
-  if (signature !== expected || Number(expires) < Date.now()) {
-    return undefined;
-  }
-
+/** The account behind a verified session, or undefined when it is gone. */
+export async function loadSessionUser(userId: string): Promise<SessionUser | undefined> {
   const { data } = await getCommunityDb()
     .from("community_users")
     .select("id,username,is_admin")

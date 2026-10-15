@@ -482,7 +482,7 @@
   box-sizing: border-box;
   width: 112px;
   height: 40px;
-  padding: 5px 6px 0 7px;
+  padding: 4px 6px 0 7px;
   border: 1px solid var(--tb-edge);
   background: var(--tb-surface);
   cursor: pointer;
@@ -523,8 +523,8 @@
 }
 .tc-node .tb-faces {
   position: absolute;
-  left: 8px;
-  bottom: 5px;
+  left: 7px;
+  bottom: 4px;
 }
 .tc-loose-head {
   position: absolute;

@@ -70,6 +70,9 @@ export function TaskBoard() {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [newTaskTick]);
 
+  // Leaving a board closes its box (the game's box belongs to its board).
+  useEffect(() => () => selectTask(undefined), [designId]);
+
   const selected = selectedId ? (tasks ?? []).find((task) => task.id === selectedId) : undefined;
 
   return (

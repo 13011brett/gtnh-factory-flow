@@ -41,6 +41,7 @@ import { ViewOnlyNotice } from "./community/ViewOnlyNotice";
 import { TabConflictNotice } from "./TabConflictNotice";
 import { LiveNotice } from "./live/LiveNotice";
 import { TaskBoard, TaskLinkIndexController } from "./tasks/TaskBoard";
+import { AddToTaskMenu } from "./tasks/AddToTask";
 import { BoardToolbar } from "./chrome/BoardToolbar";
 import { isLiveConfigured } from "@/lib/live/live-config";
 import { BlueprintSaveDialog } from "./BlueprintSaveDialog";
@@ -409,6 +410,7 @@ function BoardColumn() {
       <div className="relative min-h-0">
         <FactoryFlow />
         {TASKS_ENABLED ? <TaskLinkIndexController /> : null}
+        {TASKS_ENABLED ? <AddToTaskMenu /> : null}
         {showTasks ? (
           <div className="absolute inset-0 z-30">
             <TaskBoard />

@@ -15,6 +15,12 @@ import { buildPortFlowScope } from "../flow-scope";
 import { usePortRowBrowse } from "../use-port-row-browse";
 import { isWiringConnection } from "../connection-drag";
 import { CardActionsMenu } from "./menus/CardActionsMenu";
+import { openAddToTask } from "@/components/tasks/AddToTask";
+import { cardsForTask } from "@/lib/tasks/make-task";
+import { isLiveConfigured } from "@/lib/live/live-config";
+
+/** Task boards come with live plans: no Add to a task row without them. */
+const TASKS_ENABLED = isLiveConfigured();
 import { checklistLocked } from "../RecipeNode";
 import { MobPickerMenu } from "../MobPickerMenu";
 import { isControllerSlotInput } from "@/lib/model/free-input";
@@ -818,6 +824,11 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
           onClose={() => setMenu(undefined)}
           onClone={() => cloneWithSound(duplicateNode, node.id)}
           onDelete={() => deleteNode(node.id)}
+          onAddToTask={
+            TASKS_ENABLED
+              ? () => void openAddToTask(cardsForTask(node.id), { left: menu.x, top: menu.top, bottom: menu.bottom })
+              : undefined
+          }
         />
       ) : null}
     </div>

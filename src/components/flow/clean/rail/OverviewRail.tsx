@@ -62,6 +62,12 @@ import type { RailDrawer, RailLine, RailMachine, RailPin } from "./rail-model";
 import { hideTip, tipProps, type TipContent } from "./rail-tip";
 import { toggleRailSection, useRailView, writeRailView } from "./rail-view";
 import { SpareBlock } from "./SpareBlock";
+import { openAddToTask } from "@/components/tasks/AddToTask";
+import { cardsForTask } from "@/lib/tasks/make-task";
+import { isLiveConfigured } from "@/lib/live/live-config";
+
+/** Task boards come with live plans: no Add to a task without them. */
+const TASKS_ENABLED = isLiveConfigured();
 
 /**
  * The overview, as a column left of the board: the mod's `OverviewRail`
@@ -1056,14 +1062,27 @@ const MachineRow = memo(function MachineRow({
     notes: eu
       ? [{ text: `${eu} ${peak ? "peak" : "average"}`, tone: tooLow ? "red" : "muted" }]
       : undefined,
-    actions: [{ input: "left", label: "Go to the card" }],
+    actions: [
+      { input: "left", label: "Go to the card" },
+      ...(TASKS_ENABLED ? [{ input: "right" as const, label: "Add to a task" }] : []),
+    ],
   };
   return (
     <div
       className="rail-machine"
       style={{ height: ROW_H }}
       data-hot={hot ? "" : undefined}
+      data-rail-machine={entry.nodeId}
       onClick={go}
+      onContextMenu={(event) => {
+        if (!TASKS_ENABLED) return;
+        event.preventDefault();
+        void openAddToTask(cardsForTask(entry.nodeId, false), {
+          left: event.clientX,
+          top: event.clientY,
+          bottom: event.clientY,
+        });
+      }}
       onAuxClick={(event) => {
         if (event.button === 1) go();
       }}

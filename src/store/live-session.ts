@@ -110,6 +110,11 @@ export function dismissLiveNotice(): void {
   useLiveSession.setState({ notice: undefined });
 }
 
+/** Shows a notice above the board (Add to a task's "Added ... to ...", with Open). */
+export function showLiveNotice(text: string, action?: LiveNotice["action"]): void {
+  useLiveSession.setState({ notice: { ...noticeOf(text), ...(action ? { action } : {}) } });
+}
+
 /** The parts of a WebSocket the session uses (a fake in tests). */
 export interface LiveSocketLike {
   readonly readyState: number;

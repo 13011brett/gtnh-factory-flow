@@ -16,15 +16,10 @@ import { GroupMenu } from "./clean/group/GroupMenu";
 import { cloneWithSound } from "@/lib/sound/sfx";
 import { addArrowAt, addBoxAt, addStickyNoteAt } from "./clean/note/note-actions";
 import { isLiveConfigured } from "@/lib/live/live-config";
-import {
-  cardsForTask,
-  makeTaskFromCards,
-  selectedTaskCards,
-  taskBoardDesigns,
-  type TaskCard,
-} from "@/lib/tasks/make-task";
+import { cardsForTask, selectedTaskCards } from "@/lib/tasks/make-task";
+import { openAddToTask } from "@/components/tasks/AddToTask";
 
-/** Task boards come with live plans: no Make a task row without them. */
+/** Task boards come with live plans: no Add to a task row without them. */
 const TASKS_ENABLED = isLiveConfigured();
 
 /**
@@ -66,8 +61,6 @@ export function BoardContextMenu({
   onClose: () => void;
 }) {
   const [picking, setPicking] = useState(false);
-  // Make a task: the cards it is about, once chosen, and the menu turns into the list of boards to put it in.
-  const [taskCards, setTaskCards] = useState<TaskCard[]>();
   const annotation = useFactoryStore((state) =>
     target.kind === "annotation" ? state.project.annotations?.find((entry) => entry.id === target.id) : undefined,
   );
@@ -142,32 +135,6 @@ export function BoardContextMenu({
     );
   }
 
-  if (taskCards) {
-    const boards = taskBoardDesigns();
-    return (
-      <BoardMenu x={target.x} y={target.y} label="Task boards" onClose={onClose}>
-        {boards.map((board) => (
-          <MenuRow
-            key={board.id}
-            label={board.name}
-            onClick={() => {
-              onClose();
-              void makeTaskFromCards(taskCards, board.id);
-            }}
-          />
-        ))}
-        {boards.length > 0 ? <MenuLine /> : null}
-        <MenuRow
-          label="New task board"
-          onClick={() => {
-            onClose();
-            void makeTaskFromCards(taskCards, undefined);
-          }}
-        />
-      </BoardMenu>
-    );
-  }
-
   if (target.kind === "group") {
     return group ? <GroupMenu pocket={group} x={target.x} y={target.y} onClose={onClose} /> : null;
   }
@@ -186,7 +153,13 @@ export function BoardContextMenu({
   return (
     <BoardMenu x={target.x} y={target.y} label="Board menu" onClose={onClose}>
       {target.kind === "pane" && TASKS_ENABLED && selectedTaskCards().length > 0 ? (
-        <MenuRow label="Make a task" onClick={() => setTaskCards(selectedTaskCards())} />
+        <MenuRow
+          label="Add to a task"
+          onClick={() => {
+            onClose();
+            void openAddToTask(selectedTaskCards(), { left: target.x, top: target.y, bottom: target.y });
+          }}
+        />
       ) : null}
       {target.kind === "pane" && planMode ? (
         <>
@@ -201,7 +174,11 @@ export function BoardContextMenu({
         <CardRows
           onClone={() => cloneWithSound(store().duplicateNode, target.id)}
           onDelete={() => store().deleteNode(target.id)}
-          onMakeTask={TASKS_ENABLED ? () => setTaskCards(cardsForTask(target.id)) : undefined}
+          onAddToTask={
+            TASKS_ENABLED
+              ? () => void openAddToTask(cardsForTask(target.id), { left: target.x, top: target.y, bottom: target.y })
+              : undefined
+          }
           close={onClose}
         />
       ) : null}

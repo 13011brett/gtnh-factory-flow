@@ -1,16 +1,33 @@
 "use client";
 
+import { readDesign } from "@/lib/designs/design-storage";
 import { buildMachineList } from "@/lib/model/machine-list";
-import type { PlanTaskLink } from "@/lib/model/types";
+import type { FactoryProject, PlanTaskLink, PlanTaskStatus } from "@/lib/model/types";
 import { useDesignStore } from "@/store/design-store";
 import { useFactoryStore } from "@/store/factory-store";
-import { myAccountId, useLiveSession } from "@/store/live-session";
+import { myAccountId, showLiveNotice, useLiveSession } from "@/store/live-session";
 import { activateDesign } from "./open-link";
-import { addTask, addTaskItem, boardCardLabel, cardLine, titleForCards } from "./task-board";
+import {
+  addTask,
+  addThing,
+  boardCardLabel,
+  cardLine,
+  taskById,
+  taskProgress,
+  tasksIn,
+  titleForCards,
+} from "./task-board";
 import { selectTask } from "./task-board-ui";
 import { planLinkId } from "./task-links";
 
-/** A card of the open plan as a task shows it. */
+/**
+ * "Add to a task" (the game's TaskActions): cards of the open plan go into a task of one of the task boards on this
+ * device (a plan of its own kind), each as a machine thing with its own checkbox saying how many to build. Asked from
+ * a right click on cards, a card's actions and the overview's machine lines: which task board, then which task in it
+ * (or a new one). A notice says what went where, with Open.
+ */
+
+/** A card of the open plan as a task names it. */
 export interface TaskCard {
   nodeId: string;
   name: string;
@@ -19,12 +36,51 @@ export interface TaskCard {
   count: number;
 }
 
-/** The task boards on this device, for the Make a task menu: the open design leaves out (it is not a board). */
-export function taskBoardDesigns(): Array<{ id: string; name: string }> {
-  const { designs } = useDesignStore.getState();
-  return designs
-    .filter((design) => design.taskBoard)
-    .map((design) => ({ id: design.id, name: design.name }));
+/** A task board on this device, for the first menu: its design and how many tasks it holds. */
+export interface TaskBoardChoice {
+  id: string;
+  name: string;
+  tasks: number;
+}
+
+/** A task of a board, for the second menu: the ones under way first. */
+export interface TaskChoice {
+  id: string;
+  title: string;
+  status: PlanTaskStatus;
+  done: number;
+  all: number;
+}
+
+/** The task boards on this device, the open design left out (it is the plan the cards are on). */
+export async function taskBoardChoices(): Promise<TaskBoardChoice[]> {
+  const { designs, activeDesignId } = useDesignStore.getState();
+  const boards = designs.filter((design) => design.taskBoard && design.id !== activeDesignId);
+  return Promise.all(
+    boards.map(async (design) => {
+      const record = await readDesign(design.id).catch(() => undefined);
+      return {
+        id: design.id,
+        name: design.name,
+        tasks: record?.project.tasks?.length ?? design.stats?.tasks ?? 0,
+      };
+    }),
+  );
+}
+
+/** A board's tasks in the order the second menu lists them: Doing, Blocked, To do, then Done. */
+export function taskChoicesOf(project: FactoryProject): TaskChoice[] {
+  return (["doing", "blocked", "todo", "done"] as const).flatMap((status) =>
+    tasksIn(project, status).map((task) => {
+      const progress = taskProgress(project, task.id);
+      return { id: task.id, title: task.title, status, done: progress.done, all: progress.all };
+    }),
+  );
+}
+
+export async function taskChoices(boardId: string): Promise<TaskChoice[]> {
+  const record = await readDesign(boardId).catch(() => undefined);
+  return record ? taskChoicesOf(record.project) : [];
 }
 
 /** The machine cards selected on the board. */
@@ -38,11 +94,16 @@ export function selectedTaskCards(): TaskCard[] {
  * The cards a right click on `nodeId` means: the whole selection when the card is part of it, else the card alone.
  * Only machine cards (drawers, notes and groups are not built).
  */
-export function cardsForTask(nodeId: string): TaskCard[] {
+export function cardsForTask(nodeId: string, withSelection = true): TaskCard[] {
   const { project, lastResult, selectedBoardIds } = useFactoryStore.getState();
   const cardIds = new Set(project.nodes.map((node) => node.id));
-  const chosen = selectedBoardIds.includes(nodeId) ? selectedBoardIds.filter((id) => cardIds.has(id)) : [nodeId];
-  const entries = new Map(buildMachineList(project, lastResult).map((entry) => [entry.nodeId, entry]));
+  const chosen =
+    withSelection && selectedBoardIds.includes(nodeId)
+      ? selectedBoardIds.filter((id) => cardIds.has(id))
+      : [nodeId];
+  const entries = new Map(
+    buildMachineList(project, lastResult).map((entry) => [entry.nodeId, entry]),
+  );
   const cards: TaskCard[] = [];
   for (const id of chosen) {
     if (!cardIds.has(id)) {
@@ -59,42 +120,109 @@ export function cardsForTask(nodeId: string): TaskCard[] {
   return cards;
 }
 
+/** Opens a task in its box once its board is on the screen with the task on it (the game's openWhenShown). */
+export async function openWhenShown(boardId: string, taskId: string): Promise<void> {
+  for (let waited = 0; waited < 5000; waited += 50) {
+    const shown =
+      useDesignStore.getState().activeDesignId === boardId &&
+      taskById(useFactoryStore.getState().project, taskId) !== undefined &&
+      typeof document !== "undefined" &&
+      document.querySelector("[data-task-board]") !== null;
+    if (shown) {
+      // A moment for the board to settle: leaving a board closes its box.
+      await new Promise((resolve) => setTimeout(resolve, 100));
+      selectTask(taskId);
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
+}
+
+/** Waits until the open plan's edits are confirmed by the live service (or it is not live), at most `ms`. */
+async function settled(designId: string, ms: number): Promise<void> {
+  for (let waited = 0; waited < ms; waited += 100) {
+    const live = useLiveSession.getState();
+    if (
+      live.status === "off" ||
+      (live.designId === designId && live.status === "live" && live.pending === 0)
+    ) {
+      return;
+    }
+    await new Promise((resolve) => setTimeout(resolve, 100));
+  }
+}
+
 /**
- * "Make a task": a task in To do on a task board (the board of `boardDesignId`, or a new one), titled from the
- * cards' machines, with a checklist line for each card saying how many to build, linked to all of them. The board
- * opens with the task selected.
+ * Adds cards of the open plan to a task on a board (the board of `boardDesignId`, or a new one) as machine things,
+ * one a card with how many to build; with no task, a new one in To do titled from their machines. The edit is made on
+ * the board itself (so a live board sends it as anyone's edit), then the plan comes back and a notice says what went
+ * where with Open, which shows the board with the task open. Returns the task's id.
  */
-export async function makeTaskFromCards(
+export async function addCardsToTask(
   cards: readonly TaskCard[],
   boardDesignId: string | undefined,
-): Promise<void> {
+  taskId?: string,
+): Promise<string | undefined> {
   if (cards.length === 0) {
-    return;
+    return undefined;
   }
   const designStore = useDesignStore.getState();
   const from = designStore.designs.find((design) => design.id === designStore.activeDesignId);
   const plan = from ? planLinkId(from, myAccountId()) : "";
-  const links: PlanTaskLink[] = cards.map((card) => ({ plan, node: card.nodeId }));
   if (boardDesignId) {
     const board = designStore.designs.find((design) => design.id === boardDesignId);
     if (!board) {
-      return;
+      return undefined;
     }
     await activateDesign(board);
   } else {
     await designStore.addTaskBoard();
   }
+  const boardId = useDesignStore.getState().activeDesignId;
+  // The board lands on the canvas a moment after the design is named.
+  for (let waited = 0; waited < 3000; waited += 50) {
+    if (useFactoryStore.getState().project.primaryView === "tasks") break;
+    await new Promise((resolve) => setTimeout(resolve, 50));
+  }
   const me = useLiveSession.getState().me;
   const author = me ? { id: me.id, username: me.username } : { id: "local", username: "You" };
   let made: string | undefined;
+  let title = "";
   useFactoryStore.getState().editTasks((project) => {
-    const added = addTask(project, { title: titleForCards(cards.map((card) => card.name)), links, author });
-    made = added.id;
-    let next = added.project;
-    cards.forEach((card, at) => {
-      next = addTaskItem(next, added.id, cardLine(card), links[at]);
-    });
+    let next = project;
+    let id = taskId && taskById(project, taskId) ? taskId : undefined;
+    if (!id) {
+      const added = addTask(next, { title: titleForCards(cards.map((card) => card.name)), author });
+      next = added.project;
+      id = added.id;
+    }
+    title = taskById(next, id)?.title ?? "";
+    for (const card of cards) {
+      const link: PlanTaskLink = { plan, node: card.nodeId };
+      next = addThing(next, id, { kind: "machine", text: cardLine(card), link });
+    }
+    made = id;
     return next;
   });
-  selectTask(made);
+  if (!made || !boardId) {
+    return undefined;
+  }
+  const task = made;
+  // Back to the plan the cards are on, once the board's edit is safe.
+  if (from) {
+    await settled(boardId, 8000);
+    const back = useDesignStore.getState().designs.find((design) => design.id === from.id);
+    if (back) await activateDesign(back);
+  }
+  const what = cards.length === 1 ? cards[0]!.name : `${cards.length} machines`;
+  showLiveNotice(`Added ${what} to '${title}'`, {
+    label: "Open",
+    run: () => {
+      useLiveSession.setState({ notice: undefined });
+      const board = useDesignStore.getState().designs.find((design) => design.id === boardId);
+      if (!board) return;
+      void activateDesign(board).then(() => openWhenShown(boardId, task));
+    },
+  });
+  return task;
 }

@@ -604,3 +604,15 @@
   font-style: normal;
   color: var(--tb-faint);
 }
+
+/* A machine's picture fills its 16 px square as the overview's does: the picture's box is 2 px bigger each way. */
+.tbx-icon {
+  position: relative;
+}
+.tbx-icon-art {
+  position: absolute !important;
+  left: -2px;
+  top: -2px;
+  width: 20px !important;
+  height: 20px !important;
+}

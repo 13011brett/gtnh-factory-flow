@@ -1009,7 +1009,8 @@ function MachinePicture({ state }: { state: LinkState | undefined }) {
         showAmount={false}
         bare
         tooltip={false}
-        iconPixelSize={machineArtPixels(16)}
+        iconPixelSize={machineArtPixels(20)}
+        className="tbx-icon-art"
       />
     </span>
   );

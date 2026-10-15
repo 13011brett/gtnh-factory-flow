@@ -26,6 +26,7 @@ import {
   type LivePerson,
   type ServerFrame,
 } from "@/lib/live/protocol";
+import type { FactoryProject } from "@/lib/model/types";
 import { APP_VERSION } from "@/lib/version";
 import { useCommunityAuthStore } from "./community-auth-store";
 import { useDesignStore } from "./design-store";
@@ -887,8 +888,34 @@ export class LiveSession {
     }
     const ops = diffPlans(before, after);
     if (ops.length > 0) {
-      useFactoryStore.getState().applyLiveOps(ops);
+      const conversion = useFactoryStore.getState().applyLiveOps(ops);
+      if (conversion) {
+        this.sendConversion(conversion.before, conversion.after);
+      }
     }
+  }
+
+  /**
+   * A plan that landed in an old mode was converted to the one board mode on
+   * the canvas (applyLiveOps): the conversion goes out as an edit undo never
+   * takes back, so everyone in the plan reads the same converted plan.
+   */
+  private sendConversion(before: FactoryProject, after: FactoryProject): void {
+    const room = this.room;
+    if (!room) {
+      return;
+    }
+    const ops = diffPlans(liveShape(before), liveShape(after));
+    if (ops.length === 0) {
+      return;
+    }
+    for (const chunk of chunkOps(ops)) {
+      const batch = room.engine.localOps(chunk, { undoable: false, keepRedo: true });
+      if (batch) {
+        this.queueBatch(room, batch);
+      }
+    }
+    this.schedulePersist();
   }
 
   private queueBatch(room: Room, batch: PendingBatch): void {

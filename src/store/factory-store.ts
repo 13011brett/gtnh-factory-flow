@@ -297,8 +297,14 @@ interface FactoryStore {
    * fresh snapshot): the ops land on the project as they are, keeping every
    * untouched card the same object, and the books re-solve. Never an edit of
    * this tab's, never in history, never sent back.
+   *
+   * There is one board mode: a live plan that is not in it yet (made by an
+   * older build, or by the game, which writes Solve plans) is converted as
+   * every landing plan is (`normalizeLoadedProjectWithNotice`), and the plan
+   * before and after the conversion come back for the live session to send
+   * as an edit, so every screen shows the same converted plan.
    */
-  applyLiveOps: (ops: LiveOp[]) => void;
+  applyLiveOps: (ops: LiveOp[]) => { before: FactoryProject; after: FactoryProject } | undefined;
   /**
    * A task board edit (src/lib/tasks/task-board.ts): one undo step and, on a
    * live plan, one batch. Tasks never feed the solve, so the books stay.
@@ -1222,11 +1228,18 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
   },
   applyLiveOps: (ops) => {
     if (ops.length === 0) {
-      return;
+      return undefined;
     }
+    let conversion: { before: FactoryProject; after: FactoryProject } | undefined;
     quietly(() =>
       write((state) => {
-        const project = applyOps(state.project as unknown as Record<string, unknown>, ops) as unknown as FactoryProject;
+        const landed = applyOps(state.project as unknown as Record<string, unknown>, ops) as unknown as FactoryProject;
+        const opened = landed.planMode ? undefined : normalizeLoadedProjectWithNotice(landed);
+        // Tests that keep the old modes get the plan back unconverted: nothing to send then.
+        const project = opened?.project.planMode ? opened.project : landed;
+        if (project !== landed) {
+          conversion = { before: landed, after: project };
+        }
         const present = new Set<string>([
           ...project.nodes.map((node) => node.id),
           ...(project.storages ?? []).map((storage) => storage.id),
@@ -1237,11 +1250,13 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
         return {
           project,
           lastResult: solveBooks(project),
+          ...(conversion && opened?.notice ? { planNotice: opened.notice } : {}),
           ...(selectedBoardIds.length === state.selectedBoardIds.length ? {} : { selectedBoardIds }),
           ...(state.selectedNodeId && !present.has(state.selectedNodeId) ? { selectedNodeId: undefined } : {}),
         };
       }),
     );
+    return conversion;
   },
   editTasks: (edit) => {
     set((state) => {

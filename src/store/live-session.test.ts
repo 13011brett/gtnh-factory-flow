@@ -79,7 +79,7 @@ vi.mock("@/lib/live/live-pending-store", () => ({
   aliveTabs: vi.fn(async () => pendingStore.alive),
 }));
 
-import { createEmptyProject } from "@/examples";
+import { createEmptyProject, createNewProject } from "@/examples";
 import { applyOps, type LiveOp, type LivePlan, type LiveThing } from "@/lib/live/ops";
 import { LIVE_LIMITS, type ServerFrame } from "@/lib/live/protocol";
 import type { FactoryAnnotation, FactoryProject } from "@/lib/model/types";
@@ -236,8 +236,9 @@ function annotation(id: string, text: string, x = 0): FactoryAnnotation {
   } as FactoryAnnotation;
 }
 
+/** A plan as this build makes one: in plan mode, the one board mode. */
 function planWith(...annotations: FactoryAnnotation[]): FactoryProject {
-  return { ...createEmptyProject(), id: "plan-live", name: "Live", annotations };
+  return { ...createNewProject(), id: "plan-live", name: "Live", annotations };
 }
 
 function annotations(): FactoryAnnotation[] {
@@ -311,6 +312,26 @@ describe("live editing in the store", () => {
     expect(liveUndoHandler()).toBeDefined();
     // Bob is here (the game); ann's own connection is not a face.
     expect(useLiveSession.getState().present.map((person) => person.username)).toEqual(["bob"]);
+  });
+
+  it("converts a live plan in an old mode to the one board mode once, as an edit undo never takes back", async () => {
+    // The game writes Solve plans; an older build wrote Build plans. Both land through the live room.
+    const old: FactoryProject = { ...createEmptyProject(), id: "plan-live", name: "Live", solveMode: true, annotations: [annotation("n1", "one")] };
+    await openLiveDesign(planWith(annotation("n1", "one")), old);
+
+    expect(useFactoryStore.getState().project.planMode).toBe(true);
+    const batches = service.sent("ops");
+    expect(batches).toHaveLength(1);
+    expect(batches[0]!.ops).toContainEqual(expect.objectContaining({ o: "meta", f: expect.objectContaining({ planMode: true }) }));
+    expect(service.plan.planMode).toBe(true);
+    // Nothing of this person's to undo: the conversion is not theirs to take back.
+    expect(useFactoryStore.getState().liveUndo?.canUndo).toBe(false);
+
+    // A plan already in the one mode sends nothing more.
+    service.remote([{ o: "patch", c: "annotations", id: "n1", f: { text: "from bob" } }]);
+    await settle();
+    expect(service.sent("ops")).toHaveLength(1);
+    expect(annotations()[0]!.text).toBe("from bob");
   });
 
   it("sends each edit as the batch of what changed, nothing derived, confirmed by its echo", async () => {

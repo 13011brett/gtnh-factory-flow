@@ -104,10 +104,16 @@ changes nothing until then. Architecture and protocol: `docs/live.md`.
   and only that lands, through `applyLiveOps` (same objects for untouched things, re-solved like any edit). It is the
   same design changing, never an arriving plan: the "every arriving plan opens as a NEW design" rule is untouched
   (opening a shared plan the first time is the arrival, `openSharedDesign`).
+- ONE MODE. A live plan lands through `applyLiveOps`, not the loading funnel, so that action converts a plan not in
+  plan mode yet (an older build's, or the game's, which writes Solve plans) as every landing plan is
+  (`normalizeLoadedProjectWithNotice`) and hands the before and after back; the session sends the conversion as an
+  edit undo never takes back (`localOps(..., { undoable: false })`). The load-never-writes rule does not hold here:
+  a conversion kept on one screen would read everyone else's edits against a different plan.
 - UNDO on a live plan applies the recorded inverses of this person's own edits (`LiveClientState.undo`), sent as a
   new batch. `withProjectHistory` keeps no snapshots while a live handler is set, and entering or leaving live empties
-  the snapshot history: a snapshot restored over a live plan would wipe everyone else's edits. Undo buttons read
-  `liveUndo` when it is set.
+  the snapshot history: a snapshot restored over a live plan would wipe everyone else's edits. Undo buttons and their
+  sounds read `liveUndo` when it is set. Writes outside the store's actions follow the same rule (the overview's
+  leftover splits, `rail-actions.ts`: no snapshot while live, and a split in hand is quiet until it is let go).
 - OFFLINE. Edits wait in pending, kept in IndexedDB (`live-pending-store.ts`, its own database) per plan and tab, and
   go when the connection is back (backoff, `online`, the tab coming back); a closed tab's leftovers are adopted by the
   next tab to open that plan (Web Locks tell which tabs are gone). Batches are paced under the service's rate and

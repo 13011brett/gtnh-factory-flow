@@ -3,6 +3,7 @@ import { openLibrary } from "@/lib/library/library-tab";
 import type { FactoryProject } from "@/lib/model/types";
 import type { TargetMode } from "@/lib/model/storage-target";
 import { useFactoryStore } from "@/store/factory-store";
+import { liveUndoHandler, quietly } from "@/store/live-edit-gate";
 import { solveBooks } from "@/store/solve-books";
 import { RULE_STEPS } from "../../rate-rule";
 import {
@@ -246,19 +247,29 @@ function withSpare(
   return next;
 }
 
-/** A write to the project the store has no action for. `push`: one undo step of its own. */
+/**
+ * A write to the project the store has no action for. `push`: one undo step of its own. A live plan keeps no
+ * snapshots (its undo is the recorded inverses of this person's edits, live-edit-gate.ts).
+ */
 function writeProject(project: FactoryProject, push: boolean): void {
   const stamped: FactoryProject = {
     ...project,
     metadata: { ...project.metadata, updatedAt: new Date().toISOString() },
   };
+  const snapshot = push && !liveUndoHandler();
   useFactoryStore.setState((s) => ({
     project: stamped,
     lastResult: solveBooks(stamped),
-    ...(push
+    ...(snapshot
       ? { undoHistory: [...s.undoHistory, s.project].slice(-HISTORY_LIMIT), redoHistory: [] }
       : {}),
   }));
+}
+
+/** On a live plan a split in hand is not sent: only where it is let go is (one edit, one undo step). */
+function inHand(write: () => void): void {
+  if (liveUndoHandler()) quietly(write);
+  else write();
 }
 
 export function spareMap(spare: SpareView, shares: readonly number[]): Record<string, number> {
@@ -290,7 +301,7 @@ export { nudged };
 /** A split while its bar is in hand: the plan re-solves as it moves and no undo step is made. */
 export function previewSpare(spare: SpareView, shares: readonly number[]): void {
   if (locked()) return;
-  writeProject(withSpare(state().project, spare.key, spareMap(spare, shares)), false);
+  inHand(() => writeProject(withSpare(state().project, spare.key, spareMap(spare, shares)), false));
 }
 
 /**
@@ -298,6 +309,18 @@ export function previewSpare(spare: SpareView, shares: readonly number[]): void 
  * split moved, that is the one undo step; if not, the plan goes back to it.
  */
 export function endSpareDrag(base: FactoryProject, moved: boolean): void {
+  if (liveUndoHandler()) {
+    // The splits in hand were quiet. Others' edits that landed meanwhile stay; only the splits go out, as one edit.
+    const held = state().project;
+    const withShares = (spareShares: FactoryProject["spareShares"]): FactoryProject => {
+      const next: FactoryProject = { ...held, spareShares };
+      if (spareShares === undefined) delete (next as { spareShares?: unknown }).spareShares;
+      return next;
+    };
+    quietly(() => writeProject(withShares(base.spareShares), false));
+    if (moved) writeProject(withShares(held.spareShares), false);
+    return;
+  }
   if (!moved) {
     if (state().project !== base) writeProject(base, false);
     return;

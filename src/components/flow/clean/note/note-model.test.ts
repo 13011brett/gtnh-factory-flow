@@ -189,8 +189,8 @@ describe("notes as the website's text annotations", () => {
     { id: "f", kind: "text" as const },
   ];
 
-  it("a plan board shows only text annotations; other boards show everything", () => {
-    expect(visibleAnnotations(annotations, true).map((a) => a.id)).toEqual(["b", "f"]);
+  it("every board shows every annotation, the drawn kinds in the clean look on a plan board", () => {
+    expect(visibleAnnotations(annotations, true).map((a) => a.id)).toEqual(["a", "b", "c", "d", "e", "f"]);
     expect(visibleAnnotations(annotations, false).map((a) => a.id)).toEqual(["a", "b", "c", "d", "e", "f"]);
     expect(annotations.filter(isStickyNote)).toHaveLength(2);
   });

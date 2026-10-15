@@ -413,6 +413,7 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
   const openMenu = (event: MouseEvent<HTMLElement>) => {
     event.stopPropagation();
     if (!wasClick(event)) return;
+    // The menu hangs under the key, as the mod's (RecipeCard.openActions).
     const card = event.currentTarget.closest("[data-node-glance-root]") ?? undefined;
     const r = (card ?? event.currentTarget).getBoundingClientRect();
     setMenu(

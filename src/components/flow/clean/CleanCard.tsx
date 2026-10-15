@@ -586,7 +586,8 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
     event.stopPropagation();
     if (!wasClick(event)) return;
     const card = event.currentTarget.closest("[data-node-glance-root]") ?? undefined;
-    const r = (card ?? event.currentTarget).getBoundingClientRect();
+    // The menu hangs under the key, as the mod's (RecipeCard.openActions).
+    const r = event.currentTarget.getBoundingClientRect();
     setMenu(menu?.kind === kind ? undefined : { kind, x: r.left, top: r.top, bottom: r.bottom, hangsFrom: card });
   };
 

@@ -34,6 +34,7 @@ import {
   type NodeTypes,
   type OnSelectionChangeParams,
   type ReactFlowInstance,
+  useKeyPress,
   useStore,
   useStoreApi,
   ViewportPortal,
@@ -5052,6 +5053,9 @@ export function FactoryFlow() {
    * board further in is still selectable.
    */
   const marqueeShieldRef = useRef<Set<string>>(new Set());
+  // Shift drags the band only from empty board (the mod: Shift adds a card it clicks). React Flow's own selection key
+  // starts the band wherever the press lands, a card too, and swallows the click that would select it.
+  const shiftHeld = useKeyPress("Shift");
   const handleSelectionStart = useCallback((event: ReactMouseEvent) => {
     const instance = flowInstanceRef.current;
     if (!instance) {
@@ -6348,6 +6352,9 @@ export function FactoryFlow() {
         // Shift (like Ctrl/Cmd) adds a card to the selection. Shift also drags
         // the band, but the band starts on the pane and this fires on a card.
         multiSelectionKeyCode={["Shift", "Control", "Meta"]}
+        selectionKeyCode={null}
+        selectionOnDrag={shiftHeld}
+        panOnDrag={!shiftHeld}
         onNodeClick={handleNodeClick}
         onNodeDoubleClick={handleNodeDoubleClick}
         onEdgeClick={handleEdgeClick}

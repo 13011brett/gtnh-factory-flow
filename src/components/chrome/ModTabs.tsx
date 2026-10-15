@@ -11,6 +11,7 @@ import { encodePlanCode, planCodeLink } from "@/lib/import-export/plan-code";
 import { leaveLibrary, openLibrary } from "@/lib/library/library-tab";
 import { leaveWelcomeTab } from "@/lib/welcome/welcome-tab";
 import { playBoardSound } from "@/lib/board-sounds";
+import { playSfx } from "@/lib/sound/sfx";
 import { useDesignStore } from "@/store/design-store";
 import { useFactoryStore } from "@/store/factory-store";
 import { useSolvingBooks } from "@/components/flow/use-solving-books";
@@ -88,6 +89,7 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
   }, [activeDesignId, publicView?.id, designs.length, syncFade]);
 
   const close = async (id: string) => {
+    playSfx("ui.close");
     const index = designs.findIndex((design) => design.id === id);
     const next = designs[index + 1] ?? designs[index - 1];
     await closeDesigns([id], next?.id);
@@ -105,6 +107,8 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
   };
 
   const activate = async (id: string) => {
+    // A tab switched turns a page; its cards are not landing, they were there.
+    if (id !== activeDesignId) playSfx("ui.page");
     leaveWelcomeTab();
     leaveLibrary();
     await switchToDesign(id);
@@ -122,6 +126,7 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
         {
           label: "New plan",
           onSelect: () => {
+            playSfx("ui.page");
             leaveWelcomeTab();
             leaveLibrary();
             void addDesign();

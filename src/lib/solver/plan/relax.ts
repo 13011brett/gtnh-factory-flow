@@ -33,7 +33,7 @@ function solveRelaxed(ctx: SolveContext): Relaxed | null {
     const under = lp.drawerUnder[d]!;
     const over = lp.drawerOver[d]!;
     slack[d] = (under >= 0 ? result.x[under]! : 0) + (over >= 0 ? result.x[over]! : 0);
-    total[d] = ctx.drawerTotal(d, result.point.extents, result.point.externals);
+    total[d] = ctx.drawerTotal(d, result.point.extents, result.point.flows, result.point.externals);
   }
   return { slack, total };
 }

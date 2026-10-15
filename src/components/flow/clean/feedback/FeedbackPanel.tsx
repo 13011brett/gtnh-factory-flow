@@ -23,6 +23,7 @@ import {
 } from "./feedback-model";
 import { closeFeedback, openFeedback, useFeedbackOpen } from "./feedback-store";
 import "./feedback.css";
+import { playSfx, sfxToggle } from "@/lib/sound/sfx";
 
 /**
  * The top bar's Feedback, small and friendly (the mod's FeedbackPanel): three big faces (how it's going, if you
@@ -104,6 +105,7 @@ export function FeedbackPanel({ onClose }: { onClose: () => void }) {
         throw new Error(body.error ?? `The site answered ${response.status}`);
       }
       setSent({ number: body.number, url: body.url });
+      playSfx("note.stick");
     } catch (e) {
       setError(`Couldn't send it: ${e instanceof Error ? e.message : "no answer"}`);
     } finally {
@@ -116,7 +118,10 @@ export function FeedbackPanel({ onClose }: { onClose: () => void }) {
       <div ref={dialogRef} className="fb" role="dialog" aria-modal="true" aria-label="Send feedback">
         <div className="fb-title">
           <span>Send feedback</span>
-          <div role="button" tabIndex={0} aria-label="Close" className="fb-x" onClick={onClose} onKeyDown={activateOnKey} />
+          <div role="button" tabIndex={0} aria-label="Close" className="fb-x" data-sfx-own="" onClick={() => {
+            playSfx("ui.close");
+            onClose();
+          }} onKeyDown={activateOnKey} />
         </div>
         {sent ? (
           <div className="fb-sent">
@@ -155,7 +160,12 @@ export function FeedbackPanel({ onClose }: { onClose: () => void }) {
                   className="fb-face"
                   onMouseEnter={() => setHotFace(i)}
                   onMouseLeave={() => setHotFace(-1)}
-                  onClick={() => !sending && setMood(mood === m ? undefined : m)}
+                  data-sfx-own=""
+                  onClick={() => {
+                    if (sending) return;
+                    setMood(mood === m ? undefined : m);
+                    sfxToggle(mood !== m);
+                  }}
                 >
                   <Face mood={i} picked={mood === m} hot={hotFace === i && !sending} size={36} />
                 </div>
@@ -174,7 +184,12 @@ export function FeedbackPanel({ onClose }: { onClose: () => void }) {
                     className="fb-kind"
                     data-on={kind === k.id ? "" : undefined}
                     style={{ ["--kc" as string]: k.colour }}
-                    onClick={() => !sending && setKind(k.id)}
+                    data-sfx-own=""
+                    onClick={() => {
+                      if (sending || kind === k.id) return;
+                      setKind(k.id);
+                      playSfx("ui.tick", 1, 1 + 0.1 * KINDS.indexOf(k));
+                    }}
                   >
                     <Icon size={12} strokeWidth={2.4} />
                     <span>{k.label}</span>

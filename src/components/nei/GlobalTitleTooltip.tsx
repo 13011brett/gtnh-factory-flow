@@ -218,11 +218,11 @@ export function GlobalTitleTooltip() {
     <div
       ref={panelRef}
       data-minecraft-tooltip="true"
-      className={`${TOOLTIP_PANEL_CLASS} ui-zoom max-w-[340px] px-2 py-1 font-mono text-[16px] leading-[19px]`}
+      className={`${TOOLTIP_PANEL_CLASS} ui-zoom max-w-[340px]`}
       style={{ left: tip.x, top: tip.y }}
     >
       {tip.lines.map((line, index) => (
-        <div key={`${line}-${index}`} className={index === 0 ? "text-fg" : "text-fg-subtle"}>
+        <div key={`${line}-${index}`} className="mc-tip-line" data-tone={index === 0 ? "name" : undefined}>
           {line}
         </div>
       ))}

@@ -38,6 +38,7 @@ import {
   type SettingControl,
 } from "../menus/settings-model";
 import { SpecialSheet } from "./SpecialSheets";
+import { cloneWithSound } from "@/lib/sound/sfx";
 import type { SpecialActions, SpecialContext, SpecialModel } from "./use-special";
 import type { SpecialChip, SpecialSection, SpecialView } from "./special-model";
 
@@ -702,7 +703,7 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
         >
           <div role="menu" aria-label="Card actions" className="text-[13px] leading-[18px]">
             {[
-              { label: "Clone node", icon: Copy, run: () => duplicateNode(node.id), show: true },
+              { label: "Clone node", icon: Copy, run: () => cloneWithSound(duplicateNode, node.id), show: true },
               {
                 label: "Replace the recipe",
                 icon: RefreshCw,

@@ -36,7 +36,8 @@ export function MachineListMenu({
       <div className="cm-head">Machines that run this recipe</div>
       <div className="cm-scroll">
         {ordered.map((handler) => {
-          const icon = machineIconAtTier(entries.get(handler.id), handler.minimumTier) ?? mapIcon;
+          const own = machineIconAtTier(entries.get(handler.id), handler.minimumTier);
+          const icon = own ?? mapIcon;
           return (
             <div
               key={handler.id}
@@ -50,7 +51,8 @@ export function MachineListMenu({
               }}
             >
               <ArtBox src={icon?.iconPath} atlas={icon && !icon.iconPath ? { ...icon, displayName: icon.displayName ?? handler.label } : undefined} size={18} />
-              <span className="cm-name">{icon?.displayName ?? handler.label}</span>
+              {/* The recipe map's picture stands in for a machine with none of its own, never its name (a bee's map is named for the species). */}
+              <span className="cm-name">{own?.displayName ?? handler.label}</span>
               <span className="cm-note">{getMachineGroup(handler)}</span>
             </div>
           );

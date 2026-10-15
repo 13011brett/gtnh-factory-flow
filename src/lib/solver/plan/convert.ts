@@ -3,6 +3,7 @@ import { dedupeEdgeWires } from "../../model/edge-identity";
 import { resourceMatchesInput } from "../../model/resources";
 import { sectionHandleId } from "../../model/shared-machine";
 import { getStorageRoles } from "../../model/storage-role";
+import { keepsBuffer } from "./adapter/buffers";
 import { hasStorageTarget } from "../../model/storage-target";
 import type {
   FactoryEdge,
@@ -24,7 +25,7 @@ export interface PlanConversionReport {
   portRates: number;
   /** Buffer drawers replaced by direct wires. */
   buffersExpanded: number;
-  /** Of those, ratio buffers (their shares are gone: plain wires). */
+  /** Ratio buffers, joined or kept (their shares are gone either way). */
   ratioBuffersFlattened: number;
   /** Drawers whose stored rate was set to Ignore (Build keeps rates dormant). */
   drawerRatesParked: number;
@@ -56,9 +57,11 @@ export interface PlanConversion {
  * - A card's `targetOutput` becomes a port rate on its output row, and the
  *   plan's `targetRate` lands on the first card making the resource (unless a
  *   card already targets it). The classic fields are left as they are.
- * - Buffer drawers do not exist in plan mode: each wire into a buffer is
- *   joined to each wire out of it, one buffer at a time so a chain still joins
- *   its ends. Ratio buffers are plain buffers here: their shares are dropped.
+ * - A buffer drawer wired only to cards stays a buffer drawer (its rate, which
+ *   no older board enforced, parked as no rule). Any other buffer (wired to a
+ *   drawer, or by a loose cell wire) is joined: each wire into it to each wire
+ *   out of it, one buffer at a time so a chain still joins its ends. Ratio
+ *   buffers are plain buffers here: their shares are dropped.
  * - Build keeps drawer rates dormant, so a rate on a source or product drawer
  *   of a Build plan comes over as Ignore (the number stays, no rule). A
  *   classic Solve plan's rates were live and stay live.
@@ -238,13 +241,31 @@ function expandBuffers(
   project: FactoryProject,
   report: PlanConversionReport,
 ): { edges: FactoryEdge[]; storages: FactoryStorage[] } {
-  const storages = project.storages ?? [];
   const roles = getStorageRoles({ ...project, poolMode: undefined });
   let edges = project.edges.map(stripRatio);
   const removed = new Set<string>();
+  const storageIds = new Set((project.storages ?? []).map((storage) => storage.id));
+  // A buffer wired only to cards stays a buffer drawer (`docs/buffer-drawers.md`); a ratio one loses its shares. No
+  // older board enforced a buffer's rate, so a number on one comes over as no rule (the number stays).
+  const storages = (project.storages ?? []).map((storage) => {
+    if (roles.get(storage.id) !== "buffer" || !keepsBuffer(storage.id, project.edges, storageIds)) return storage;
+    let kept: FactoryStorage = storage;
+    if (storage.bufferMode !== undefined || storage.ratioExportPercent !== undefined) {
+      if (storage.bufferMode === "ratio") report.ratioBuffersFlattened += 1;
+      const { bufferMode: _mode, ratioExportPercent: _share, ...plain } = storage;
+      void _mode;
+      void _share;
+      kept = plain;
+    }
+    if (hasStorageTarget(kept, "product")) {
+      report.drawerRatesParked += 1;
+      kept = { ...kept, targetMode: "ignore" };
+    }
+    return kept;
+  });
 
   for (const storage of storages) {
-    if (roles.get(storage.id) !== "buffer") {
+    if (roles.get(storage.id) !== "buffer" || keepsBuffer(storage.id, project.edges, storageIds)) {
       continue;
     }
     const feeders = edges.filter((e) => e.target === storage.id && e.source !== storage.id);
@@ -314,9 +335,9 @@ function parkDormantRates(
 /**
  * A clipboard or blueprint as the plan board takes it. What was copied on an
  * older board may hold buffer drawers, ratio shares, pool sides and
- * production groups; none exist in plan mode, so buffers become the direct
- * wires they stood for (as `convertBuildToPlan` does) and the rest is
- * dropped. Counts are not pinned: a pasted card is free, like any new card.
+ * production groups; only plain buffers exist in plan mode, so a buffer is
+ * kept as one or joined into the wires it stood for (as `convertBuildToPlan`
+ * does) and the rest is dropped. Counts are not pinned: a pasted card is free, like any new card.
  */
 export function planClipboard<
   T extends {

@@ -61,6 +61,22 @@
   --cd-lit: #c59552;
   --cd-radius: 2px;
 }
+.cd[data-kind="buffer"] {
+  --cd-tint: #2e9c8f;
+  --cd-frame: #325f5d;
+  --cd-edge: #316e6a;
+  --cd-bar: #253d3e;
+  --cd-bar-hot: #274b4a;
+  --cd-body: #242d31;
+  --cd-stripe: #243437;
+  --cd-glance: #243134;
+  --cd-number: #5dafa7;
+  --cd-name: #699c9b;
+  --cd-grip: #649c9a;
+  --cd-grip-hot: #8a9ca1;
+  --cd-lit: #839662;
+  --cd-radius: 0;
+}
 .cd[data-kind="trash"] {
   --cd-tint: #8a93a6;
   --cd-frame: #565b66;
@@ -104,8 +120,15 @@
   clip-path: polygon(0 0, 100% 0, calc(100% - 4px) 100%, 4px 100%);
   box-shadow: none;
 }
+/* A buffer is a barrel: its four corners cut straight (the mod's DrawerPaint.CUT), open to both sides. */
+.cd[data-kind="buffer"] .cd-edge,
+.cd[data-kind="buffer"] .cd-fill {
+  clip-path: polygon(4px 0, calc(100% - 4px) 0, 100% 4px, 100% calc(100% - 4px), calc(100% - 4px) 100%, 4px 100%, 0 calc(100% - 4px), 0 4px);
+  box-shadow: none;
+}
 .cd[data-kind="trash"] .cd-wrap-shadow,
-.cd[data-kind="trash"] {
+.cd[data-kind="trash"],
+.cd[data-kind="buffer"] {
   filter: drop-shadow(6px 8px 7px rgba(0, 0, 0, 0.36));
 }
 
@@ -442,17 +465,20 @@
     0 0 0 2px var(--cc-accept),
     6px 8px 7px rgba(0, 0, 0, 0.36);
 }
-.cd[data-kind="trash"][data-selected] {
+.cd[data-kind="trash"][data-selected],
+.cd[data-kind="buffer"][data-selected] {
   filter: drop-shadow(2px 0 0 var(--cc-select)) drop-shadow(-2px 0 0 var(--cc-select))
     drop-shadow(0 2px 0 var(--cc-select)) drop-shadow(0 -2px 0 var(--cc-select))
     drop-shadow(6px 8px 7px rgba(0, 0, 0, 0.36));
 }
-.cd[data-kind="trash"][data-lit] {
+.cd[data-kind="trash"][data-lit],
+.cd[data-kind="buffer"][data-lit] {
   filter: drop-shadow(1px 0 0 rgba(255, 210, 87, 0.3)) drop-shadow(-1px 0 0 rgba(255, 210, 87, 0.3))
     drop-shadow(0 1px 0 rgba(255, 210, 87, 0.3)) drop-shadow(0 -1px 0 rgba(255, 210, 87, 0.3))
     drop-shadow(6px 8px 7px rgba(0, 0, 0, 0.36));
 }
-.cd[data-kind="trash"][data-accepts] {
+.cd[data-kind="trash"][data-accepts],
+.cd[data-kind="buffer"][data-accepts] {
   filter: drop-shadow(1px 0 0 rgba(74, 222, 128, 0.7)) drop-shadow(-1px 0 0 rgba(74, 222, 128, 0.7))
     drop-shadow(0 1px 0 rgba(74, 222, 128, 0.7)) drop-shadow(0 -1px 0 rgba(74, 222, 128, 0.7))
     drop-shadow(6px 8px 7px rgba(0, 0, 0, 0.36));

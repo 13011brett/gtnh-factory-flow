@@ -1,6 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import { playEditSfx, playSfxDegree } from "@/lib/sound/sfx";
 
 /**
  * What the top bar asks of the board. FactoryFlow registers these while it is
@@ -26,6 +27,10 @@ const IDLE: ArrangeState = { running: false, fraction: 0, stopping: false };
 
 let commands: BoardCommands | undefined;
 let arrange: ArrangeState = IDLE;
+/** The arrange's progress in tenths that have ticked, and when the last did (the mod's `tickArrange`). */
+let arrangeTicked = 0;
+let arrangeTickAt = 0;
+const ARRANGE_TICK_MS = 90;
 const listeners = new Set<() => void>();
 
 function emit() {
@@ -47,6 +52,9 @@ export function getBoardCommands(): BoardCommands | undefined {
 export function reportArrange(progress: { step: number; done: number; total: number } | undefined, steps: number) {
   if (!progress) {
     if (arrange !== IDLE) {
+      // Landing has its own sound; a stopped arrange lands nothing.
+      if (!arrange.stopping) playEditSfx("board.sweep");
+      arrangeTicked = 0;
       arrange = IDLE;
       emit();
     }
@@ -55,6 +63,14 @@ export function reportArrange(progress: { step: number; done: number; total: num
   const within = progress.total > 0 ? Math.min(1, progress.done / progress.total) : 0;
   const fraction = Math.max(arrange.running ? arrange.fraction : 0, Math.min(1, (progress.step + within) / steps));
   if (arrange.running && arrange.fraction === fraction) return;
+  // A tick for every tenth it gets along, a note higher each time, spaced so a quick one does not rattle.
+  const tenth = Math.floor(fraction * 10);
+  const now = typeof performance === "undefined" ? 0 : performance.now();
+  if (!arrange.stopping && tenth > arrangeTicked && now - arrangeTickAt >= ARRANGE_TICK_MS) {
+    arrangeTicked = tenth;
+    arrangeTickAt = now;
+    playSfxDegree("ui.tick", 0.8, tenth - 4);
+  }
   arrange = { running: true, fraction, stopping: arrange.running ? arrange.stopping : false };
   emit();
 }

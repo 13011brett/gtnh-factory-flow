@@ -31,13 +31,14 @@ const COLUMNS: ReadonlyArray<ReadonlyArray<PowerGroupId | "other">> = [
 
 /** The planning cards the picker lists first: no recipe, no tier. */
 interface OtherCard {
-  id: "custom-rate" | "fluid-tank";
+  id: "custom-rate" | "fluid-tank" | "crop-farm";
   name: string;
   blurb: string;
 }
 const OTHERS: readonly OtherCard[] = [
   { id: "custom-rate", name: "Custom Rate", blurb: "A rate you set: supplies or drains any resource, at a dial." },
   { id: "fluid-tank", name: "Fluid Tank", blurb: "Empties a filled cell into its fluid and the empty cell, or fills cells. Free and instant." },
+  { id: "crop-farm", name: "Crop Farm", blurb: "Crops planted and harvested: pick the crop on the card." },
 ];
 
 type Entry =
@@ -135,6 +136,7 @@ export function ModPowerPicker() {
       playBoardSound("tick");
       if (entry.kind === "other") {
         if (entry.card.id === "custom-rate") addCustomRateNode();
+        else if (entry.card.id === "crop-farm") useFactoryStore.getState().addCropFarmNode();
         else (useFactoryStore.getState() as unknown as { addFluidTankNode?: () => void }).addFluidTankNode?.();
         closePowerMenu();
         return;
@@ -368,6 +370,7 @@ function TierTag({ tier }: { tier: string }) {
 
 function MachineArt({ entry, size }: { entry: Entry; size: number }) {
   if (entry.kind === "other") {
+    if (entry.card.id === "crop-farm") return <SproutArt size={size} />;
     return entry.card.id === "custom-rate" ? <Gauge scale={size >= 40 ? 4 : 2} /> : <TankArt size={size} />;
   }
   const art = getPowerStructureArt(entry.hit.source.id);
@@ -404,6 +407,18 @@ function Gauge({ scale }: { scale: number }) {
   return (
     <svg width={9 * scale} height={8 * scale} viewBox="0 0 9 8" shapeRendering="crispEdges" fill="#aebceb" aria-hidden>
       <path d={d} />
+    </svg>
+  );
+}
+
+/** A sprout on farmland: the crop farm. */
+function SproutArt({ size }: { size: number }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 16 16" shapeRendering="crispEdges" aria-hidden>
+      <path d="M1 11h14v4H1z" fill="#5b3b22" />
+      <path d="M1 11h14v1H1z" fill="#7a5230" />
+      <path d="M7 4h1v7H7z" fill="#3f8f2a" />
+      <path d="M3 4h4v1H3zM4 5h3v1H4zM8 6h4v1H8zM8 7h3v1H8z" fill="#5cc23b" />
     </svg>
   );
 }

@@ -62,6 +62,7 @@ import { getUiScale, useUiScale } from "@/lib/ui-scale";
 import { machineArtPixels } from "./flow/MachinePicker";
 import { ItemPickerPopover } from "./ItemPickerPopover";
 import { ResourceIcon } from "./nei/ResourceIcon";
+import { itemTipLines, McFloatingTip } from "./nei/McTip";
 import {
   contextualizePreviewRecipe,
   summaryToPreviewRecipe,
@@ -2466,12 +2467,16 @@ function ResourceChip({
   }, [onCycle]);
 
   const press = useLongPress(onMenu);
+  // The item's Minecraft tooltip, at once, as NEI shows one over a recipe's slot.
+  const [tip, setTip] = useState<{ x: number; y: number }>();
 
   return (
     <button
       ref={rootRef}
       type="button"
       {...press.handlers}
+      onMouseMove={(event) => setTip(event.buttons === 0 ? { x: event.clientX, y: event.clientY } : undefined)}
+      onMouseLeave={() => setTip(undefined)}
       onPointerDown={(event) => {
         press.handlers.onPointerDown(event);
         onDragStart?.(event);
@@ -2536,6 +2541,18 @@ function ResourceChip({
         <span className="text-[12px] text-[var(--mc-ink-muted)] tabular-nums">
           {Math.round(chance * 1000) / 10}%
         </span>
+      ) : null}
+      {tip ? (
+        <McFloatingTip
+          x={tip.x}
+          y={tip.y}
+          lines={itemTipLines({
+            name: resourceLabel(resource),
+            id: resource.id,
+            tooltip: resource.tooltip,
+            extra: chance !== undefined && chance < 1 ? [`Chance: ${Math.round(chance * 1000) / 10}%`] : undefined,
+          })}
+        />
       ) : null}
     </button>
   );

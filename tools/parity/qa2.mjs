@@ -192,7 +192,7 @@ for (const n of names) {
   try {
     await Promise.race([sections[n](), new Promise((_, rj) => setTimeout(() => rj(new Error("section timeout 240 s")), 240000))]);
   } catch (e) {
-    rec(n, "CRASH", "FAIL", String(e).slice(0, 300));
+    rec(n, "CRASH", "FAIL", String(e).replace(/data-tip="[^"]*"/g, "").slice(0, 1500));
   }
 }
 fs.writeFileSync(RES, JSON.stringify(results, null, 1));

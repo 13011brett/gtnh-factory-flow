@@ -42,7 +42,8 @@ export function readExtras(root: Element | null, id: string, type: string | unde
     const img = icon?.querySelector("img");
     const art = img?.getAttribute("src") ?? (icon ? urlOf(icon.style.backgroundImage) : undefined);
     const text = num?.textContent?.trim();
-    const sign = kind === "source" ? "-" : "+";
+    // Taken from a source, put into a product or trash; nothing signs what passes through a buffer.
+    const sign = kind === "source" ? "-" : kind === "buffer" ? "" : "+";
     return {
       drawer: kind,
       art: art ?? undefined,

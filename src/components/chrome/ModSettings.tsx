@@ -14,7 +14,7 @@ import {
 import { useDeviceSettings, writeDeviceSettings } from "@/lib/device-settings";
 import { SEE_THROUGH_STEP, setSeeThrough, useSeeThrough } from "@/components/flow/clean/seethrough/see-through";
 import { MinimapSettingsRows } from "@/components/flow/clean/minimap/MinimapSettingsPanel";
-import { areBoardSoundsEnabled, getBoardSoundVolume, playBoardSound, setBoardSoundsEnabled, setBoardSoundVolume } from "@/lib/board-sounds";
+import { getSoundLevel, playSfx, setSoundLevel, sfxClick, sfxTick, sfxToggle } from "@/lib/sound/sfx";
 import { setUiScalePercent, useUiScalePercent } from "@/lib/ui-scale";
 import { BOARD_TIMELAPSE_PRESETS, runBoardTimelapsePreset } from "@/components/flow/board-timelapse";
 import { useFactoryStore } from "@/store/factory-store";
@@ -25,10 +25,8 @@ import {
   SEE_THROUGH_NAMES,
   SIZE_NAMES,
   SOUND_NAMES,
-  SOUND_VOLUME,
   sizeIndexOf,
   sizePercentOf,
-  soundIndexOf,
 } from "./settings-model";
 
 type Kind = "switch" | "choice" | "slider" | "button";
@@ -72,7 +70,7 @@ export function ModSettings({
   const seeThrough = useSeeThrough();
   const uiPercent = useUiScalePercent();
   const [font, setFont] = useState<AppFontId>(() => getStoredAppFont());
-  const [sounds, setSounds] = useState(() => ({ enabled: areBoardSoundsEnabled(), volume: getBoardSoundVolume() }));
+  const [soundIndex, setSoundIndex] = useState(() => getSoundLevel());
   const [menu, setMenu] = useState<{ anchor: ChromeAnchor }>();
   const canPlayTimelapse = useFactoryStore(
     (state) => state.project.nodes.length + (state.project.storages?.length ?? 0) >= 2,
@@ -83,6 +81,7 @@ export function ModSettings({
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape" && !menu) {
         event.stopPropagation();
+        playSfx("ui.close");
         onClose();
       }
     };
@@ -90,14 +89,17 @@ export function ModSettings({
     return () => window.removeEventListener("keydown", onKey, true);
   }, [onClose, menu]);
 
-  const soundIndex = soundIndexOf(sounds.enabled, sounds.volume);
   const setSound = (index: number) => {
-    const enabled = index > 0;
-    setBoardSoundsEnabled(enabled);
-    if (enabled) setBoardSoundVolume(SOUND_VOLUME[index]);
-    setSounds({ enabled, volume: enabled ? SOUND_VOLUME[index] : sounds.volume });
-    // The Sounds row clicks at its new loudness.
-    if (enabled) window.setTimeout(() => playBoardSound("tick"), 40);
+    setSoundLevel(index);
+    setSoundIndex(index);
+  };
+  // The box opens and closes with the mod's panel sounds.
+  useEffect(() => {
+    playSfx("ui.open");
+  }, []);
+  const close = () => {
+    playSfx("ui.close");
+    onClose();
   };
 
   const sections: Section[] = [
@@ -210,26 +212,30 @@ export function ModSettings({
 
   const sectionIndex = Math.max(0, sections.findIndex((section) => section.name === settings.settingsSection));
   const section = sections[sectionIndex];
-  const pick = (index: number) => {
+  const pick = (index: number, wheel?: boolean) => {
     if (index === sectionIndex) return;
     writeDeviceSettings({ settingsSection: sections[index].name });
-    playBoardSound("tick");
+    if (wheel) sfxTick(index < sectionIndex);
+    else sfxClick();
   };
 
   const set = (row: Row, index: number, anchor?: HTMLElement) => {
     if (row.off) return;
     if (row.kind !== "button" && index === row.at) return;
+    const up = index > row.at;
     row.to(index, anchor);
-    if (row.kind === "switch") playBoardSound("tick", { gain: index === 1 ? 1.1 : 0.9 });
-    else if (row.kind === "button") playBoardSound("tick");
-    else if (row.kind === "choice" && row.label !== "Sounds") playBoardSound("tick");
+    // The sound of what changed, as the mod's SettingsPanel.set; the Sounds row clicks at its new loudness.
+    if (row.kind === "switch") sfxToggle(index === 1);
+    else if (row.kind === "slider") playSfx("ui.tick", 1, 0.85 + (0.4 * index) / Math.max(1, row.names.length - 1));
+    else if (row.kind === "button" || row.label === "Sounds") sfxClick();
+    else sfxTick(up);
   };
 
   return createPortal(
     <div
       className="ms-backdrop ui-zoom"
       onPointerDown={(event) => {
-        if (event.target === event.currentTarget) onClose();
+        if (event.target === event.currentTarget) close();
       }}
     >
       <div
@@ -244,19 +250,19 @@ export function ModSettings({
           const target = event.target as HTMLElement;
           if (!target.closest(".ms-side")) return;
           const next = Math.max(0, Math.min(sections.length - 1, sectionIndex + (event.deltaY > 0 ? 1 : -1)));
-          pick(next);
+          pick(next, true);
         }}
       >
         <div className="ms-title">
           <span>Settings</span>
-          <div className="ms-close" role="button" aria-label="Close" onClick={onClose}>
+          <div className="ms-close" role="button" aria-label="Close" onClick={close}>
             <svg width="14" height="14" viewBox="0 0 14 14" shapeRendering="crispEdges" aria-hidden fill="currentColor">
               <path d={crossPath()} />
             </svg>
           </div>
         </div>
         <div className="ms-body">
-          <nav className="ms-side" aria-label="Settings sections">
+          <nav className="ms-side" aria-label="Settings sections" data-sfx-own="">
             {sections.map((entry, index) => (
               <div
                 key={entry.name}
@@ -270,7 +276,7 @@ export function ModSettings({
               </div>
             ))}
           </nav>
-          <div className="ms-rows">
+          <div className="ms-rows" data-sfx-own="">
             {section.intro ? <div className="ms-intro">{section.intro}</div> : null}
             {section.body ??
               section.rows.map((row) => <SettingRow key={row.label} row={row} onSet={set} dragRef={dragRef} />)}
@@ -350,7 +356,7 @@ function SettingRow({
           onPointerUp={() => (dragRef.current = undefined)}
           onChange={(event) => {
             const value = Number(event.target.value);
-            row.to(value);
+            onSet(row, value);
           }}
         />
         <span className="ms-value">{row.names[Math.max(0, row.at)]}</span>
@@ -393,8 +399,7 @@ function SettingRow({
         if (row.kind === "switch") onSet(row, step > 0 ? 1 : 0);
         else if (row.kind === "choice" || row.kind === "slider") {
           const next = Math.max(0, Math.min(last, (row.at < 0 ? 0 : row.at) + step));
-          if (row.kind === "slider") row.to(next);
-          else onSet(row, next);
+          onSet(row, next);
         }
       }}
     >

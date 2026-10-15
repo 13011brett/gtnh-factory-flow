@@ -450,7 +450,7 @@ describe("the funnel", () => {
     useFactoryStore.setState({ isReadOnly: false });
   });
 
-  it("a pasted clipboard from an older board loses its buffers, ratios, pool sides and groups", () => {
+  it("a pasted clipboard from an older board keeps its buffer as a plain buffer, losing ratios, pool sides and groups", () => {
     const clipboard = {
       nodes: [node("a", "rA", { productionGroupId: "g" }), node("b", "rB")],
       storages: [
@@ -463,10 +463,11 @@ describe("the funnel", () => {
       productionGroups: [{ id: "g" }],
     };
     const pasted = planClipboard(clipboard as never) as typeof clipboard;
-    expect(pasted.storages).toEqual([]);
-    expect(pasted.edges).toHaveLength(1);
-    expect(pasted.edges[0]).toMatchObject({ source: "a", target: "b" });
-    expect(pasted.edges[0]!.ratioWeight).toBeUndefined();
+    expect(pasted.storages.map((s) => s.id)).toEqual(["buf"]);
+    expect((pasted.storages[0] as { bufferMode?: string }).bufferMode).toBeUndefined();
+    expect((pasted.storages[0] as { poolSide?: string }).poolSide).toBeUndefined();
+    expect(pasted.edges).toHaveLength(2);
+    expect(pasted.edges.every((e) => e.ratioWeight === undefined)).toBe(true);
     expect(pasted.nodes[0]!.productionGroupId).toBeUndefined();
     expect(pasted.productionGroups).toBeUndefined();
   });

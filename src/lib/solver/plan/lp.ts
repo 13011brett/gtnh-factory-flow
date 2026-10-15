@@ -125,6 +125,11 @@ export function addDrawerRows(ctx: SolveContext, lp: ModelLp, relaxed: boolean):
       cols.push(lp.extentCol(m));
       vals.push(drawer.extentQty[i]! * scale);
     });
+    // A buffer's total is the flow on its edges.
+    for (const e of drawer.flowEdges) {
+      cols.push(lp.flowCol(e));
+      vals.push(scale);
+    }
     for (const p of drawer.externalPorts) {
       cols.push(lp.extCol(p));
       vals.push(scale);

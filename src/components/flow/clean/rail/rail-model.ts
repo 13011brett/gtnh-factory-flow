@@ -1,4 +1,5 @@
 import { isCustomRateRecipe } from "@/lib/model/custom-rate";
+import { isFluidTankRecipe } from "@/lib/model/fluid-tank";
 import { buildMachineList, type MachineListEntry } from "@/lib/model/machine-list";
 import { makeResourceKey } from "@/lib/model/resources";
 import { getStorageRoles, type StorageRole } from "@/lib/model/storage-role";
@@ -222,6 +223,8 @@ export function buildRailModel(
 
   const machineEntries = buildMachineList(project, result);
   const machines: RailMachine[] = machineEntries
+    // A fluid tank is free and instant: no machine to build (the mod lists none for it).
+    .filter((entry) => !isFluidTankRecipe(recipes.get(nodesById.get(entry.nodeId)?.recipeId ?? "")))
     .filter((entry) => entry.count > 1e-9 || (nodesById.get(entry.nodeId)?.solvePin ?? 0) > 0)
     .map((entry) => {
       const pin = nodesById.get(entry.nodeId)?.solvePin;
@@ -251,6 +254,9 @@ export function buildRailModel(
     const projectNode = nodesById.get(cardId);
     const recipe = recipes.get(node.recipeId);
     if (!projectNode || isCustomRateRecipe(recipe)) continue;
+    // A machine at zero keeps its nameplate rates in the result (its port rows are built from them) but makes and uses
+    // nothing: the mod sums solved flows only. A shared machine's unused recipe is one.
+    if (!((node.theoreticalMachinesRequired ?? 0) > 1e-9)) continue;
     for (const side of ["output", "input"] as const) {
       const flows = side === "output" ? node.outputs : node.inputs;
       for (const flow of Object.values(flows)) {
@@ -399,7 +405,7 @@ export function buildRailModel(
     },
     hasMade: machineEntries.some((e) => e.madeEuT !== undefined),
   };
-  const wholeMachines = machineEntries.reduce((total, e) => total + Math.ceil(e.count - 1e-9), 0);
+  const wholeMachines = machines.reduce((total, e) => total + Math.ceil(e.count - 1e-9), 0);
   return { inputs, outputs, internal, machines, wholeMachines, power, aliases };
 }
 

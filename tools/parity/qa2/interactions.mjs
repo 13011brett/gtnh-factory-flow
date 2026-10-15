@@ -49,7 +49,7 @@ export default function ({ page, wait, rec, check, shot, nodeSel, focus, idle, s
     await tipDelay("rail machine line chip", ".rail-machine .rail-tier");
     await tipDelay("top bar key (rate unit)", '.mb-key:text-is("EU/t")');
     await tipDelay("plan tab", 'text=Untitled design', 0);
-    await tipDelay("top bar undo key", 'header button >> nth=0');
+    await tipDelay("top bar undo key", '.mb-key[aria-label="Undo"]');
     // none while holding: press on the drawer bar and stay
     await idle();
     const c = await center(an + " .cd-bar");

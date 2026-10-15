@@ -1,6 +1,9 @@
 "use client";
 
-import { SpawnKeys } from "@/components/SpawnKeys";
+import { RailKey } from "@/components/flow/clean/rail/rail-controls";
+import "@/components/flow/clean/rail/rail.css";
+import { useIsCompactViewport } from "@/lib/compact-view";
+import { useBoardCovered } from "./use-covering-page";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { DEFAULT_DATASET_MANIFEST_URL } from "@/lib/datasets";
 import {
@@ -66,6 +69,8 @@ interface RecipeBrowserProps {
 export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
   // Plan boards seat the items on the right: its edge, fold key and arrow face the other way.
   const itemsOnRight = usePlanLayout();
+  const isCompact = useIsCompactViewport();
+  const boardCovered = useBoardCovered();
   const datasetManifest = useFactoryStore((state) => state.datasetManifest);
   const datasetManifestUrl = useFactoryStore((state) => state.datasetManifestUrl);
   const selectedDatasetVersionId = useFactoryStore((state) => state.selectedDatasetVersionId);
@@ -802,21 +807,6 @@ export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
           // The wheel pages the list from anywhere in the column, including over
           // the controls and the recent shelf, since nothing here scrolls.
           <div className="flex min-h-0 flex-1 flex-col">
-        {/* Spawners for the non-recipe cards (generator, custom rate, crop
-            farm), above the search. */}
-        <SpawnKeys
-          leading={
-            /* Folds this column away; on a phone it closes the drawer. */
-            <button
-              type="button"
-              onClick={() => writeWorkspaceView({ leftPanelOpen: false })}
-              aria-label="Hide the items column"
-              className="fold-key"
-            >
-              <FoldGlyph direction={itemsOnRight ? "right" : "left"} />
-            </button>
-          }
-        />
         <ResourceIndexPane
           search={recipeSearch}
           onSearchChange={setRecipeSearch}
@@ -824,6 +814,20 @@ export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
           searchFlashing={isSearchFlashing}
           activeResource={activeResource}
           onBrowse={browseResource}
+          // NEI's field sits at the bottom middle of the screen. On a phone, under a page covering the board and under
+          // the recipe search (whose own keys sit there) it is at the column's foot.
+          searchAt={isCompact || boardCovered || activeResource ? "bottom" : "dock"}
+          leading={
+            /* Folds this column away (the overview's fold key, facing the board); on a phone it closes the drawer. */
+            <RailKey
+              label="Hide the items column"
+              className="rail-key-fold"
+              onClick={() => writeWorkspaceView({ leftPanelOpen: false })}
+              tip={() => ({ title: "Fold the items" })}
+            >
+              <FoldGlyph direction={itemsOnRight ? "right" : "left"} />
+            </RailKey>
+          }
         />
           </div>
         )}

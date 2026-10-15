@@ -34,7 +34,7 @@ import { useRenderedHandles } from "../../use-rendered-handles";
 import { usePortRowBrowse } from "../../use-port-row-browse";
 import type { StorageNodeData } from "../../StorageNode";
 import { checklistLocked } from "../../RecipeNode";
-import { TO_PRODUCT, TO_TRASH, buildDrawerView } from "./drawer-model";
+import { TO_PRODUCT, TO_TRASH, bufferThroughput, buildDrawerView } from "./drawer-model";
 import { DrawerIcon } from "./DrawerIcon";
 import { ensureInteractionHost, tipAttrs } from "../interaction";
 import type { TargetMode } from "@/lib/model/storage-target";
@@ -212,7 +212,7 @@ export function CleanDrawer({
     storage,
     role: role === "idle" ? "product" : role,
     result,
-    flowing: Math.abs(result?.netPerSecond ?? 0),
+    flowing: role === "buffer" ? bufferThroughput(result) : Math.abs(result?.netPerSecond ?? 0),
   });
   const locked = rule.locked || checklistLocked();
   /** A byproduct has no rule: choosing one makes it a product first. */
@@ -300,7 +300,8 @@ export function CleanDrawer({
         });
       }
     }
-    if (view.kind !== "source") {
+    // Product and trash take turns; a source and a buffer are what their wires make them.
+    if (view.kind === "product" || view.kind === "trash") {
       rows.push({
         mark: "",
         label: view.kind === "trash" ? TO_PRODUCT : TO_TRASH,

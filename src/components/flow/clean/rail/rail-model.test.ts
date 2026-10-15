@@ -16,7 +16,8 @@ describe("the rail's totals", () => {
     // The iron drawer is a source with a rule (at most 12); the log drawer is a source with nothing set.
     expect(rail.inputs.map((l) => l.label)).toEqual(["Iron Ingot", "Log"]);
     expect(rail.outputs.map((l) => l.label).sort()).toEqual(["Plank", "Steel Plate", "Steel Rod"]);
-    expect(rail.internal.map((l) => l.label)).toEqual(["Steel Plate"]);
+    // The cutter sits at zero: its nameplate rates in the result are not flows, so no plate stays inside.
+    expect(rail.internal.map((l) => l.label)).toEqual([]);
     const steel = rail.outputs.find((l) => l.label === "Steel Plate")!;
     // 6 made by the compressor, the spare cutter at zero uses none of it.
     expect(steel.amount).toBeGreaterThan(0);
@@ -53,6 +54,17 @@ describe("the rail's totals", () => {
     expect(rail.machines.map((m) => m.nodeId)).toEqual(["comp"]);
     expect(rail.machines[0]).toMatchObject({ pinned: true, pin: 6 });
     expect(rail.wholeMachines).toBe(6);
+  });
+
+  it("lists no machine for a fluid tank: it is free and instant (the mod lists none)", () => {
+    const project = structuredClone(mockUnneeded.project);
+    const comp = project.nodes.find((n) => n.id === "comp")!;
+    const recipe = project.recipes.find((r) => r.id === comp.recipeId)!;
+    recipe.machineType = "Tank";
+    recipe.source = { ...recipe.source, recipeMap: "Tank" } as typeof recipe.source;
+    const rail = buildRailModel(project, mockUnneeded.result);
+    expect(rail.machines).toEqual([]);
+    expect(rail.wholeMachines).toBe(0);
   });
 
   it("adds up power from the machine list (peak and average)", () => {

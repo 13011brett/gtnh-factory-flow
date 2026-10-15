@@ -29,6 +29,7 @@ export const PLAN_NAMES = [
   "mv",
   "full-platline",
   "platline",
+  "buffer-drawers",
 ] as const;
 
 /** The 16 gtnh-flow charts (`GtnhFlowLoader.CORPUS`); case names are `gtnh-flow-<chart>`. */
@@ -98,7 +99,11 @@ export function parseSolveInput(raw: unknown): SolveInput {
     machines,
     edges: (o.edges as EdgeIn[]).map((e) => ({ ...e })),
     pools: ((o.pools as PoolIn[]) ?? []).map((p) => ({ ...p, machines: [...p.machines] })),
-    drawers: ((o.drawers as DrawerIn[]) ?? []).map((d) => ({ ...d, links: d.links.map((l) => ({ ...l })) })),
+    drawers: ((o.drawers as DrawerIn[]) ?? []).map((d) => ({
+      ...d,
+      links: d.links.map((l) => ({ ...l })),
+      ...(d.takers ? { takers: d.takers.map((l) => ({ ...l })) } : {}),
+    })),
     extentPins: { ...((o.extentPins as Record<Id, number>) ?? {}) },
     spares: JSON.parse(JSON.stringify(o.spares ?? {})) as SolveInput["spares"],
   };
@@ -148,7 +153,12 @@ export function tile(input: SolveInput, copies: number): SolveInput {
     for (const e of input.edges) edges.push({ ...e, id: r(e.id), source: r(e.source), target: r(e.target) });
     for (const p of input.pools) pools.push({ ...p, machines: p.machines.map(r) });
     for (const d of input.drawers)
-      drawers.push({ ...d, id: r(d.id), links: d.links.map((l) => ({ ...l, node: r(l.node) })) });
+      drawers.push({
+        ...d,
+        id: r(d.id),
+        links: d.links.map((l) => ({ ...l, node: r(l.node) })),
+        ...(d.takers ? { takers: d.takers.map((l) => ({ ...l, node: r(l.node) })) } : {}),
+      });
     for (const [k, v] of Object.entries(input.extentPins)) extentPins[r(k)] = v;
     const rekey = (key: string) => (c === 0 ? key : key.replace(UUID_RE, (u) => r(u)));
     for (const [lk, bearers] of Object.entries(input.spares)) {

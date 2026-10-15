@@ -16,6 +16,7 @@
  */
 import path from "node:path";
 import { isCommunityConfigured } from "@/lib/server/community";
+import { assertLocalDbAllowed } from "@/lib/server/local-db/client";
 import { LiveService } from "./service";
 import { supabasePlanStore } from "./store";
 
@@ -28,6 +29,11 @@ async function main() {
   const production = process.env.NODE_ENV === "production";
   if (!process.env.COMMUNITY_HASH_SALT) {
     fatal("COMMUNITY_HASH_SALT is not set: sessions could not be checked.");
+  }
+  try {
+    assertLocalDbAllowed();
+  } catch (error) {
+    fatal((error as Error).message);
   }
   if (!isCommunityConfigured()) {
     fatal("No database: set SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY (or LOCAL_DB=1).");

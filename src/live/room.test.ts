@@ -269,3 +269,33 @@ describe("a room's lease", () => {
     expect(await again!.flush()).toBe(true);
   });
 });
+
+describe("what the server writes on a task", () => {
+  it("is who made it: the sender of a new task, kept by a put over it, never patched", async () => {
+    const room = await openRoom(new HeldStore());
+    const bob: RoomPeer = { ...peer, connId: "c-bob", userId: "22222222-2222-4222-8222-222222222222" };
+    const task = (id: string, extra: Record<string, unknown> = {}) => ({
+      o: "put" as const,
+      c: "tasks" as const,
+      id,
+      v: { id, title: "T", status: "todo", order: "a1", ...extra },
+    });
+    const createdBy = (id: string) =>
+      (room.plan.tasks as Array<{ id: string; createdBy?: string }>).find((t) => t.id === id)
+        ?.createdBy;
+    expect(room.apply(bob, "b1", [task("t2", { createdBy: OWNER })])).toMatchObject({
+      kind: "applied",
+    });
+    expect(createdBy("t2")).toBe(bob.userId);
+    room.apply(peer, "a1", [task("t2", { createdBy: OWNER, title: "Renamed" })]);
+    expect(createdBy("t2")).toBe(bob.userId);
+    room.apply(peer, "a2", [
+      { o: "patch", c: "tasks", id: "t2", f: { createdBy: OWNER } },
+      { o: "patch", c: "tasks", id: "t1", f: {}, d: ["createdBy"] },
+    ]);
+    expect(createdBy("t2")).toBe(bob.userId);
+    // A task from before, made by nobody the server knows, stays that way.
+    room.apply(bob, "b2", [task("t1", { createdBy: bob.userId })]);
+    expect(createdBy("t1")).toBeUndefined();
+  });
+});

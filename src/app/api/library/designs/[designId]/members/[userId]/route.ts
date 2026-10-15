@@ -15,6 +15,9 @@ export const dynamic = "force-dynamic";
 
 type RouteContext = { params: Promise<{ designId: string; userId: string }> };
 
+/** Accounts an owner may add to their plans an hour: share spam goes nowhere fast. */
+const SHARE_ADDS_PER_HOUR = 30;
+
 /**
  * Sharing a plan: the owner adds an account as an editor (PUT) or takes one
  * off (DELETE); a member takes themselves off (leaving). Each change reaches
@@ -91,6 +94,16 @@ export async function PUT(request: Request, context: RouteContext) {
         return NextResponse.json(
           { error: `A plan can be shared with ${LIBRARY_MAX_MEMBERS} accounts at most.` },
           { status: 409 },
+        );
+      }
+      // Each share shows the plan in someone else's library: an owner adds
+      // at most SHARE_ADDS_PER_HOUR a hour, across all their plans.
+      if (
+        !(await checkRateLimit(`user:${ownerId}`, "library-share-add", SHARE_ADDS_PER_HOUR, 60 * 60))
+      ) {
+        return NextResponse.json(
+          { error: `You can share with ${SHARE_ADDS_PER_HOUR} people an hour. Try again later.` },
+          { status: 429 },
         );
       }
       const { error: insertError } = await db

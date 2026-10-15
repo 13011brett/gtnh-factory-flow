@@ -1028,7 +1028,8 @@ describe("the live service", { timeout: 30_000 }, () => {
     const tasks = state.view.tasks as Array<Record<string, unknown>>;
     expect(tasks).toEqual([
       { id: "t1", title: "One", status: "todo", order: "a0" },
-      { id: "t2", title: "Two", status: "todo", order: "a1" },
+      // Who made it is the server's to say.
+      { id: "t2", title: "Two", status: "todo", order: "a1", createdBy: users.ann!.id },
     ]);
     await ann.close();
     await until(async () => (await storedRow(designId)).live_lease_until === null);

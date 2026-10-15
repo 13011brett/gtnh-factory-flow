@@ -26,6 +26,18 @@ export function isLocalDb(): boolean {
   return process.env.LOCAL_DB === "1";
 }
 
+/**
+ * LOCAL_DB=1 points the server at a development database that checks no key:
+ * a production process with it set would serve everyone's data from
+ * whatever answers on LOCAL_DB_URL. Throws when NODE_ENV is production;
+ * called as each server starts and before the local client is made.
+ */
+export function assertLocalDbAllowed(): void {
+  if (isLocalDb() && process.env.NODE_ENV === "production") {
+    throw new Error("LOCAL_DB=1 is for development only: unset it when NODE_ENV=production.");
+  }
+}
+
 export function localDbUrl(): string {
   return (process.env.LOCAL_DB_URL || LOCAL_DB_DEFAULT_URL).replace(/\/+$/, "");
 }

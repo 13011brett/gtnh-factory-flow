@@ -2,7 +2,13 @@ import { createHash, randomBytes, scryptSync, timingSafeEqual } from "node:crypt
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { entryIconSchema } from "@/lib/model/schemas";
 import type { CommunityPlanSummary, EntryIcon, PlanResourceStat } from "@/lib/community/types";
-import { isLocalDb, LOCAL_DB_SERVICE_KEY, localDbFetch, localDbUrl } from "./local-db/client";
+import {
+  assertLocalDbAllowed,
+  isLocalDb,
+  LOCAL_DB_SERVICE_KEY,
+  localDbFetch,
+  localDbUrl,
+} from "./local-db/client";
 import { makeSessionToken, readSessionCookie, SESSION_COOKIE, SESSION_DAYS, verifySessionToken } from "./session";
 
 export { makeSessionToken, SESSION_COOKIE };
@@ -48,7 +54,8 @@ export function isCommunityConfigured(): boolean {
 export function getCommunityDb(): SupabaseClient {
   if (!cachedClient && isLocalDb()) {
     // Local development (LOCAL_DB=1): the database on this machine, never
-    // the hosted project, whatever SUPABASE_URL says.
+    // the hosted project, whatever SUPABASE_URL says. Never in production.
+    assertLocalDbAllowed();
     cachedClient = createClient(localDbUrl(), LOCAL_DB_SERVICE_KEY, {
       auth: { persistSession: false, autoRefreshToken: false },
       global: { fetch: (input, init) => localDbFetch(input, init, fetchWithDbTimeout) },

@@ -389,4 +389,37 @@ describe("cloud plans over REST", () => {
     }
     expect(last).toBe(429);
   });
+
+  it("holds an owner to 30 new shares an hour, however often they unshare", async () => {
+    await makeUser("erin");
+    const designId = "design-share-spam";
+    const saved = await design.PUT(
+      request(
+        "PUT",
+        `/api/library/designs/${designId}`,
+        "erin",
+        upsertBody("Spam", "2026-10-14T11:00:00.000Z"),
+      ),
+      params({ designId }),
+    );
+    expect(saved.status).toBe(200);
+    const share = (method: "PUT" | "DELETE") =>
+      (method === "PUT" ? member.PUT : member.DELETE)(
+        request(method, `/api/library/designs/${designId}/members/${users.bob!.id}`, "erin"),
+        params({ designId, userId: users.bob!.id }),
+      );
+    for (let i = 0; i < 30; i += 1) {
+      expect((await share("PUT")).status).toBe(200);
+      // Sharing again with someone already in it adds nobody.
+      if (i === 0) {
+        expect((await share("PUT")).status).toBe(200);
+      }
+      expect((await share("DELETE")).status).toBe(200);
+    }
+    const refused = await share("PUT");
+    expect(refused.status).toBe(429);
+    expect(await refused.json()).toEqual({
+      error: "You can share with 30 people an hour. Try again later.",
+    });
+  });
 });

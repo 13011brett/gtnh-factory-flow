@@ -399,19 +399,28 @@ export class Room {
   }
 
   /**
-   * A comment's author and time are the server's to write: a new comment gets
-   * the sender and now; changing an existing one is its author's alone and
-   * keeps its stamps. Anyone in the room may delete one (a task going takes
-   * its comments with it).
+   * What the server writes, never the client: a comment's author and time,
+   * and who made a task.
+   *
+   * A new comment gets the sender and now; changing an existing one is its
+   * author's alone and keeps its stamps. Anyone in the room may delete one (a
+   * task going takes its comments with it). A new task's `createdBy` is the
+   * sender; a task put over an existing one keeps the existing one's; a patch
+   * cannot set or delete it.
    */
   private stampComments(peer: RoomPeer, ops: LiveOp[]): { ops: LiveOp[] } | { error: string } {
-    if (!ops.some((op) => "c" in op && op.c === "taskComments")) {
+    if (!ops.some((op) => "c" in op && (op.c === "taskComments" || op.c === "tasks"))) {
       return { ops };
     }
     const now = new Date().toISOString();
     const putInBatch = new Set<string>();
+    const tasksPut = new Set<string>();
     const out: LiveOp[] = [];
     for (const op of ops) {
+      if ("c" in op && op.c === "tasks") {
+        out.push(this.stampTask(peer, op, tasksPut));
+        continue;
+      }
       if (!("c" in op) || op.c !== "taskComments") {
         out.push(op);
         continue;
@@ -446,6 +455,31 @@ export class Room {
       }
     }
     return { ops: out };
+  }
+
+  private stampTask(peer: RoomPeer, op: LiveOp, putInBatch: Set<string>): LiveOp {
+    if (op.o === "put") {
+      const old = putInBatch.has(op.id) ? undefined : this.content.find("tasks", op.id);
+      const v = { ...op.v };
+      if (old) {
+        if (old.createdBy === undefined) {
+          delete v.createdBy;
+        } else {
+          v.createdBy = old.createdBy;
+        }
+      } else {
+        v.createdBy = peer.userId;
+        putInBatch.add(op.id);
+      }
+      return { ...op, v };
+    }
+    if (op.o === "patch" && (Object.hasOwn(op.f, "createdBy") || op.d?.includes("createdBy"))) {
+      const f = { ...op.f };
+      delete f.createdBy;
+      const d = op.d?.filter((name) => name !== "createdBy");
+      return d && d.length > 0 ? { ...op, f, d } : { o: "patch", c: op.c, id: op.id, f };
+    }
+    return op;
   }
 
   private cidKey(cid: string): string {

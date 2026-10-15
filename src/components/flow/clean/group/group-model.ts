@@ -175,12 +175,14 @@ export function levelOrigin(pockets: readonly FactoryPocket[], levelId: string |
 
 function sizeOfPocket(pocket: FactoryPocket, sizeOf: SizeOf): Size {
   if (pocket.expanded && pocket.size) return pocket.size;
-  return sizeOf(pocket.id) ?? { width: GROUP.width, height: summaryHeight(1) };
+  const measured = sizeOf(pocket.id);
+  return measured ? { width: measured.width, height: measured.height } : { width: GROUP.width, height: summaryHeight(1) };
 }
 
 function estimate(project: FactoryProject, id: string, sizeOf: SizeOf): Size {
   const measured = sizeOf(id);
-  if (measured && measured.width > 0 && measured.height > 0) return measured;
+  // Only the size: the board publishes a whole box (with its corner on the board), and callers place it themselves.
+  if (measured && measured.width > 0 && measured.height > 0) return { width: measured.width, height: measured.height };
   if ((project.storages ?? []).some((entry) => entry.id === id)) {
     return { width: STORAGE_NODE_WIDTH, height: STORAGE_NODE_HEIGHT };
   }

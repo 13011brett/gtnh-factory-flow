@@ -422,6 +422,7 @@ import { setBoardSizeSource, boardSizeOf } from "./clean/group/group-sizes";
 import { clearGroupDrop, groupDropSound, groupUnder, showGroupDrop } from "./clean/group/group-drop";
 import { computeGroupSummaries } from "./clean/group/group-summary";
 import { useWorkspaceView } from "@/lib/workspace-view";
+import { playEditSfx } from "@/lib/sound/sfx";
 import { visibleAnnotations } from "./clean/note/note-model";
 import { settleZonePoints } from "@/lib/model/zone-points";
 import { BOARD_PAPER_IDS } from "@/lib/model/board-paper";
@@ -2923,6 +2924,25 @@ export function FactoryFlow() {
           (change) => change.type !== "position" || !passengers.has(change.id),
         );
       }
+      const drop = groupDropRef.current;
+      if (drop) {
+        const change = changes.find(
+          (entry) => entry.type === "position" && entry.dragging && entry.position && entry.id === drop.primary,
+        );
+        const geometry = publishedBoardGeometryById.get(drop.primary);
+        if (change && change.type === "position" && change.position && geometry) {
+          const box = {
+            x: change.position.x + drop.origin.x,
+            y: change.position.y + drop.origin.y,
+            width: geometry.width,
+            height: geometry.height,
+          };
+          // Where the pointer aims, before the magnet slides the card clear of what is in the way: a full group still
+          // takes it (and grows round it).
+          drop.target = groupUnder(drop.frames, box, BOARD_WINDOW_TITLE_HEIGHT, drop.excluded);
+          showGroupDrop(drop.target, drop.from);
+        }
+      }
       const constraints = dragConstraintsRef.current;
       if (constraints.size > 0) {
         for (const change of changes) {
@@ -2959,22 +2979,6 @@ export function FactoryFlow() {
             x: free.x - constraint.origin.x,
             y: free.y - constraint.origin.y,
           };
-        }
-      }
-      const drop = groupDropRef.current;
-      if (drop) {
-        const change = changes.find(
-          (entry) => entry.type === "position" && entry.dragging && entry.position && entry.id === drop.primary,
-        );
-        const geometry = publishedBoardGeometryById.get(drop.primary);
-        if (change && change.type === "position" && change.position && geometry) {
-          const box = {
-            x: change.position.x + drop.origin.x,
-            y: change.position.y + drop.origin.y,
-            width: geometry.width,
-            height: geometry.height,
-          };
-          showGroupDrop(groupUnder(drop.frames, box, BOARD_WINDOW_TITLE_HEIGHT, drop.excluded), drop.from);
         }
       }
       setFlowNodes((currentNodes) => {
@@ -4899,6 +4903,10 @@ export function FactoryFlow() {
     if (selectedNodeIds.length < 2) {
       return false;
     }
+    // Plan boards: any selection can be grouped (groupItems sorts out where the group sits).
+    if (project.planMode === true) {
+      return true;
+    }
     const chosen = new Set(selectedNodeIds);
     if ((project.pockets ?? []).some((pocket) => chosen.has(pocket.id))) {
       return false;
@@ -4913,6 +4921,7 @@ export function FactoryFlow() {
   }, [
     project.annotations,
     project.nodes,
+    project.planMode,
     project.pockets,
     project.storages,
     selectedNodeIds,
@@ -4941,6 +4950,17 @@ export function FactoryFlow() {
       return false;
     }
 
+    // Plan boards: a group round the selection where it stands (docs/groups.md); the group becomes the selection.
+    if (useFactoryStore.getState().project.planMode === true) {
+      const groupId = useFactoryStore.getState().groupSelection(selectedNodeIds, boardSizeOf);
+      if (!groupId) {
+        return false;
+      }
+      playEditSfx("board.merge");
+      setSelectedNodeIds([groupId]);
+      setSelectedEdgeIds([]);
+      return true;
+    }
     // The frame appears around the cards where they stand; nothing moves
     // and no wire changes, so there is nothing to confirm first.
     const boardId = wrapSelectionInBoard(selectedNodeIds);
@@ -4950,7 +4970,7 @@ export function FactoryFlow() {
     setSelectedNodeIds([]);
     setSelectedEdgeIds([]);
     return true;
-  }, [selectedNodeIds, wrapSelectionInBoard]);
+  }, [selectedNodeIds, setSelectedEdgeIds, setSelectedNodeIds, wrapSelectionInBoard]);
 
   const pasteBoardClipboard = useCallback(() => {
     if (!boardClipboard) {
@@ -5573,6 +5593,8 @@ export function FactoryFlow() {
         origin: { x: number; y: number };
         frames: ReturnType<typeof computeOpenBoardRects>;
         excluded: Set<string>;
+        /** The group lit now (where the pointer aims); the drop lands there. */
+        target?: string;
       }
     | undefined
   >(undefined);
@@ -5858,10 +5880,15 @@ export function FactoryFlow() {
         }
         // A card belongs to the room it is WHOLLY inside; the magnet never
         // leaves it across a wall. Clear of every frame, it leaves its board.
+        // The group lit while carried is where the carried cards land (the pointer aimed there, whatever the magnet
+        // slid them clear of); with nothing lit, the group under the card's centre.
+        const aimed = groupDropRef.current;
         const landing = planBoard
           ? pocketIdSet.has(entry.id)
             ? currentOwner
-            : groupUnder(frames, { x: absolute.x, y: absolute.y, width, height }, BOARD_WINDOW_TITLE_HEIGHT, excluded)
+            : aimed
+              ? aimed.target
+              : groupUnder(frames, { x: absolute.x, y: absolute.y, width, height }, BOARD_WINDOW_TITLE_HEIGHT, excluded)
           : pickBoardOwnerFor(
               frames,
               { x: absolute.x, y: absolute.y, width, height },
@@ -6987,6 +7014,7 @@ const SelectionActionsBar = memo(function SelectionActionsBar({
   onCombine: () => boolean;
 }) {
   const isCompact = useIsCompactViewport();
+  const planBoard = useFactoryStore((state) => state.project.planMode === true);
   if (selectionCount < 2 || (!canWrap && !canCombine)) {
     return null;
   }
@@ -7019,12 +7047,12 @@ const SelectionActionsBar = memo(function SelectionActionsBar({
       <button
         type="button"
         onClick={onWrap}
-        title="Wrap in a board (Ctrl+G)"
+        title={planBoard ? "Group these (Ctrl+G)" : "Wrap in a board (Ctrl+G)"}
         // Plain chrome, like every other button: boards have no house colour.
         className="flex h-9 items-center gap-1.5 whitespace-nowrap border-2 border-[var(--mc-15)] bg-[var(--mc-49)] px-3 font-mono text-[12px] font-bold text-white shadow-[inset_2px_2px_0_var(--mc-85),inset_-2px_-2px_0_var(--mc-25)] hover:brightness-110"
       >
         <Box className="h-4 w-4" />
-        Wrap {selectionCount} in a board
+        {planBoard ? "Group" : `Wrap ${selectionCount} in a board`}
       </button>
       ) : null}
     </div>

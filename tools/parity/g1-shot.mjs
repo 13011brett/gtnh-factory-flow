@@ -25,6 +25,10 @@ for (const t of steps.split("|").filter(Boolean)) {
   else if (t.startsWith("at=")) { const [x, y] = t.slice(3).split(",").map(Number); await page.mouse.click(x, y); }
   else if (t.startsWith("drag=")) { const [x, y, x2, y2] = t.slice(5).split(",").map(Number); await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move((x + x2) / 2, (y + y2) / 2, { steps: 8 }); await page.mouse.move(x2, y2, { steps: 8 }); await page.mouse.up(); }
   else if (t.startsWith("sdrag=")) { const [x, y, x2, y2] = t.slice(6).split(",").map(Number); await page.keyboard.down("Shift"); await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x2, y2, { steps: 12 }); await page.mouse.up(); await page.keyboard.up("Shift"); }
+  else if (t.startsWith("wheel=")) { const [x, y, dy] = t.slice(6).split(",").map(Number); await page.mouse.move(x, y); await page.mouse.wheel(0, dy); }
+  else if (t.startsWith("hold=")) { const [x, y, x2, y2] = t.slice(5).split(",").map(Number); await page.mouse.move(x, y); await page.mouse.down(); await page.mouse.move(x2, y2, { steps: 14 }); }
+  else if (t === "up") await page.mouse.up();
+  else if (t.startsWith("rects")) console.log(JSON.stringify(await page.evaluate(() => [...document.querySelectorAll(".react-flow__node")].map((n) => { const r = n.getBoundingClientRect(); return n.dataset.id.slice(0, 10) + " " + n.className.split(" ")[1].replace("react-flow__node-", "") + " " + [r.x, r.y, r.width, r.height].map(Math.round).join(","); }))));
   else if (t.startsWith("move=")) { const [x, y] = t.slice(5).split(",").map(Number); await page.mouse.move(x, y); }
   else if (t.startsWith("wait=")) await page.waitForTimeout(+t.slice(5));
   else if (t.startsWith("key=")) await page.keyboard.press(t.slice(4));

@@ -1,0 +1,74 @@
+/*
+ * Shells (VirtualCard.tsx): the stand-in for a card whose contents are not mounted.
+ *
+ * The board fades a card's contents against its glance face for 560 ms when the zoom crosses the glance step
+ * (globals.css). With a card's contents mounted only near the screen, the flip swaps which element is there
+ * rather than fading it, and a thousand glance faces each starting a transition at once was the slowest frame of
+ * a zoom. So cards swap without the fade.
+ */
+.factory-flow-board .cc-card[data-node-glance-root],
+.factory-flow-board .cc-card[data-node-glance-root] > * {
+  transition: none !important;
+}
+.factory-flow-board .cc-card[data-node-glance-root] > .cc-glance {
+  animation: none !important;
+}
+
+/*
+ * A card far from the screen (card-virtualizer.ts, phase 0) is not rendered at all: a thousand positioned wrappers
+ * cost the compositor 20 ms a frame to layerize and hit-test even when nothing in them paints. React Flow ignores
+ * the zero size this gives them and keeps each card's size and handles; the shell stays in the tree.
+ */
+.react-flow__node[data-vfar] {
+  display: none !important;
+}
+
+/* The markers a shown shell carries so that a measure reads its handles back (VirtualCard.tsx). */
+.cc-card[data-shell] > [data-vstub] {
+  pointer-events: none;
+  visibility: hidden;
+}
+
+/*
+ * Zoomed out the wires' shadow is under a pixel (4 px at 0.15 zoom), and the one filter over the whole wire layer
+ * made every arrowhead a compositing layer of its own (450 layers for 170 wires, 6 s of a pan scenario).
+ */
+.factory-flow-board[data-detail-level="glance"] .react-flow__edges {
+  filter: none !important;
+}
+
+/*
+ * A shell on or near the screen whose card has not mounted yet shows the glance face faintly instead of an empty
+ * frame (a zoom out mounts a few cards a frame, nearest the middle first).
+ */
+.factory-flow-board:not([data-detail-level="glance"]) .cc-card[data-shell] > .cc-glance[data-node-detail="glance"] {
+  opacity: 0.55;
+  visibility: visible;
+}
+
+/*
+ * The glance count's size follows the zoom (the mod holds it at a constant size on screen). clean.css sizes it with
+ * font-size and offsets that read --board-zoom, so every zoom step re-laid out the text of every shell on screen:
+ * 40 ms of forced layout a step at a few hundred shells. The same size as a transform from the same corner, which
+ * only repaints. (Shells are all there is at the glance step.)
+ */
+.factory-flow-board[data-detail-level="glance"] .cc-card[data-shell] > .cc-glance::after {
+  right: 2px;
+  bottom: 2px;
+  font-size: 20px;
+  transform-origin: right bottom;
+  transform: translate(calc(-6px / var(--board-zoom, 1)), calc(-4px / var(--board-zoom, 1)))
+    scale(min(calc(1 / var(--board-zoom, 1)), 4.5));
+}
+
+/*
+ * While only the camera moves (VirtualizationController.tsx) nothing on the board takes the pointer: the browser
+ * hit-tests every pointer move and wheel tick against all of it otherwise.
+ */
+.factory-flow-board[data-camera-moving] .react-flow__nodes,
+.factory-flow-board[data-camera-moving] .react-flow__edges,
+.factory-flow-board[data-camera-moving] .react-flow__edgelabel-renderer,
+.factory-flow-board[data-camera-moving] .react-flow__viewport-portal {
+  pointer-events: none !important;
+}
+

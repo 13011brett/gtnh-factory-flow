@@ -28,6 +28,7 @@ export function visible(el: Element | null): el is Element {
 /** The first visible element matching the selector. */
 export function css(selector: string, root?: ParentNode): Target {
   return () => {
+    // `document` is read when the target runs: css() is called at module load, which the server renders too.
     for (const el of (root ?? document).querySelectorAll(selector)) if (visible(el)) return el;
     return null;
   };

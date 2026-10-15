@@ -18,6 +18,7 @@ import { MobPickerMenu } from "../MobPickerMenu";
 import { isControllerSlotInput } from "@/lib/model/free-input";
 import type { CleanCardActions, CleanCardContext, CleanCardView, CleanChipView, CleanPortView } from "./clean-model";
 import { tierChipColors } from "./tokens";
+import { syncPromptPhase } from "../virtual/prompt-phase";
 import { ensureInteractionHost, useClickSlop, tipAttrs, type TipSpec } from "./interaction";
 import { PortRateControls } from "./interaction/PortRateControls";
 import { forcedTip, menuTip, portTip, powerPanelTip } from "./interaction/tips";
@@ -551,9 +552,8 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
   // Every prompt on the board shares one phase however late it mounted.
   useEffect(() => {
     if (!view.unset) return;
-    for (const animation of rootRef.current?.getAnimations?.({ subtree: true }) ?? []) {
-      if ((animation as CSSAnimation).animationName === "cc-prompt") animation.startTime = 0;
-    }
+    // Queued: getAnimations flushes the page's style, once a frame for every card mounted in it.
+    syncPromptPhase();
   }, [view.unset]);
   const deleteNode = useFactoryStore((state) => state.deleteNode);
   const duplicateNode = useFactoryStore((state) => state.duplicateNode);

@@ -500,6 +500,19 @@ function expandCrossFormEdges(project: FactoryProject): {
  * use this on every store write, so it must stay O(n) over ids alone.
  */
 export function hasAnySolveNumbers(project: FactoryProject): boolean {
+  // Every drawer asks this on every store write (a hover is one), so it is worked out once per project object: the
+  // store replaces the project on every edit. 500 drawers over 1,500 nodes were 750,000 checks a hover.
+  let known = solveNumbersByProject.get(project);
+  if (known === undefined) {
+    known = projectHasSolveNumbers(project);
+    solveNumbersByProject.set(project, known);
+  }
+  return known;
+}
+
+const solveNumbersByProject = new WeakMap<FactoryProject, boolean>();
+
+function projectHasSolveNumbers(project: FactoryProject): boolean {
   return (
     (project.storages ?? []).some(
       (storage) =>

@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, type RefObject } from "react";
+import { virtualizationEnabled } from "./virtual/card-virtualizer";
 
 /**
  * CARDS OFF SCREEN COST NOTHING TO STYLE, LAYOUT OR PAINT.
@@ -42,6 +43,11 @@ export const CONTAINMENT_HOLD_ATTRIBUTE = "data-cv-hold";
 const DISABLE_KEY = "gtnh-factory-flow.no-cv";
 
 function disabled(): boolean {
+  // Cards that are not near the screen have no contents at all (virtual/), so there is nothing left to skip;
+  // content-visibility stays for the board that turns the shell off.
+  if (virtualizationEnabled()) {
+    return true;
+  }
   try {
     return window.localStorage.getItem(DISABLE_KEY) === "1";
   } catch {

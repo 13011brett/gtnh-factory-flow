@@ -1,6 +1,7 @@
 "use client";
 
-import { useStore, useStoreApi, ViewportPortal } from "@xyflow/react";
+import { useStore, useStoreApi } from "@xyflow/react";
+import { FlowViewportPortal as ViewportPortal } from "./virtual/flow-portals";
 import { memo, useEffect, useMemo, useState } from "react";
 import { BOARD_GRID } from "@/lib/board-grid";
 import type { CanvasGrainLayer } from "./canvas-themes";

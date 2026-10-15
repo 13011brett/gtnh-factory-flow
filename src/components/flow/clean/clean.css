@@ -618,7 +618,11 @@
   text-decoration-color: var(--cc-muted);
 }
 .cc-count[data-prompt]::after {
-  animation: cc-prompt var(--cc-prompt) steps(1, end) infinite;
+  color: var(--cc-gold);
+}
+/* The prompts blink off one clock, the root's data-cc-blink (virtual/prompt-phase.ts), not an animation each. */
+:root[data-cc-blink] .cc-count[data-prompt]::after {
+  color: var(--cc-prompt-off);
 }
 .cc-count input {
   box-sizing: border-box;

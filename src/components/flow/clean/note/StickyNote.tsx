@@ -9,6 +9,7 @@ import { measureClean } from "../text-measure";
 import type { TipSpec } from "../interaction/tip-spec";
 import { NoteMenu, type NoteMenuState } from "./NoteMenu";
 import "./note.css";
+import { registerZoomConsumer } from "../../virtual/zoom-var";
 import {
   NOTE,
   clampFont,
@@ -104,6 +105,9 @@ function StickyNoteComponent({ data, selected, width, height }: NodeProps<Sticky
     },
     [locked, text],
   );
+
+  // The board writes --board-zoom to the notes directly (virtual/zoom-var.ts), not to every element under it.
+  useEffect(() => registerZoomConsumer(rootRef.current), []);
 
   // A note the board's menu just made starts being written on.
   useEffect(() => {

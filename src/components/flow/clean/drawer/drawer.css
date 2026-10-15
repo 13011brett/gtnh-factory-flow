@@ -391,7 +391,11 @@
     inset 0 1px 0 1px rgba(0, 0, 0, 0.7);
 }
 .cd-box[data-prompt]::before {
-  animation: cc-prompt var(--cc-prompt) steps(1, end) infinite;
+  color: var(--cc-gold);
+}
+/* Blinks off the root's one clock (virtual/prompt-phase.ts). */
+:root[data-cc-blink] .cd-box[data-prompt]::before {
+  color: var(--cc-prompt-off);
 }
 .cd-box[data-unmet] {
   box-shadow:

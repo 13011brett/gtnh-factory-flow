@@ -16,6 +16,9 @@ type StoreApi = ReturnType<typeof useStoreApi>;
 
 /** The least time between two rebuilds of the scene. */
 const REBUILD_GAP_MS = 100;
+/** A map of this many tiles redraws at most every DRAW_GAP_MS while the camera moves (1,500 tiles are 10 ms a draw). */
+const BIG_MAP_TILES = 300;
+const DRAW_GAP_MS = 40;
 
 const IMAGE_CACHE = new Map<string, HTMLImageElement | "loading" | "failed">();
 
@@ -25,9 +28,14 @@ function urlOf(css: string): string | undefined {
 }
 
 /** What a card's or drawer's own DOM carries that its node data does not: the picture, the drawer's role and rate. */
-export function readExtras(root: Element | null, id: string, type: string | undefined): TileExtras | undefined {
+export function readExtras(
+  root: Element | null,
+  id: string,
+  type: string | undefined,
+  wrapperOf?: (id: string) => Element | null | undefined,
+): TileExtras | undefined {
   if (!root) return undefined;
-  const el = root.querySelector(`[data-id="${CSS.escape(id)}"]`);
+  const el = wrapperOf ? wrapperOf(id) : root.querySelector(`[data-id="${CSS.escape(id)}"]`);
   if (!el) return undefined;
   if (type === "recipeNode") {
     const glance = el.querySelector<HTMLElement>(".cc-glance");
@@ -117,6 +125,8 @@ export class MinimapEngine {
   private font: string | undefined;
   private lastRebuildAt = -1000;
   private deferTimer = 0;
+  private drawTimer = 0;
+  private lastDrawAt = -1000;
 
   constructor(
     private readonly store: StoreApi,
@@ -152,6 +162,7 @@ export class MinimapEngine {
       unsubscribe();
       window.clearInterval(poll);
       window.clearTimeout(this.deferTimer);
+      window.clearTimeout(this.drawTimer);
       if (this.raf) cancelAnimationFrame(this.raf);
       this.raf = 0;
     };
@@ -175,12 +186,24 @@ export class MinimapEngine {
       });
     }
     const cache = this.extras;
+    // Every node's wrapper by id, read once in one pass when the first is wanted: a selector query per card was a
+    // walk of the whole board each, 240 ms of a rebuild after a solve at 1,000 cards.
+    let wrappers: Map<string, Element> | undefined;
+    const wrapperOf = (id: string) => {
+      if (!wrappers) {
+        wrappers = new Map();
+        for (const element of root?.querySelectorAll(".react-flow__node[data-id]") ?? []) {
+          wrappers.set(element.getAttribute("data-id")!, element);
+        }
+      }
+      return wrappers.get(id);
+    };
     const extras = (id: string) => {
       const node = state.nodeLookup.get(id);
       if (!node) return undefined;
       const hit = cache.get(id);
       if (hit && hit.data === node.data) return hit.extras;
-      const fresh = readExtras(root, id, node.type);
+      const fresh = readExtras(root, id, node.type, wrapperOf);
       cache.set(id, { data: node.data, extras: fresh });
       return fresh;
     };
@@ -220,8 +243,19 @@ export class MinimapEngine {
       }
     }
     if (!this.dirty.draw) return;
-    this.dirty.draw = false;
     const drawStart = performance.now();
+    if ((this.scene?.tiles.length ?? 0) > BIG_MAP_TILES && drawStart - this.lastDrawAt < DRAW_GAP_MS) {
+      // Still dirty: it is drawn when the gap is over, with the camera as it is then.
+      if (!this.drawTimer) {
+        this.drawTimer = window.setTimeout(() => {
+          this.drawTimer = 0;
+          this.schedule("draw");
+        }, DRAW_GAP_MS - (drawStart - this.lastDrawAt));
+      }
+      return;
+    }
+    this.lastDrawAt = drawStart;
+    this.dirty.draw = false;
     const state = this.store.getState();
     const [tx, ty, tz] = state.transform;
     const viewW = state.width / tz;

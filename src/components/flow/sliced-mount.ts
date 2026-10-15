@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { virtualizationEnabled } from "./virtual/card-virtualizer";
 
 /**
  * A BIG PLAN MOUNTS IN SLICES, NEAREST THE CAMERA FIRST.
@@ -35,6 +36,11 @@ type SliceNode = { id: string; position: { x: number; y: number }; parentId?: st
 type SliceEdge = { source: string; target: string };
 
 function disabled(): boolean {
+  // Cards reach React Flow as shells and fill in near the camera first (virtual/card-virtualizer.ts), which is
+  // what this was for, without sending the whole board round again for every slice.
+  if (virtualizationEnabled()) {
+    return true;
+  }
   try {
     return window.localStorage.getItem("gtnh-factory-flow.no-slice") === "1";
   } catch {

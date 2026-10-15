@@ -37,6 +37,7 @@ import { checklistLocked } from "../../RecipeNode";
 import { TO_PRODUCT, TO_TRASH, bufferThroughput, buildDrawerView } from "./drawer-model";
 import { DrawerIcon } from "./DrawerIcon";
 import { ensureInteractionHost, tipAttrs } from "../interaction";
+import { startPromptClock } from "../../virtual/prompt-phase";
 import type { TargetMode } from "@/lib/model/storage-target";
 
 /** A press that moved this far (screen px) before release is a drag, not a click. */
@@ -175,6 +176,10 @@ export function CleanDrawer({
     // eslint-disable-next-line react-hooks/exhaustive-deps
     [storage, role, label, result, unanchored, unmet, rateUnit, powerUnit],
   );
+  // "Set rate" blinks off the board's one clock (virtual/prompt-phase.ts).
+  useEffect(() => {
+    if (view.prompt) startPromptClock();
+  }, [view.prompt]);
 
   const inputHandleId = makeResourceHandleId("input", {
     kind: storage.kind,

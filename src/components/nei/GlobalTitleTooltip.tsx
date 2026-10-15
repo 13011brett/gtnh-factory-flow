@@ -24,6 +24,9 @@ import { restWait } from "@/components/flow/clean/interaction/rest-wait";
  */
 const STORED = "data-tip-title";
 
+/** The least time between two re-reads of what is under the pointer while the wheel or a scroll goes on. */
+const RECHECK_GAP_MS = 150;
+
 export function GlobalTitleTooltip() {
   const [tip, setTip] = useState<{ lines: string[]; x: number; y: number } | undefined>();
   const panelRef = useRef<HTMLDivElement | null>(null);
@@ -38,6 +41,10 @@ export function GlobalTitleTooltip() {
     let buttons = 0;
     let pressedAt: { x: number; y: number } | undefined;
     let settleFrame: number | undefined;
+    // The re-read below is a hit test of the whole board (17 ms at a thousand cards), once a wheel step; so it runs
+    // at most every RECHECK_GAP_MS while the wheel or a scroll goes on.
+    let lastRecheck = 0;
+    let recheckTimer: number | undefined;
     const observer = new MutationObserver((records) => {
       // A title removed by React means the tip is gone; do not keep showing
       // the cached text. Our own title conversion is unobserved.
@@ -53,6 +60,8 @@ export function GlobalTitleTooltip() {
         window.cancelAnimationFrame(settleFrame);
         settleFrame = undefined;
       }
+      window.clearTimeout(recheckTimer);
+      recheckTimer = undefined;
       pendingRef.current = undefined;
       if (frameRef.current !== undefined) {
         window.cancelAnimationFrame(frameRef.current);
@@ -140,11 +149,20 @@ export function GlobalTitleTooltip() {
     // re-read from whatever is under the pointer (same element keeps it, a new
     // one re-targets it; without elementFromPoint it stays).
     const recheckAtPointer = () => {
-      if (settleFrame !== undefined) {
+      if (settleFrame !== undefined || recheckTimer !== undefined) {
+        return;
+      }
+      const wait = RECHECK_GAP_MS - (performance.now() - lastRecheck);
+      if (wait > 0) {
+        recheckTimer = window.setTimeout(() => {
+          recheckTimer = undefined;
+          recheckAtPointer();
+        }, wait);
         return;
       }
       settleFrame = window.requestAnimationFrame(() => {
         settleFrame = undefined;
+        lastRecheck = performance.now();
         const pointer = pointerRef.current;
         if (!pointer) {
           return;
@@ -154,6 +172,12 @@ export function GlobalTitleTooltip() {
           : hovered?.isConnected ? hovered : null;
         resolveAt(under, pointer.x, pointer.y, buttons);
       });
+    };
+
+    // A wheel or scroll re-reads only a tip that is up or pending: with none, the next mouse move finds one (the
+    // board's camera scrolls every frame it moves, and each re-read is a hit test of everything on screen).
+    const recheckShown = () => {
+      if (hovered) recheckAtPointer();
     };
 
     const onPointerDown = (event: PointerEvent) => {
@@ -178,8 +202,8 @@ export function GlobalTitleTooltip() {
     };
     const options = { capture: true, passive: true } as const;
     document.addEventListener("mousemove", onMove, options);
-    window.addEventListener("wheel", recheckAtPointer, options);
-    window.addEventListener("scroll", recheckAtPointer, options);
+    window.addEventListener("wheel", recheckShown, options);
+    window.addEventListener("scroll", recheckShown, options);
     window.addEventListener("pointerdown", onPointerDown, options);
     window.addEventListener("pointerup", onPointerUp, options);
     window.addEventListener("click", recheckAtPointer, options);
@@ -190,11 +214,12 @@ export function GlobalTitleTooltip() {
     return () => {
       observer.disconnect();
       document.removeEventListener("mousemove", onMove, options);
-      window.removeEventListener("wheel", recheckAtPointer, options);
-      window.removeEventListener("scroll", recheckAtPointer, options);
+      window.removeEventListener("wheel", recheckShown, options);
+      window.removeEventListener("scroll", recheckShown, options);
       if (settleFrame !== undefined) {
         window.cancelAnimationFrame(settleFrame);
       }
+      window.clearTimeout(recheckTimer);
       window.removeEventListener("pointerdown", onPointerDown, options);
       window.removeEventListener("pointerup", onPointerUp, options);
       window.removeEventListener("click", recheckAtPointer, options);

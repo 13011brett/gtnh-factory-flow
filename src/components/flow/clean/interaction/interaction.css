@@ -184,7 +184,11 @@
   color: #8a8e97;
 }
 .cc-prb[data-prompt] {
-  animation: cc-prompt var(--cc-prompt, 1s) steps(1, end) infinite;
+  color: var(--cc-gold);
+}
+/* Blinks off the root's one clock (virtual/prompt-phase.ts). */
+:root[data-cc-blink] .cc-prb[data-prompt] {
+  color: var(--cc-prompt-off, #6f737c);
 }
 .cc-prb input {
   box-sizing: border-box;

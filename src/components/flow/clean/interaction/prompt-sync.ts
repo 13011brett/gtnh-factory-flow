@@ -4,7 +4,9 @@
  * starts, its start time is set to the document timeline's origin, so all
  * copies of it are in step (the mod draws them off one clock).
  */
-const PULSES = new Set(["cc-prompt", "cc-accept", "cc-glow"]);
+import { queuePhaseSync, startPromptClock } from "../../virtual/prompt-phase";
+
+const PULSES = new Set(["cc-accept", "cc-glow"]);
 
 let installed = false;
 
@@ -16,12 +18,14 @@ export function syncAnimation(animation: Animation): void {
 export function installPromptSync(): void {
   if (installed || typeof document === "undefined") return;
   installed = true;
+  // The prompts ("(set count)", "Set rate") blink off one clock, not an animation each (virtual/prompt-phase.ts).
+  startPromptClock();
   document.addEventListener(
     "animationstart",
     (event) => {
       if (!PULSES.has(event.animationName)) return;
-      const target = event.target as Element | null;
-      for (const animation of target?.getAnimations?.({ subtree: true }) ?? []) syncAnimation(animation);
+      // One flush a frame for every pulse that started in it, not a style recalculation and a subtree walk each.
+      queuePhaseSync();
     },
     { capture: true, passive: true },
   );

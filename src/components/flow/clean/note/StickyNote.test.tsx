@@ -204,15 +204,16 @@ describe("StickyNote", () => {
   it("right-click opens the menu with the mod's rows; colour and delete work", () => {
     const { container } = renderNote(note());
     fireEvent.contextMenu(container.querySelector(".sn")!, { clientX: 50, clientY: 50 });
-    const rows = () => Array.from(document.querySelectorAll('[role="menuitem"]')).map((b) => b.textContent);
+    const rows = () => Array.from(document.querySelectorAll("[role^=menuitem]")).map((b) => b.textContent);
     expect(rows()).toEqual(["Write on it", "Colour...", "Bigger text14 px", "Smaller text", "Delete note"]);
-    fireEvent.click(document.querySelectorAll('[role="menuitem"]')[1]!);
-    expect(rows().slice(0, 4)).toEqual(["Yellow✓", "Orange", "Pink", "Red"]);
-    fireEvent.click(Array.from(document.querySelectorAll('[role="menuitem"]')).find((b) => b.textContent === "Pink")!);
+    fireEvent.click(document.querySelectorAll("[role^=menuitem]")[1]!);
+    expect(rows().slice(0, 4)).toEqual(["Yellow", "Orange", "Pink", "Red"]);
+    expect(document.querySelector("[role^=menuitem]")!.hasAttribute("data-checked")).toBe(true);
+    fireEvent.click(Array.from(document.querySelectorAll("[role^=menuitem]")).find((b) => b.textContent === "Pink")!);
     expect(annotations()[0]?.colorTag).toBe("pink");
     expect(document.querySelectorAll('[role="menu"]')).toHaveLength(0);
     fireEvent.contextMenu(container.querySelector(".sn")!, { clientX: 50, clientY: 50 });
-    fireEvent.click(Array.from(document.querySelectorAll('[role="menuitem"]')).find((b) => b.textContent === "Delete note")!);
+    fireEvent.click(Array.from(document.querySelectorAll("[role^=menuitem]")).find((b) => b.textContent === "Delete note")!);
     expect(annotations()).toHaveLength(0);
   });
 

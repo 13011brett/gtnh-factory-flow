@@ -316,7 +316,7 @@ export function CleanDrawer({
         key={row.label}
         label={row.label}
         detail={row.mark || undefined}
-        checked={row.on}
+        checked={row.muted ? undefined : row.on}
         onClick={() => {
           close();
           row.run();

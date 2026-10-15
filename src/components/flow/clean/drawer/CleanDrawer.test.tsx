@@ -155,23 +155,23 @@ describe("the rule menu", () => {
     load(storage({ targetPerSecond: 2, targetMode: "at-least" }));
     const { container } = renderDrawer(stored(), "product");
     fireEvent.click(container.querySelector(".cd-key")!);
-    const rows = screen.getAllByRole("menuitem").map((row) => row.textContent);
-    expect(rows).toEqual(["~Any", "≥At least", "=Exactly", "≤At most", "Void it (trash)"]);
-    expect(screen.getAllByRole("menuitem")[1]!.hasAttribute("data-on")).toBe(true);
+    const rows = Array.from(document.querySelectorAll("[role^=menuitem]")).map((row) => row.textContent);
+    expect(rows).toEqual(["Any~", "At least≥", "Exactly=", "At most≤", "Void it (trash)"]);
+    expect(Array.from(document.querySelectorAll("[role^=menuitem]"))[1]!.hasAttribute("data-checked")).toBe(true);
   });
 
   it("a source has the four rules and no void row", () => {
     load(storage());
     const { container } = renderDrawer(stored(), "source");
     fireEvent.click(container.querySelector(".cd-key")!);
-    expect(screen.getAllByRole("menuitem").map((row) => row.textContent)).toEqual(["~Any", "≥At least", "=Exactly", "≤At most"]);
+    expect(Array.from(document.querySelectorAll("[role^=menuitem]")).map((row) => row.textContent)).toEqual(["Any~", "At least≥", "Exactly=", "At most≤"]);
   });
 
   it("trash has one row: Keep it (product)", () => {
     load(storage({ drainMode: "trash" }));
     const { container } = renderDrawer(stored(), "trash");
     fireEvent.click(container.querySelector(".cd-key")!);
-    expect(screen.getAllByRole("menuitem").map((row) => row.textContent)).toEqual(["Keep it (product)"]);
+    expect(Array.from(document.querySelectorAll("[role^=menuitem]")).map((row) => row.textContent)).toEqual(["Keep it (product)"]);
     fireEvent.click(screen.getByText("Keep it (product)"));
     expect(stored().drainMode).toBe("product");
   });

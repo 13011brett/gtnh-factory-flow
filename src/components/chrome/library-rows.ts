@@ -11,8 +11,10 @@ import type { MenuEntry } from "./ChromeMenu";
 export function libraryRows(
   linked: boolean,
   open: (mode: ShareMode) => void,
-  options: { disabled?: boolean } = {},
+  options: { disabled?: boolean; taskBoard?: boolean } = {},
 ): MenuEntry[] {
+  // A task board is never posted to the library.
+  if (options.taskBoard) return [];
   if (!linked) {
     return [
       isLiveConfigured()

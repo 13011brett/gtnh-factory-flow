@@ -39,7 +39,8 @@
 
 /* The mod's size on screen: its GUI pixels are two screen pixels at GUI scale 2; these sizes are GUI pixels under the
    interface's 1.17, so the bar and its menus wear 2 / 1.17 more (ChromeMenu.tsx CHROME_SCREEN_K). */
-.mb {
+.mb,
+.ml {
   zoom: 1.7094;
 }
 .mm.ui-zoom {

@@ -95,12 +95,6 @@ export function ModLibrary() {
     <div className="ml mx" data-mod-library="">
       <div className="ml-head">
         <ShelfTab label="MY PLANS" count={String(designs.length)} on={shelf === "mine"} onClick={() => setLibraryView({ kind: "all" })} />
-        <ShelfTab
-          label="PUBLIC SETUPS"
-          count={publicTotal === undefined ? "..." : compact(publicTotal)}
-          on={shelf === "public"}
-          onClick={() => setLibraryView({ kind: "public" })}
-        />
         {showShared ? (
           <ShelfTab
             label="SHARED WITH ME"
@@ -109,6 +103,12 @@ export function ModLibrary() {
             onClick={() => setLibraryView({ kind: "shared" })}
           />
         ) : null}
+        <ShelfTab
+          label="PUBLIC SETUPS"
+          count={publicTotal === undefined ? "..." : compact(publicTotal)}
+          on={shelf === "public"}
+          onClick={() => setLibraryView({ kind: "public" })}
+        />
         {shelf === "shared" ? null : shelf === "mine" ? (
           <input
             className="ml-search"
@@ -288,6 +288,7 @@ function MyPlans({ query }: { query: string }) {
             requestShareDialog(mode);
           })();
         },
+        { taskBoard: Boolean(allDesigns.find((design) => design.id === m.id)?.taskBoard) },
       ),
       {
         label: "Delete plan",

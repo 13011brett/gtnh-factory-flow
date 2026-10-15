@@ -130,6 +130,7 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
 
   const linkedPost = useFactoryStore((state) => state.project.metadata?.communityPlanId);
   const plan = () => useFactoryStore.getState().project;
+  const isTaskBoardPlan = useFactoryStore((state) => state.project.primaryView === "tasks");
   // Whether a game with the mod is listening, asked each time the menu opens.
   const modReach = useModReach(menu?.kind === "share");
 
@@ -150,7 +151,7 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
               },
         ]
       : []),
-    ...libraryRows(Boolean(linkedPost), onShare, { disabled: isReadOnly }).map(({ detail, ...row }) => {
+    ...libraryRows(Boolean(linkedPost), onShare, { disabled: isReadOnly, taskBoard: isTaskBoardPlan }).map(({ detail, ...row }) => {
       void detail;
       return row;
     }),

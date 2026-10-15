@@ -364,6 +364,7 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
             onShare(mode);
           })();
         },
+        { taskBoard: Boolean(designs.find((design) => design.id === m.id)?.taskBoard) },
       ),
     ];
     if (canClose) {

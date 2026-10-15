@@ -47,7 +47,7 @@ export const states = [
   { id: "ebf-strip-chip-hover", ref: "card-settings-strip-coil-chip-hover", plan: ebfOne, node: "ebf", setup: async (c) => { await pin(c, 2); await wait(c, 1000); await hoverSel(c, ".cc-sc"); } },
   { id: "ebf-strip-coil-menu", ref: "card-settings-strip-coil-menu-open", plan: ebfOne, node: "ebf", setup: async (c) => { await pin(c, 2); await wait(c, 1000); await clickSel(c, ".cc-sc"); } },
   // ---- forced rows (zoom 0.5 in the reference) ----
-  { id: "card-forced-in", ref: "card-forced-in-row-aniline-reactor", plan: forcedPlan, node: "an", webZoom: 1, setup: none },
+  { id: "card-forced-in", ref: "card-forced-in-row-aniline-reactor", plan: forcedPlan, node: "an", setup: none },
   // ---- shared machine ----
   {
     id: "shared-machine",
@@ -82,7 +82,7 @@ export const states = [
   { id: "ebf-naquadah-coil-menu", ref: "card-coil-menu-lists-only-coils-hot-enough", plan: { nodes: [{ key: "nq", recipe: { query: "naquadah oxide", nameRe: "^Blast Furnace: Naquadah Nugget", hasIn: ["Naquadah Oxide", "Oganesson"] }, x: 0, y: 0, tier: "IV" }], drawers: [], wires: [] }, node: "nq", setup: (c) => clickSel(c, ".cc-sc") },
   { id: "vcm-unset", ref: "card-unset-set-count-prompt-vcm", plan: { nodes: [{ key: "vcm", recipe: { res: ["fluid", "vinylchloride"], nameRe: "Large Chemical", hasIn: ["^Ethylene$", "^Chlorine$"] }, x: 0, y: 0, tier: "LV" }], drawers: [], wires: [] }, node: "vcm", setup: none },
   { id: "forced-two", ref: "card-forced-rows-two-reactors-zoom-0-8", plan: forcedPlan, node: "nb", anchor: { x: 33, y: 248 }, zoom: 0.8, setup: none },
-  { id: "tip-forced-input", ref: "tip-forced-input-row", plan: forcedPlan, node: "an", anchor: { x: 8, y: 0 }, zoom: 0.5, webZoom: 1, setup: async (c) => { const b = await c.page.locator(c.nodeSel + " .cc-forced").first().boundingBox(); await c.page.mouse.move(b.x + b.width / 2, b.y + b.height * 0.8); await wait(c, 1400); } },
+  { id: "tip-forced-input", ref: "tip-forced-input-row", plan: forcedPlan, node: "an", anchor: { x: 8, y: 0 }, zoom: 0.5, setup: async (c) => { const b = await c.page.locator(c.nodeSel + " .cc-forced").first().boundingBox(); await c.page.mouse.move(b.x + b.width / 2, b.y + b.height * 0.8); await wait(c, 1400); } },
   { id: "two-selected", ref: "card-two-cards-selected-combine-button", plan: { nodes: [{ ...ebfOne.nodes[0] }, { key: "e2", recipe: { query: "ilmenite", nameRe: "^Blast Furnace: Cast Iron", hasIn: ["Ilmenite", "Carbon"] }, x: 400, y: 0, tier: "HV" }], drawers: [], wires: [] }, node: "ebf", anchor: { x: 78, y: 298 }, zoom: 0.44, setup: async (c) => { await c.page.keyboard.down("Shift"); for (const n of await c.page.locator(".react-flow__node").all()) { const b = await n.boundingBox(); await c.page.mouse.click(b.x + b.width * 0.6, b.y + b.height * 0.55); } await c.page.keyboard.up("Shift"); await c.page.mouse.move(1500, 960); await wait(c, 900); } },
   { id: "drawer-source-sulfuric", ref: "drawer-source-sulfuric-acid", plan: drawerPlan, node: "acid", anchor: { x: 34, y: 20 }, drawer: true, extendH: 40, setup: none },
   ...[["atleast", "at-least"], ["exactly", "exact"], ["atmost", "at-most"]].map(([n, mode]) => ({ id: "drawer-rule-" + n, ref: "drawer-product-" + n + "-rule", plan: { ...drawerPlan, drawers: drawerPlan.drawers.map((d) => (d.key === "aniline" ? { ...d, mode } : d)) }, node: "aniline", anchor: { x: 76, y: 40 }, drawer: true, extendH: 40, setup: none })),

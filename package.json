@@ -4,6 +4,8 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
+    "dev:local": "node tools/dev-local.mjs",
+    "local-db": "tsx tools/local-db/serve.ts",
     "build": "next build",
     "start": "next start",
     "lint": "eslint",
@@ -29,16 +31,20 @@
     "pngjs": "^7.0.0",
     "react": "19.2.4",
     "react-dom": "19.2.4",
+    "ws": "^8.21.3",
     "zod": "^4.4.3",
     "zustand": "^5.0.13"
   },
   "devDependencies": {
+    "@electric-sql/pglite": "^0.5.8",
     "@tailwindcss/postcss": "^4",
     "@testing-library/react": "^16.3.2",
     "@types/node": "^20",
     "@types/pngjs": "^6.0.5",
     "@types/react": "^19",
     "@types/react-dom": "^19",
+    "@types/ws": "^8.18.2",
+    "esbuild": "^0.28.2",
     "eslint": "^9",
     "eslint-config-next": "16.2.6",
     "eslint-config-prettier": "^10.1.8",
@@ -46,6 +52,7 @@
     "playwright-core": "1.63.0",
     "prettier": "^3.8.3",
     "tailwindcss": "^4",
+    "tsx": "^4.23.15",
     "typescript": "^5",
     "vite": "8.0.13",
     "vitest": "^4.1.6"

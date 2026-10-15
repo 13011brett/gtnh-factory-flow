@@ -2,6 +2,7 @@ import { createHash, createHmac, randomBytes, scryptSync, timingSafeEqual } from
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { entryIconSchema } from "@/lib/model/schemas";
 import type { CommunityPlanSummary, EntryIcon, PlanResourceStat } from "@/lib/community/types";
+import { isLocalDb, LOCAL_DB_SERVICE_KEY, localDbFetch, localDbUrl } from "./local-db/client";
 
 /**
  * Server-only Supabase access for the community hub. Uses the service-role
@@ -38,10 +39,18 @@ export function fetchWithDbTimeout(
 }
 
 export function isCommunityConfigured(): boolean {
-  return Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
+  return isLocalDb() || Boolean(process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
 export function getCommunityDb(): SupabaseClient {
+  if (!cachedClient && isLocalDb()) {
+    // Local development (LOCAL_DB=1): the database on this machine, never
+    // the hosted project, whatever SUPABASE_URL says.
+    cachedClient = createClient(localDbUrl(), LOCAL_DB_SERVICE_KEY, {
+      auth: { persistSession: false, autoRefreshToken: false },
+      global: { fetch: (input, init) => localDbFetch(input, init, fetchWithDbTimeout) },
+    });
+  }
   if (!cachedClient) {
     const url = process.env.SUPABASE_URL;
     const key = process.env.SUPABASE_SERVICE_ROLE_KEY;

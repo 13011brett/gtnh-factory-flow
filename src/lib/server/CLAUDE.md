@@ -49,3 +49,14 @@ The instance is small and has gone down under load. Rules:
   `systemctl reload caddy`).
 - Plans and the picture go to the private `feedback-files` bucket, served by `/api/feedback/files/<id>/<file>`, only
   once every check has passed. The mod strips names, paths and addresses from logs and crash reports before sending.
+
+## Local database (local-db/, `npm run dev:local`)
+
+- `LOCAL_DB=1` points the server's Supabase client at a real Postgres on this machine (PGlite, loaded from
+  `supabase/schema.sql` and `supabase/migrations/*.sql` on every open) through a PostgREST stand-in
+  (`local-db/postgrest.ts`). Unset, nothing changes. Never copy `.env.local` into a worktree: local work needs no
+  Supabase credentials.
+- Next.js never loads PGlite: it reaches the database over HTTP at `LOCAL_DB_URL` (`tools/local-db/serve.ts`, data in
+  `scratch/local-db/pgdata`). Tests open it in memory and register it in-process (`useInProcessLocalDb`).
+- The stand-in covers the query shapes this code sends (filters, or-trees, counts, single, upserts, storage buckets).
+  A new shape (an embed, an rpc) needs it added there and a case in `postgrest.test.ts`.

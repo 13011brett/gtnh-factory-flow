@@ -9,6 +9,8 @@ import type { FactoryNode, Recipe } from "@/lib/model/types";
 import { fluidArtPixels, getFallbackFluidColor, isSwatchFluid, ResourceIcon } from "@/components/nei/ResourceIcon";
 import { type BrowseMode as PortBrowseMode } from "@/components/browse-menu";
 import { useFactoryStore } from "@/store/factory-store";
+import { useCardTaskStatus } from "@/lib/tasks/task-link-index";
+import { TASK_STATUS_COLOR } from "@/lib/tasks/task-links";
 import { buildPortFlowScope } from "../flow-scope";
 import { usePortRowBrowse } from "../use-port-row-browse";
 import { isWiringConnection } from "../connection-drag";
@@ -547,6 +549,8 @@ export interface CleanCardProps {
 export function CleanCard({ view, actions, context, recipe, node }: CleanCardProps) {
   const { wasClick, onPointerDownCapture } = useClickSlop();
   const glanceNames = useDeviceSettings().zoomedOutNames;
+  // A task board somewhere on this device is about this card: the most pressing one's colour, a dot before the name.
+  const taskStatus = useCardTaskStatus(view.nodeId);
   const rootRef = useRef<HTMLDivElement>(null);
   useEffect(() => ensureInteractionHost(), []);
   // Every prompt on the board shares one phase however late it mounted.
@@ -634,7 +638,13 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
           role={view.hasPicker ? "button" : undefined}
           tabIndex={view.hasPicker ? 0 : undefined}
           className={view.hasPicker ? "cc-name nowheel" : "cc-name"}
-          style={{ "--cc-name-size": `${view.nameSize}px` } as CSSProperties}
+          style={
+            {
+              "--cc-name-size": `${view.nameSize}px`,
+              ...(taskStatus ? { "--cc-task": TASK_STATUS_COLOR[taskStatus] } : {}),
+            } as CSSProperties
+          }
+          data-task={taskStatus}
           data-picker={view.hasPicker ? "" : undefined}
           data-open={listOpen ? "" : undefined}
           data-machine-menu-toggle={view.hasPicker ? "" : undefined}

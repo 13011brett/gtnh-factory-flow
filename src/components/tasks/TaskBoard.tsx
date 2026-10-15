@@ -5,10 +5,11 @@ import { memo, useEffect, useMemo, useRef, useState } from "react";
 import { Face } from "@/components/live/LiveFaces";
 import type { PlanTask, PlanTaskStatus } from "@/lib/model/types";
 import { colorFor } from "@/lib/live/protocol";
-import { addTask, moveTask, TASK_STATUS_LABEL, TASK_STATUSES } from "@/lib/tasks/task-board";
+import { addTask, moveTask, NEW_TASK_TITLE, TASK_STATUS_LABEL, TASK_STATUSES } from "@/lib/tasks/task-board";
 import { byOrder } from "@/lib/tasks/order-key";
-import { setPlanFace } from "@/lib/tasks/task-view";
-import { useDesignStore } from "@/store/design-store";
+import { selectTask, useTaskBoardUi } from "@/lib/tasks/task-board-ui";
+import { startTaskLinkIndex } from "@/lib/tasks/task-link-index";
+import { taskLinks } from "@/lib/tasks/task-links";
 import { useFactoryStore } from "@/store/factory-store";
 import { TaskPanel } from "./TaskPanel";
 import { useTaskAuthor, useTaskPeople } from "./task-people";
@@ -27,11 +28,34 @@ export function TaskBoard() {
   const isReadOnly = useFactoryStore((state) => state.isReadOnly);
   const author = useTaskAuthor();
   const people = useTaskPeople();
-  const [selectedId, setSelectedId] = useState<string>();
+  const selectedId = useTaskBoardUi((state) => state.selectedId);
+  const newTaskTick = useTaskBoardUi((state) => state.newTaskTick);
+  const setSelectedId = selectTask;
   const [dragging, setDragging] = useState<string>();
   const [dropAt, setDropAt] = useState<{ status: PlanTaskStatus; index: number }>();
   const [draft, setDraft] = useState("");
   const addInput = useRef<HTMLInputElement>(null);
+
+  // New task in the toolbar's header: a task in To do, open in the panel with its title ready to type over.
+  const seenTick = useRef(newTaskTick);
+  useEffect(() => {
+    if (newTaskTick === seenTick.current) {
+      return;
+    }
+    seenTick.current = newTaskTick;
+    if (isReadOnly) {
+      return;
+    }
+    let made: string | undefined;
+    editTasks((project) => {
+      const result = addTask(project, { title: NEW_TASK_TITLE, author });
+      made = result.id;
+      return result.project;
+    });
+    if (made) {
+      selectTask(made);
+    }
+  }, [newTaskTick, isReadOnly, editTasks, author]);
 
   const columns = useMemo(() => {
     const byStatus = new Map<PlanTaskStatus, PlanTask[]>(
@@ -168,17 +192,6 @@ export function TaskBoard() {
   return (
     <div className="relative flex h-full min-h-0 w-full bg-canvas text-xs text-fg" data-task-board>
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="flex h-9 shrink-0 items-center gap-2 border-b border-line px-3">
-          <h2 className="text-sm font-semibold">Tasks</h2>
-          <span className="text-xs text-fg-muted">{(tasks ?? []).length}</span>
-          <button
-            type="button"
-            onClick={() => setPlanFace("plan")}
-            className="ml-auto rounded border border-line-strong px-2 py-0.5 text-xs text-fg-subtle hover:bg-surface-raised"
-          >
-            Back to the board
-          </button>
-        </div>
         <div className="grid min-h-0 flex-1 grid-cols-4 gap-2 overflow-x-auto p-2 compact:grid-cols-[repeat(4,minmax(220px,1fr))]">
           {TASK_STATUSES.map((status) => {
             const list = columns.get(status) ?? [];
@@ -301,7 +314,7 @@ const TaskCard = memo(function TaskCard({
   onPress: (event: React.PointerEvent) => void;
 }) {
   const assignees = task.assignees ?? [];
-  const cards = task.nodeIds?.length ?? 0;
+  const cards = taskLinks(task, "").length;
   return (
     <button
       type="button"
@@ -362,14 +375,8 @@ const TaskCard = memo(function TaskCard({
   );
 });
 
-/**
- * Puts each design up on the face it was made for: a task board opens on its
- * tasks, everything else on the board. Mounted once beside the board.
- */
-export function TaskFaceController() {
-  const activeDesignId = useDesignStore((state) => state.activeDesignId);
-  useEffect(() => {
-    setPlanFace(useFactoryStore.getState().project.primaryView === "tasks" ? "tasks" : "plan");
-  }, [activeDesignId]);
+/** Keeps the dots on cards current: which cards some task board is about. Mounted once beside the board. */
+export function TaskLinkIndexController() {
+  useEffect(() => startTaskLinkIndex(), []);
   return null;
 }

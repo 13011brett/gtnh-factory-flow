@@ -2,14 +2,11 @@
 
 import "./chrome.css";
 
-import { useCallback, useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
-import { activateOnKey } from "@/lib/hooks/button-keys";
+import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
 import { useIsCompactViewport } from "@/lib/compact-view";
 import { usePlanLayout } from "@/components/use-plan-layout";
 import { leaveLibrary, openLibrary, useLibraryTab } from "@/lib/library/library-tab";
-import { isPowerDisplayUnit, type RateUnit } from "@/lib/model/rate-unit";
-import { playBoardSound } from "@/lib/board-sounds";
-import { sfxTick } from "@/lib/sound/sfx";
+import { isPowerDisplayUnit } from "@/lib/model/rate-unit";
 import { useWorkspaceView, writeWorkspaceView } from "@/lib/workspace-view";
 import { useFactoryStore } from "@/store/factory-store";
 import { useDesignStore } from "@/store/design-store";
@@ -19,18 +16,18 @@ import { tipAttrs } from "@/components/flow/clean/interaction";
 import { isEditableKeyboardTarget } from "@/components/flow/keyboard";
 import { downloadPlanFile } from "@/lib/import-export/open-plan-file";
 import { PastePlanDialog } from "@/components/export/PastePlanDialog";
-import { arrangeLabel, pressArrange, getBoardCommands, useArrangeState } from "./board-commands";
-import { ChromeMenu, chromeAnchorOf, MENU_ANCHOR_ATTR, type ChromeAnchor, type MenuEntry } from "./ChromeMenu";
+import { BarKey, useBarFit } from "./bar-parts";
+import { AccountKey } from "./AccountKey";
+import { ChromeMenu, chromeAnchorOf, type ChromeAnchor, type MenuEntry } from "./ChromeMenu";
 import { knock, OPEN_FEEDBACK_EVENT, OPEN_TOUR_EVENT, OPEN_CONTROLS_EVENT } from "./chrome-events";
 import { ModTabs } from "./ModTabs";
 import { libraryRows } from "./library-rows";
 import { copyPlanCode, copyPlanLink, openInModRow, useModReach } from "./share-actions";
 import type { ShareMode } from "@/components/community/SharePlanDialog";
-import { PixelBolt, PixelIcon } from "./pixel-icons";
+import { PixelIcon } from "./pixel-icons";
 import { ControlsList } from "./ControlsList";
 import { HelpLinks } from "./help-links";
 import { isLiveConfigured } from "@/lib/live/live-config";
-import { setPlanFace, usePlanFace } from "@/lib/tasks/task-view";
 import { useCommunityAuthStore } from "@/store/community-auth-store";
 import { useLiveSession } from "@/store/live-session";
 import { PlanShareDialog } from "@/components/live/PlanShareDialog";
@@ -38,10 +35,6 @@ import { initialsOf, inkOn } from "@/components/live/LiveFaces";
 
 /** Live plans (sharing, presence, task boards): none of it shows without NEXT_PUBLIC_LIVE_URL. */
 const LIVE = isLiveConfigured();
-
-/** The rate unit key's four clocks, in the mod's order. */
-const RATE_ORDER: RateUnit[] = ["tick", "second", "minute", "hour"];
-const RATE_LABEL: Record<string, string> = { tick: "/t", second: "/s", minute: "/min", hour: "/hr", eu: "/s" };
 
 function useHistoryShortcuts() {
   const undo = useFactoryStore((state) => state.undo);
@@ -66,117 +59,6 @@ function useHistoryShortcuts() {
   }, [redo, undo]);
 }
 
-/** One key of the bar: a label (or a picture), a tip, and the click, right-click and wheel it answers. */
-function BarKey({
-  id,
-  label,
-  width,
-  tip,
-  tipSub,
-  icon,
-  off,
-  open,
-  gap,
-  onClick,
-  onContext,
-  onWheel,
-  children,
-  glyph,
-  ariaLabel,
-  menuAnchor,
-}: {
-  id: string;
-  label?: string;
-  /** The key's width in the mod's GUI pixels: its widest label's width in the game's font, plus 12 (the mod's `fit`). */
-  width?: number;
-  tip: string;
-  tipSub?: string;
-  icon?: boolean;
-  off?: boolean;
-  open?: boolean;
-  gap?: boolean;
-  onClick: (event: MouseEvent<HTMLElement>) => void;
-  onContext?: () => void;
-  /** +1 for wheel up, -1 for wheel down. */
-  onWheel?: (step: number) => void;
-  children?: ReactNode;
-  glyph?: string;
-  ariaLabel?: string;
-  menuAnchor?: boolean;
-}) {
-  return (
-    <div
-      role="button"
-      tabIndex={off ? -1 : 0}
-      aria-label={ariaLabel ?? label ?? id}
-      aria-haspopup={menuAnchor ? "menu" : undefined}
-      aria-expanded={menuAnchor ? Boolean(open) : undefined}
-      onKeyDown={activateOnKey}
-      aria-disabled={off || undefined}
-      className={gap ? "mb-key mb-gap" : "mb-key"}
-      data-mb={id}
-      data-icon={icon ? "" : undefined}
-      data-off={off ? "" : undefined}
-      data-open={open ? "" : undefined}
-      data-glyph={glyph}
-      {...(menuAnchor ? { [MENU_ANCHOR_ATTR]: "" } : {})}
-      style={width ? { width } : undefined}
-      onMouseDown={(event) => event.preventDefault()}
-      onClick={(event) => {
-        if (off) return;
-        playBoardSound("tick");
-        onClick(event);
-      }}
-      onContextMenu={(event) => {
-        event.preventDefault();
-        if (off || !onContext) return;
-        playBoardSound("tick");
-        onContext();
-      }}
-      onWheel={
-        onWheel
-          ? (event) => {
-              if (off || event.deltaY === 0) return;
-              onWheel(event.deltaY < 0 ? 1 : -1);
-              // A top-bar key the wheel steps too ticks (the mod's WheelKey).
-              sfxTick(event.deltaY < 0);
-            }
-          : undefined
-      }
-      {...tipAttrs({ id: `bar|${id}`, title: tip, sub: tipSub })}
-    >
-      {children ?? label}
-    </div>
-  );
-}
-
-/**
- * How much room the bar has, in its own pixels. Roomy is the full bar; tight drops what can go without a new picture
- * (Non-recipe to its bolt, Arrange to its label's width, the faces to two and a +N, tighter keys); wrapped puts the
- * keys on a second row under the tabs, as a phone does. The widths are what the keys need beside a tab and the dot.
- */
-export type BarFit = "roomy" | "tight" | "wrapped";
-const TIGHT_BELOW = 740;
-const WRAPPED_BELOW = 600;
-
-function useBarFit(ref: { current: HTMLElement | null }): BarFit {
-  const [fit, setFit] = useState<BarFit>("roomy");
-  useEffect(() => {
-    const bar = ref.current;
-    if (!bar) return;
-    const read = () => {
-      // clientWidth is the bar's own px (the shell's zoom and the bar's are outside it).
-      const width = bar.clientWidth;
-      setFit(width === 0 ? "roomy" : width < WRAPPED_BELOW ? "wrapped" : width < TIGHT_BELOW ? "tight" : "roomy");
-    };
-    read();
-    const observer = new ResizeObserver(read);
-    observer.observe(bar);
-    return () => observer.disconnect();
-  }, [ref]);
-  return fit;
-}
-
 export interface ModBarProps {
   /** Opens the library dialog: a new post, an update of the plan's own post, or another post of it. */
   onShare: (mode?: ShareMode) => void;
@@ -193,9 +75,9 @@ export interface ModBarProps {
 }
 
 /**
- * The top bar, the mod's: the plan tabs take the room the keys leave; the keys come in groups, a gap between each:
- * the non-recipe machines, undo and redo, arrange and fit, the view dials, the library and sharing, then feedback,
- * settings and help.
+ * The top bar holds the account's things only: the plan tabs and +, the live state and faces, then Library and Share,
+ * the account key, and feedback, settings and help. What edits or views the board (Non-recipe, undo and redo, Arrange,
+ * Fit, the rate unit, EU/t, Avg) is the board's own toolbar (BoardToolbar), along the top of the board.
  */
 export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMenu, unreadNotes }: ModBarProps) {
   useHistoryShortcuts();
@@ -208,18 +90,7 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
   useEffect(() => {
     if (activeDesignId) stampOpened(activeDesignId);
   }, [activeDesignId]);
-  // A live plan's undo is its own (recorded inverses of this person's edits): the keys read it when it is set.
-  const canUndo = useFactoryStore((state) => (state.liveUndo ? state.liveUndo.canUndo : state.undoHistory.length > 0));
-  const canRedo = useFactoryStore((state) => (state.liveUndo ? state.liveUndo.canRedo : state.redoHistory.length > 0));
-  const undo = useFactoryStore((state) => state.undo);
-  const redo = useFactoryStore((state) => state.redo);
-  const rateUnit = useFactoryStore((state) => state.rateUnit);
-  const setRateUnit = useFactoryStore((state) => state.setRateUnit);
-  const powerDisplayUnit = useFactoryStore((state) => state.powerDisplayUnit);
   const setPowerDisplayUnit = useFactoryStore((state) => state.setPowerDisplayUnit);
-  const powerMenuOpen = useFactoryStore((state) => state.powerMenuOpen);
-  const openPowerMenu = useFactoryStore((state) => state.openPowerMenu);
-  const closePowerMenu = useFactoryStore((state) => state.closePowerMenu);
   const workspace = useWorkspaceView();
   // A phone: the two side columns are drawers over the board, one at a time; their keys sit first in the bar.
   const compact = useIsCompactViewport();
@@ -228,15 +99,12 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
   const itemsOpen = workspace.leftPanelOpen && !bothOpen;
   const sideOpen = workspace.rightPanelOpen && !bothOpen;
   const library = useLibraryTab();
-  const arrange = useArrangeState();
   const isReadOnly = useFactoryStore((state) => state.isReadOnly);
   const [menu, setMenu] = useState<{ kind: "share" | "help"; anchor: ChromeAnchor }>();
   const [pasting, setPasting] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [inviting, setInviting] = useState(false);
   const signedIn = useCommunityAuthStore((state) => Boolean(state.user));
-  const face = usePlanFace();
-  const showsTasks = LIVE && face === "tasks" && !library.active;
   const closeMenu = useCallback(() => setMenu(undefined), []);
 
   // The power unit comes back from storage (the old toolbar restored it; it is gone from plan boards).
@@ -259,25 +127,6 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
     window.addEventListener(OPEN_CONTROLS_EVENT, open);
     return () => window.removeEventListener(OPEN_CONTROLS_EVENT, open);
   }, []);
-
-  const rateIndex = Math.max(0, RATE_ORDER.indexOf(rateUnit === "eu" ? "second" : rateUnit));
-  const stepRate = (step: number) => {
-    const next = RATE_ORDER[(rateIndex + step + RATE_ORDER.length) % RATE_ORDER.length];
-    setRateUnit(next);
-  };
-
-  const isAmps = powerDisplayUnit !== "eu";
-  const togglePower = () => {
-    if (isAmps) {
-      setPowerDisplayUnit("eu");
-    } else {
-      // The mod's Amps: every card counts in its own machine's tier.
-      setPowerDisplayUnit("amps");
-    }
-  };
-
-  const peak = !workspace.averageMachineDraw;
-  const togglePeak = () => writeWorkspaceView({ averageMachineDraw: peak });
 
   const linkedPost = useFactoryStore((state) => state.project.metadata?.communityPlanId);
   const plan = () => useFactoryStore.getState().project;
@@ -346,104 +195,8 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
         </>
       ) : null}
       <BarKey
-        id="nonrecipe"
-        gap
-        glyph="bolt"
-        width={tight ? undefined : 78}
-        ariaLabel="Non-recipe machines"
-        tip="Non-recipe machines: generators, turbines, boilers, reactors"
-        open={powerMenuOpen}
-        off={isReadOnly}
-        onClick={() => {
-          // The key opens the picker and closes it again.
-          if (powerMenuOpen) closePowerMenu();
-          else {
-            leaveLibrary();
-            openPowerMenu();
-          }
-        }}
-        menuAnchor
-      >
-        <PixelBolt className="mb-bolt" />
-        {tight ? null : "Non-recipe"}
-      </BarKey>
-      <BarKey
-        id="undo"
-        gap
-        icon
-        off={!canUndo || isReadOnly}
-        ariaLabel="Undo"
-        tip="Undo (Ctrl+Z)"
-        onClick={() => undo()}
-      >
-        <PixelIcon name="undo" />
-      </BarKey>
-      <BarKey
-        id="redo"
-        icon
-        off={!canRedo || isReadOnly}
-        ariaLabel="Redo"
-        tip="Redo (Ctrl+Shift+Z or Ctrl+Y)"
-        onClick={() => redo()}
-      >
-        <PixelIcon name="undo" mirror />
-      </BarKey>
-      <BarKey
-        id="arrange"
-        gap
-        label={arrangeLabel(arrange)}
-        width={tight && !arrange.running ? undefined : 90}
-        tip="Auto-arrange the plan (press again to stop)"
-        off={isReadOnly}
-        onClick={() => pressArrange()}
-      />
-      <BarKey id="fit" label="Fit" width={24} tip="Zoom to fit the whole plan" onClick={() => getBoardCommands()?.fit()} />
-      <BarKey
-        id="rate"
-        gap
-        label={RATE_LABEL[rateUnit] ?? "/s"}
-        width={32}
-        tip="Rate unit: per tick, second, minute or hour"
-        onClick={() => stepRate(1)}
-        onContext={() => stepRate(-1)}
-        onWheel={stepRate}
-      />
-      <BarKey
-        id="power"
-        label={isAmps ? "Amps" : "EU/t"}
-        width={36}
-        tip="Show power as EU/t, or as amps at each machine's tier"
-        onClick={togglePower}
-        onContext={togglePower}
-        onWheel={togglePower}
-      />
-      <BarKey
-        id="peak"
-        label={peak ? "Peak" : "Avg"}
-        width={35}
-        tip="Average or peak power use (peak: every machine running at once)"
-        onClick={togglePeak}
-        onContext={togglePeak}
-        onWheel={togglePeak}
-      />
-      {LIVE ? (
-        <BarKey
-          id="tasks"
-          gap
-          label={showsTasks ? "Plan" : "Tasks"}
-          width={42}
-          tip="Switch between the plan and its task board"
-          onClick={() => {
-            // The task board takes the board's place, as the library does; from the library it shows the tasks.
-            const tasks = library.active || face !== "tasks";
-            leaveLibrary();
-            setPlanFace(tasks ? "tasks" : "plan");
-          }}
-        />
-      ) : null}
-      <BarKey
         id="library"
-        gap={!LIVE}
+        gap
         label={library.active ? "Board" : "Library"}
         width={50}
         tip="Library: your plans, and plans other players shared"
@@ -453,11 +206,12 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
         id="share"
         label="Share"
         width={42}
-        tip="Share this plan: to the library, as a link, a code or a file, to the game, or as a picture"
+        tip="Share this plan: with people, to the library, as a link, a code or a file, to the game, or as a picture"
         open={menu?.kind === "share"}
         onClick={(event) => openMenuFrom("share", event)}
         menuAnchor
       />
+      <AccountKey />
       <BarKey
         id="feedback"
         gap

@@ -623,6 +623,12 @@ const stampSchema = z.string().max(PLAN_TASK_LIMITS.stampLength);
 // A fractional index: sorts as a string, and a move writes a key between two others.
 const orderKeySchema = z.string().min(1).max(PLAN_TASK_LIMITS.orderLength);
 
+const planTaskLinkSchema = z.object({
+  // Empty reads as the plan holding the task (the game's older spelling).
+  plan: z.string().max(PLAN_TASK_LIMITS.idLength),
+  node: taskIdSchema,
+});
+
 export const planTaskSchema = z.object({
   id: taskIdSchema,
   title: z.string().min(1).max(PLAN_TASK_LIMITS.titleLength),
@@ -630,6 +636,7 @@ export const planTaskSchema = z.object({
   status: z.enum(["todo", "doing", "blocked", "done"]),
   order: orderKeySchema,
   assignees: z.array(accountIdSchema).max(PLAN_TASK_LIMITS.assignees).optional(),
+  links: z.array(planTaskLinkSchema).max(PLAN_TASK_LIMITS.nodeIds).optional(),
   nodeIds: z.array(taskIdSchema).max(PLAN_TASK_LIMITS.nodeIds).optional(),
   createdBy: accountIdSchema.optional(),
   createdAt: stampSchema.optional(),
@@ -642,6 +649,7 @@ export const planTaskItemSchema = z.object({
   text: z.string().min(1).max(PLAN_TASK_LIMITS.itemTextLength),
   done: z.boolean(),
   order: orderKeySchema,
+  link: planTaskLinkSchema.optional(),
   nodeId: taskIdSchema.optional(),
 });
 

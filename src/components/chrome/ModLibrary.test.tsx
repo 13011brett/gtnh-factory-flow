@@ -68,13 +68,14 @@ afterEach(() => cleanup());
 const tileNames = () => [...document.querySelectorAll(".ml-tile:not(.ml-new) .ml-name")].map((element) => element.textContent);
 
 describe("the library", () => {
-  it("has the mod's header: MY PLANS with its count, PUBLIC SETUPS, a Find a plan box, a sign-in key and a close key", () => {
+  it("has the mod's header: MY PLANS with its count, PUBLIC SETUPS, a Find a plan box and a close key, and no sign-in key (that is the top bar's account key)", () => {
     render(<ModLibrary />);
     const tabs = [...document.querySelectorAll(".ml-tab")].map((tab) => tab.textContent);
     expect(tabs).toEqual(["MY PLANS3", "PUBLIC SETUPS..."]);
     expect(document.querySelector(".ml-tab[data-on]")?.textContent).toContain("MY PLANS");
     expect(screen.getByPlaceholderText("Find a plan")).toBeTruthy();
-    expect(document.querySelector(".ml-signin")?.textContent).toBe("Sign in");
+    expect(document.querySelector(".ml-signin")).toBeNull();
+    expect(screen.queryByText("Sign in")).toBeNull();
     expect(screen.getByLabelText("Close the library")).toBeTruthy();
   });
 
@@ -139,14 +140,10 @@ describe("the library", () => {
     expect([...document.querySelectorAll(".ml-tab")].at(-1)?.textContent).toBe("PUBLIC SETUPS7");
   });
 
-  it("Sign in opens the form, a signed-in player sees their name", () => {
-    const first = render(<ModLibrary />);
-    fireEvent.click(screen.getByText("Sign in"));
-    expect(screen.getByRole("dialog", { name: "Sign in to the library" })).toBeTruthy();
-    expect(screen.getByText("To share plans and edit your posts")).toBeTruthy();
-    first.unmount();
+  it("a signed-in player sees a line saying who they are, and nothing to press", () => {
     auth.user = { username: "arodoid" };
     render(<ModLibrary />);
-    expect(document.querySelector(".ml-account")?.textContent).toBe("arodoid");
+    expect(document.querySelector("[data-signed-in-as]")?.textContent).toBe("Signed in as arodoid");
+    expect(document.querySelector(".ml-account")).toBeNull();
   });
 });

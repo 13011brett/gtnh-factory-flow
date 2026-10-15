@@ -142,6 +142,9 @@ describe("cloud plans over REST", () => {
         body: {
           doc: `${users.ann!.id}:${designId}`,
           members: [{ id: users.bob!.id, username: "bob" }],
+          added: [users.bob!.id],
+          owner: { id: users.ann!.id, username: "ann" },
+          name: "Steel",
         },
       },
     ]);

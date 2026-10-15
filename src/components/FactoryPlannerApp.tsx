@@ -40,9 +40,9 @@ import { PublicViewBar } from "./community/PublicViewBar";
 import { ViewOnlyNotice } from "./community/ViewOnlyNotice";
 import { TabConflictNotice } from "./TabConflictNotice";
 import { LiveNotice } from "./live/LiveNotice";
-import { TaskBoard, TaskFaceController } from "./tasks/TaskBoard";
+import { TaskBoard, TaskLinkIndexController } from "./tasks/TaskBoard";
+import { BoardToolbar } from "./chrome/BoardToolbar";
 import { isLiveConfigured } from "@/lib/live/live-config";
-import { usePlanFace } from "@/lib/tasks/task-view";
 import { BlueprintSaveDialog } from "./BlueprintSaveDialog";
 import { PowerSourceOverlay } from "./PowerSourceOverlay";
 import { FactoryFlow } from "./flow/FactoryFlow";
@@ -390,15 +390,16 @@ function BoardColumn() {
   const publicView = useDesignStore((state) => state.publicView);
   // The mod's bar renames in the tab menu and describes in the share box: no identity strip on a desktop board.
   const isCompact = useIsCompactViewport();
-  // The task board is the plan's other face, over the board like the
-  // Library. Only with live plans configured (tasks come with them).
-  const face = usePlanFace();
-  const showTasks = TASKS_ENABLED && face === "tasks" && !covering;
+  // A task board is a plan of its own kind: its tasks cover the board like the Library does, and a plan that is not
+  // one never shows tasks. Only with live plans configured (tasks come with them).
+  const isTaskBoard = useFactoryStore((state) => state.project.primaryView === "tasks");
+  const showTasks = TASKS_ENABLED && isTaskBoard && !covering;
 
   return (
     <div className="grid h-full min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)]">
       <div className="min-w-0">
         {covering ? null : publicView ? <PublicViewBar key={publicView.id} /> : null}
+        {covering ? null : <BoardToolbar />}
         {covering ? null : <TabConflictNotice />}
         <LiveNotice />
       </div>
@@ -408,7 +409,7 @@ function BoardColumn() {
       */}
       <div className="relative min-h-0">
         <FactoryFlow />
-        {TASKS_ENABLED ? <TaskFaceController /> : null}
+        {TASKS_ENABLED ? <TaskLinkIndexController /> : null}
         {showTasks ? (
           <div className="absolute inset-0 z-30">
             <TaskBoard />

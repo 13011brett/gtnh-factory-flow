@@ -109,11 +109,25 @@ export interface PlanTask {
   order: string;
   /** Account ids of the plan's members working on it. */
   assignees?: string[];
-  /** Cards the task is about. */
+  /**
+   * Cards of other plans the task is about (a task board is a plan of its own kind: it holds no cards).
+   * Older boards wrote `nodeIds`, cards of the plan holding the task; they are still read.
+   */
+  links?: PlanTaskLink[];
+  /** Older spelling of `links`: cards of the plan that holds the task. Read, no longer written. */
   nodeIds?: string[];
   createdBy?: string;
   createdAt?: string;
   doneAt?: string;
+}
+
+/**
+ * A card on a plan. `plan` is the plan's id as the library knows it: `<ownerId>:<designId>` for a plan in the
+ * account, the local design id for one on this device only; `node` is the card's id in that plan.
+ */
+export interface PlanTaskLink {
+  plan: string;
+  node: string;
 }
 
 /** One checklist line of a task: its own thing, so two people can tick two lines at once. */
@@ -123,6 +137,9 @@ export interface PlanTaskItem {
   text: string;
   done: boolean;
   order: string;
+  /** The card this line is about. */
+  link?: PlanTaskLink;
+  /** Older spelling of `link`: a card of the plan that holds the task. Read, no longer written. */
   nodeId?: string;
 }
 

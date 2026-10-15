@@ -1,0 +1,112 @@
+"use client";
+
+import { create } from "zustand";
+import { readDesign } from "@/lib/designs/design-storage";
+import type { PlanTask, PlanTaskStatus } from "@/lib/model/types";
+import { useDesignStore } from "@/store/design-store";
+import { useFactoryStore } from "@/store/factory-store";
+import { myAccountId } from "@/store/live-session";
+import {
+  linkKey,
+  morePressing,
+  planLinkId,
+  planLinkIds,
+  taskLinks,
+} from "./task-links";
+
+/**
+ * Which cards some task is about, from the task boards loaded on this device
+ * (the open design when it is a task board, the others read from storage):
+ * the most pressing status among the tasks that link each card. A card wears
+ * a dot in that status's colour. Rebuilt a moment after the library or the
+ * open board's tasks change; nothing is read while no board has a task.
+ */
+interface TaskLinkIndex {
+  /** Link key (plan and card) -> its most pressing task's status. */
+  statuses: Record<string, PlanTaskStatus>;
+  /** The spellings of the open plan's id in links. */
+  planIds: string[];
+}
+
+export const useTaskLinkIndex = create<TaskLinkIndex>(() => ({ statuses: {}, planIds: [] }));
+
+/** The status of the most pressing task that links the open plan's card, or undefined. */
+export function useCardTaskStatus(nodeId: string): PlanTaskStatus | undefined {
+  return useTaskLinkIndex((state) => {
+    let best: PlanTaskStatus | undefined;
+    for (const plan of state.planIds) {
+      const found = state.statuses[linkKey({ plan, node: nodeId })];
+      if (found) {
+        best = best ? morePressing(best, found) : found;
+      }
+    }
+    return best;
+  });
+}
+
+let version = 0;
+
+async function rebuild(): Promise<void> {
+  const mine = ++version;
+  const { designs, activeDesignId } = useDesignStore.getState();
+  const me = myAccountId();
+  const active = designs.find((design) => design.id === activeDesignId);
+  const statuses: Record<string, PlanTaskStatus> = {};
+  const add = (ownPlan: string, tasks: readonly PlanTask[] | undefined) => {
+    for (const task of tasks ?? []) {
+      for (const link of taskLinks(task, ownPlan)) {
+        const key = linkKey(link);
+        const before = statuses[key];
+        statuses[key] = before ? morePressing(before, task.status) : task.status;
+      }
+    }
+  };
+  const project = useFactoryStore.getState().project;
+  for (const design of designs) {
+    const isActive = design.id === activeDesignId;
+    if (!design.taskBoard && !(isActive && project.primaryView === "tasks")) {
+      continue;
+    }
+    const ownPlan = planLinkId(design, me);
+    if (isActive) {
+      add(ownPlan, project.tasks);
+      continue;
+    }
+    const record = await readDesign(design.id).catch(() => undefined);
+    if (mine !== version) {
+      return;
+    }
+    add(ownPlan, record?.project.tasks);
+  }
+  if (mine === version) {
+    useTaskLinkIndex.setState({
+      statuses,
+      planIds: active ? planLinkIds(active, me) : [],
+    });
+  }
+}
+
+/** Keeps the index current. Mounted once by the app shell, with live plans (task boards come with them). */
+export function startTaskLinkIndex(): () => void {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+  const queue = () => {
+    clearTimeout(timer);
+    timer = setTimeout(() => void rebuild(), 150);
+  };
+  const stopDesigns = useDesignStore.subscribe((state, previous) => {
+    if (state.designs !== previous.designs || state.activeDesignId !== previous.activeDesignId) {
+      queue();
+    }
+  });
+  const stopProject = useFactoryStore.subscribe((state, previous) => {
+    if (state.project.tasks !== previous.project.tasks) {
+      queue();
+    }
+  });
+  queue();
+  return () => {
+    clearTimeout(timer);
+    stopDesigns();
+    stopProject();
+  };
+}

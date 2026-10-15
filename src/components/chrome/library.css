@@ -320,3 +320,10 @@
   color: var(--mc-cyan);
   cursor: pointer;
 }
+
+/* The line saying who is signed in, where the account key used to sit (the top bar's account key is the key now). */
+.ml-as {
+  flex: none;
+  color: var(--mc-muted);
+  padding: 0 4px;
+}

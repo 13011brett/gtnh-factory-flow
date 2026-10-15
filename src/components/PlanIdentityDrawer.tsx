@@ -26,7 +26,6 @@ import { formatRelativeDate } from "@/components/shelf-cards";
 import { LiveFaces, LiveStatusChip } from "@/components/live/LiveFaces";
 import { PlanShareDialog } from "@/components/live/PlanShareDialog";
 import { isLiveConfigured } from "@/lib/live/live-config";
-import { setPlanFace, usePlanFace } from "@/lib/tasks/task-view";
 
 /**
  * The plan bar: a slim row above the board with the plan's icon, name and
@@ -112,8 +111,6 @@ export function PlanIdentityDrawer() {
   const live = isLiveConfigured();
   const signedIn = useCommunityAuthStore((state) => Boolean(state.user));
   const [isInviting, setInviting] = useState(false);
-  const face = usePlanFace();
-  const taskCount = project.tasks?.length ?? 0;
 
   return (
     // min-w-0 matters: the board column's grid sizes its one track to its
@@ -143,26 +140,6 @@ export function PlanIdentityDrawer() {
             {(descriptionDraft ?? project.description)?.trim() || "Add description…"}
           </span>
         </button>
-        {live ? (
-          <div className="flex h-6 shrink-0 overflow-hidden rounded border border-line-strong text-xs" role="tablist" aria-label="Plan view">
-            {(["plan", "tasks"] as const).map((view) => (
-              <button
-                key={view}
-                type="button"
-                role="tab"
-                aria-selected={face === view}
-                data-plan-face={view}
-                onClick={() => setPlanFace(view)}
-                className={[
-                  "px-2 text-xs",
-                  face === view ? "bg-surface-raised text-fg" : "text-fg-muted hover:text-fg",
-                ].join(" ")}
-              >
-                {view === "plan" ? "Board" : `Tasks${taskCount > 0 ? ` ${taskCount}` : ""}`}
-              </button>
-            ))}
-          </div>
-        ) : null}
         {live ? (
           <>
             <LiveStatusChip />

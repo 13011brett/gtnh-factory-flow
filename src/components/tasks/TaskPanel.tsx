@@ -8,7 +8,6 @@ import type { PlanTask } from "@/lib/model/types";
 import {
   addTaskComment,
   addTaskItem,
-  boardCardLabel,
   commentsOfTask,
   deleteTask,
   deleteTaskComment,
@@ -16,14 +15,19 @@ import {
   itemsOfTask,
   moveTask,
   moveTaskItem,
+  NEW_TASK_TITLE,
   TASK_STATUS_LABEL,
   TASK_STATUSES,
   tasksIn,
   updateTask,
   updateTaskItem,
 } from "@/lib/tasks/task-board";
-import { setPlanFace } from "@/lib/tasks/task-view";
+import { openTaskLink, useLinkStates } from "@/lib/tasks/open-link";
+import { itemLink, linkKey, taskLinks } from "@/lib/tasks/task-links";
+import { useDesignStore } from "@/store/design-store";
 import { useFactoryStore } from "@/store/factory-store";
+import { myAccountId } from "@/store/live-session";
+import { planLinkId } from "@/lib/tasks/task-links";
 import { useTaskAuthor, useTaskPeople } from "./task-people";
 
 /**
@@ -37,7 +41,6 @@ export function TaskPanel({ task, onClose }: { task: PlanTask; onClose: () => vo
   const isReadOnly = useFactoryStore((state) => state.isReadOnly);
   const allItems = useFactoryStore((state) => state.project.taskItems);
   const allComments = useFactoryStore((state) => state.project.taskComments);
-  const selectedBoardIds = useFactoryStore((state) => state.selectedBoardIds);
   const author = useTaskAuthor();
   const people = useTaskPeople();
   const [titleDraft, setTitleDraft] = useState<string>();
@@ -57,8 +60,23 @@ export function TaskPanel({ task, onClose }: { task: PlanTask; onClose: () => vo
       commentsOfTask({ ...useFactoryStore.getState().project, taskComments: allComments }, task.id),
     [allComments, task.id],
   );
-  const linked = task.nodeIds ?? [];
-  const project = useFactoryStore.getState().project;
+  // The plan holding the task, as links spell it: an older same-plan link reads as this one.
+  const ownPlan = useDesignStore((state) => {
+    const design = state.designs.find((entry) => entry.id === state.activeDesignId);
+    return design ? planLinkId(design, myAccountId()) : "";
+  });
+  const linked = useMemo(() => taskLinks(task, ownPlan), [task, ownPlan]);
+  const states = useLinkStates(linked);
+  const [gone, setGone] = useState<string>();
+  const show = async (link: { plan: string; node: string }) => {
+    setGone(undefined);
+    const result = await openTaskLink(link);
+    if (result === "plan-gone") {
+      setGone("That plan is gone");
+    } else if (result === "card-gone") {
+      setGone("That card is gone");
+    }
+  };
   const done = items.filter((item) => item.done).length;
 
   useEffect(() => () => window.clearTimeout(textTimer.current), []);
@@ -79,7 +97,6 @@ export function TaskPanel({ task, onClose }: { task: PlanTask; onClose: () => vo
   };
 
   const assigned = new Set(task.assignees ?? []);
-  const linkable = selectedBoardIds.filter((id) => !linked.includes(id));
 
   return (
     <aside
@@ -105,6 +122,10 @@ export function TaskPanel({ task, onClose }: { task: PlanTask; onClose: () => vo
           rows={2}
           maxLength={120}
           readOnly={isReadOnly}
+          autoFocus={task.title === NEW_TASK_TITLE}
+          onFocus={(event) => {
+            if (task.title === NEW_TASK_TITLE) event.currentTarget.select();
+          }}
           aria-label="Task title"
           className="min-w-0 flex-1 resize-none rounded border border-transparent bg-transparent px-1 py-0.5 text-sm font-semibold outline-none hover:border-line focus:border-line-strong focus:bg-surface-sunken"
         />
@@ -242,6 +263,17 @@ export function TaskPanel({ task, onClose }: { task: PlanTask; onClose: () => vo
                   readOnly={isReadOnly}
                   onCommit={(text) => editTasks((plan) => updateTaskItem(plan, item.id, { text }))}
                 />
+                {itemLink(item, ownPlan) ? (
+                  <button
+                    type="button"
+                    onClick={() => void show(itemLink(item, ownPlan)!)}
+                    aria-label={`Show on its plan: ${item.text}`}
+                    title="Show it on its plan"
+                    className="shrink-0 rounded p-0.5 text-fg-muted hover:text-cyan-300"
+                  >
+                    <Link2 className="h-3 w-3" />
+                  </button>
+                ) : null}
                 {isReadOnly ? null : (
                   <span className="flex shrink-0 items-center opacity-0 group-focus-within:opacity-100 group-hover:opacity-100">
                     <button
@@ -304,24 +336,28 @@ export function TaskPanel({ task, onClose }: { task: PlanTask; onClose: () => vo
             <p className="text-fg-muted">No cards linked.</p>
           ) : (
             <ul className="space-y-0.5">
-              {linked.map((id) => {
-                const label = boardCardLabel(project, id);
+              {linked.map((link) => {
+                const state = states[linkKey(link)];
+                const label =
+                  state?.state === "ok"
+                    ? state.label
+                    : state?.state === "card"
+                      ? "A card that is gone"
+                      : state?.state === "away"
+                        ? "A card on a plan not on this device"
+                        : state?.state === "plan"
+                          ? "A card on a plan that is gone"
+                          : "A card";
                 return (
-                  <li key={id} className="flex items-center gap-1.5">
+                  <li key={linkKey(link)} className="flex items-center gap-1.5" data-task-link>
                     <Link2 className="h-3 w-3 shrink-0 text-fg-muted" aria-hidden />
                     <button
                       type="button"
-                      disabled={!label}
-                      onClick={() => {
-                        setPlanFace("plan");
-                        const store = useFactoryStore.getState();
-                        store.setSelectedBoardIds([id]);
-                        store.focusBoardNode(id);
-                      }}
-                      className="min-w-0 flex-1 truncate text-left text-cyan-300 hover:underline disabled:text-fg-muted disabled:no-underline"
-                      title={label ? "Show it on the board" : "This card is gone"}
+                      onClick={() => void show(link)}
+                      className="min-w-0 flex-1 truncate text-left text-cyan-300 hover:underline"
+                      title="Show it on its plan"
                     >
-                      {label ?? "A card that is gone"}
+                      {label}
                     </button>
                     {isReadOnly ? null : (
                       <button
@@ -329,7 +365,8 @@ export function TaskPanel({ task, onClose }: { task: PlanTask; onClose: () => vo
                         onClick={() =>
                           editTasks((plan) =>
                             updateTask(plan, task.id, {
-                              nodeIds: linked.filter((entry) => entry !== id),
+                              links: linked.filter((entry) => linkKey(entry) !== linkKey(link)),
+                              nodeIds: [],
                             }),
                           )
                         }
@@ -344,25 +381,11 @@ export function TaskPanel({ task, onClose }: { task: PlanTask; onClose: () => vo
               })}
             </ul>
           )}
-          {isReadOnly ? null : (
-            <button
-              type="button"
-              disabled={linkable.length === 0}
-              onClick={() =>
-                editTasks((plan) =>
-                  updateTask(plan, task.id, { nodeIds: [...linked, ...linkable] }),
-                )
-              }
-              title={
-                linkable.length === 0
-                  ? "Select cards on the board first"
-                  : "Link the selected cards"
-              }
-              className="rounded border border-line-strong px-2 py-0.5 text-fg-subtle hover:bg-surface-raised disabled:opacity-40"
-            >
-              Link selected cards{linkable.length > 0 ? ` (${linkable.length})` : ""}
-            </button>
-          )}
+          {gone ? (
+            <p className="text-red-400" role="status" data-task-link-gone>
+              {gone}
+            </p>
+          ) : null}
         </section>
 
         <section className="space-y-1.5" data-task-comments>

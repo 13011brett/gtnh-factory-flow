@@ -33,6 +33,8 @@ export interface DesignSummary {
    * post carries no link.
    */
   communityPlanId?: string;
+  /** This design is a task board (its plan's `primaryView` is "tasks"), copied out so a menu can list the boards without loading plans. */
+  taskBoard?: boolean;
   /**
    * SYNC BOOKKEEPING. `updatedAt` above moves when the PLAN is saved;
    * `metaUpdatedAt` moves on any change at all (rename, close, folder,
@@ -315,6 +317,9 @@ export function toDesignSummary(record: DesignRecord): DesignSummary {
   }
   if (communityPlanId) {
     summary.communityPlanId = communityPlanId;
+  }
+  if (record.project.primaryView === "tasks") {
+    summary.taskBoard = true;
   }
   if (record.cloud) {
     summary.cloud = record.cloud;

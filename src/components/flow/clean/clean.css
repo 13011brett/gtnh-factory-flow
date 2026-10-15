@@ -174,6 +174,17 @@
   position: relative;
   user-select: none;
 }
+/* A task on this card: a dot in the most pressing task's colour before the name (a pseudo-element: the DOM budget). */
+.cc-name[data-task]::before {
+  content: "";
+  display: inline-block;
+  width: 9px;
+  height: 9px;
+  margin-right: 5px;
+  border-radius: 50%;
+  vertical-align: -1px;
+  background: var(--cc-task, transparent);
+}
 .cc-name + .cc-chip {
   margin-left: auto;
 }

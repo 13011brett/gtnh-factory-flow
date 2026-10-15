@@ -6,6 +6,7 @@ import {
   addTask,
   addTaskComment,
   addTaskItem,
+  cardLine,
   commentsOfTask,
   deleteTask,
   deleteTaskItem,
@@ -14,6 +15,7 @@ import {
   moveTaskItem,
   taskCardCounts,
   tasksIn,
+  titleForCards,
   updateTask,
   updateTaskItem,
 } from "./task-board";
@@ -104,5 +106,30 @@ describe("the task board's edits", () => {
     expect(project.tasks!.some((entry) => entry.id === task.id)).toBe(false);
     expect(project.taskItems).toEqual([]);
     expect(project.taskComments).toEqual([]);
+  });
+});
+
+describe("tasks made from cards", () => {
+  it("titles a task from its machines", () => {
+    expect(titleForCards(["Electric Blast Furnace"])).toBe("Build Electric Blast Furnace");
+    expect(titleForCards(["Mixer", "Mixer", "Centrifuge"])).toBe("Build Mixer and Centrifuge");
+    expect(titleForCards(["A", "B", "C", "D"])).toBe("Build A and 3 more");
+  });
+
+  it("writes a checklist line with how many to build and the tier", () => {
+    expect(cardLine({ name: "Electric Blast Furnace", tier: "HV", count: 4 })).toBe(
+      "4× Electric Blast Furnace (HV)",
+    );
+    expect(cardLine({ name: "Mixer", count: 0 })).toBe("Mixer");
+  });
+
+  it("keeps links on a new task and its lines, once each", () => {
+    const link = { plan: "p", node: "n1" };
+    const made = addTask(createEmptyProject(), { title: "Build", links: [link, link, { plan: "p", node: "n2" }] });
+    expect(made.project.tasks![0]!.links).toEqual([link, { plan: "p", node: "n2" }]);
+    const withLine = addTaskItem(made.project, made.id, "2× Mixer", link);
+    expect(withLine.taskItems![0]!.link).toEqual(link);
+    const cleared = updateTask(withLine, made.id, { links: [] });
+    expect(cleared.tasks![0]!.links).toBeUndefined();
   });
 });

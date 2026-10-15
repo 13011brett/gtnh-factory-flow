@@ -8,7 +8,18 @@ import type { MenuAnchor } from "./MenuPortal";
  * from the card's actions key and from a right click on the card (BoardContextMenu). The mod's world rows (Show in
  * the world, Remove from the world) have no website equivalent.
  */
-export function CardRows({ onClone, onDelete, close }: { onClone: () => void; onDelete: () => void; close: () => void }) {
+export function CardRows({
+  onClone,
+  onDelete,
+  onMakeTask,
+  close,
+}: {
+  onClone: () => void;
+  onDelete: () => void;
+  /** Task boards come with live plans: without them there is no row. */
+  onMakeTask?: () => void;
+  close: () => void;
+}) {
   return (
     <>
       <MenuRow
@@ -18,6 +29,7 @@ export function CardRows({ onClone, onDelete, close }: { onClone: () => void; on
           onClone();
         }}
       />
+      {onMakeTask ? <MenuRow label="Make a task" onClick={onMakeTask} /> : null}
       <MenuLine />
       <MenuRow
         label="Delete node"

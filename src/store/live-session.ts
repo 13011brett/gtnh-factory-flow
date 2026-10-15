@@ -194,6 +194,16 @@ function readCachedMe(
   }
 }
 
+/** This account's id, once the service has said it (or from the last time on this device); undefined signed out. */
+export function myAccountId(): string | undefined {
+  const known = useLiveSession.getState().me;
+  if (known) {
+    return known.id;
+  }
+  const username = useCommunityAuthStore.getState().user?.username;
+  return username ? readCachedMe(username)?.id : undefined;
+}
+
 function writeCachedMe(me: { id: string; username: string; color: string }): void {
   try {
     window.localStorage.setItem(ME_CACHE_KEY, JSON.stringify(me));

@@ -4,8 +4,6 @@ import "./chrome.css";
 import "./library.css";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { createPortal } from "react-dom";
-import { loginCommunityUser, registerCommunityUser } from "@/lib/community/client";
 import { requestShareDialog } from "@/lib/setups-tab";
 import { openDesigns, type DesignSummary } from "@/lib/designs/design-library";
 import { readDesign } from "@/lib/designs/design-storage";
@@ -23,8 +21,6 @@ import { Face } from "@/components/library/LibraryTile";
 import { SETUP_SORTS, SetupsGrid } from "@/components/library/SetupsGrid";
 import { useSetupFilters } from "@/components/library/SetupsFilterBar";
 import { useCommunityUser } from "@/components/community/auth";
-import { useDropdownDismiss } from "@/lib/hooks/use-dropdown-dismiss";
-import { getUiScale } from "@/lib/ui-scale";
 import { ChromeMenu, chromeAnchorOf, MENU_ANCHOR_ATTR, type ChromeAnchor, type MenuEntry } from "./ChromeMenu";
 import { SharedWithMe } from "@/components/live/SharedWithMe";
 import { isLiveConfigured } from "@/lib/live/live-config";
@@ -47,9 +43,8 @@ export function ModLibrary() {
   const filters = useSetupFilters("top");
   const [publicTotal, setPublicTotal] = useState<number>();
   const [mineQuery, setMineQuery] = useState("");
-  const [menu, setMenu] = useState<{ kind: "sort" | "tier" | "account"; anchor: ChromeAnchor }>();
-  const [signingIn, setSigningIn] = useState<ChromeAnchor>();
-  const { user, isLoading, signOut } = useCommunityUser();
+  const [menu, setMenu] = useState<{ kind: "sort" | "tier"; anchor: ChromeAnchor }>();
+  const { user } = useCommunityUser();
   const showShared = LIVE && Boolean(user);
   const shelf: "mine" | "public" | "shared" =
     library.view.kind === "public" || library.view.kind === "saved"
@@ -77,7 +72,7 @@ export function ModLibrary() {
   const tierIndex = filters.maxTier === "" ? -1 : Number(filters.maxTier);
   const tierLabel = tierIndex < 0 ? "Any tier" : `Up to ${GT_VOLTAGE_TIERS[tierIndex]?.tier ?? ""}`;
 
-  const menuEntries = (kind: "sort" | "tier" | "account"): MenuEntry[] => {
+  const menuEntries = (kind: "sort" | "tier"): MenuEntry[] => {
     if (kind === "sort") {
       return SETUP_SORTS.map((entry) => ({
         label: entry.label,
@@ -85,19 +80,13 @@ export function ModLibrary() {
         onSelect: () => filters.setSort(entry.value),
       }));
     }
-    if (kind === "tier") {
-      return [
-        { label: "Any tier", current: tierIndex < 0, onSelect: () => filters.setMaxTier("") },
-        ...GT_VOLTAGE_TIERS.map((entry, index) => ({
-          label: `Up to ${entry.tier}`,
-          current: tierIndex === index,
-          onSelect: () => filters.setMaxTier(String(index)),
-        })),
-      ];
-    }
     return [
-      { label: "My posts", detail: "your public plans", onSelect: () => setLibraryView({ kind: "public" }) },
-      { label: "Sign out", onSelect: () => void signOut() },
+      { label: "Any tier", current: tierIndex < 0, onSelect: () => filters.setMaxTier("") },
+      ...GT_VOLTAGE_TIERS.map((entry, index) => ({
+        label: `Up to ${entry.tier}`,
+        current: tierIndex === index,
+        onSelect: () => filters.setMaxTier(String(index)),
+      })),
     ];
   };
 
@@ -155,35 +144,11 @@ export function ModLibrary() {
             />
           </>
         ) : null}
-        {isLoading ? null : user ? (
-          <div
-            className="mb-key ml-account"
-            role="button"
-            {...{ [MENU_ANCHOR_ATTR]: "" }}
-            onClick={(event) => {
-              playBoardSound("tick");
-              const anchor = chromeAnchorOf(event.currentTarget);
-              setMenu((current) => (current?.kind === "account" ? undefined : { kind: "account", anchor }));
-            }}
-            {...tipAttrs({ id: "lib|account", title: `Signed in as ${user.username}`, sub: "Your posts, and signing out" })}
-          >
-            {user.username}
-          </div>
-        ) : (
-          <div
-            className="mb-key ml-account ml-signin"
-            role="button"
-            {...{ [MENU_ANCHOR_ATTR]: "" }}
-            onClick={(event) => {
-              playBoardSound("tick");
-              const anchor = chromeAnchorOf(event.currentTarget);
-              setSigningIn((current) => (current ? undefined : anchor));
-            }}
-            {...tipAttrs({ id: "lib|signin", title: "Sign in to share plans" })}
-          >
-            Sign in
-          </div>
-        )}
+        {user ? (
+          <span className="ml-as" data-signed-in-as="">
+            Signed in as {user.username}
+          </span>
+        ) : null}
         <div
           className="mb-key ml-close"
           role="button"
@@ -214,13 +179,11 @@ export function ModLibrary() {
         <ChromeMenu
           anchor={menu.anchor}
           entries={menuEntries(menu.kind)}
-          label={menu.kind === "sort" ? "Sort" : menu.kind === "tier" ? "Tier" : "Account"}
-          minWidth={menu.kind === "account" ? 120 : 130}
-          align={menu.kind === "account" ? "right" : "left"}
+          label={menu.kind === "sort" ? "Sort" : "Tier"}
+          minWidth={130}
           onClose={closeMenu}
         />
       ) : null}
-      {signingIn ? <SignInPanel anchor={signingIn} onClose={() => setSigningIn(undefined)} /> : null}
     </div>
   );
 }
@@ -463,93 +426,5 @@ function TileRename({ initial, onDone }: { initial: string; onDone: (name: strin
         if (event.key === "Escape") finish(false);
       }}
     />
-  );
-}
-
-// ---- Signing in ------------------------------------------------------------
-
-/** "Sign in to the library": the mod's form, over the library's own accounts. */
-function SignInPanel({ anchor, onClose }: { anchor: ChromeAnchor; onClose: () => void }) {
-  const ref = useRef<HTMLDivElement>(null);
-  const { setUser } = useCommunityUser();
-  const [mode, setMode] = useState<"login" | "register">("login");
-  const [username, setUsername] = useState("");
-  const [password, setPassword] = useState("");
-  const [error, setError] = useState<string>();
-  const [busy, setBusy] = useState(false);
-  useDropdownDismiss(true, { refs: [ref], onClose, insideSelector: "[data-menu-anchor]" });
-  const scale = getUiScale();
-  const vw = window.innerWidth / scale;
-
-  const submit = async () => {
-    if (busy || username.trim().length < 3 || password.length < 6) return;
-    setBusy(true);
-    setError(undefined);
-    try {
-      const signedIn =
-        mode === "login" ? await loginCommunityUser(username, password) : await registerCommunityUser(username, password);
-      setUser(signedIn);
-      onClose();
-    } catch (failure) {
-      setError(failure instanceof Error ? failure.message : "Sign in failed.");
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return createPortal(
-    <div
-      ref={ref}
-      role="dialog"
-      aria-label="Sign in to the library"
-      className="mm ml-signpanel ui-zoom"
-      style={{ top: anchor.bottom / scale + 2, right: Math.max(2, vw - (anchor.right ?? anchor.left) / scale) }}
-      onPointerDown={(event) => event.stopPropagation()}
-    >
-      <form
-        onSubmit={(event) => {
-          event.preventDefault();
-          void submit();
-        }}
-      >
-        <div className="ml-sign-title">{mode === "login" ? "Sign in to the library" : "Create a library account"}</div>
-        <div className="ml-sign-sub">To share plans and edit your posts</div>
-        <label className="ml-sign-label">USERNAME</label>
-        <input
-          autoFocus
-          className="ml-search ml-sign-field"
-          placeholder="Username"
-          autoComplete="username"
-          maxLength={24}
-          value={username}
-          onChange={(event) => setUsername(event.target.value)}
-        />
-        <label className="ml-sign-label">PASSWORD</label>
-        <input
-          className="ml-search ml-sign-field"
-          type="password"
-          placeholder="Password"
-          autoComplete={mode === "login" ? "current-password" : "new-password"}
-          maxLength={128}
-          value={password}
-          onChange={(event) => setPassword(event.target.value)}
-        />
-        {error ? <div className="ml-sign-error">{error}</div> : <div className="ml-sign-gap" />}
-        <button className="ml-sign-go" type="submit" disabled={busy || username.trim().length < 3 || password.length < 6}>
-          {busy ? "..." : mode === "login" ? "Sign in" : "Create account"}
-        </button>
-        <div
-          className="ml-sign-switch"
-          role="button"
-          onClick={() => {
-            setMode(mode === "login" ? "register" : "login");
-            setError(undefined);
-          }}
-        >
-          {mode === "login" ? "No account yet? Create one" : "Have an account? Sign in"}
-        </div>
-      </form>
-    </div>,
-    document.body,
   );
 }

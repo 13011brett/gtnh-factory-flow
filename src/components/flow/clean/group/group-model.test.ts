@@ -19,13 +19,13 @@ describe("groups (docs/groups.md)", () => {
     expect(group.name).toBe("Group 1");
     expect(group.expanded).toBe(true);
     expect(group.colorTag).toBe("light_blue");
-    // A cell of padding round the members, the title strip (two cells) above.
-    expect(group.position).toEqual({ x: 80, y: 140 });
+    // The mod's frame: 10 px round the members and the 20 px strip above, the corner on its 10 px grid.
+    expect(group.position).toEqual({ x: 90, y: 170 });
     const a = made.project.nodes.find((n) => n.id === "a")!;
     expect(a.pocketId).toBe("g");
     expect({ x: a.position.x + group.position.x, y: a.position.y + group.position.y }).toEqual({ x: 100, y: 200 });
     expect(made.project.nodes.find((n) => n.id === "c")!.pocketId).toBeUndefined();
-    expect(group.size!.width).toBeGreaterThanOrEqual(600 + 380 - 80 + 20);
+    expect(group.size).toEqual({ width: 600 + 380 + 10 - 90, height: 200 + 160 + 10 - 170 });
   });
 
   it("nests a group made inside one group, and never nests by accident", () => {
@@ -39,7 +39,11 @@ describe("groups (docs/groups.md)", () => {
   it("grows a frame to hold its members and never shrinks it", () => {
     const g = { id: "g", name: "G", position: { x: 0, y: 0 }, expanded: true, size: { width: 300, height: 200 } };
     const grown = fitGroups(plan([card("a", 20, 60, "g")], [g]), size);
-    expect(grown.pockets![0]!.size).toEqual({ width: 420, height: 240 });
+    expect(grown.pockets![0]!.size).toEqual({ width: 20 + 380 + 10, height: 60 + 160 + 10 });
+    // Members closer than the padding (or under the strip) push the frame out up and left; they stay put on the board.
+    const tight = fitGroups(plan([card("a", 4, 22, "g")], [g]), size);
+    expect(tight.pockets![0]!.position).toEqual({ x: -6, y: -8 });
+    expect(tight.nodes[0]!.position).toEqual({ x: 10, y: 30 });
     const big = { ...g, size: { width: 3000, height: 3000 } };
     expect(fitGroups(plan([card("a", 20, 60, "g")], [big]), size).pockets![0]!.size).toEqual(big.size);
   });

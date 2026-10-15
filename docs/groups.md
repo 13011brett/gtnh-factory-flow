@@ -29,10 +29,12 @@ Rules both planners keep:
 
 - **One group each.** A card, drawer, note or group is in at most one group. Every recipe of a shared machine is in
   the shared card's group.
-- **The frame holds its members.** After every edit a group's frame grows to hold its members' boxes plus a cell of
-  padding (and its title strip); it never shrinks by itself, and resizing stops at that box. (The website keeps member
-  positions frame-relative, so it shifts the members when the frame grows up or left; the mod keeps absolute positions
-  and moves the frame's corner. Same picture.)
+- **The frame holds its members.** After every edit a group's frame grows to hold its members' boxes plus 10 px of
+  padding and its 20 px title strip, to the pixel (the mod's `BoardGroup.PAD`, the website's `group-model.ts`
+  `FRAME`, so an edit on either side leaves the same frame); a new group's corner sits on the 10 px grid. It never
+  shrinks by itself, resizing stops at that box, and opening a collapsed group leaves its members where they were.
+  (The website keeps member positions frame-relative, so it shifts the members when the frame grows up or left; the
+  mod keeps absolute positions and moves the frame's corner. Same picture.)
 - **Legacy pockets** (no `size`: members in a space of their own): on open (website) or import (mod) the members are
   moved so their box sits a cell inside the frame under its title strip, at `position`, and the frame is sized to fit.
   Written back, they carry a `size` and frame-relative positions, as the website writes any board it has opened.

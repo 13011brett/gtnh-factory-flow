@@ -1,9 +1,5 @@
 import {
   BOARD_GRID,
-  BOARD_WINDOW_FIT_PAD,
-  BOARD_WINDOW_MIN_HEIGHT,
-  BOARD_WINDOW_MIN_WIDTH,
-  BOARD_WINDOW_TITLE_HEIGHT,
   RECIPE_NODE_WIDTH,
   STORAGE_NODE_HEIGHT,
   STORAGE_NODE_WIDTH,
@@ -21,7 +17,8 @@ import { CC } from "../tokens";
  * a group. The store applies the edits as one undo step each.
  *
  * Coordinates: a member's stored position is relative to its group's frame corner, a group's to its parent's;
- * the frame's top `BOARD_WINDOW_TITLE_HEIGHT` (two cells) is kept clear for the title strip.
+ * the frame's top `GROUP.strip` is kept clear for the title strip. Frames follow the mod's rules (`FRAME`), so a
+ * group edited on either side keeps the same frame: members' box plus 10 px, the strip above, never snapped.
  */
 
 /**
@@ -47,6 +44,15 @@ export const GROUP = {
   grip: 4,
   /** The summary card is a card's width. */
   width: RECIPE_NODE_WIDTH,
+} as const;
+
+/** A frame's padding round its members and its smallest size: the mod's `BoardGroup.PAD`, `MIN_W`, `MIN_H`. */
+export const FRAME = {
+  pad: 10,
+  minWidth: 160,
+  minHeight: 80,
+  /** The mod's board grid, which a new group's corner sits on (`BoardSession.snap`). */
+  grid: 10,
 } as const;
 
 /** A pocket's paper to its colour tag (a pocket with no `colorTag`). */
@@ -129,9 +135,13 @@ export function machinesText(count: number): string {
   return count === 1 ? "1 machine" : `${count} machines`;
 }
 
-/** The summary card's height for its rows (one row at least: the "Nothing goes in or out." line), to whole cells. */
+/**
+ * The summary card's height for its rows (one row at least: the "Nothing goes in or out." line), up to the mod's
+ * 10 px grid as its `GroupPaint.summaryHeight`.
+ */
 export function summaryHeight(rows: number): number {
-  return snapSizeUpToGrid(GROUP.strip + GROUP.line + Math.max(1, rows) * GROUP.row + GROUP.pad);
+  const h = GROUP.strip + GROUP.line + Math.max(1, rows) * GROUP.row + GROUP.pad;
+  return Math.ceil(h / FRAME.grid) * FRAME.grid;
 }
 
 // ---------------------------------------------------------------------------
@@ -250,11 +260,12 @@ export function fitGroups(project: FactoryProject, sizeOf: SizeOf, only?: Iterab
     const minY = Math.min(...boxes.map((b) => b.y));
     const maxX = Math.max(...boxes.map((b) => b.x + b.width));
     const maxY = Math.max(...boxes.map((b) => b.y + b.height));
-    const dx = minX < BOARD_WINDOW_FIT_PAD ? snapSizeUpToGrid(BOARD_WINDOW_FIT_PAD - minX) : 0;
-    const top = BOARD_WINDOW_TITLE_HEIGHT + BOARD_WINDOW_FIT_PAD;
-    const dy = minY < top ? snapSizeUpToGrid(top - minY) : 0;
-    const width = Math.max(size.width + dx, snapSizeUpToGrid(maxX + dx + BOARD_WINDOW_FIT_PAD), BOARD_WINDOW_MIN_WIDTH);
-    const height = Math.max(size.height + dy, snapSizeUpToGrid(maxY + dy + BOARD_WINDOW_FIT_PAD), BOARD_WINDOW_MIN_HEIGHT);
+    // The mod's Groups.fit: the members' box plus FRAME.pad, the strip above, to the pixel (whole pixels up).
+    const dx = minX < FRAME.pad ? Math.ceil(FRAME.pad - minX) : 0;
+    const top = GROUP.strip + FRAME.pad;
+    const dy = minY < top ? Math.ceil(top - minY) : 0;
+    const width = Math.max(size.width + dx, Math.ceil(maxX + dx + FRAME.pad), FRAME.minWidth);
+    const height = Math.max(size.height + dy, Math.ceil(maxY + dy + FRAME.pad), FRAME.minHeight);
     if (dx === 0 && dy === 0 && width === size.width && height === size.height) continue;
     changed = true;
     const shift = <T extends Placed>(items: T[] | undefined): T[] | undefined =>
@@ -369,9 +380,10 @@ export function groupItems(
   const minY = Math.min(...rects.map((r) => r.y));
   const maxX = Math.max(...rects.map((r) => r.x + r.width));
   const maxY = Math.max(...rects.map((r) => r.y + r.height));
+  // The mod's GroupEdits.group: the corner on its 10 px grid, the box plus the padding and the strip.
   const corner = {
-    x: Math.floor((minX - BOARD_WINDOW_FIT_PAD) / BOARD_GRID) * BOARD_GRID,
-    y: Math.floor((minY - BOARD_WINDOW_TITLE_HEIGHT - BOARD_WINDOW_FIT_PAD) / BOARD_GRID) * BOARD_GRID,
+    x: Math.round((minX - FRAME.pad - 4) / FRAME.grid) * FRAME.grid,
+    y: Math.round((minY - FRAME.pad - GROUP.strip - 4) / FRAME.grid) * FRAME.grid,
   };
   const parentOrigin = levelOrigin(pockets, parent);
   const group: FactoryPocket = {
@@ -382,8 +394,8 @@ export function groupItems(
     position: { x: corner.x - parentOrigin.x, y: corner.y - parentOrigin.y },
     expanded: true,
     size: {
-      width: Math.max(BOARD_WINDOW_MIN_WIDTH, snapSizeUpToGrid(maxX - corner.x + BOARD_WINDOW_FIT_PAD)),
-      height: Math.max(BOARD_WINDOW_MIN_HEIGHT, snapSizeUpToGrid(maxY - corner.y + BOARD_WINDOW_FIT_PAD)),
+      width: Math.max(FRAME.minWidth, Math.ceil(maxX - corner.x + FRAME.pad)),
+      height: Math.max(FRAME.minHeight, Math.ceil(maxY - corner.y + FRAME.pad)),
     },
   };
   const targets = new Map(
@@ -416,7 +428,7 @@ export function addToGroup(
   const moving = ids.filter((id) => ownerOf(project, id).found && canJoin(project, id, groupId));
   if (moving.length === 0) return project;
   const leaving = new Set(moving);
-  let bottom = BOARD_WINDOW_TITLE_HEIGHT;
+  let bottom: number = GROUP.strip;
   const consider = (items: readonly Placed[] | undefined) => {
     for (const item of items ?? []) {
       if (item.pocketId !== groupId || leaving.has(item.id)) continue;
@@ -432,8 +444,8 @@ export function addToGroup(
     }
   }
   const origin = levelOrigin(pockets, groupId);
-  let x = BOARD_WINDOW_FIT_PAD;
-  const y = snapSizeUpToGrid(bottom + BOARD_WINDOW_FIT_PAD);
+  let x: number = FRAME.pad;
+  const y = Math.ceil(bottom + FRAME.pad);
   const targets = new Map<string, { level: string | undefined; at: { x: number; y: number } }>();
   const owners = new Set<string>();
   for (const id of moving) {

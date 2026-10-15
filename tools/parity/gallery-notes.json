@@ -582,5 +582,9 @@
  "t-v": [
   "NOT CAPTURED",
   "Unlabelled reference shot."
+ ],
+ "tour-step-27-full-board-solved-bending-acid": [
+  "DIFFERS",
+  "Same step: the mod frames the electrolyzer and reactor with its slider note; the web shows the alloy smelter and bender with the minimap note (its script is out of step with the mod at 27)."
  ]
 }

@@ -92,15 +92,12 @@ From the plan-wide solve, never a solve of the group alone. Over the members (ne
 
 | Do | What happens |
 | --- | --- |
-| Select (marquee or Shift-click), then the **Group** key in the selection bar (beside "Combine N into one machine"), **Ctrl+G**, or **Group selected** in the right-click menu | A group round the selection where it stands (nothing moves): frame = the members' box plus a cell, the title strip above. The selection becomes the group. |
-| Click the title strip's name | Rename in place (Enter sets, Escape cancels; empty keeps the old name). |
-| Drag the title strip (or the summary card) | Moves the group and everything in it, nested groups included. Drops follow the board's rules (a 3 px slop, the 10 px grid, never onto a card). |
+| Select (marquee or Shift-click), then the **Group** key in the selection bar (beside "Combine N into one machine") or **Ctrl+G** (Ctrl+G works on one thing too) | A group round the selection where it stands (nothing moves): frame = the members' box plus a cell, the title strip above. The selection becomes the group. Sound: `board.merge`. |
+| Click the title strip's name, or Rename in its menu | Rename in place (Enter sets, Escape cancels; empty keeps the old name). |
+| Drag the title strip (or the summary card) | Moves the group and everything in it, nested groups included. Drops follow the board's rules (a 3 px slop, the grid, never onto a card). A carried group keeps its parent. |
 | Drag a frame's edge or corner (4 px either side of the border) | Resizes it; it never cuts a member off. |
-| The collapse key; double-click the summary card | Collapse or expand. |
-| Drag a card, drawer or note so its centre lands inside an open group's frame | It joins that group (the innermost open group there). Dropped outside every frame, it leaves its group. A group dragged keeps its own parent. |
-| Right-click a group (strip, border, summary card) | Rename, Collapse / Expand, Colour..., Ungroup (the group goes, its contents stay where they are, in the group it sat in), Delete group and contents (red). |
-| Right-click a card, drawer, note or drawing | Its menu, which now always ends in: Group selected (when two or more things are selected and it is one of them), Add to group... (a list of the open groups; it moves to sit just under that group's members, a cell in, and the frame grows) or Remove from group (it moves a cell clear of the frame's right side), and Delete. A right-click on an item's icon still looks it up (recipes; uses with Shift), as R and U do. |
-| Delete key on a selected group | Deletes the group and its contents, as deleting a selected board always did (undo brings them back). |
+| The collapse key; double-click the summary card; Collapse / Expand in its menu | Collapse or expand. |
+| Delete key on a selected group | Deletes the group and its contents (undo brings them back). |
 | Copy and paste | A copied group takes its contents with it. |
 
 **Making a group never nests by accident.** If every selected thing is in the same group, the new group goes inside
@@ -109,6 +106,41 @@ the new group.
 
 Undo covers every change (one step each). A collapsed group's members cannot be selected, hovered or dragged; select-all
 and the marquee skip them; they still solve.
+
+## Dragging in and out
+
+What is in a group is always plain: its members sit on its tinted body inside its border; everything else is on the
+bare board.
+
+- While a card, drawer or note is carried, the group under the **pointer's aim** (the carried thing's centre, before
+  the board slides it clear of what is in the way) lights up: its body brighter with a 2 px inner line in its colour,
+  its strip brighter, its border white. Coming over a new group ticks once (`wire.snap`, 0.6). The group it would leave
+  dims.
+- Let go and it is in the lit group: the frame grows to hold it (even a full group takes it, the thing landing where
+  the board slid it), with `board.merge` pitched up (1.12). Let go over no group and it leaves its group, with
+  `board.merge` pitched down (0.85, quieter).
+- Frames are no walls on a plan board: a card is never stopped at a border, only by other cards.
+- A carried group never joins another by being dropped on it; nest groups by grouping a selection inside a group.
+
+## Menus
+
+Every right-click menu and every key menu on the board is one menu in one skin (the mod's `PickList`: square, 1 px
+chrome, the game font; the website's `clean/menus/BoardMenu`). Rows are the same words on both sides. A "..." row
+opens a short list with the current choice ticked; red rows lose something and sit under a rule.
+
+| Right-click on | Rows |
+| --- | --- |
+| The board | Add sticky note, Add box, Add arrow (website: New product drawer) |
+| A card (anywhere but an item) | the card's actions key rows: Clone node, (mod: Show in the world, Remove from the world, once placed), Delete node |
+| A drawer | its rule key's rows (Any, At least, Exactly, At most, ticked; Void it (trash) / Keep it (product)), Clone drawer, Delete drawer |
+| A sticky note | Write on it, Colour..., Bigger text, Smaller text, Delete note |
+| A box or zone / an arrow | Colour..., Fill..., Border..., Marks..., Delete box / Colour..., Thickness..., Heads..., Delete arrow |
+| A group (title strip, border, summary card) | Rename, Collapse or Expand, Colour..., Ungroup (keeps contents), Delete group and contents |
+| A wire (website) | Add a drawer here, Delete wire |
+| An item (a port's or a drawer's resource icon) | not a menu: it looks the item up, recipes (uses with Shift), as R and U do |
+
+There is no "Add to group" row anywhere: things go in and out of groups by dragging, and groups are made with the
+Group key or Ctrl+G.
 
 ## Arrange
 

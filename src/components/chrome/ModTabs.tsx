@@ -16,6 +16,17 @@ import { useSolvingBooks } from "@/components/flow/use-solving-books";
 import { tipAttrs } from "@/components/flow/clean/interaction";
 import { openPlanFile } from "@/lib/import-export/open-plan-file";
 import { flashNotice } from "@/components/flow/clean/rail/NoticeBar";
+import {
+  orderWith,
+  shiftsFor,
+  slotAt,
+  stepped,
+  TAB_DRAG_SLOP,
+  TAB_EDGE_SPEED,
+  TAB_EDGE_ZONE,
+  TAB_GLIDE_MS,
+  type TabBox,
+} from "./tab-reorder";
 import { ChromeMenu, chromeAnchorOf, MENU_ANCHOR_ATTR, type ChromeAnchor, type MenuEntry } from "./ChromeMenu";
 import { libraryRows } from "./library-rows";
 import { copyPlanCode } from "./share-actions";
@@ -28,6 +39,29 @@ export interface ModTabsActions {
   /** The library dialog for the plan open now: Save to library, Update in library, Save as new post. */
   onShare: (mode?: ShareMode) => void;
 }
+
+/** A plan tab in hand (or settling after it): how far it has moved, and where every tab sits for the new order. */
+interface TabDrag {
+  id: string;
+  dx: number;
+  shifts: Record<string, number>;
+  settling: boolean;
+}
+
+interface TabGrab {
+  id: string;
+  startX: number;
+  startScroll: number;
+  pointerX: number;
+  /** Screen pixels per CSS pixel of the strip (the page may be zoomed). */
+  scale: number;
+  boxes: TabBox[];
+  held: boolean;
+  slot: number;
+  frame: number;
+}
+
+const TAB_GAP = 2;
 
 type TabMenu =
   | { kind: "plus"; anchor: ChromeAnchor }
@@ -45,6 +79,7 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
   const renameDesign = useDesignStore((state) => state.renameDesign);
   const closeDesigns = useDesignStore((state) => state.closeDesigns);
   const removeDesign = useDesignStore((state) => state.removeDesign);
+  const reorderDesigns = useDesignStore((state) => state.reorderDesigns);
   const designs = openDesigns(allDesigns);
   const linkedPostId = useFactoryStore((state) => state.project.metadata?.communityPlanId);
   const solving = useSolvingBooks();
@@ -53,11 +88,22 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
   const [renaming, setRenaming] = useState<string>();
   const [fade, setFade] = useState({ left: false, right: false });
   const stripRef = useRef<HTMLDivElement>(null);
+  const [drag, setDrag] = useState<TabDrag>();
+  const grabRef = useRef<TabGrab | null>(null);
+  const stopGrabRef = useRef<() => void>(() => undefined);
+  const suppressClick = useRef(false);
+  const designIds = designs.map((design) => design.id);
+  const designIdsRef = useRef(designIds);
+  const allDesignsRef = useRef(allDesigns);
   const canClose = designs.length + publicViews.length > 1;
   // One tab is in the Tab order (roving): the open plan's, else the first. The arrows move among the rest.
   const tabIds = [...publicViews.map((view) => `public:${view.id}`), ...designs.map((design) => design.id)];
   const wanted = publicView ? `public:${publicView.id}` : activeDesignId;
   const tabStop = wanted && tabIds.includes(wanted) ? wanted : tabIds[0];
+  useLayoutEffect(() => {
+    designIdsRef.current = designIds;
+    allDesignsRef.current = allDesigns;
+  });
   const closeMenu = useCallback(() => setMenu(undefined), []);
 
   const syncFade = useCallback(() => {
@@ -88,6 +134,151 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
     else if (right > strip.scrollLeft + strip.clientWidth) strip.scrollLeft = right - strip.clientWidth;
     syncFade();
   }, [activeDesignId, publicView?.id, designs.length, syncFade]);
+
+  /** The new order of the open tabs, with the parked plans left in their own places among the rest. */
+  const commitOrder = useCallback(
+    (openOrder: string[]) => {
+      const open = new Set(designIdsRef.current);
+      let next = 0;
+      const full = allDesignsRef.current.map((design) => (open.has(design.id) ? openOrder[next++] : design.id));
+      void reorderDesigns(full);
+    },
+    [reorderDesigns],
+  );
+
+  useEffect(() => () => stopGrabRef.current(), []);
+
+  /** A press on a plan tab: moved past the slop it is picked up, follows the pointer, the others slide aside. */
+  const grabTab = (event: React.PointerEvent<HTMLElement>, id: string) => {
+    const strip = stripRef.current;
+    if (!strip || event.button !== 0 || event.pointerType === "touch" || grabRef.current) return;
+    if ((event.target as HTMLElement).closest(".mt-close, input")) return;
+    const boxes = [...strip.querySelectorAll<HTMLElement>(".mt-tab[data-design-id]")].map((tab) => ({
+      id: tab.dataset.designId ?? "",
+      left: tab.offsetLeft,
+      width: tab.offsetWidth,
+    }));
+    const me = boxes.findIndex((box) => box.id === id);
+    if (me < 0 || boxes.length < 2) return;
+    const grab: TabGrab = {
+      id,
+      startX: event.clientX,
+      startScroll: strip.scrollLeft,
+      pointerX: event.clientX,
+      scale: strip.offsetWidth > 0 && strip.getBoundingClientRect().width > 0 ? strip.getBoundingClientRect().width / strip.offsetWidth : 1,
+      boxes,
+      held: false,
+      slot: me,
+      frame: 0,
+    };
+    grabRef.current = grab;
+
+    const order = () => orderWith(designIdsRef.current, id, grab.slot);
+    const update = () => {
+      const mine = grab.boxes.find((box) => box.id === id);
+      if (!mine) return;
+      const first = grab.boxes[0];
+      const last = grab.boxes[grab.boxes.length - 1];
+      const raw = (grab.pointerX - grab.startX) / grab.scale + (strip.scrollLeft - grab.startScroll);
+      const dx = Math.max(first.left - mine.left, Math.min(last.left + last.width - mine.left - mine.width, raw));
+      const slot = slotAt(grab.boxes, id, mine.left + mine.width / 2 + dx);
+      if (slot !== grab.slot) {
+        grab.slot = slot;
+        playSfx("ui.tick");
+      }
+      setDrag({ id, dx, shifts: shiftsFor(grab.boxes, order(), TAB_GAP), settling: false });
+    };
+    const edgeScroll = () => {
+      grab.frame = 0;
+      if (!grabRef.current) return;
+      const rect = strip.getBoundingClientRect();
+      const into =
+        grab.pointerX < rect.left + TAB_EDGE_ZONE
+          ? grab.pointerX - rect.left - TAB_EDGE_ZONE
+          : grab.pointerX > rect.right - TAB_EDGE_ZONE
+            ? grab.pointerX - rect.right + TAB_EDGE_ZONE
+            : 0;
+      if (into !== 0) {
+        const before = strip.scrollLeft;
+        strip.scrollLeft += Math.sign(into) * Math.min(TAB_EDGE_SPEED, 2 + (Math.abs(into) / TAB_EDGE_ZONE) * TAB_EDGE_SPEED);
+        if (strip.scrollLeft !== before) update();
+      }
+      grab.frame = requestAnimationFrame(edgeScroll);
+    };
+    const onMove = (move: PointerEvent) => {
+      grab.pointerX = move.clientX;
+      if (!grab.held) {
+        if (Math.abs(move.clientX - grab.startX) / grab.scale <= TAB_DRAG_SLOP) return;
+        grab.held = true;
+        suppressClick.current = true;
+        setMenu(undefined);
+        playSfx("board.lift");
+        grab.frame = requestAnimationFrame(edgeScroll);
+      }
+      update();
+    };
+    const finish = (commit: boolean) => {
+      const wasHeld = grab.held;
+      const final = order();
+      const shifts = shiftsFor(grab.boxes, commit ? final : designIdsRef.current, TAB_GAP);
+      stopGrabRef.current();
+      if (!wasHeld) return;
+      if (commit) playSfx("board.drop");
+      setDrag({ id, dx: shifts[id] ?? 0, shifts, settling: true });
+      window.setTimeout(() => {
+        setDrag(undefined);
+        if (commit && final.some((other, at) => other !== designIdsRef.current[at])) commitOrder(final);
+        window.setTimeout(() => {
+          suppressClick.current = false;
+        }, 0);
+      }, TAB_GLIDE_MS);
+    };
+    const onUp = () => finish(true);
+    const onKey = (key: KeyboardEvent) => {
+      if (key.key !== "Escape") return;
+      key.preventDefault();
+      key.stopPropagation();
+      finish(false);
+    };
+    window.addEventListener("pointermove", onMove);
+    window.addEventListener("pointerup", onUp);
+    window.addEventListener("pointercancel", onUp);
+    window.addEventListener("keydown", onKey, true);
+    stopGrabRef.current = () => {
+      window.removeEventListener("pointermove", onMove);
+      window.removeEventListener("pointerup", onUp);
+      window.removeEventListener("pointercancel", onUp);
+      window.removeEventListener("keydown", onKey, true);
+      if (grab.frame) cancelAnimationFrame(grab.frame);
+      grabRef.current = null;
+      stopGrabRef.current = () => undefined;
+    };
+  };
+
+  /** Ctrl+Shift+Left or Right on a focused tab moves it one place. */
+  const moveTabByKey = (event: React.KeyboardEvent<HTMLElement>, id: string, by: -1 | 1) => {
+    const next = stepped(designIds, id, by);
+    event.preventDefault();
+    if (next === designIds) return;
+    playSfx("ui.tick");
+    commitOrder(next);
+    requestAnimationFrame(() => {
+      const tab = stripRef.current?.querySelector<HTMLElement>(`.mt-tab[data-design-id="${id}"]`);
+      tab?.focus();
+      tab?.scrollIntoView({ block: "nearest", inline: "nearest" });
+    });
+  };
+
+  const tabDragStyle = (id: string): React.CSSProperties | undefined => {
+    if (!drag) return undefined;
+    const mine = drag.id === id;
+    const x = mine ? drag.dx : (drag.shifts[id] ?? 0);
+    return {
+      transform: `translateX(${x}px)`,
+      transition: !mine || drag.settling ? `transform ${TAB_GLIDE_MS}ms ease-out` : "none",
+      zIndex: mine ? 3 : undefined,
+    };
+  };
 
   const close = async (id: string) => {
     playSfx("ui.close");
@@ -193,6 +384,11 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
             const tabs = [...event.currentTarget.querySelectorAll<HTMLElement>(".mt-tab")];
             const at = tabs.indexOf(document.activeElement as HTMLElement);
             if (at < 0) return;
+            const held = tabs[at].dataset.designId;
+            if (held && event.ctrlKey && event.shiftKey && (event.key === "ArrowLeft" || event.key === "ArrowRight")) {
+              moveTabByKey(event, held, event.key === "ArrowLeft" ? -1 : 1);
+              return;
+            }
             let to = -1;
             if (event.key === "ArrowRight") to = (at + 1) % tabs.length;
             else if (event.key === "ArrowLeft") to = (at - 1 + tabs.length) % tabs.length;
@@ -269,6 +465,11 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
                 className="mt-tab"
                 data-design-id={design.id}
                 data-active={active ? "" : undefined}
+                data-dragging={drag?.id === design.id ? "" : undefined}
+                style={tabDragStyle(design.id)}
+                onPointerDown={(event) => {
+                  if (!isRenaming) grabTab(event, design.id);
+                }}
                 role="tab"
                 aria-selected={active}
                 tabIndex={tabStop === design.id ? 0 : -1}
@@ -284,6 +485,7 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
                   }
                 }}
                 onClick={() => {
+                  if (suppressClick.current) return;
                   if (!isRenaming) void activate(design.id);
                 }}
                 onMouseDown={(event) => {

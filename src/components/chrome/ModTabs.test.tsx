@@ -1,8 +1,10 @@
 // @vitest-environment jsdom
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
 import type { DesignSummary } from "@/lib/designs/design-library";
 import { readLibraryTabState, openLibrary } from "@/lib/library/library-tab";
+import { onSfx } from "@/lib/sound/sfx";
 import { useDesignStore } from "@/store/design-store";
 import { ModTabs } from "./ModTabs";
 
@@ -27,6 +29,7 @@ const actions = {
   closeDesigns: vi.fn(async () => undefined),
   removeDesign: vi.fn(async () => undefined),
   renameDesign: vi.fn(async () => undefined),
+  reorderDesigns: vi.fn(async () => undefined),
 };
 
 beforeEach(() => {
@@ -130,5 +133,98 @@ describe("the plan tabs", () => {
     const tab = screen.getByText("Benzene").closest(".mt-tab")!;
     expect(JSON.parse(tab.getAttribute("data-tip")!)).toMatchObject({ title: "Benzene", sub: "Middle-click to close, right-click for more" });
     expect(JSON.parse(screen.getByLabelText("New plan").getAttribute("data-tip")!).title).toBe("New plan, or open an existing one");
+  });
+});
+
+describe("dragging the plan tabs", () => {
+  const sfx: string[] = [];
+  let offsetLeft: PropertyDescriptor | undefined;
+  let offsetWidth: PropertyDescriptor | undefined;
+  const place = (element: HTMLElement) => {
+    const tabs = [...document.querySelectorAll(".mt-tab")];
+    return tabs.indexOf(element);
+  };
+  beforeEach(() => {
+    vi.useFakeTimers();
+    offsetLeft = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "offsetLeft");
+    offsetWidth = Object.getOwnPropertyDescriptor(HTMLElement.prototype, "offsetWidth");
+    Object.defineProperty(HTMLElement.prototype, "offsetLeft", { configurable: true, get() { return Math.max(0, place(this)) * 52; } });
+    Object.defineProperty(HTMLElement.prototype, "offsetWidth", { configurable: true, get() { return 50; } });
+    useDesignStore.setState({
+      designs: [design("a", "Benzene"), design("b", "ref-chain"), design("c", "Parked", { closed: true }), design("d", "Toluene")],
+      activeDesignId: "b",
+    });
+    sfx.length = 0;
+    return onSfx((play) => sfx.push(play.name));
+  });
+  afterEach(() => {
+    vi.useRealTimers();
+    if (offsetLeft) Object.defineProperty(HTMLElement.prototype, "offsetLeft", offsetLeft);
+    if (offsetWidth) Object.defineProperty(HTMLElement.prototype, "offsetWidth", offsetWidth);
+  });
+  const pointer = (type: string, clientX: number, target: EventTarget = window) =>
+    act(() => {
+      target.dispatchEvent(new MouseEvent(type, { clientX, bubbles: true, button: 0 }));
+    });
+  const tabOf = (name: string) => screen.getByText(name).closest(".mt-tab") as HTMLElement;
+
+  it("carries a tab past the slop, slides the others aside and saves the order on drop", () => {
+    render(<ModTabs {...props} />);
+    const first = tabOf("Benzene");
+    pointer("pointerdown", 10, first);
+    pointer("pointermove", 12);
+    expect(first.hasAttribute("data-dragging")).toBe(false);
+    pointer("pointermove", 130);
+    expect(first.hasAttribute("data-dragging")).toBe(true);
+    expect(first.style.transform).toBe("translateX(104px)");
+    expect(tabOf("ref-chain").style.transform).toBe("translateX(-52px)");
+    expect(tabOf("Toluene").style.transform).toBe("translateX(-52px)");
+    pointer("pointerup", 130);
+    expect(actions.reorderDesigns).not.toHaveBeenCalled();
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+    expect(actions.reorderDesigns).toHaveBeenCalledWith(["b", "d", "c", "a"]);
+    expect(sfx).toEqual(expect.arrayContaining(["board.lift", "ui.tick", "board.drop"]));
+    expect(actions.switchToDesign).not.toHaveBeenCalled();
+  });
+
+  it("a drag moves nothing and clicks nothing under the slop; the click switches", () => {
+    render(<ModTabs {...props} />);
+    const first = tabOf("Benzene");
+    pointer("pointerdown", 10, first);
+    pointer("pointermove", 13);
+    pointer("pointerup", 13);
+    fireEvent.click(first);
+    expect(actions.switchToDesign).toHaveBeenCalledWith("a");
+    expect(actions.reorderDesigns).not.toHaveBeenCalled();
+  });
+
+  it("Escape puts it back and saves nothing", () => {
+    render(<ModTabs {...props} />);
+    const first = tabOf("Benzene");
+    pointer("pointerdown", 10, first);
+    pointer("pointermove", 130);
+    act(() => {
+      window.dispatchEvent(new KeyboardEvent("keydown", { key: "Escape", bubbles: true }));
+    });
+    act(() => {
+      vi.advanceTimersByTime(200);
+    });
+    expect(actions.reorderDesigns).not.toHaveBeenCalled();
+    expect(first.style.transform).toBe("");
+  });
+
+  it("Ctrl+Shift+Right moves the focused tab one place", () => {
+    render(<ModTabs {...props} />);
+    const first = tabOf("Benzene");
+    first.focus();
+    fireEvent.keyDown(first, { key: "ArrowRight", ctrlKey: true, shiftKey: true });
+    expect(actions.reorderDesigns).toHaveBeenCalledWith(["b", "a", "c", "d"]);
+    actions.reorderDesigns.mockClear();
+    const last = tabOf("Toluene");
+    last.focus();
+    fireEvent.keyDown(last, { key: "ArrowRight", ctrlKey: true, shiftKey: true });
+    expect(actions.reorderDesigns).not.toHaveBeenCalled();
   });
 });

@@ -192,7 +192,7 @@ export function TaskBoard() {
   return (
     <div className="relative flex h-full min-h-0 w-full bg-canvas text-xs text-fg" data-task-board>
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="grid min-h-0 flex-1 grid-cols-4 gap-2 overflow-x-auto p-2 compact:grid-cols-[repeat(4,minmax(220px,1fr))]">
+        <div className="grid min-h-0 flex-1 grid-cols-4 gap-2 overflow-x-auto p-2 pt-10 compact:grid-cols-[repeat(4,minmax(220px,1fr))]">
           {TASK_STATUSES.map((status) => {
             const list = columns.get(status) ?? [];
             return (

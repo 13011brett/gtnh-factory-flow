@@ -399,7 +399,6 @@ function BoardColumn() {
     <div className="grid h-full min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)]">
       <div className="min-w-0">
         {covering ? null : publicView ? <PublicViewBar key={publicView.id} /> : null}
-        {covering ? null : <BoardToolbar />}
         {covering ? null : <TabConflictNotice />}
         <LiveNotice />
       </div>
@@ -415,6 +414,8 @@ function BoardColumn() {
             <TaskBoard />
           </div>
         ) : null}
+        {/* The board's keys float over its top edge: no band, no space reserved. */}
+        {covering ? null : <BoardToolbar />}
         {covering === "welcome" ? (
           <div className="absolute inset-0 z-40">
             <WelcomePage />

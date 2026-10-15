@@ -101,7 +101,10 @@ export function ModPowerPicker() {
     const measure = () => {
       const main = document.querySelector<HTMLElement>("main[data-items-side]");
       // Below the board's toolbar when there is one: its Non-recipe key closes the picker again.
-      const bar = document.querySelector<HTMLElement>("[data-board-toolbar]") ?? document.querySelector<HTMLElement>("[data-mod-bar]");
+      const strip = document.querySelector<HTMLElement>("header[data-board-toolbar]");
+      const groups = strip ? Array.from(strip.children) : [];
+      const bottom = groups.length ? Math.max(...groups.map((group) => group.getBoundingClientRect().bottom)) : 0;
+      const bar = strip ? { getBoundingClientRect: () => ({ bottom }) } : document.querySelector<HTMLElement>("[data-mod-bar]");
       const scale = getUiScale();
       const items = main ? Number(main.dataset.rightPx ?? 0) : 0;
       setFrame({ left: 0, right: Math.round(items), top: bar ? Math.round(bar.getBoundingClientRect().bottom / scale) : 0 });

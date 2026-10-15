@@ -101,13 +101,15 @@ in `src/store/CLAUDE.md` (Live plans, Task boards).
   rows say Publish to library... for a plan not posted yet (`chrome/library-rows.ts`, the dialog's title too). Never fold
   one into the other. Without live plans every row and label is as before. The + tab menu has New task board.
   `PlanIdentityDrawer`, `DesignTabs` and `BoardActions` keep their live keys but are not on the desktop board.
-- What edits or views the board is the BOARD TOOLBAR (`chrome/BoardToolbar.tsx`), a strip along the top of the board in
-  the middle column (above the notices; not while the Library or Welcome covers it): Non-recipe, undo, redo, Arrange,
-  Fit, the rate unit, EU/t, Avg, same order and words as the game's (`chrome/bar-parts.tsx` has the key and the fit
-  hook both bars share). A task board shows its own header there instead (title, count, New task: `requestNewTask`).
-  The Non-recipe picker opens below this strip (`[data-board-toolbar]`).
+- What edits or views the board is the BOARD TOOLBAR (`chrome/BoardToolbar.tsx`): no band. Its keys float over the
+  board's top edge (it sits inside the board's box, so the board fills the whole middle column and nothing is reserved;
+  not while the Library or Welcome covers it). Left group: Non-recipe, undo, redo. Right group: Arrange, Fit, the rate
+  unit, EU/t, Avg; same order and words as the game's (`chrome/bar-parts.tsx` has the key and the fit hook both bars
+  share). Too narrow for one row, the right group drops to a second row, still right. The strip takes no presses
+  (`pointer-events: none`), only the keys do. A task board shows its own header the same way (title and count left,
+  New task right; `TaskBoard` leaves room at its top). The Non-recipe picker opens below the keys (`header[data-board-toolbar]`).
 - Both bars degrade by their own width (`useBarFit`, bar px, `data-fit`, the widths in `BAR_FIT_TOP` and the toolbar's
-  `STRIP_FIT`): tight tightens the keys (Non-recipe shows its bolt alone, Arrange takes its label's width, the faces are
+  `STRIP_FIT`, which only tightens): tight tightens the keys (Non-recipe shows its bolt alone, Arrange takes its label's width, the faces are
   two and a +N), wrapped puts the keys on a second row (the top bar's tabs always keep room for the active tab and the +).
 - Share dialog: the owner is listed first; the owner adds people by name (search asks once typing pauses, 250 ms,
   and drops the answer to an older query) and removes them; someone it is shared with sees everyone and can leave.

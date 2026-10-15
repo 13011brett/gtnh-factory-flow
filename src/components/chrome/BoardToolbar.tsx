@@ -21,8 +21,8 @@ const LIVE = isLiveConfigured();
 const RATE_ORDER: RateUnit[] = ["tick", "second", "minute", "hour"];
 const RATE_LABEL: Record<string, string> = { tick: "/t", second: "/s", minute: "/min", hour: "/hr", eu: "/s" };
 
-/** This strip has fewer keys than the top bar: it tightens, then wraps, at its own widths (its own px). */
-const STRIP_FIT = { tightBelow: 390, wrappedBelow: 262 } as const;
+/** This strip has fewer keys than the top bar: it tightens at its own width (its own px); its two groups wrap by themselves. */
+const STRIP_FIT = { tightBelow: 390, wrappedBelow: 0 } as const;
 
 /**
  * The board's toolbar, along the top of the board between the overview and the items list: what edits or views the
@@ -48,18 +48,21 @@ function TaskBoardHeader() {
   const isReadOnly = useFactoryStore((state) => state.isReadOnly);
   return (
     <>
-      <span className="mb-title" data-task-board-title="">
-        {name ?? "Tasks"}
-      </span>
-      <span className="mb-count">{count === 1 ? "1 task" : `${count} tasks`}</span>
-      <span className="mb-grow" />
-      <BarKey
-        id="new-task"
-        label="New task"
-        off={isReadOnly}
-        tip="Add a task to To do"
-        onClick={() => requestNewTask()}
-      />
+      <div className="mb-group mb-group-left">
+        <span className="mb-title" data-task-board-title="">
+          {name ?? "Tasks"}
+        </span>
+        <span className="mb-count">{count === 1 ? "1 task" : `${count} tasks`}</span>
+      </div>
+      <div className="mb-group mb-group-right">
+        <BarKey
+          id="new-task"
+          label="New task"
+          off={isReadOnly}
+          tip="Add a task to To do"
+          onClick={() => requestNewTask()}
+        />
+      </div>
     </>
   );
 }
@@ -96,6 +99,7 @@ function BoardKeys({ tight }: { tight: boolean }) {
 
   return (
     <>
+      <div className="mb-group mb-group-left">
       <BarKey
         id="nonrecipe"
         glyph="bolt"
@@ -138,9 +142,10 @@ function BoardKeys({ tight }: { tight: boolean }) {
       >
         <PixelIcon name="undo" mirror />
       </BarKey>
+      </div>
+      <div className="mb-group mb-group-right">
       <BarKey
         id="arrange"
-        gap
         label={arrangeLabel(arrange)}
         width={tight && !arrange.running ? undefined : 90}
         tip="Auto-arrange the plan (press again to stop)"
@@ -176,6 +181,7 @@ function BoardKeys({ tight }: { tight: boolean }) {
         onContext={togglePeak}
         onWheel={togglePeak}
       />
+      </div>
     </>
   );
 }

@@ -1,6 +1,6 @@
 # Groups (the website's boards and pockets, back in both planners)
 
-Written 2026-10-14 (G1). One file, copied verbatim into the website (`docs/groups.md`); change both together.
+Written 2026-10-14 (G1). One file, copied verbatim in both repos (mod `docs/design/groups.md`, website `docs/groups.md`); change both together.
 
 A group is a named, coloured frame round part of a plan: select some things, make them a group, move them as one,
 collapse the group down to a summary card and open it again. It is the website's old "board" (its type still says
@@ -30,7 +30,9 @@ Rules both planners keep:
 - **One group each.** A card, drawer, note or group is in at most one group. Every recipe of a shared machine is in
   the shared card's group.
 - **The frame holds its members.** After every edit a group's frame grows to hold its members' boxes plus a cell of
-  padding (and its title strip); it never shrinks by itself, and resizing stops at that box.
+  padding (and its title strip); it never shrinks by itself, and resizing stops at that box. (The website keeps member
+  positions frame-relative, so it shifts the members when the frame grows up or left; the mod keeps absolute positions
+  and moves the frame's corner. Same picture.)
 - **Legacy pockets** (no `size`: members in a space of their own): on open (website) or import (mod) the members are
   moved so their box sits a cell inside the frame under its title strip, at `position`, and the frame is sized to fit.
   Written back, they carry a `size` and frame-relative positions, as the website writes any board it has opened.
@@ -98,7 +100,7 @@ From the plan-wide solve, never a solve of the group alone. Over the members (ne
 | Drag a frame's edge or corner (4 px either side of the border) | Resizes it; it never cuts a member off. |
 | The collapse key; double-click the summary card; Collapse / Expand in its menu | Collapse or expand. |
 | Delete key on a selected group | Deletes the group and its contents (undo brings them back). |
-| Copy and paste | A copied group takes its contents with it. |
+| Copy and paste | Website: a copied group takes its contents with it. The mod copies what is selected, without the group. |
 
 **Making a group never nests by accident.** If every selected thing is in the same group, the new group goes inside
 it; otherwise the selected things leave their groups and the new group sits on the board. Selected groups go inside
@@ -132,7 +134,7 @@ opens a short list with the current choice ticked; red rows lose something and s
 | --- | --- |
 | The board | Add sticky note, Add box, Add arrow (website: New product drawer) |
 | A card (anywhere but an item) | the card's actions key rows: Clone node, (mod: Show in the world, Remove from the world, once placed), Delete node |
-| A drawer | its rule key's rows (Any, At least, Exactly, At most, ticked; Void it (trash) / Keep it (product)), Clone drawer, Delete drawer |
+| A drawer | its rule key's rows (Any, At least, Exactly, At most, the current one ticked; Void it (trash) / Keep it (product)), Delete drawer |
 | A sticky note | Write on it, Colour..., Bigger text, Smaller text, Delete note |
 | A box or zone / an arrow | Colour..., Fill..., Border..., Marks..., Delete box / Colour..., Thickness..., Heads..., Delete arrow |
 | A group (title strip, border, summary card) | Rename, Collapse or Expand, Colour..., Ungroup (keeps contents), Delete group and contents |
@@ -152,9 +154,14 @@ this the only behaviour. Wires into a group count as wires into its block.
 
 | | Mod | Website |
 | --- | --- | --- |
-| Model | `data/flowchart/BoardGroup`, `Graph.boardGroups`, `Node.group`, `Drawer.group`, `Note.group` | `FactoryPocket`, `pocketId` (unchanged) |
-| Edits | `ui/BoardSession` (`groupSelection`, `ungroup`, `moveGroup`, `setGroupOf`...) | store: `wrapSelectionInBoard`, `dissolvePocket`, `expandPocket`, `minimizePocket`... |
-| Drawn | `ui/group/GroupCard`, `GroupPaint`, `GroupSummary` | `src/components/flow/clean/group/` |
-| Wires | `ui/canvas/WireLayer` (docks on a collapsed group) | the board's edge docking on a minimized board |
-| Plan JSON | `importer/FfPlanParser` (boards), `FfConverter`, `library/PlanExport` | native |
-| Minimap | `ui/world/Minimap` via `PlanSnapshot` | `clean/minimap/minimap-scene.ts` |
+| Model | `data/flowchart/BoardGroup`, `Groups` (membership, nesting, hiding, fit), `Graph.boardGroups`, `Node.group`, `Drawer.group`, `Note.group` | `FactoryPocket`, `pocketId` (unchanged); `clean/group/group-model.ts` (make, fit, colours) |
+| Edits | `ui/group/GroupEdits` (group, rename, recolour, collapse, resize, ungroup, delete with contents, a drop's landing) | store: `groupSelection`, `renamePocket`, `paintPocket`, `minimizePocket`, `expandPocket`, `dissolvePocket`, `moveBoardItems(moves, fit)` |
+| Drawn | `ui/group/GroupCard` (strip, keys, edges, summary card, menu), `GroupPaint`, `GroupSummary`; bodies under the wires in `BoardCanvas.paintGroupBodies` | `clean/group/CleanGroupFrame`, `CleanGroupSummary`, `GroupFloor` (the body), `GroupSwitch`, `group-summary.ts`, `group.css` |
+| Dragging in and out | `BoardCanvas.aim` (the aimed group), `endMove` → `GroupEdits.land` | `clean/group/group-drop.ts` (lit target, sounds, `groupUnder`), FactoryFlow's drag handlers |
+| Making | `SelectionBar` (Group key), Ctrl+G in `BoardScreen` | `SelectionBar` in FactoryFlow (Group key), Ctrl+G |
+| Menus | `ui/popup/PickList` everywhere (`GroupCard.openMenu`, `RecipeCard.openActionsAt`, `DrawerCard.ruleRows`, `NoteCard.openMenu`, `BoardCanvas.openBoardMenu`) | `clean/menus/BoardMenu` everywhere (`GroupMenu`, `CardRows`, the drawer's, `NoteMenu`, `AnnotationMenu`, `BoardContextMenu`) |
+| Wires | `ui/canvas/WireLayer` (`groupBox`: a collapsed group's box takes what it hides) | the old minimized board's inert handles (`board-card-in`, `board-card-out`) |
+| Arrange | `BoardCanvas.arrange` (a top-level group is one box), `collectArrange` moves its contents with it | "Keep boards" always on for plan boards |
+| Plan JSON | `importer/FfPlanParser` (`FfPlan.boards`, `boardOf`), `FfConverter.placeBoards`, `library/PlanExport` (`pockets`, `pocketId`) | native |
+| Minimap | `ui/world/Minimap.drawGroups` via `PlanSnapshot.groups` | `clean/minimap/minimap-scene.ts`, `minimap-draw.ts` |
+| Tests | `GroupsTest`, `GroupsRoundTripTest` (two public posts with boards, and a round trip), `FfPlanParserTest` | `group-model.test.ts` |

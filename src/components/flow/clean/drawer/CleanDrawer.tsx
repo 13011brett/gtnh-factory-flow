@@ -308,8 +308,8 @@ export function CleanDrawer({
     if (had) promote();
   };
 
-  // The drawer's menu (docs/groups.md, "Menus"): a right click anywhere on it opens its rule rows, Clone drawer and
-  // Delete drawer, the rule key's rows plus the drawer's own, as the mod's DrawerCard does.
+  // The drawer's menu (docs/groups.md, "Menus"): a right click anywhere on it opens its rule key's rows and Delete
+  // drawer, as the mod's DrawerCard does.
   const ruleRows = (close: () => void) =>
     menuRows.map((row) => (
       <MenuRow
@@ -524,14 +524,6 @@ export function CleanDrawer({
         <BoardMenu x={context.x} y={context.y} label="Drawer" onClose={() => setContext(undefined)}>
           {ruleRows(() => setContext(undefined))}
           {menuRows.length > 0 ? <MenuLine /> : null}
-          <MenuRow
-            label="Clone drawer"
-            onClick={() => {
-              setContext(undefined);
-              useFactoryStore.getState().duplicateStorage(storage.id);
-            }}
-          />
-          <MenuLine />
           <MenuRow
             label="Delete drawer"
             danger

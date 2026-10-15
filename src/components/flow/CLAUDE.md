@@ -193,7 +193,16 @@ contents. Read `virtual/card-virtualizer.ts` first (pure, tested); budgets and n
   `edges` prop only changes with the plan, and the memo in FactoryFlow applies the current choice.
 - `--board-zoom` is written on the board only at the glance step and on each sticky note directly (`zoom-var.ts`):
   an inherited property written per step restyles every element under it.
-- Pulses ("(set count)", the acceptance glow) are pinned to the shared phase by one `document.getAnimations()` a
-  frame (`prompt-phase.ts`), never a subtree walk per card.
+- The prompts ("(set count)", "Set rate") blink off one clock: `data-cc-blink` on the root, flipped twice a second
+  by `prompt-phase.ts` while a prompt is mounted, and their colour follows it in CSS. Never a CSS animation per
+  prompt: one running animation keeps the page drawing and restyling every frame. The acceptance glow (a wire in
+  hand) is still an animation, pinned to the shared phase by one `document.getAnimations()` a frame.
+- While only the camera moves the board carries `data-camera-moving` (150 ms past the last step; never with a wire,
+  card or marquee in hand) and its cards and wires take no pointer events; a pan captures the pointer on the pane
+  as React Flow starts it. Both keep the browser from hit-testing everything on screen at every pointer event.
+- React Flow's `ViewportPortal` and `EdgeLabelRenderer` query the DOM in a store selector on every store change; use
+  `virtual/flow-portals.tsx` (FactoryFlow imports them under the same names).
+- Wires and the overview rail follow an edit in a deferred render (`useDeferredValue` of the project and the solve):
+  the click paints the cards first. Anything that needs wires and project in the same render reads `edgeProject`.
 - `localStorage["gtnh-factory-flow.no-virtual"] = "1"` turns all of it off. `window.__gtnhVirtual` reads
   the counts (mounted, wires shown, pump cost, handle report) for the perf harness.

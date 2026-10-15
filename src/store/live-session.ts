@@ -13,7 +13,7 @@ import {
   writePending,
 } from "@/lib/live/live-pending-store";
 import { clearPresence, notePresence, setPresentPeople } from "@/lib/live/live-presence";
-import { liveShape } from "@/lib/live/live-shape";
+import { liveShape, withRecipesTheyName } from "@/lib/live/live-shape";
 import { diffPlans, type LiveOp, type LivePlan } from "@/lib/live/ops";
 import {
   docKey,
@@ -850,7 +850,8 @@ export class LiveSession {
     if (!room || useDesignStore.getState().activeDesignId !== room.designId) {
       return;
     }
-    const ops = diffPlans(liveShape(previous), liveShape(next));
+    const shaped = liveShape(next);
+    const ops = withRecipesTheyName(diffPlans(liveShape(previous), shaped), room.engine.view, shaped);
     if (ops.length === 0) {
       return;
     }

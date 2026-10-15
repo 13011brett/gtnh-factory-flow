@@ -1,6 +1,6 @@
 import { isPowerRecipe } from "@/lib/power/power-recipe";
 import type { FactoryProject, Recipe } from "@/lib/model/types";
-import type { LivePlan } from "./ops";
+import type { LiveOp, LivePlan, LiveThing } from "./ops";
 
 /**
  * A plan as live edits see it: the editor's project with everything that is
@@ -71,4 +71,60 @@ export function liveShape(plan: FactoryProject | LivePlan): LivePlan {
     shapedPlans.set(source, shaped);
   }
   return shaped;
+}
+
+function recipeIdsOf(card: Record<string, unknown>, into: Set<string>): void {
+  if (typeof card.recipeId === "string") {
+    into.add(card.recipeId);
+  }
+  if (Array.isArray(card.extraRecipes)) {
+    for (const section of card.extraRecipes) {
+      if (section && typeof section === "object" && typeof (section as { recipeId?: unknown }).recipeId === "string") {
+        into.add((section as { recipeId: string }).recipeId);
+      }
+    }
+  }
+}
+
+function idsOf(list: unknown): Set<string> {
+  const ids = new Set<string>();
+  if (Array.isArray(list)) {
+    for (const thing of list) {
+      if (thing && typeof thing === "object" && typeof (thing as { id?: unknown }).id === "string") {
+        ids.add((thing as { id: string }).id);
+      }
+    }
+  }
+  return ids;
+}
+
+/**
+ * An edit's ops with a put in front for every recipe its cards name that the shared plan does not hold. The dataset's
+ * refresh re-keys a card's recipe on this screen only (quietly: a plan from the game names its recipes
+ * `gtnhplanner:<card>`), so a card copied or re-pointed here would otherwise name a recipe nobody else has.
+ */
+export function withRecipesTheyName(ops: LiveOp[], shared: LivePlan, next: LivePlan): LiveOp[] {
+  const named = new Set<string>();
+  for (const op of ops) {
+    if (op.o === "put" && op.c === "nodes") recipeIdsOf(op.v, named);
+    else if (op.o === "patch" && op.c === "nodes") recipeIdsOf(op.f, named);
+  }
+  if (named.size === 0) {
+    return ops;
+  }
+  const held = idsOf(shared.recipes);
+  for (const op of ops) {
+    if (op.o === "put" && op.c === "recipes") held.add(op.id);
+  }
+  const missing = [...named].filter((id) => !held.has(id));
+  if (missing.length === 0) {
+    return ops;
+  }
+  const recipes = Array.isArray(next.recipes) ? (next.recipes as LiveThing[]) : [];
+  const puts: LiveOp[] = [];
+  for (const id of missing) {
+    const recipe = recipes.find((entry) => entry && entry.id === id);
+    if (recipe) puts.push({ o: "put", c: "recipes", id, v: recipe });
+  }
+  return puts.length > 0 ? [...puts, ...ops] : ops;
 }

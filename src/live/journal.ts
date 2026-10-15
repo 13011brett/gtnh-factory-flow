@@ -130,16 +130,14 @@ export class Journal {
   /**
    * Keeps only the entries after `seq` (a flush reached it): usually removes
    * the file. `cids`, the room's recently applied batch ids, are written first
-   * (whole, through a rename), so at no moment are they in neither file.
+   * (whole, through a rename), so at no moment are they in neither file; when
+   * they cannot be written the journal stays as it is (its entries carry their
+   * cids) and the next flush trims it.
    */
   trim(doc: string, seq: number, cids?: AppliedCid[]): Promise<void> {
     return this.serial(doc, async () => {
-      if (cids) {
-        await mkdir(this.dir, { recursive: true });
-        const file = this.cidsFileFor(doc);
-        const temp = `${file}.tmp`;
-        await writeFile(temp, JSON.stringify(cids));
-        await rename(temp, file);
+      if (cids && !(await this.writeCids(doc, cids))) {
+        return;
       }
       const rest = (await this.read(doc)).filter((entry) => entry.seq > seq);
       if (rest.length === 0) {
@@ -151,6 +149,27 @@ export class Journal {
         );
       }
     });
+  }
+
+  private async writeCids(doc: string, cids: AppliedCid[]): Promise<boolean> {
+    const file = this.cidsFileFor(doc);
+    const text = JSON.stringify(cids);
+    try {
+      await mkdir(this.dir, { recursive: true });
+      const temp = `${file}.tmp`;
+      await writeFile(temp, text);
+      try {
+        await rename(temp, file);
+      } catch {
+        // Windows refuses a rename over a file something holds open for a
+        // moment (a scanner): write it in place instead.
+        await writeFile(file, text);
+        await rm(temp, { force: true });
+      }
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   /** Forgets a doc's journal and its batch ids (the plan was deleted). */

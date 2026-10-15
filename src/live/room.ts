@@ -129,6 +129,12 @@ export class Room {
     }
     const journalled = await deps.journal.read(doc);
     const replay = journalled.filter((entry) => entry.seq > room.seq);
+    // Entries already stored but never trimmed still name applied batches.
+    for (const entry of journalled) {
+      if (entry.seq <= room.seq) {
+        room.remember(entry.cid, entry.seq);
+      }
+    }
     if (journalled.length > replay.length) {
       // Flushed before a crash but never trimmed.
       await deps.journal.trim(doc, room.seq, room.recentCids());

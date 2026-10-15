@@ -32,6 +32,7 @@ import { libraryRows } from "./library-rows";
 import { copyPlanCode } from "./share-actions";
 import type { ShareMode } from "@/components/community/SharePlanDialog";
 import { isLiveConfigured } from "@/lib/live/live-config";
+import { ChecklistIcon } from "./pixel-icons";
 
 /** What the tab strip asks of the bar: the dialogs it does not own. */
 export interface ModTabsActions {
@@ -482,6 +483,7 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
                 className="mt-tab"
                 data-design-id={design.id}
                 data-active={active ? "" : undefined}
+                data-tasks={design.taskBoard ? "" : undefined}
                 data-dragging={drag?.id === design.id ? "" : undefined}
                 style={tabDragStyle(design.id)}
                 onPointerDown={(event) => {
@@ -529,7 +531,10 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
                     }}
                   />
                 ) : (
-                  <span className="mt-name">{design.name}</span>
+                  <>
+                    {design.taskBoard ? <ChecklistIcon className="mt-tasks" /> : null}
+                    <span className="mt-name">{design.name}</span>
+                  </>
                 )}
                 {active && solving ? <span className="mt-solving" aria-label="Still working out this plan's numbers" /> : null}
                 {canClose && !isRenaming ? (

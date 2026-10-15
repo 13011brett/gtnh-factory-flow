@@ -234,6 +234,19 @@
     inset -1px 0 0 var(--mc-ring);
   z-index: 1;
 }
+/* A task board's tab: a faint violet cast (about 9% of #a78bfa) and the checklist icon before its name. */
+.mt-tab[data-tasks]::before {
+  content: "";
+  position: absolute;
+  inset: 0 1px;
+  background: rgba(167, 139, 250, 0.09);
+  pointer-events: none;
+}
+.mt-tasks {
+  flex: none;
+  margin: -1px 3px 0 0;
+  color: #a78bfa;
+}
 .mt-tab[data-readonly] {
   color: #e0a63a;
 }
@@ -424,6 +437,19 @@
   flex: none;
   color: var(--mc-muted);
   text-align: right;
+}
+/* A row with a status dot or a plus: the picture, 6 px, then the label; the detail keeps its 12 px. */
+.mm-dot {
+  flex: none;
+  width: 6px;
+  height: 6px;
+  margin-right: -6px;
+  border-radius: 3px;
+}
+.mm-plus {
+  flex: none;
+  margin-right: -8px;
+  color: var(--mc-cyan);
 }
 .mm-rule {
   height: 1px;

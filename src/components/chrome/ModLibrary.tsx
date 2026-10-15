@@ -25,6 +25,7 @@ import { ChromeMenu, chromeAnchorOf, MENU_ANCHOR_ATTR, type ChromeAnchor, type M
 import { SharedWithMe } from "@/components/live/SharedWithMe";
 import { isLiveConfigured } from "@/lib/live/live-config";
 import { useCloudLibraryStore } from "@/lib/library/cloud-library";
+import { ChecklistIcon } from "./pixel-icons";
 
 /** Plans shared with you come with live plans: none of it shows without NEXT_PUBLIC_LIVE_URL. */
 const LIVE = isLiveConfigured();
@@ -360,8 +361,10 @@ function PlanTile({
 }) {
   const cards = design.stats ? Math.max(0, design.stats.cards - (design.stats.drawers ?? 0)) : undefined;
   const drawers = design.stats?.drawers;
-  const size =
-    cards === undefined
+  const tasks = design.stats?.tasks ?? 0;
+  const size = design.taskBoard
+    ? `${tasks} ${tasks === 1 ? "task" : "tasks"}`
+    : cards === undefined
       ? undefined
       : `${cards} ${cards === 1 ? "card" : "cards"}${drawers === undefined ? "" : ` · ${drawers} ${drawers === 1 ? "drawer" : "drawers"}`}`;
   const drawable = Boolean(design.icon && (design.icon.iconPath || design.icon.iconAtlas || design.icon.kind === "fluid"));
@@ -369,6 +372,7 @@ function PlanTile({
     <div
       className="ml-tile"
       role="button"
+      data-tasks={design.taskBoard ? "" : undefined}
       data-showing={showing ? "" : undefined}
       onClick={() => !renaming && onOpen()}
       onContextMenu={(event) => {
@@ -393,7 +397,10 @@ function PlanTile({
       {renaming ? (
         <TileRename initial={design.name} onDone={onRename} />
       ) : (
-        <span className="ml-name">{design.name}</span>
+        <span className="ml-name">
+          {design.taskBoard ? <ChecklistIcon className="ml-tasks" /> : null}
+          {design.name}
+        </span>
       )}
       {size ? <span className="ml-size">{size}</span> : null}
       <span className="ml-when">last open {when}</span>

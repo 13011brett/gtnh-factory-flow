@@ -26,6 +26,8 @@ export interface DesignStats {
    */
   takes?: string[];
   makes?: string[];
+  /** A task board's tasks: its tile says how many. */
+  tasks?: number;
 }
 
 function isVoltageTier(value: unknown): value is VoltageTierName {
@@ -61,6 +63,9 @@ export function computeDesignStats(
   };
   if (tier) {
     stats.tier = tier;
+  }
+  if (project.primaryView === "tasks") {
+    stats.tasks = project.tasks?.length ?? 0;
   }
   if (result && Number.isFinite(result.totalEuT)) {
     stats.euT = result.totalEuT;

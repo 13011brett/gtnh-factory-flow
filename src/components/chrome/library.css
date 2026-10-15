@@ -205,6 +205,18 @@
   white-space: nowrap;
   color: #fff;
 }
+.ml-tile[data-tasks]::before {
+  content: "";
+  position: absolute;
+  inset: 1px;
+  background: rgba(167, 139, 250, 0.09);
+  pointer-events: none;
+}
+.ml-tasks {
+  margin: 0 3px -1px 0;
+  color: #a78bfa;
+  vertical-align: baseline;
+}
 .ml-tile:has(.ml-chip) .ml-name {
   right: 62px;
 }

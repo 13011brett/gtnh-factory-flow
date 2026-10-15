@@ -7,6 +7,12 @@ export const PIXEL_ICONS = {
   gear: ["..##.##..", "..#####..", "#########", "###...###", ".##...##.", "###...###", "#########", "..#####..", "..##.##.."],
   help: ["..#####..", ".##...##.", "......##.", ".....##..", "....##...", "....##...", ".........", "....##...", "....##..."],
   bulb: ["...###...", "..##.##..", ".##...##.", ".##...##.", "..##.##..", "...###...", ".........", "...###...", "...###..."],
+  check: [".........", ".......##", "......###", ".....###.", "##..###..", "######...", ".####....", "..##.....", "........."],
+  comment: [".#######.", "#########", "##.....##", "##.....##", "#########", ".#######.", "..##.....", ".##......", "........."],
+  card: ["#########", "#########", "#.......#", "#########", "#.......#", "#.......#", "#.......#", "#########", "........."],
+  pin: ["..#####..", ".#######.", ".##...##.", ".##...##.", ".#######.", "..#####..", "...###...", "...###...", "....#...."],
+  camera: [".........", "...###...", "#########", "###...###", "##.....##", "###...###", "#########", ".........", "........."],
+  plus: [".........", "...##....", "...##....", ".######..", ".######..", "...##....", "...##....", ".........", "........."],
 } as const;
 
 export type PixelIconName = keyof typeof PIXEL_ICONS;
@@ -74,5 +80,61 @@ export function PixelBolt({ className }: { className?: string }) {
     <svg className={className} width="7" height="11" viewBox="0 0 7 11" shapeRendering="crispEdges" aria-hidden fill="currentColor">
       <path d={d} />
     </svg>
+  );
+}
+
+/** A flat picture from runs of {x, y, width}, one pixel high each (the mod's TaskLook pictures). */
+export function PixelRuns({
+  runs,
+  width,
+  height,
+  className,
+  style,
+}: {
+  runs: ReadonlyArray<readonly [number, number, number]>;
+  width: number;
+  height: number;
+  className?: string;
+  style?: CSSProperties;
+}) {
+  const d = runs.map(([x, y, w]) => `M${x} ${y}h${w}v1h-${w}z`).join("");
+  return (
+    <svg
+      className={className}
+      style={style}
+      width={width}
+      height={height}
+      viewBox={`0 0 ${width} ${height}`}
+      shapeRendering="crispEdges"
+      aria-hidden
+      fill="currentColor"
+    >
+      <path d={d} />
+    </svg>
+  );
+}
+
+/** A task board's checklist icon, 7 x 8: a clipboard with two lines on it (the mod's TaskLook.CHECKLIST). */
+export const CHECKLIST_RUNS: ReadonlyArray<readonly [number, number, number]> = [
+  [2, 0, 3],
+  [0, 1, 7],
+  [0, 2, 1],
+  [6, 2, 1],
+  [0, 3, 1],
+  [2, 3, 3],
+  [6, 3, 1],
+  [0, 4, 1],
+  [6, 4, 1],
+  [0, 5, 1],
+  [2, 5, 3],
+  [6, 5, 1],
+  [0, 6, 1],
+  [6, 6, 1],
+  [0, 7, 7],
+];
+
+export function ChecklistIcon({ className, style }: { className?: string; style?: CSSProperties }) {
+  return (
+    <PixelRuns runs={CHECKLIST_RUNS} width={7} height={8} className={className} style={style} />
   );
 }

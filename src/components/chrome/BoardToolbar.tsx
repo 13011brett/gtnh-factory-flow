@@ -6,7 +6,9 @@ import { useRef } from "react";
 import { isLiveConfigured } from "@/lib/live/live-config";
 import { leaveLibrary } from "@/lib/library/library-tab";
 import type { RateUnit } from "@/lib/model/rate-unit";
-import { requestNewTask } from "@/lib/tasks/task-board-ui";
+import { requestNewTask, setTaskView, useTaskView } from "@/lib/tasks/task-board-ui";
+import { tipAttrs } from "@/components/flow/clean/interaction";
+import "@/components/tasks/tasks.css";
 import { useWorkspaceView, writeWorkspaceView } from "@/lib/workspace-view";
 import { useDesignStore } from "@/store/design-store";
 import { useFactoryStore } from "@/store/factory-store";
@@ -41,20 +43,53 @@ export function BoardToolbar() {
   );
 }
 
-/** A task board's header: its title and how many tasks it holds, then New task. */
+/**
+ * A task board's header, as the game's (TaskBoardView.drawHeader): its title and how many tasks it holds as plain
+ * words, then Board / Chain (remembered per board in this browser) and New task at the right.
+ */
 function TaskBoardHeader() {
-  const name = useDesignStore((state) => state.designs.find((entry) => entry.id === state.activeDesignId)?.name);
+  const designId = useDesignStore((state) => state.activeDesignId);
+  const name = useDesignStore(
+    (state) => state.designs.find((entry) => entry.id === state.activeDesignId)?.name,
+  );
   const count = useFactoryStore((state) => state.project.tasks?.length ?? 0);
   const isReadOnly = useFactoryStore((state) => state.isReadOnly);
+  const view = useTaskView(designId);
+  const views = [
+    { id: "board", label: "Board", tip: "Show the tasks in columns", sub: undefined },
+    {
+      id: "chain",
+      label: "Chain",
+      tip: "Show the tasks as chains",
+      sub: "What each task waits on, left to right",
+    },
+  ] as const;
   return (
     <>
       <div className="mb-group mb-group-left">
-        <span className="mb-title" data-task-board-title="">
-          {name ?? "Tasks"}
+        <span className="mb-title" data-plain="" data-task-board-title="">
+          {name?.trim() ? name : "Tasks"}
         </span>
-        <span className="mb-count">{count === 1 ? "1 task" : `${count} tasks`}</span>
+        <span className="mb-count" data-plain="">
+          {count === 1 ? "1 task" : `${count} tasks`}
+        </span>
       </div>
       <div className="mb-group mb-group-right">
+        <span className="tb-switch" role="group" aria-label="View" data-task-view-switch="">
+          {views.map((each) => (
+            <button
+              key={each.id}
+              type="button"
+              aria-pressed={view === each.id}
+              data-task-view={each.id}
+              {...tipAttrs({ id: `task-view|${each.id}`, title: each.tip, sub: each.sub })}
+              onMouseDown={(event) => event.preventDefault()}
+              onClick={() => designId && setTaskView(designId, each.id)}
+            >
+              {each.label}
+            </button>
+          ))}
+        </span>
         <BarKey
           id="new-task"
           label="New task"
@@ -147,7 +182,7 @@ function BoardKeys({ tight }: { tight: boolean }) {
       <BarKey
         id="arrange"
         label={arrangeLabel(arrange)}
-        width={tight && !arrange.running ? undefined : 90}
+        width={arrange.running ? 90 : undefined}
         tip="Auto-arrange the plan (press again to stop)"
         off={isReadOnly}
         onClick={() => pressArrange()}

@@ -1,0 +1,593 @@
+/*
+ * The task board, its task box and its chain view, as the game draws them (ui/task: TaskBoardView, TaskPanel,
+ * TaskChainView, TaskLook). Sizes are the mod's GUI pixels: one CSS px each under the shell's 1.17, and the views wear
+ * 2 / 1.17 more (the top bar's rule, chrome.css), so they are two screen pixels each as at the game's GUI scale 2.
+ */
+.tb,
+.tbx-layer,
+.tbp-layer {
+  --tb-canvas: #141414;
+  --tb-col: #18191c;
+  --tb-col-edge: #26282d;
+  --tb-surface: #23252a;
+  --tb-edge: #34363c;
+  --tb-hair: #2c2e34;
+  --tb-card-hot: #2a2c32;
+  --tb-ink: #e8e9ee;
+  --tb-muted: #9a9ca4;
+  --tb-dim: #7e8089;
+  --tb-faint: #6a6c74;
+  --tb-label: #6f727b;
+  --tb-well: #16171a;
+  --tb-control: #2a2c31;
+  --tb-control-hover: #33363c;
+  --tb-side: #1d1f23;
+  --tb-side-edge: #2c2e34;
+  --tb-cyan: #22d3ee;
+  --tb-ok: #5ee9b5;
+  --tb-red: #e05252;
+  --tb-amber: #e0a63a;
+  --tb-key: #26282d;
+  --tb-key-hover: #2d2f35;
+  --tb-key-hi: #4a4c54;
+  --tb-key-lo: #17191d;
+  font-family: var(--font-minecraft), monospace;
+  font-size: 8px;
+  line-height: 10px;
+  font-weight: 400;
+  letter-spacing: 0;
+  -webkit-font-smoothing: none;
+  color: var(--tb-ink);
+}
+.tb button,
+.tb input,
+.tb textarea,
+.tbx-layer button,
+.tbx-layer textarea {
+  font: inherit;
+  color: inherit;
+  letter-spacing: 0;
+}
+
+/* ---- The board ------------------------------------------------------------ */
+
+.tb {
+  zoom: 1.7094;
+  position: relative;
+  box-sizing: border-box;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+  padding-top: 24px;
+  background: var(--tb-canvas);
+  user-select: none;
+}
+.tb-columns {
+  box-sizing: border-box;
+  display: grid;
+  grid-template-columns: repeat(4, minmax(112px, 1fr));
+  column-gap: 8px;
+  height: 100%;
+  padding: 8px;
+  overflow-x: auto;
+  overflow-y: hidden;
+  scrollbar-width: thin;
+  scrollbar-color: #6a6c74 transparent;
+}
+.tb-col {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+  min-height: 0;
+}
+.tb-col-head {
+  position: relative;
+  flex: none;
+  display: flex;
+  align-items: center;
+  height: 20px;
+  padding-left: 2px;
+}
+.tb-dot {
+  display: inline-block;
+  flex: none;
+  border-radius: 50%;
+}
+.tb-col-head .tb-dot {
+  margin: -2px 4px 0 0;
+}
+.tb-col-name {
+  color: var(--tb-ink);
+  white-space: nowrap;
+}
+.tb-col-count {
+  margin-left: 5px;
+  color: var(--tb-muted);
+}
+.tb-add {
+  position: absolute;
+  right: 0;
+  top: 2px;
+  display: grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--tb-muted);
+  cursor: pointer;
+}
+.tb-add:hover {
+  background: var(--tb-key-hover);
+  color: var(--tb-ink);
+}
+.tb-add::before,
+.tb-add::after {
+  content: "";
+  position: absolute;
+  background: currentColor;
+}
+.tb-add::before {
+  left: 4px;
+  top: 7px;
+  width: 8px;
+  height: 2px;
+}
+.tb-add::after {
+  left: 7px;
+  top: 4px;
+  width: 2px;
+  height: 8px;
+}
+.tb-well {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  padding: 4px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  background: var(--tb-col);
+  box-shadow: inset 0 0 0 1px var(--tb-col-edge);
+  scrollbar-width: thin;
+  scrollbar-color: #4a4c54 transparent;
+}
+.tb-well[data-drop-here] {
+  background: color-mix(in srgb, var(--tb-drop) 5%, var(--tb-col));
+}
+.tb-empty {
+  padding: 14px 6px 0;
+  text-align: center;
+  color: var(--tb-faint);
+}
+.tb-empty p:first-child {
+  margin-bottom: 4px;
+  color: var(--tb-muted);
+}
+
+/* A task's card: its first screenshot across the top, its column's colour down the left, its title and priority,
+   then faces, days in the column, things done of all of them and comments. */
+.tb-card {
+  position: relative;
+  flex: none;
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  padding: 0;
+  border: 1px solid var(--tb-edge);
+  background: var(--tb-surface);
+  text-align: left;
+  cursor: pointer;
+}
+.tb-card:hover,
+.tb-card[data-hot] {
+  background: var(--tb-card-hot);
+}
+.tb-card[data-carried] {
+  visibility: hidden;
+}
+.tb-card[data-lifted] {
+  position: absolute;
+  z-index: 20;
+  pointer-events: none;
+  box-shadow:
+    2px 3px 0 rgba(0, 0, 0, 0.25),
+    4px 6px 0 rgba(0, 0, 0, 0.31);
+}
+.tb-card-pic {
+  display: block;
+  width: 100%;
+  aspect-ratio: 16 / 9;
+  max-height: 64px;
+  object-fit: cover;
+  border-bottom: 1px solid var(--tb-edge);
+  image-rendering: auto;
+}
+.tb-card-body {
+  position: relative;
+  padding: 5px 6px 3px 7px;
+}
+.tb-card-body::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--tb-stripe);
+}
+.tb-card-top {
+  display: flex;
+  align-items: flex-start;
+  gap: 3px;
+}
+.tb-card-title {
+  flex: 1 1 auto;
+  min-width: 0;
+  padding-left: 1px;
+  overflow-wrap: anywhere;
+}
+.tb-card[data-status="done"] .tb-card-title {
+  color: var(--tb-muted);
+}
+.tb-card-top svg {
+  flex: none;
+  margin-top: 0;
+}
+.tb-card-meta {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  height: 12px;
+  margin-top: 3px;
+  padding-left: 1px;
+}
+.tb-card-meta .tb-grow {
+  flex: 1 1 auto;
+}
+.tb-count {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  color: var(--tb-muted);
+  white-space: nowrap;
+}
+.tb-count + .tb-count {
+  margin-left: 2px;
+}
+.tb-count[data-all] {
+  color: var(--tb-ok);
+}
+.tb-count svg {
+  margin-top: 1px;
+}
+.tb-time {
+  display: inline-flex;
+  gap: 2px;
+}
+.tb-time i {
+  display: block;
+  width: 3px;
+  height: 3px;
+}
+.tb-faces {
+  display: inline-flex;
+}
+.tb-faces .tb-face + .tb-face {
+  margin-left: -2px;
+}
+.tb-face {
+  flex: none;
+  box-sizing: border-box;
+  display: inline-grid;
+  place-items: center;
+  min-width: 12px;
+  height: 12px;
+  padding: 1px 2px 0 2px;
+  clip-path: polygon(
+    1px 0,
+    calc(100% - 1px) 0,
+    100% 1px,
+    100% calc(100% - 1px),
+    calc(100% - 1px) 100%,
+    1px 100%,
+    0 calc(100% - 1px),
+    0 1px
+  );
+  line-height: 10px;
+}
+.tb-gap {
+  flex: none;
+  box-sizing: border-box;
+  border: 1px dashed rgba(161, 164, 173, 0.5);
+}
+
+/* ---- The header's view switch (in the board toolbar) ------------------------ */
+
+.mb-strip .tb-switch {
+  display: inline-flex;
+  box-shadow: 0 0 0 1px #26282d;
+  margin-right: 5px;
+}
+.tb-switch button {
+  height: 16px;
+  padding: 0 6px;
+  border: 0;
+  margin: 0;
+  background: #18191c;
+  color: var(--mc-muted);
+  font: inherit;
+  cursor: pointer;
+}
+.tb-switch button:hover {
+  background: #2d2f35;
+}
+.tb-switch button[aria-pressed="true"] {
+  background: #33363c;
+  color: var(--mc-ink);
+  box-shadow: inset 0 -1px 0 #22d3ee;
+}
+.mb-strip .mb-title[data-plain],
+.mb-strip .mb-count[data-plain] {
+  background: none;
+  box-shadow: none;
+  padding: 0;
+}
+.mb-strip .mb-count[data-plain] {
+  margin-left: 8px;
+}
+
+/* ---- The chain view ---------------------------------------------------------- */
+
+.tc {
+  position: relative;
+  display: flex;
+  width: 100%;
+  height: 100%;
+  min-height: 0;
+}
+.tc-list {
+  position: relative;
+  flex: none;
+  display: flex;
+  flex-direction: column;
+  box-sizing: border-box;
+  width: 132px;
+  height: 100%;
+  background: var(--tb-col);
+  box-shadow: inset -1px 0 0 var(--tb-col-edge);
+}
+.tc-list[data-folded] {
+  width: 14px;
+  cursor: pointer;
+}
+.tc-list[data-folded]:hover {
+  background: #24262b;
+}
+.tc-list-head {
+  flex: none;
+  position: relative;
+  height: 18px;
+  padding: 5px 0 0 6px;
+  box-sizing: border-box;
+  color: var(--tb-muted);
+  box-shadow:
+    inset 0 -1px 0 var(--tb-col-edge),
+    inset -1px 0 0 var(--tb-col-edge);
+}
+.tc-fold {
+  position: absolute;
+  top: 2px;
+  right: 2px;
+  width: 14px;
+  height: 14px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--tb-muted);
+  cursor: pointer;
+}
+.tc-fold:hover {
+  background: var(--tb-key-hover);
+  color: var(--tb-ink);
+}
+.tc-list[data-folded] .tc-fold {
+  top: 6px;
+  right: 3px;
+  width: 8px;
+  height: 12px;
+  background: transparent;
+}
+.tc-list-body {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 3px 1px 3px 0;
+  scrollbar-width: thin;
+  scrollbar-color: #4a4c54 transparent;
+}
+.tc-heading {
+  display: flex;
+  height: 16px;
+  padding: 4px 0 0 6px;
+  box-sizing: border-box;
+  color: var(--tb-dim);
+}
+.tc-heading i {
+  margin-left: 5px;
+  font-style: normal;
+  color: var(--tb-faint);
+}
+.tc-chain + .tc-chain,
+.tc-chain + .tc-loose {
+  margin-top: 4px;
+}
+.tc-row {
+  position: relative;
+  display: flex;
+  align-items: center;
+  height: 13px;
+  padding-right: 5px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.tc-row:hover {
+  background: #24262b;
+}
+.tc-row[data-on] {
+  background: #2c3036;
+  box-shadow: inset 2px 0 0 var(--tb-cyan);
+}
+.tc-row .tb-dot {
+  margin: -1px 4px 0 0;
+}
+.tc-row span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tc-row[data-done] span:last-child {
+  color: var(--tb-faint);
+}
+.tc-map {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  cursor: grab;
+  touch-action: none;
+}
+.tc-map[data-panning] {
+  cursor: grabbing;
+}
+.tc-world {
+  position: absolute;
+  left: 0;
+  top: 0;
+  transform-origin: 0 0;
+}
+.tc-arrows {
+  position: absolute;
+  left: 0;
+  top: 0;
+  overflow: visible;
+  pointer-events: none;
+}
+.tc-node {
+  position: absolute;
+  box-sizing: border-box;
+  width: 112px;
+  height: 40px;
+  padding: 5px 6px 0 7px;
+  border: 1px solid var(--tb-edge);
+  background: var(--tb-surface);
+  cursor: pointer;
+}
+.tc-node::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: var(--tb-stripe);
+}
+.tc-node:hover {
+  background: var(--tb-card-hot);
+}
+.tc-node[data-on] {
+  border-color: var(--tb-cyan);
+}
+.tc-node[data-done]::after {
+  content: "";
+  position: absolute;
+  inset: -1px;
+  background: rgba(20, 20, 20, 0.55);
+}
+.tc-node-title {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+  margin-right: 9px;
+  overflow-wrap: anywhere;
+}
+.tc-node > svg {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+}
+.tc-node .tb-faces {
+  position: absolute;
+  left: 8px;
+  bottom: 5px;
+}
+.tc-loose-head {
+  position: absolute;
+  color: var(--tb-faint);
+}
+.tb-key.tc-fit {
+  position: absolute;
+  right: 6px;
+  bottom: 6px;
+}
+.tc-hint {
+  position: absolute;
+  left: 8px;
+  right: 8px;
+  bottom: 16px;
+  text-align: center;
+  color: var(--tb-faint);
+  pointer-events: none;
+}
+.tc-empty {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  text-align: center;
+  color: var(--tb-faint);
+}
+.tc-empty p:first-child {
+  margin-bottom: 2px;
+  color: var(--tb-muted);
+}
+
+/* A key in the game's style: 16 high, a one pixel bevel. */
+.tb-key {
+  position: relative;
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 3px;
+  height: 16px;
+  padding: 0 6px;
+  border: 0;
+  margin: 0;
+  background: var(--tb-key);
+  color: var(--tb-ink);
+  white-space: nowrap;
+  cursor: pointer;
+  box-shadow:
+    inset 1px 1px 0 var(--tb-key-hi),
+    inset -1px -1px 0 var(--tb-key-lo);
+}
+.tb-key:hover {
+  background: var(--tb-key-hover);
+}
+.tb-key[data-off] {
+  color: var(--tb-faint);
+  cursor: default;
+}
+.tb-key > svg {
+  flex: none;
+  margin-left: -1px;
+}
+.tb-key[data-tone="red"] {
+  color: var(--tb-red);
+}

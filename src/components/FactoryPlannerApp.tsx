@@ -458,11 +458,13 @@ export function ColumnWorkspace({ workspace, onLoadDatasetVersion, header }: Wor
   const planLayout = usePlanLayout();
   const overviewWidth = usePlanOverviewWidth();
   const worksheet = poolMode;
+  // A task board has no overview (the game's): its columns take the overview's room too.
+  const taskBoard = useFactoryStore((state) => TASKS_ENABLED && state.project.primaryView === "tasks");
   const columns = workspaceColumns({
     planLayout,
     itemsOpen: workspace.leftPanelOpen,
     inspectorOpen: workspace.rightPanelOpen,
-    hideBoardPanels: Boolean(covering) || worksheet,
+    hideBoardPanels: Boolean(covering) || worksheet || (taskBoard && planLayout),
     overviewWidth,
   });
 
@@ -503,7 +505,7 @@ export function ColumnWorkspace({ workspace, onLoadDatasetVersion, header }: Wor
         {header ? (
           <>
             <div className="grid min-h-0 min-w-0" style={{ gridColumn: 1, gridRow: 2 }}>
-              {covering ? <div /> : <PlanOverview />}
+              {covering || taskBoard ? <div /> : <PlanOverview />}
             </div>
             <div className="grid min-h-0 min-w-0" style={{ gridColumn: 2, gridRow: 2 }}>
               <BoardColumn />
@@ -513,7 +515,7 @@ export function ColumnWorkspace({ workspace, onLoadDatasetVersion, header }: Wor
             </div>
           </>
         ) : null}
-        {header ? null : planLayout ? covering ? <div /> : <PlanOverview /> : items}
+        {header ? null : planLayout ? covering || taskBoard ? <div /> : <PlanOverview /> : items}
         {header ? null : <BoardColumn />}
         {header ? null : planLayout ? (
           items

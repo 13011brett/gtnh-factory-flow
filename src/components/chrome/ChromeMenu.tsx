@@ -15,6 +15,7 @@ import { getUiScale } from "@/lib/ui-scale";
 export const CHROME_SCREEN_K = 2 / 1.17;
 import { playBoardSound } from "@/lib/board-sounds";
 import { tipAttrs } from "@/components/flow/clean/interaction";
+import { PixelIcon } from "./pixel-icons";
 
 /** Where a menu hangs from, in real (unzoomed) screen pixels. */
 export interface ChromeAnchor {
@@ -40,6 +41,12 @@ export interface MenuEntry {
   ruleAbove?: boolean;
   /** A tooltip: why a greyed row does nothing, or more about what it does. */
   tip?: string;
+  /** A small coloured dot before the label (a task's status). */
+  dot?: string;
+  /** A plus before the label: the row makes something new. */
+  plus?: boolean;
+  /** A picture before the label. */
+  icon?: ReactNode;
   onSelect: () => void;
 }
 
@@ -169,6 +176,9 @@ function MenuRow({ entry, onClose }: { entry: MenuEntry; onClose: () => void }):
           entry.onSelect();
         }}
       >
+        {entry.dot ? <span className="mm-dot" style={{ background: entry.dot }} aria-hidden /> : null}
+        {entry.plus ? <PixelIcon name="plus" className="mm-plus" /> : null}
+        {entry.icon ?? null}
         <span className="mm-label">{entry.label}</span>
         {entry.detail ? <span className="mm-detail">{entry.detail}</span> : null}
       </div>

@@ -1,172 +1,226 @@
 "use client";
 
-import { Link2, ListChecks, MessageSquare, Plus } from "lucide-react";
+import "./tasks.css";
+
 import { memo, useEffect, useMemo, useRef, useState } from "react";
-import { Face } from "@/components/live/LiveFaces";
-import type { PlanTask, PlanTaskStatus } from "@/lib/model/types";
-import { colorFor } from "@/lib/live/protocol";
-import { addTask, moveTask, NEW_TASK_TITLE, TASK_STATUS_LABEL, TASK_STATUSES } from "@/lib/tasks/task-board";
+import { ChromeMenu, type ChromeAnchor, type MenuEntry } from "@/components/chrome/ChromeMenu";
+import { PixelIcon } from "@/components/chrome/pixel-icons";
+import { tipAttrs } from "@/components/flow/clean/interaction";
+import type { FactoryProject, PlanPicture, PlanTask, PlanTaskStatus } from "@/lib/model/types";
+import {
+  addTask,
+  deleteTask,
+  firstPicture,
+  inColumnText,
+  moveTask,
+  moveTaskTo,
+  NEW_TASK_TITLE,
+  shownPriority,
+  TASK_PRIORITY_LABEL,
+  TASK_STATUS_LABEL,
+  TASK_STATUSES,
+  taskCardCounts,
+  timeDotCount,
+} from "@/lib/tasks/task-board";
 import { byOrder } from "@/lib/tasks/order-key";
-import { selectTask, useTaskBoardUi } from "@/lib/tasks/task-board-ui";
+import { selectTask, useTaskBoardUi, useTaskView } from "@/lib/tasks/task-board-ui";
 import { startTaskLinkIndex } from "@/lib/tasks/task-link-index";
-import { taskLinks } from "@/lib/tasks/task-links";
+import { TASK_STATUS_COLOR } from "@/lib/tasks/task-links";
+import { useDesignStore } from "@/store/design-store";
 import { useFactoryStore } from "@/store/factory-store";
-import { TaskPanel } from "./TaskPanel";
-import { useTaskAuthor, useTaskPeople } from "./task-people";
+import { TaskBox } from "./TaskBox";
+import { TaskChainView } from "./TaskChainView";
+import { PriorityIcon, StatusDot, TaskFaces, TimeDots, useNameOf } from "./task-look";
+import { useTaskAuthor } from "./task-people";
 
 /**
- * The plan's task board: To do, Doing, Blocked, Done. Cards drag between and
- * within columns (a drop writes one order key), and a click opens the task in
- * the panel beside the columns. Covers the board the way the Library does, so
- * the board underneath keeps its camera and its solve.
+ * A task board, the game's TaskBoardView: four columns, Blocked, To do, Doing and Done, each a stack of task cards.
+ * A press let go within the slop is a click and opens the task in its box; moved further it carries the card and
+ * letting go puts it where the gap shows. A column's + and the header's New task make a task at once and open it.
+ * Covers the board the way the Library does, so the board underneath keeps its camera and its solve. The header (the
+ * board's name, Board / Chain, New task) is the board toolbar's (BoardToolbar).
  */
 export function TaskBoard() {
+  const designId = useDesignStore((state) => state.activeDesignId);
+  const view = useTaskView(designId);
+  const tasks = useFactoryStore((state) => state.project.tasks);
+  const editTasks = useFactoryStore((state) => state.editTasks);
+  const isReadOnly = useFactoryStore((state) => state.isReadOnly);
+  const author = useTaskAuthor();
+  const selectedId = useTaskBoardUi((state) => state.selectedId);
+  const newTaskTick = useTaskBoardUi((state) => state.newTaskTick);
+
+  const make = (status: PlanTaskStatus) => {
+    if (isReadOnly) return;
+    let made: string | undefined;
+    editTasks((project) => {
+      const result = addTask(project, { title: NEW_TASK_TITLE, status, author });
+      made = result.id;
+      return result.project;
+    });
+    if (made) selectTask(made);
+  };
+
+  // New task in the header: a task in To do at once, open in its box.
+  const seenTick = useRef(newTaskTick);
+  useEffect(() => {
+    if (newTaskTick === seenTick.current) return;
+    seenTick.current = newTaskTick;
+    make("todo");
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [newTaskTick]);
+
+  const selected = selectedId ? (tasks ?? []).find((task) => task.id === selectedId) : undefined;
+
+  return (
+    <div className="tb" data-task-board="" data-task-view={view}>
+      {view === "chain" ? <TaskChainView key={designId} /> : <Columns onMake={make} />}
+      {selected ? (
+        <TaskBox key={selected.id} task={selected} onClose={() => selectTask(undefined)} />
+      ) : null}
+    </div>
+  );
+}
+
+/** GUI pixels a press travels before it carries the card (the game's DRAG_SLOP). */
+const DRAG_SLOP = 6;
+
+interface Carry {
+  id: string;
+  /** The pointer in the card, and the card's size, in GUI pixels. */
+  grabX: number;
+  grabY: number;
+  w: number;
+  h: number;
+  /** Where the card is drawn, in the board's GUI pixels. */
+  x: number;
+  y: number;
+}
+
+function Columns({ onMake }: { onMake: (status: PlanTaskStatus) => void }) {
   const tasks = useFactoryStore((state) => state.project.tasks);
   const items = useFactoryStore((state) => state.project.taskItems);
   const comments = useFactoryStore((state) => state.project.taskComments);
   const editTasks = useFactoryStore((state) => state.editTasks);
   const isReadOnly = useFactoryStore((state) => state.isReadOnly);
-  const author = useTaskAuthor();
-  const people = useTaskPeople();
-  const selectedId = useTaskBoardUi((state) => state.selectedId);
-  const newTaskTick = useTaskBoardUi((state) => state.newTaskTick);
-  const setSelectedId = selectTask;
-  const [dragging, setDragging] = useState<string>();
-  const [dropAt, setDropAt] = useState<{ status: PlanTaskStatus; index: number }>();
-  const [draft, setDraft] = useState("");
-  const addInput = useRef<HTMLInputElement>(null);
-
-  // New task in the toolbar's header: a task in To do, open in the panel with its title ready to type over.
-  const seenTick = useRef(newTaskTick);
-  useEffect(() => {
-    if (newTaskTick === seenTick.current) {
-      return;
-    }
-    seenTick.current = newTaskTick;
-    if (isReadOnly) {
-      return;
-    }
-    let made: string | undefined;
-    editTasks((project) => {
-      const result = addTask(project, { title: NEW_TASK_TITLE, author });
-      made = result.id;
-      return result.project;
-    });
-    if (made) {
-      selectTask(made);
-    }
-  }, [newTaskTick, isReadOnly, editTasks, author]);
+  const nameOf = useNameOf();
+  const rootRef = useRef<HTMLDivElement>(null);
+  const [carry, setCarry] = useState<Carry>();
+  const [drop, setDrop] = useState<{ status: PlanTaskStatus; index: number }>();
+  const [menu, setMenu] = useState<{ task: PlanTask; anchor: ChromeAnchor }>();
+  const suppressClick = useRef(false);
 
   const columns = useMemo(() => {
     const byStatus = new Map<PlanTaskStatus, PlanTask[]>(
       TASK_STATUSES.map((status) => [status, []]),
     );
-    for (const task of tasks ?? []) {
-      byStatus.get(task.status)?.push(task);
-    }
-    for (const [status, list] of byStatus) {
-      byStatus.set(status, byOrder(list));
-    }
+    for (const task of tasks ?? []) byStatus.get(task.status)?.push(task);
+    for (const [status, list] of byStatus) byStatus.set(status, byOrder(list));
     return byStatus;
   }, [tasks]);
 
-  const counts = useMemo(() => {
-    const result = new Map<string, { items: number; done: number; comments: number }>();
-    const entry = (taskId: string) => {
-      let found = result.get(taskId);
-      if (!found) {
-        found = { items: 0, done: 0, comments: 0 };
-        result.set(taskId, found);
-      }
-      return found;
-    };
-    for (const item of items ?? []) {
-      const found = entry(item.taskId);
-      found.items += 1;
-      if (item.done) {
-        found.done += 1;
-      }
+  // Each task's things done of all, comments and first screenshot, worked out once per change of the plan.
+  const facts = useMemo(() => {
+    const project = { tasks, taskItems: items, taskComments: comments } as FactoryProject;
+    const out = new Map<
+      string,
+      { counts: ReturnType<typeof taskCardCounts>; picture?: PlanPicture }
+    >();
+    for (const task of tasks ?? []) {
+      out.set(task.id, {
+        counts: taskCardCounts(project, task.id),
+        picture: firstPicture(project, task.id),
+      });
     }
-    for (const comment of comments ?? []) {
-      entry(comment.taskId).comments += 1;
-    }
-    return result;
-  }, [items, comments]);
+    return out;
+  }, [tasks, items, comments]);
 
-  const names = useMemo(() => new Map(people.map((person) => [person.id, person])), [people]);
-  const selected = selectedId ? (tasks ?? []).find((task) => task.id === selectedId) : undefined;
-
-  const add = () => {
-    const title = draft.trim();
-    if (!title) {
-      return;
-    }
-    let made: string | undefined;
-    editTasks((project) => {
-      const result = addTask(project, { title, author });
-      made = result.id;
-      return result.project;
-    });
-    setDraft("");
-    if (made) {
-      setSelectedId(made);
-    }
-    addInput.current?.focus();
+  const board = () => rootRef.current?.closest<HTMLElement>(".tb") ?? undefined;
+  /** Screen pixels per GUI pixel here (the views' zoom). */
+  const scale = () => {
+    const root = board();
+    return root && root.offsetWidth > 0 ? root.getBoundingClientRect().width / root.offsetWidth : 2;
+  };
+  const local = (clientX: number, clientY: number) => {
+    const box = board()?.getBoundingClientRect();
+    const k = scale();
+    return box ? { x: (clientX - box.left) / k, y: (clientY - box.top) / k } : { x: 0, y: 0 };
   };
 
-  // A press on a card that travels past DRAG_SLOP carries it; let go over a
-  // column and it lands between the cards around the pointer. Pointer events,
-  // so mouse, pen and touch all work the same.
-  const press = useRef<{ id: string; x: number; y: number; active: boolean } | undefined>(
-    undefined,
-  );
-  const dropRef = useRef<{ status: PlanTaskStatus; index: number } | undefined>(undefined);
-  const suppressClick = useRef(false);
-
-  const beginPress = (event: React.PointerEvent, id: string) => {
-    if (event.button !== 0 || isReadOnly) {
-      return;
+  /** Where a carried card would land: the column under the pointer, its place there by the cards' middles. */
+  const findDrop = (clientX: number, middleY: number, held: string) => {
+    const lists = [...(rootRef.current?.querySelectorAll<HTMLElement>("[data-task-list]") ?? [])];
+    if (lists.length === 0) return undefined;
+    let list = lists[0]!;
+    for (const each of lists) {
+      if (clientX >= each.getBoundingClientRect().left - 8) list = each;
     }
-    press.current = { id, x: event.clientX, y: event.clientY, active: false };
+    const status = list.dataset.taskList as PlanTaskStatus;
+    let index = 0;
+    for (const card of list.querySelectorAll<HTMLElement>("[data-task-card]")) {
+      if (card.dataset.taskCard === held) continue;
+      const box = card.getBoundingClientRect();
+      if (middleY < box.top + box.height / 2) break;
+      index += 1;
+    }
+    return { status, index };
+  };
+
+  const beginPress = (event: React.PointerEvent<HTMLElement>, task: PlanTask) => {
+    if (event.button !== 0 || isReadOnly) return;
+    const card = event.currentTarget;
+    const startX = event.clientX;
+    const startY = event.clientY;
+    let active: Carry | undefined;
+    let landing: { status: PlanTaskStatus; index: number } | undefined;
     const move = (moved: PointerEvent) => {
-      const held = press.current;
-      if (!held) {
-        return;
+      const k = scale();
+      if (!active) {
+        if (Math.hypot(moved.clientX - startX, moved.clientY - startY) < DRAG_SLOP * k) return;
+        const box = card.getBoundingClientRect();
+        const at = local(box.left, box.top);
+        active = {
+          id: task.id,
+          grabX: (startX - box.left) / k,
+          grabY: (startY - box.top) / k,
+          w: box.width / k,
+          h: box.height / k,
+          x: at.x,
+          y: at.y,
+        };
       }
-      if (!held.active) {
-        if (Math.hypot(moved.clientX - held.x, moved.clientY - held.y) < DRAG_SLOP) {
-          return;
-        }
-        held.active = true;
-        setDragging(held.id);
+      const point = local(moved.clientX, moved.clientY);
+      active = { ...active, x: point.x - active.grabX, y: point.y - active.grabY };
+      setCarry(active);
+      const middle = moved.clientY - active.grabY * k + (active.h * k) / 2;
+      const next = findDrop(moved.clientX, middle, task.id);
+      if (next?.status !== landing?.status || next?.index !== landing?.index) {
+        landing = next;
+        setDrop(next);
       }
-      const list = document
-        .elementFromPoint(moved.clientX, moved.clientY)
-        ?.closest<HTMLElement>("[data-task-list]");
-      const status = list?.dataset.taskList as PlanTaskStatus | undefined;
-      const next =
-        list && status ? { status, index: dropIndex(list, moved.clientY, held.id) } : undefined;
-      if (next?.status !== dropRef.current?.status || next?.index !== dropRef.current?.index) {
-        dropRef.current = next;
-        setDropAt(next);
+      // Near a column's top or bottom, the column scrolls.
+      const list = next
+        ? rootRef.current?.querySelector<HTMLElement>(`[data-task-list="${next.status}"]`)
+        : null;
+      if (list) {
+        const box = list.getBoundingClientRect();
+        if (moved.clientY < box.top + 16 * k) list.scrollTop -= 6;
+        else if (moved.clientY > box.bottom - 16 * k) list.scrollTop += 6;
       }
     };
     const end = () => {
       window.removeEventListener("pointermove", move);
       window.removeEventListener("pointerup", end);
       window.removeEventListener("pointercancel", end);
-      const held = press.current;
-      const drop = dropRef.current;
-      press.current = undefined;
-      dropRef.current = undefined;
-      if (held?.active) {
+      if (active) {
         suppressClick.current = true;
         window.setTimeout(() => (suppressClick.current = false), 0);
-        setDragging(undefined);
-        setDropAt(undefined);
-        if (drop) {
-          editTasks((project) => moveTask(project, held.id, drop.status, drop.index));
+        if (landing) {
+          const to = landing;
+          editTasks((project) => moveTask(project, task.id, to.status, to.index));
         }
+        setCarry(undefined);
+        setDrop(undefined);
       }
     };
     window.addEventListener("pointermove", move);
@@ -174,204 +228,227 @@ export function TaskBoard() {
     window.addEventListener("pointercancel", end);
   };
 
-  const dropIndex = (list: HTMLElement, clientY: number, held: string | undefined): number => {
-    let index = 0;
-    for (const card of list.querySelectorAll<HTMLElement>("[data-task-card]")) {
-      if (card.dataset.taskCard === held) {
-        continue;
-      }
-      const box = card.getBoundingClientRect();
-      if (clientY < box.top + box.height / 2) {
-        return index;
-      }
-      index += 1;
-    }
-    return index;
-  };
+  const empty = (tasks ?? []).length === 0;
+  const carried = carry ? (tasks ?? []).find((task) => task.id === carry.id) : undefined;
+
+  const menuEntries = (task: PlanTask): MenuEntry[] => [
+    { label: "Open", onSelect: () => selectTask(task.id) },
+    ...TASK_STATUSES.filter((status) => status !== task.status).map((status) => ({
+      label: `Move to ${TASK_STATUS_LABEL[status]}`,
+      disabled: isReadOnly,
+      onSelect: () => editTasks((project) => moveTaskTo(project, task.id, status)),
+    })),
+    {
+      label: "Delete task",
+      tone: "red" as const,
+      ruleAbove: true,
+      disabled: isReadOnly,
+      onSelect: () => editTasks((project) => deleteTask(project, task.id)),
+    },
+  ];
 
   return (
-    <div className="relative flex h-full min-h-0 w-full bg-canvas text-xs text-fg" data-task-board>
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <div className="grid min-h-0 flex-1 grid-cols-4 gap-2 overflow-x-auto p-2 pt-10 compact:grid-cols-[repeat(4,minmax(220px,1fr))]">
-          {TASK_STATUSES.map((status) => {
-            const list = columns.get(status) ?? [];
-            return (
-              <section
-                key={status}
-                data-task-column={status}
-                className="flex min-h-0 min-w-0 flex-col rounded border border-line bg-surface"
-              >
-                <header className="flex h-8 shrink-0 items-center gap-2 border-b border-line px-2">
-                  <span className="text-xs font-semibold uppercase tracking-wide text-fg-subtle">
-                    {TASK_STATUS_LABEL[status]}
-                  </span>
-                  <span className="text-xs tabular-nums text-fg-muted">{list.length}</span>
-                </header>
-                {status === "todo" && !isReadOnly ? (
-                  <form
-                    className="flex shrink-0 items-center gap-1 border-b border-line p-1.5"
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      add();
-                    }}
-                  >
-                    <input
-                      ref={addInput}
-                      value={draft}
-                      onChange={(event) => setDraft(event.target.value)}
-                      placeholder="Add a task"
-                      aria-label="New task title"
-                      maxLength={120}
-                      className="h-7 min-w-0 flex-1 rounded border border-line bg-surface-sunken px-2 text-xs outline-none focus:border-cyan-600"
+    <div ref={rootRef} className="tb-columns" data-task-columns="">
+      {TASK_STATUSES.map((status) => {
+        const list = columns.get(status) ?? [];
+        const label = TASK_STATUS_LABEL[status];
+        let place = 0;
+        const gapAt = carry && drop?.status === status ? drop.index : -1;
+        return (
+          <section key={status} className="tb-col" data-task-column={status}>
+            <header className="tb-col-head">
+              <StatusDot status={status} />
+              <span className="tb-col-name">{label}</span>
+              <span className="tb-col-count">{list.length}</span>
+              {isReadOnly ? null : (
+                <button
+                  type="button"
+                  className="tb-add"
+                  aria-label={`Add a task to ${label}`}
+                  data-task-add={status}
+                  {...tipAttrs({ id: `task-add|${status}`, title: `Add a task to ${label}` })}
+                  onClick={() => onMake(status)}
+                />
+              )}
+            </header>
+            <div
+              className="tb-well"
+              data-task-list={status}
+              data-drop-here={gapAt >= 0 ? "" : undefined}
+              style={{ ["--tb-drop" as string]: TASK_STATUS_COLOR[status] }}
+            >
+              {list.map((task) => {
+                const here = task.id !== carry?.id && gapAt === place;
+                if (task.id !== carry?.id) place += 1;
+                return (
+                  <FragmentWithGap key={task.id} gap={here ? carry!.h : undefined}>
+                    <TaskCard
+                      task={task}
+                      facts={facts.get(task.id)}
+                      nameOf={nameOf}
+                      carried={task.id === carry?.id}
+                      onPress={(event) => beginPress(event, task)}
+                      onOpen={() => {
+                        if (!suppressClick.current) selectTask(task.id);
+                      }}
+                      onMenu={(anchor) => setMenu({ task, anchor })}
                     />
-                    <button
-                      type="submit"
-                      aria-label="Add the task"
-                      disabled={!draft.trim()}
-                      className="flex h-7 w-7 shrink-0 items-center justify-center rounded border border-line-strong text-fg-subtle hover:bg-surface-raised disabled:opacity-40"
-                    >
-                      <Plus className="h-3.5 w-3.5" />
-                    </button>
-                  </form>
-                ) : null}
-                <div
-                  className="min-h-0 flex-1 space-y-1.5 overflow-y-auto p-1.5"
-                  data-task-list={status}
-                >
-                  {list.length === 0 && !(dropAt?.status === status) ? (
-                    <p className="px-1 py-2 text-xs text-fg-muted">Nothing here.</p>
-                  ) : null}
-                  {(() => {
-                    // Drop places count the column without the card in hand.
-                    let place = 0;
-                    const showLine = dropAt?.status === status;
-                    const rows = list.map((task) => {
-                      const lineHere = showLine && task.id !== dragging && dropAt.index === place;
-                      if (task.id !== dragging) {
-                        place += 1;
-                      }
-                      return (
-                        <div
-                          key={task.id}
-                          className={task.id === dragging ? "opacity-40" : undefined}
-                        >
-                          {lineHere ? <DropLine /> : null}
-                          <TaskCard
-                            task={task}
-                            counts={counts.get(task.id)}
-                            people={names}
-                            selected={task.id === selectedId}
-                            onOpen={() => {
-                              if (!suppressClick.current) {
-                                setSelectedId(task.id);
-                              }
-                            }}
-                            onPress={(event) => beginPress(event, task.id)}
-                          />
-                        </div>
-                      );
-                    });
-                    return (
-                      <>
-                        {rows}
-                        {showLine && dropAt.index >= place ? <DropLine /> : null}
-                      </>
-                    );
-                  })()}
+                  </FragmentWithGap>
+                );
+              })}
+              {carry && gapAt >= place ? (
+                <div className="tb-gap" style={{ height: carry.h }} />
+              ) : null}
+              {empty && status === TASK_STATUSES[0] ? (
+                <div className="tb-empty" data-task-empty="">
+                  <p>No tasks yet.</p>
+                  <p>Press + to add one.</p>
+                  <p>Or add a card from its menu.</p>
                 </div>
-              </section>
-            );
-          })}
-        </div>
-      </div>
-      {selected ? (
-        <TaskPanel key={selected.id} task={selected} onClose={() => setSelectedId(undefined)} />
+              ) : null}
+            </div>
+          </section>
+        );
+      })}
+      {carry && carried ? (
+        <TaskCard
+          task={carried}
+          facts={facts.get(carried.id)}
+          nameOf={nameOf}
+          lifted={{ x: carry.x, y: carry.y, w: carry.w }}
+          onPress={() => {}}
+          onOpen={() => {}}
+          onMenu={() => {}}
+        />
+      ) : null}
+      {menu ? (
+        <ChromeMenu
+          anchor={menu.anchor}
+          entries={menuEntries(menu.task)}
+          label="Task"
+          minWidth={120}
+          onClose={() => setMenu(undefined)}
+        />
       ) : null}
     </div>
   );
 }
 
-/** Screen pixels a press travels before it is a drag, not a click. */
-const DRAG_SLOP = 4;
-
-function DropLine() {
-  return <div aria-hidden className="my-0.5 h-0.5 rounded bg-cyan-500" data-task-drop-line />;
+function FragmentWithGap({
+  gap,
+  children,
+}: {
+  gap: number | undefined;
+  children: React.ReactNode;
+}) {
+  return (
+    <>
+      {gap !== undefined ? <div className="tb-gap" style={{ height: gap }} /> : null}
+      {children}
+    </>
+  );
 }
 
 const TaskCard = memo(function TaskCard({
   task,
-  counts,
-  people,
-  selected,
-  onOpen,
+  facts,
+  nameOf,
+  carried,
+  lifted,
   onPress,
+  onOpen,
+  onMenu,
 }: {
   task: PlanTask;
-  counts?: { items: number; done: number; comments: number };
-  people: Map<string, { id: string; username: string; color: string }>;
-  selected: boolean;
+  facts?: { counts: ReturnType<typeof taskCardCounts>; picture?: PlanPicture };
+  nameOf: (id: string) => string | undefined;
+  carried?: boolean;
+  lifted?: { x: number; y: number; w: number };
+  onPress: (event: React.PointerEvent<HTMLElement>) => void;
   onOpen: () => void;
-  onPress: (event: React.PointerEvent) => void;
+  onMenu: (anchor: ChromeAnchor) => void;
 }) {
   const assignees = task.assignees ?? [];
-  const cards = taskLinks(task, "").length;
+  const counts = facts?.counts;
+  const priority = shownPriority(task);
+  const meta =
+    assignees.length > 0 ||
+    (counts?.items ?? 0) > 0 ||
+    (counts?.comments ?? 0) > 0 ||
+    timeDotCount(task) > 0;
   return (
-    <button
-      type="button"
-      data-task-card={task.id}
-      data-task-title={task.title}
+    <div
+      role="button"
+      tabIndex={lifted ? -1 : 0}
+      className="tb-card"
+      data-task-card={lifted ? undefined : task.id}
+      data-task-title={lifted ? undefined : task.title}
+      data-status={task.status}
+      data-carried={carried ? "" : undefined}
+      data-lifted={lifted ? "" : undefined}
+      style={{
+        ["--tb-stripe" as string]: TASK_STATUS_COLOR[task.status],
+        ...(lifted ? { left: lifted.x, top: lifted.y, width: lifted.w } : {}),
+      }}
+      {...(lifted
+        ? {}
+        : tipAttrs({
+            id: `task|${task.id}`,
+            title: task.title,
+            sub: inColumnText(task),
+            rows: [{ label: "Priority", value: TASK_PRIORITY_LABEL[priority] }],
+            actions: [
+              { input: "left", label: "Open it" },
+              { input: "drag", label: "Move it" },
+              { input: "right", label: "More" },
+            ],
+          }))}
       onPointerDown={onPress}
       onClick={onOpen}
-      className={[
-        "block w-full select-none rounded border bg-surface-raised px-2 py-1.5 text-left hover:border-line-strong",
-        selected ? "border-cyan-600" : "border-line",
-      ].join(" ")}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onOpen();
+        }
+      }}
+      onContextMenu={(event) => {
+        event.preventDefault();
+        onMenu({ left: event.clientX, top: event.clientY, bottom: event.clientY });
+      }}
     >
-      <span className="line-clamp-2 text-xs font-medium text-fg">{task.title}</span>
-      {assignees.length > 0 || counts?.items || counts?.comments || cards ? (
-        <span className="mt-1.5 flex flex-wrap items-center gap-x-2 gap-y-1 text-[11px] text-fg-muted">
-          {assignees.length > 0 ? (
-            <span className="flex -space-x-1">
-              {assignees.slice(0, 4).map((id) => {
-                const person = people.get(id);
-                return (
-                  <Face
-                    key={id}
-                    username={person?.username ?? "?"}
-                    color={person?.color ?? colorFor(id)}
-                    size={16}
-                  />
-                );
-              })}
-            </span>
-          ) : null}
-          {counts?.items ? (
-            <span
-              className={[
-                "inline-flex items-center gap-0.5",
-                counts.done === counts.items ? "text-emerald-400" : "",
-              ].join(" ")}
-              title="Checklist"
-            >
-              <ListChecks className="h-3 w-3" aria-hidden />
-              {counts.done}/{counts.items}
-            </span>
-          ) : null}
-          {counts?.comments ? (
-            <span className="inline-flex items-center gap-0.5" title="Comments">
-              <MessageSquare className="h-3 w-3" aria-hidden />
-              {counts.comments}
-            </span>
-          ) : null}
-          {cards ? (
-            <span className="inline-flex items-center gap-0.5" title="Linked cards">
-              <Link2 className="h-3 w-3" aria-hidden />
-              {cards}
-            </span>
-          ) : null}
-        </span>
+      {facts?.picture ? (
+        <img className="tb-card-pic" src={facts.picture.thumb} alt="" draggable={false} />
       ) : null}
-    </button>
+      <div className="tb-card-body">
+        <div className="tb-card-top">
+          <span className="tb-card-title">{task.title}</span>
+          <PriorityIcon priority={priority} />
+        </div>
+        {meta ? (
+          <div className="tb-card-meta">
+            <TaskFaces ids={assignees} nameOf={nameOf} />
+            <TimeDots task={task} />
+            <span className="tb-grow" />
+            {counts && counts.items > 0 ? (
+              <span
+                className="tb-count"
+                data-all={counts.done === counts.items ? "" : undefined}
+                data-task-things=""
+              >
+                <PixelIcon name="check" />
+                {counts.done}/{counts.items}
+              </span>
+            ) : null}
+            {counts && counts.comments > 0 ? (
+              <span className="tb-count" data-task-comments-count="">
+                <PixelIcon name="comment" />
+                {counts.comments}
+              </span>
+            ) : null}
+          </div>
+        ) : null}
+      </div>
+    </div>
   );
 });
 

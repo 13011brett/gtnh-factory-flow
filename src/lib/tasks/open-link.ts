@@ -10,6 +10,7 @@ import { leaveWelcomeTab } from "@/lib/welcome/welcome-tab";
 import { useDesignStore } from "@/store/design-store";
 import { useFactoryStore } from "@/store/factory-store";
 import { myAccountId } from "@/store/live-session";
+import { getSelectedMachineHandler } from "@/lib/model/recipe-rules";
 import { boardCardLabel } from "./task-board";
 import { designForPlan, linkKey } from "./task-links";
 
@@ -22,6 +23,20 @@ export interface LinkState {
    * someone else's that is not on this device (opening it asks the account). "plan": no such plan.
    */
   state: "ok" | "card" | "away" | "plan";
+  /** The name of the plan the card is on, when it is on this device. */
+  planName?: string;
+  /** The card's machine, for its picture: its handler, or its power source. */
+  handlerId?: string;
+  powerSourceId?: string;
+}
+
+/** The machine a card of `project` runs, for its picture. */
+function machineOf(project: FactoryProject, node: string): { handlerId?: string; powerSourceId?: string } {
+  const card = project.nodes.find((entry) => entry.id === node);
+  const recipe = card ? project.recipes.find((entry) => entry.id === card.recipeId) : undefined;
+  if (!card || !recipe) return {};
+  if (recipe.power?.sourceId) return { powerSourceId: recipe.power.sourceId };
+  return { handlerId: getSelectedMachineHandler(recipe, card).id };
 }
 
 function hasCard(project: FactoryProject | undefined, node: string): boolean {
@@ -111,7 +126,10 @@ export function useLinkStates(links: readonly PlanTaskLink[]): Record<string, Li
         }
         const project = projects.get(design.id);
         const label = project ? boardCardLabel(project, link.node) : undefined;
-        next[linkKey(link)] = label ? { state: "ok", label } : { state: "card" };
+        next[linkKey(link)] =
+          label && project
+            ? { state: "ok", label, planName: design.name, ...machineOf(project, link.node) }
+            : { state: "card", planName: design.name };
       }
       if (!cancelled) {
         setStates(next);

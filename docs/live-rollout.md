@@ -6,7 +6,7 @@ been run. Architecture and protocol: `docs/live.md`.
 
 Every step can be undone on its own:
 
-- The migration only adds (two columns, one table); the code on `main` never reads them.
+- The migration only adds (three columns, one table); the code on `main` never reads them.
 - Staging is a second Next.js instance and the live service beside the running site; stopping them changes nothing
   for `gtnhplanner.com`.
 - The switch is one Caddy change, and so is the rollback.
@@ -32,6 +32,19 @@ Note in particular the `gtnh-flow` unit's `User=`, its env file (the rest of thi
 `X-Client-Ip` and its TLS. If memory is short, give staging a smaller heap (`--max-old-space-size=1536`) for the test
 period.
 
+Confirm the session secret is set for the running site, without printing it: the website signs sessions with a
+public fallback secret when `COMMUNITY_HASH_SALT` is missing (and now warns about it at startup), and the live service
+refuses to start without it.
+
+```bash
+sudo grep -c '^COMMUNITY_HASH_SALT=..*' /opt/shared/env.local      # 1 (0: stop here and set it first)
+systemctl show gtnh-flow -p Environment | grep -c COMMUNITY_HASH_SALT   # 0 unless the unit sets it itself
+sudo grep -c '^LOCAL_DB=' /opt/shared/env.local                     # 0: LOCAL_DB is development only
+```
+
+After any restart of a site built from `cloud-live`, `journalctl -u <unit> | grep "COMMUNITY_HASH_SALT is not set"`
+must find nothing. With `LOCAL_DB=1` and `NODE_ENV=production` neither the website nor the live service starts.
+
 ## 1. The migration (Supabase, additive)
 
 In the Supabase SQL editor of the production project, run `supabase/migrations/2026-10-14-cloud-live.sql` as it is in
@@ -40,6 +53,7 @@ the branch (the same SQL is at the end of `supabase/schema.sql`). It is idempote
 ```sql
 alter table library_designs add column if not exists seq bigint not null default 0;
 alter table library_designs add column if not exists live_lease_until timestamptz;
+alter table library_designs add column if not exists live_lease_token text;
 
 create table if not exists library_design_members (
   owner_id uuid not null references community_users (id) on delete cascade,
@@ -57,17 +71,21 @@ alter table library_design_members enable row level security;
 ```
 
 `add column ... default 0` on `library_designs` rewrites nothing in Postgres 11 and later (a constant default); the
-table is small either way. Check:
+table is small either way. `live_lease_token` is the live service's lease: every write it makes is conditional on it,
+so a room that lost its lease never writes over the plan. Check:
 
 ```sql
 select column_name, data_type from information_schema.columns
- where table_name = 'library_designs' and column_name in ('seq', 'live_lease_until');
+ where table_name = 'library_designs' and column_name in ('seq', 'live_lease_until', 'live_lease_token');   -- 3 rows
 select relrowsecurity from pg_class where relname = 'library_design_members';   -- true
 select count(*) from library_design_members;                                      -- 0
 ```
 
 Undo (only if nothing uses them yet): `drop table library_design_members; alter table library_designs drop column
-live_lease_until, drop column seq;`.
+live_lease_token, drop column live_lease_until, drop column seq;`.
+
+If the earlier version of this migration (without `live_lease_token`) was already applied somewhere, run the file
+again: it is idempotent and adds only the missing column.
 
 ## 2. Staging at new.gtnhplanner.com
 
@@ -94,6 +112,8 @@ LIVE_JOURNAL_DIR=/opt/shared/live-journal
 LIVE_INTERNAL_URL=http://127.0.0.1:3001
 LIVE_INTERNAL_TOKEN=<the token>
 LIVE_ALLOWED_ORIGINS=https://new.gtnhplanner.com,https://gtnhplanner.com
+# Optional: plans open at once in the service (default 500).
+# LIVE_MAX_ROOMS=500
 EOF
 sudo chown root:<app user> /opt/shared/live.env && sudo chmod 640 /opt/shared/live.env
 ```
@@ -198,7 +218,11 @@ new.gtnhplanner.com {
 	@live path /live /live/*
 	handle @live {
 		# WebSocket upgrades pass through reverse_proxy as they are.
-		reverse_proxy 127.0.0.1:3001
+		reverse_proxy 127.0.0.1:3001 {
+			# The client's address, as the site's own block sets it (Cloudflare's
+			# CF-Connecting-IP, trusted only from Cloudflare's ranges).
+			header_up X-Client-Ip {client_ip}
+		}
 	}
 	handle {
 		reverse_proxy 127.0.0.1:3002 {
@@ -209,6 +233,13 @@ new.gtnhplanner.com {
 ```
 
 Only `/live` and `/live/*` reach the live service, so its `/internal/*` endpoints stay unreachable from outside.
+
+The live service limits socket upgrades (60 a minute) and `/live/nearby` (60 a minute) per client address. It
+listens on loopback, so every request seems to come from Caddy: it takes the address from `X-Client-Ip` (falling back
+to `CF-Connecting-IP`), and only on requests from loopback. The `header_up X-Client-Ip {client_ip}` line above
+overwrites whatever a client sends; `{client_ip}` is the real client only with Cloudflare's ranges in Caddy's
+`trusted_proxies` (the main block's global options already have them if its `X-Client-Ip` works: copy what it does).
+Without it every player shares one address and the limits bite everyone at once.
 
 TLS: if the existing block uses a Cloudflare origin certificate (`tls <cert> <key>`), check it covers the new name
 (`openssl x509 -in <cert> -noout -ext subjectAltName`: `*.gtnhplanner.com` does); if it does not, issue one that
@@ -226,7 +257,7 @@ From any machine:
 
 ```bash
 curl -sI https://new.gtnhplanner.com/ | head -1                                    # 200
-curl -s https://new.gtnhplanner.com/live/health                                    # {"ok":true,...}
+curl -s https://new.gtnhplanner.com/live/health                                    # {"ok":true,...,"flushBacklog":0}
 curl -s -o /dev/null -w "%{http_code}\n" -X POST https://new.gtnhplanner.com/internal/members   # 404 (Next.js, not the live service)
 
 # The WebSocket upgrade through Cloudflare: expect "101 Switching Protocols" (the service then says "auth": no cookie).
@@ -259,7 +290,13 @@ Also check:
 
 - A restart stores open plans: with a plan open, `sudo systemctl restart gtnh-live`; clients reconnect, nothing is
   lost, `/opt/shared/live-journal` is empty afterwards.
-- Leases end: when nobody is in a plan, `select count(*) from library_designs where live_lease_until > now();` is 0.
+- Leases end: a minute after nobody is in a plan (rooms linger that long),
+  `select count(*) from library_designs where live_lease_until > now();` is 0, and so is
+  `select count(*) from library_designs where live_lease_token is not null;`.
+- The flush queue keeps up: `/live/health`'s `flushBacklog` stays near 0 (it grows while the database is failing,
+  as flushes rest, and drains when it is back).
+- Addresses reach the service: in Caddy's access log, `/live` upgrades from ordinary use answer 101, never 429 (a 429
+  for everyone at once means `X-Client-Ip` is not set on the `@live` route and every player shares one address).
 - Logs: `journalctl -u gtnh-live -f`, `journalctl -u gtnh-flow-next -f`, Caddy's `/var/lib/caddy/access.log`.
 
 Undo staging: `sudo systemctl disable --now gtnh-flow-next gtnh-live` (the live service stores its plans as it
@@ -287,7 +324,9 @@ gtnhplanner.com {
 	# ... tls / log / headers, unchanged ...
 	@live path /live /live/*
 	handle @live {
-		reverse_proxy 127.0.0.1:3001
+		reverse_proxy 127.0.0.1:3001 {
+			header_up X-Client-Ip {client_ip}
+		}
 	}
 	handle {
 		reverse_proxy 127.0.0.1:3002 {
@@ -347,6 +386,8 @@ Once the switch has held:
 | `LIVE_INTERNAL_TOKEN` | site, live | random, `openssl rand -hex 32` |
 | `LIVE_INTERNAL_URL` | site | `http://127.0.0.1:3001` |
 | `LIVE_ALLOWED_ORIGINS` | live | `https://new.gtnhplanner.com,https://gtnhplanner.com` |
+| `LIVE_MAX_ROOMS` | live | optional, plans open at once (default `500`) |
+| `LOCAL_DB` | nobody | never set in production: with `NODE_ENV=production` neither process starts |
 | `NEXT_PUBLIC_LIVE_URL` | site, build time | `/live` (empty: no live features) |
 | `NODE_ENV` | site, live | `production` |
 | `PORT` | staging site | `3002` |

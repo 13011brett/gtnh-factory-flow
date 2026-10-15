@@ -13,40 +13,68 @@ this file is the website's side of it.
 | Op engine | `src/lib/live/ops.ts` | put / patch / del / meta, apply, diff, invert, JSON equality; `live-vectors.json` pins every rule and the game runs the same file |
 | Client engine | `src/lib/live/client-state.ts` | confirmed + pending, echoes, resync after a reconnect, undo by inverse |
 | Protocol | `src/lib/live/protocol.ts` | frame types, doc keys, limits, colours, `liveSocketUrl` |
-| Batch checks | `src/lib/live/validate.ts` | each thing a batch puts or patches must pass its collection's schema; plan fields their field's |
+| Batch checks | `src/lib/live/validate.ts`, `src/live/batch.ts` | each thing a batch puts or patches must pass its collection's schema, plan fields their field's; what is stored is the schema's output |
 | REST | `src/app/api/library/...`, `src/app/api/accounts/search` | members, `?owner=`, the lease refusal, notices to the live service (`src/lib/server/cloud-plans.ts`) |
-| Live service | `src/live/` | the WebSocket server: rooms, journal, flushes, leases |
+| Live service | `src/live/` | the WebSocket server: rooms (`room.ts`, the plan held in `doc.ts`), journal, the flush queue, leases |
 | Local database | `src/lib/server/local-db/`, `tools/local-db/serve.ts` | Postgres in-process (PGlite) behind a PostgREST stand-in |
 | Test client | `tools/live/test-client.mjs` | a headless client for all of the above |
 | The editor | `src/store/live-session.ts`, `src/lib/live/live-*.ts`, `src/components/live/`, `src/components/tasks/` | the open design live: edits, undo, offline, presence, sharing, task boards (below) |
 
 A cloud plan is a `library_designs` row, addressed everywhere as `<ownerId>:<designId>` (the doc key). The schema
-additions are `supabase/migrations/2026-10-14-cloud-live.sql`: `seq` (edit batches applied), `live_lease_until`, and
-`library_design_members`.
+additions are `supabase/migrations/2026-10-14-cloud-live.sql`: `seq` (edit batches applied), `live_lease_until` and
+`live_lease_token` (the lease), and `library_design_members`.
 
 ## How an edit travels
 
 1. A client (browser or game) diffs its plan before and after the edit (`diffPlans`), keeps the batch in `pending`
    with its inverse for undo, and sends `{ t: "ops", doc, base, cid, ops }`.
-2. The live service runs the room's batches one at a time, in arrival order. It applies the batch to a copy of the
-   plan, checks every thing it touched against the plan schema and the size limit, stamps comments (author and server
-   time), and gives it the next `seq`.
-3. The batch is appended to the room's journal file and synced to disk, then broadcast to everyone in the room, the
-   sender included (its echo is its ack: the same `cid`).
-4. At most every 8 s while the plan changes, and when the last person leaves, the room writes the plan, `seq`,
-   `plan_updated_at` and `updated_at` to the database (one write), extends or ends the lease, and trims the journal.
+2. The live service runs the room's batches one at a time, in arrival order. It stamps what is the server's to write
+   (a comment's author and time, a new task's `createdBy`), stages the batch on the room's plan, checks every thing
+   it touched against the plan schema (field by field for a thing only patched) and the size limit, and gives it the
+   next `seq`. What is stored is the schema's output: when that differs from what the batch left (a field the schema
+   does not know, a value it normalises), the ops that make it so are appended to the batch, so every client lands on
+   what is stored.
+3. The batch is applied to the room's plan in memory and appended to its journal; the journal writes a turn's lines
+   (and all that come while its last write is on the disk) in one write and one sync. Once its line is on disk the
+   batch is broadcast to everyone in the room, the sender included (its echo is its ack: the same `cid`). Nothing
+   leaves the room before it is on disk: a snapshot, a flush and the ack of a resent batch wait for the journal.
+4. At most every 8 s while the plan changes, and when the room closes, the room writes the plan, `seq`,
+   `plan_updated_at` and `updated_at` to the database (one write, in its turn of the service's flush queue), extends
+   or ends the lease, and trims the journal.
 
 So the database sees one write per 8 s per open plan, never one per edit, and a crash loses nothing: on start the
-service replays every journal over the stored plans and stores the result.
+service replays every journal over the stored plans and stores the result. A batch costs what it touches: the room
+keeps its plan with an id index per collection (`src/live/doc.ts`, checked against `applyOps`), so the biggest batch on
+a plan of 40,000 cards takes milliseconds.
 
 ### The lease
 
-Opening a room sets `live_lease_until` 90 s ahead and reads the plan in the same request; the room renews it every
-30 s. While it is in the future, the REST plan PUT refuses a plan body with `409 { live: true }` (metadata still goes
-through), and its write is conditional on the lease, so a lease taken between its read and its write still wins.
-There is one live service per database: it takes leases without asking whose they were, so a restart picks its own
-back up at once. Flushes and renewals only touch designs that are not tombstoned, so a deleted plan is never written
-back.
+Opening a room sets `live_lease_until` 90 s ahead and a fresh random `live_lease_token`, and reads the plan in the same
+request; the room renews it every 30 s. While it is in the future, the REST plan PUT refuses a plan body with
+`409 { live: true }` (metadata still goes through), and its write is conditional on the lease, so a lease taken
+between its read and its write still wins. There is one live service per database: it takes leases without asking
+whose they were, so a restart picks its own back up at once.
+
+Every renewal, flush and release is conditional on the room's token, and a REST plan save (made once a lease
+lapsed) clears it. A room whose write finds the token changed has lost its lease: it writes nothing more and closes
+everyone's socket with 1012, as a restart would; they join again, which opens the plan afresh from the database with
+the room's journal replayed on top. Flushes and renewals only touch designs that are not tombstoned, so a deleted
+plan is never written back.
+
+Each renewal also reads the plan's members again: a sharing change whose notice never reached the service takes
+effect within 30 s, dropping anyone no longer shared.
+
+### Rooms and the database
+
+- A room nobody is in lingers for a minute before its last flush lets the lease go, so someone leaving and coming
+  back, or a page reloading, reads and leases nothing again.
+- Every write of a whole plan (and every release) waits its turn in one flush queue, four at a time across all
+  rooms. Each failure rests the queue, from half a second up to 30 s, and a success lifts it; edits wait in the
+  journals meanwhile.
+- A room holding more than 8 MB of journalled batches the database has not taken refuses more as `rate` until a
+  flush gets through.
+- At most 8 plans open per account (across its sockets) and 500 in the service (`LIVE_MAX_ROOMS`). A full service
+  closes a plan nobody is in and refuses the join as `rate`; the website asks again a few seconds later.
 
 ## Protocol notes beyond the contract's table
 
@@ -58,29 +86,67 @@ The frames are the contract's (version 1). What the service adds or decides:
   (`<ownerId>.<designId>.cids.json`, written by every flush before the journal is trimmed), so a resend after a
   restart is known even when its journal was already flushed. A journal replay applies a cid it holds twice once.
 - **Refusals name the batch.** An `error` about a batch carries its `cid`, so the client can drop it
-  (`LiveClientState.refuse`). Codes: `bad_op` (shape or schema), `too_big` (a frame over 256 KB, more than 5,000 ops,
-  or a plan over the 3 MB upload limit), `rate` (over 30 batches a second), `forbidden` (not shared with you, or not
-  joined), `not_found`, `auth` (no valid session: the socket closes with 4001), `version` (hello first, `v: 1`).
-- **Comments.** A new comment gets `by`, `byName` and `at` from the server whatever the client sent; changing an
-  existing one is its author's alone and keeps those stamps; anyone in the room may delete one.
+  (`LiveClientState.refuse`). Codes: `bad_op` (shape or schema), `too_big` (a frame over 256 KB in UTF-8 bytes, more
+  than 1,000 ops, or a plan over the 3 MB upload limit), `rate`, `forbidden` (not shared with you, or not joined),
+  `not_found`, `auth` (no valid session: the socket closes with 4001), `version` (hello first, `v: 1`).
+- **`rate` means not now, not never.** A batch refused as `rate` was not applied and should go again shortly (the
+  website resends it after a second): over 30 batches a second, over the account's batch-work budget (250 ms of
+  checking and applying a second, 1 s banked), or the room's journal backlog while the database is down. A join
+  refused as `rate` (too many plans open, the service full) should be asked again after a few seconds.
+- **Sizes.** Frames are measured in UTF-8 bytes before they are parsed: only an `ops` frame may be over 16 KB, and a
+  frame over the 256 KB batch limit is refused by the `cid` read off its first or last kilobyte. A frame over 512 KB
+  closes the socket (1009) before it is read whole, so a client must never send one: split edits into batches under
+  both limits (the website keeps batches under 200 KB and 1,000 ops, and drops an edit too big to send at all).
+- **Names and depth.** No object key anywhere in a batch may be `__proto__`, `constructor` or `prototype`, and no
+  value may nest deeper than 64 levels of arrays and objects (a patched field 63, counted from its thing); such a
+  batch is refused as `bad_op`. The game's data and a recipe's `metadata` nest at most 63 levels in any stored plan.
+- **What is stored.** The plan schema's output: fields a thing's schema does not know are dropped and values it
+  normalises are normalised, by ops appended to the batch (a `put` of the thing, or a `patch` of the named fields),
+  which every client applies with the rest.
+- **Comments and tasks.** A new comment gets `by`, `byName` and `at` from the server whatever the client sent;
+  changing an existing one is its author's alone and keeps those stamps; anyone in the room may delete one. A new
+  task's `createdBy` is its sender; a task put over an existing one keeps that one's; a patch cannot set or delete it.
 - **Plan fields.** A `meta` op may only set fields the plan schema knows and may not delete required ones.
+- **Joining again.** A `join` for a plan the connection is already in answers a snapshot only when the plan moved on
+  since the last one sent to it (at most once a second), else nothing: a client that missed batches gets the plan,
+  one that already has it gets no copy.
+- **Reload.** A room whose journal cannot be written, or whose lease is no longer its own, closes the sockets of
+  everyone in it with 1012: the client reconnects, joins again and resends what was never acknowledged.
+- **Slow readers.** A socket with more than 8 MB waiting to be sent is dropped.
 - **People.** `Person` and relayed `presence` carry `conn`, the connection, as one account can be in a plan twice (a
   game and a browser). `snapshot` carries `owner: { id, username }`.
 - **Presence** is relayed to the others in the room, never stored, at most 20 frames a second per connection: between
   slots only the latest is kept, so the last position always lands.
-- **Limits per connection:** 200 frames a second (more closes the socket), 10 joins a second, 8 plans open, 500
-  selected ids in a presence frame; 16 sockets per account.
+- **Limits per connection:** 200 frames a second (more closes the socket), 10 joins a second, 30 batches a second, 8
+  plans open, 500 selected ids in a presence frame. **Per account:** 16 sockets, 8 plans open across them, 250 ms of
+  batch work a second, 30 socket upgrades a minute. **Per address:** 60 socket upgrades a minute (more answer 429
+  before the upgrade). The address is the `X-Client-Ip` header when the request comes from loopback (Caddy sets it,
+  overwriting the client's; `CF-Connecting-IP` when it is missing), otherwise the socket's own. An account is looked
+  up for a session at most once a minute.
 - **Pings.** Clients send `{ t: "ping" }` every 25 s (Cloudflare drops a socket idle for 100 s); the server also pings
   at the WebSocket level and drops a connection silent for 90 s.
 - **Origins.** A browser's upgrade must come from an origin in `LIVE_ALLOWED_ORIGINS` (403 otherwise); a client that
   sends no Origin (the game) is let in. Sign-in is the `gtnh_session` cookie on the upgrade, checked with
   `src/lib/server/session.ts`, the module the website uses.
 
-HTTP on the same port: `GET /live/health` (`{ ok, rooms, connections }`), `GET /live/nearby` (cookie: signed-in
-accounts connected from the same game server, the `game.server` hash in `hello`), and, for the Next.js routes only,
+HTTP on the same port: `GET /live/health` (`{ ok, rooms, connections, flushBacklog }`), `GET /live/nearby` (below), and,
+for the Next.js routes only,
 `POST /internal/members` (`{ doc, members }`), `/internal/deleted` (`{ doc }`) and `/internal/shutdown` (store
 everything and exit), each with `Authorization: Bearer $LIVE_INTERNAL_TOKEN`. Caddy routes only `/live` and `/live/*`
 to the service, so `/internal` is never reachable from outside.
+
+### Nearby players (for the game's share helper)
+
+`GET /live/nearby?names=<name>,<name>,...` with the session cookie answers `{ accounts: [{ id, username }] }`: the
+signed-in accounts, other than the asker, that are connected from a game (`hello` with `client: "game"`) with the
+same `game.server` hash as one of the asker's own game connections **and** whose `game.mcName` is one of `names`.
+
+- `names` are the Minecraft names the asker's game shows it (its tab list), comma separated, `[A-Za-z0-9_]{1,32}` each,
+  compared without case; at most 100 are read. Without `names` the answer is empty. The game must send its own
+  player's name as `game.mcName` in `hello` to be found.
+- So the server hash alone (an unsalted SHA-256 of the address, which anyone can compute) lists nobody: the asker
+  must already see a player in the game to learn their account.
+- 20 asks a minute per account and 60 per address; more answer `429`. No session: `401`.
 
 ## The editor
 
@@ -121,13 +187,16 @@ All signed in by the session cookie. A design id is unique per owner only, so ev
   while the lease is held: `409 { live: true }`.
 - `DELETE /api/library/designs/<id>`: the owner only; drops every member and tells the live service.
 - `GET /api/library/designs/<id>/members?owner=`: `{ ownerId, ownerName, role, members }`.
-- `PUT /api/library/designs/<id>/members/<userId>`: the owner shares (20 accounts at most).
+- `PUT /api/library/designs/<id>/members/<userId>`: the owner shares (20 accounts a plan at most; 30 new shares an
+  hour per owner across their plans, then `429`).
 - `DELETE /api/library/designs/<id>/members/<userId>?owner=`: the owner unshares, or a member leaves (their own id).
 - `GET /api/accounts/search?q=<prefix>`: `{ accounts: [{ id, username }] }`, up to 10, case-insensitive, you left out;
   60 a minute.
 
 Sharing changes and deletes are posted to the live service when `LIVE_INTERNAL_URL` and `LIVE_INTERNAL_TOKEN` are set,
-so open rooms update (`members`) and anyone no longer allowed is dropped (`kicked`).
+so open rooms update (`members`) and anyone no longer allowed is dropped (`kicked`). A notice the service does not take
+(down, restarting) is tried again in the background after 1, 4 and 15 s; each open room also reads its members again
+at every lease renewal, so a lost notice is late by at most 30 s.
 
 ## Running it locally
 
@@ -161,7 +230,8 @@ $C --user ann --password annpass1 send <doc> '[{"o":"meta","f":{"primaryView":"t
 `npm run build:live` bundles the service to `dist-live/live.mjs` (esbuild; packages stay in `node_modules`), run with
 `node dist-live/live.mjs` as the systemd unit `gtnh-live` on 127.0.0.1:3001. `next build` and `next start` are
 unchanged. Environment: `COMMUNITY_HASH_SALT`, `SUPABASE_URL`, `SUPABASE_SERVICE_ROLE_KEY`, `LIVE_PORT`,
-`LIVE_HOST`, `LIVE_JOURNAL_DIR`, `LIVE_INTERNAL_TOKEN`, `LIVE_ALLOWED_ORIGINS`, `NODE_ENV=production`. The website
+`LIVE_HOST`, `LIVE_JOURNAL_DIR`, `LIVE_INTERNAL_TOKEN`, `LIVE_ALLOWED_ORIGINS`, `LIVE_MAX_ROOMS` (optional, default 500),
+`NODE_ENV=production`. `LOCAL_DB=1` with `NODE_ENV=production` stops both the website and the service at startup. The website
 needs `LIVE_INTERNAL_URL` and `LIVE_INTERNAL_TOKEN` at run time and `NEXT_PUBLIC_LIVE_URL` at build time (unset:
 no live features). The rollout, staging first, is `docs/live-rollout.md`.
 
@@ -181,4 +251,9 @@ no live features). The rollout, staging first, is `docs/live-rollout.md`.
 - `src/lib/server/local-db/postgrest.test.ts`: every query shape against real Postgres.
 - `src/app/api/library/cloud-plans.test.ts`: sharing, members, the lease refusal, deletes, search, the notices.
 - `src/live/service.test.ts`: the service in-process with real sockets: two editors converging, reconnects, the
-  journal after a crash, refusals, unsharing and deleting, limits, comments, presence, the lease against REST, origins.
+  journal after a crash, refusals, unsharing and deleting, limits, comments, presence, the lease against REST, a lost
+  lease, origins, lingering rooms, room caps, members checked in the room's turn and re-read at renewals, upgrade
+  limits, nearby by names, slow readers, frame sizes, what is stored.
+- `src/live/doc.test.ts` (the room's plan against `applyOps`, and the biggest batch on a 40,000-card plan under
+  50 ms), `room.test.ts` (the order of a room's writes, group commit, journal backlog and failure, lease loss, task
+  stamps), `flush-queue.test.ts`, `src/lib/server/cloud-plans.test.ts` (notices tried again).

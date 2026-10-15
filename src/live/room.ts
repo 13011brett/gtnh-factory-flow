@@ -1,3 +1,4 @@
+import { randomUUID } from "node:crypto";
 import { COMMUNITY_UPLOAD_MAX_BYTES } from "@/lib/community/types";
 import { cloneJson, type LiveOp, type LivePlan } from "@/lib/live/ops";
 import {
@@ -25,6 +26,11 @@ import type { PlanStore } from "./store";
  * A journal that cannot be written fails the room: everyone in it is told to
  * join again, and the plan is opened afresh from the database and the
  * journal, which hold exactly what was ever acknowledged.
+ *
+ * The room's lease carries a token of its own; every write it makes is
+ * conditional on it. A lease that is no longer the room's (taken by another,
+ * or lapsed and cleared by a REST save) fails the room the same way: it never
+ * writes over a plan someone else now holds.
  */
 
 export interface RoomTiming {
@@ -114,6 +120,8 @@ export class Room {
   private size = 0;
   /** This room's last applied batch ids and their seqs, oldest first. */
   private readonly recent = new Map<string, number>();
+  /** This room's lease: every write it makes is conditional on it. */
+  private readonly token = randomUUID();
   private queue: Promise<unknown> = Promise.resolve();
   private flushTimer: ReturnType<typeof setTimeout> | undefined;
   private renewTimer: ReturnType<typeof setInterval> | undefined;
@@ -143,7 +151,12 @@ export class Room {
    */
   static async open(doc: string, deps: RoomDeps): Promise<Room | undefined> {
     const room = new Room(doc, deps);
-    const loaded = await deps.store.lease(room.ownerId, room.designId, room.leaseUntil());
+    const loaded = await deps.store.lease(
+      room.ownerId,
+      room.designId,
+      room.token,
+      room.leaseUntil(),
+    );
     if (!loaded) {
       return undefined;
     }
@@ -475,15 +488,16 @@ export class Room {
       const sizeAtCapture = this.size;
       this.lastFlushAt = Date.now();
       try {
-        const stored = await this.deps.store.flush(
+        const outcome = await this.deps.store.flush(
           this.ownerId,
           this.designId,
+          this.token,
           plan,
           seq,
           final ? null : this.leaseUntil(),
         );
-        if (!stored) {
-          await this.drop("deleted");
+        if (outcome !== "held") {
+          await this.leaseMissed(outcome);
           return false;
         }
         this.flushedSeq = Math.max(this.flushedSeq, seq);
@@ -534,11 +548,26 @@ export class Room {
       return;
     }
     try {
-      if (!(await this.deps.store.renew(this.ownerId, this.designId, this.leaseUntil()))) {
-        await this.drop("deleted");
+      const outcome = await this.deps.store.renew(
+        this.ownerId,
+        this.designId,
+        this.token,
+        this.leaseUntil(),
+      );
+      if (outcome !== "held") {
+        await this.leaseMissed(outcome);
       }
     } catch (error) {
       this.deps.log(`${this.doc}: lease renewal failed: ${String(error)}`);
+    }
+  }
+
+  /** A write found the design gone (dropped as deleted) or its lease another's (the room fails). */
+  private async leaseMissed(outcome: "gone" | "lost"): Promise<void> {
+    if (outcome === "gone") {
+      await this.drop("deleted");
+    } else {
+      this.fail("its lease is no longer its own (taken, or lapsed and cleared by a save)");
     }
   }
 
@@ -566,7 +595,7 @@ export class Room {
       this.ending = true;
       const stored = this.dirty
         ? await this.flush(true)
-        : await this.deps.store.release(this.ownerId, this.designId).then(
+        : await this.deps.store.release(this.ownerId, this.designId, this.token).then(
             () => true,
             (error) => {
               this.deps.log(`${this.doc}: releasing the lease failed: ${String(error)}`);
@@ -595,7 +624,9 @@ export class Room {
       if (this.dirty) {
         await this.flush(true);
       } else {
-        await this.deps.store.release(this.ownerId, this.designId).catch(() => undefined);
+        await this.deps.store
+          .release(this.ownerId, this.designId, this.token)
+          .catch(() => undefined);
       }
       this.finish();
     });

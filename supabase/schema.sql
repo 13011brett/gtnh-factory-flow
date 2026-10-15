@@ -262,6 +262,7 @@ create index if not exists community_plans_comments_idx on community_plans (comm
 -- Additive and idempotent.
 alter table library_designs add column if not exists seq bigint not null default 0;
 alter table library_designs add column if not exists live_lease_until timestamptz;
+alter table library_designs add column if not exists live_lease_token text;
 
 create table if not exists library_design_members (
   owner_id uuid not null references community_users (id) on delete cascade,

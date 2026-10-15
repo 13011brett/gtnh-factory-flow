@@ -6,7 +6,7 @@ import type { LiveOp, LivePlan } from "@/lib/live/ops";
 import type { ServerFrame } from "@/lib/live/protocol";
 import { Journal } from "./journal";
 import { Room, type RoomDeps, type RoomPeer } from "./room";
-import type { PlanStore } from "./store";
+import type { LeaseOutcome, PlanStore } from "./store";
 
 /**
  * One room against a store it can hold still: the order its writes reach
@@ -23,10 +23,12 @@ interface Write {
   done: () => void;
 }
 
-/** A store whose flushes wait until the test lets them through. */
+/** A store whose writes wait until the test lets them through, with a lease token as the database keeps it. */
 class HeldStore implements PlanStore {
   readonly writes: Write[] = [];
   hold = false;
+  /** The token the design's lease holds. */
+  token: string | null = null;
   plan: LivePlan = { name: "Plan", tasks: [{ id: "t1", title: "One", status: "todo", order: "a0" }] };
 
   private write(kind: Write["kind"], until: Date | null): Promise<void> {
@@ -45,21 +47,41 @@ class HeldStore implements PlanStore {
   async role() {
     return "owner" as const;
   }
-  async lease(_owner: string, _design: string, until: Date) {
+  async lease(_owner: string, _design: string, token: string, until: Date) {
     await this.write("lease", until);
+    this.token = token;
     return { plan: this.plan, seq: 0 };
   }
-  async renew(_owner: string, _design: string, until: Date) {
+  async renew(_owner: string, _design: string, token: string, until: Date): Promise<LeaseOutcome> {
+    if (token !== this.token) {
+      return "lost";
+    }
     await this.write("renew", until);
-    return true;
+    return "held";
   }
-  async flush(_owner: string, _design: string, plan: LivePlan, _seq: number, until: Date | null) {
+  async flush(
+    _owner: string,
+    _design: string,
+    token: string,
+    plan: LivePlan,
+    _seq: number,
+    until: Date | null,
+  ): Promise<LeaseOutcome> {
+    if (token !== this.token) {
+      return "lost";
+    }
     await this.write("flush", until);
     this.plan = plan;
-    return true;
+    if (!until) {
+      this.token = null;
+    }
+    return "held";
   }
-  async release() {
-    await this.write("release", null);
+  async release(_owner: string, _design: string, token: string) {
+    if (token === this.token) {
+      await this.write("release", null);
+      this.token = null;
+    }
   }
   async members() {
     return [];
@@ -212,5 +234,35 @@ describe("a room's batches", () => {
     // Nothing that was never on disk went out.
     expect(other.frames).toEqual([]);
     expect(readFileSync(blocked, "utf8")).toBe("not a folder");
+  });
+});
+
+describe("a room's lease", () => {
+  it("is the room's own: once another holds it, the room stops writing and everyone joins again", async () => {
+    const store = new HeldStore();
+    const room = await openRoom(store);
+    const other = listener();
+    room.peers.add(other.peer);
+    room.apply(peer, "c1", rename("Mine"));
+    await room.whenDurable();
+    // Someone else takes the lease (or it lapsed and a save cleared it).
+    store.token = "someone else's";
+    const before = store.writes.length;
+    expect(await room.flush()).toBe(false);
+    expect(room.closed).toBe(true);
+    expect(other.reloads()).toBe(1);
+    expect(store.writes.length).toBe(before);
+    expect((store.plan.tasks as Array<{ title: string }>)[0]!.title).toBe("One");
+    // Opened again, it takes the lease afresh and replays what it journalled.
+    const again = await Room.open(DOC, {
+      store,
+      journal: room["deps"].journal,
+      timing: { flushMs: 60_000, renewMs: 60_000, leaseMs: 5_000 },
+      cids: new Map(),
+      log: () => undefined,
+      onClosed: () => undefined,
+    });
+    expect((again!.plan.tasks as Array<{ title: string }>)[0]!.title).toBe("Mine");
+    expect(await again!.flush()).toBe(true);
   });
 });

@@ -16,6 +16,12 @@ alter table library_designs add column if not exists seq bigint not null default
 -- still goes through REST.
 alter table library_designs add column if not exists live_lease_until timestamptz;
 
+-- Which lease holds it: a random token the live service writes when it takes
+-- the lease. Every renewal, flush and release is conditional on it, so a
+-- room whose lease another took (or that lapsed and a REST save cleared it)
+-- stops writing instead of overwriting the plan. Cleared with the lease.
+alter table library_designs add column if not exists live_lease_token text;
+
 -- Accounts a design is shared with. (owner_id, design_id) is library_designs'
 -- primary key (user_id, id), so the composite reference needs no new unique
 -- constraint. Designs are tombstoned rather than deleted, so the API removes

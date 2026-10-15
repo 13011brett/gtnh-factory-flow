@@ -711,6 +711,52 @@ describe("the live service", { timeout: 30_000 }, () => {
     expect((await save()).status).toBe(200);
   });
 
+  it("stops writing a plan whose lease lapsed and a save took, and has everyone join again", async () => {
+    const { port } = await startService({
+      timing: { flushMs: 100, renewMs: 60_000, leaseMs: 300 },
+    });
+    const { designId, doc, plan } = await makeDesign();
+    const ann = await TestClient.open(port, { who: "ann" });
+    await ann.hello();
+    await ann.join(doc);
+    // The lease lapses (no renewal in time) and a REST save lands meanwhile.
+    await new Promise((resolve) => setTimeout(resolve, 450));
+    const saved = await designRoute.PUT(
+      new Request(`http://localhost/api/library/designs/${designId}`, {
+        method: "PUT",
+        headers: { cookie: users.ann!.cookie },
+        body: JSON.stringify({
+          name: "Live test",
+          icon: null,
+          folderId: null,
+          closed: false,
+          favorite: false,
+          order: null,
+          communityPlanId: null,
+          createdAt: "2026-10-14T10:00:00.000Z",
+          updatedAt: new Date(Date.now() + 60_000).toISOString(),
+          planUpdatedAt: new Date(Date.now() + 60_000).toISOString(),
+          plan: { ...plan, notes: "From REST" },
+        }),
+      }),
+      { params: Promise.resolve({ designId }) },
+    );
+    expect(saved.status).toBe(200);
+    // The room's next write finds the lease gone from under it: it writes
+    // nothing and closes the socket, as a restart would.
+    ann.send({ t: "ops", doc, base: 0, cid: "late", ops: [taskPatch("t1", { title: "Late" })] });
+    await ann.next("ops", (frame) => frame.cid === "late");
+    await until(() => ann.closed);
+    expect(ann.closeCode).toBe(1012);
+    expect((await storedRow(designId)).plan.notes).toBe("From REST");
+    // Joining again opens the plan afresh: the save, with the journalled edit on top.
+    const again = await TestClient.open(port, { who: "ann" });
+    await again.hello();
+    const snapshot = await again.join(doc);
+    expect(snapshot.plan.notes).toBe("From REST");
+    expect((snapshot.plan.tasks as Array<{ title: string }>)[0]!.title).toBe("Late");
+  });
+
   it("lets in browsers from its own origins and the game, which sends none", async () => {
     const { port } = await startService();
     await expect(

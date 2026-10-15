@@ -224,6 +224,11 @@ export async function PUT(request: Request, context: RouteContext) {
       };
   if (plan !== undefined) {
     row.plan = plan;
+    if (cloudColumns && current) {
+      // A lapsed lease's room must not write over this plan: its writes are
+      // conditional on its token, which this clears.
+      row.live_lease_token = null;
+    }
   }
 
   // An UPDATE for a row that exists, an INSERT for one that does not: an

@@ -86,7 +86,12 @@ export class Journal {
   }
 
   /** The entries on disk for a doc, in order. A torn last line (a crash mid-write) is skipped. */
-  async read(doc: string): Promise<JournalEntry[]> {
+  read(doc: string): Promise<JournalEntry[]> {
+    // After any write on its way, so a room opening again never reads half a line.
+    return this.serial(doc, () => this.readNow(doc));
+  }
+
+  private async readNow(doc: string): Promise<JournalEntry[]> {
     let text: string;
     try {
       text = await readFile(this.fileFor(doc), "utf8");
@@ -214,7 +219,7 @@ export class Journal {
       if (cids && !(await this.writeCids(doc, cids))) {
         return;
       }
-      const rest = (await this.read(doc)).filter((entry) => entry.seq > seq);
+      const rest = (await this.readNow(doc)).filter((entry) => entry.seq > seq);
       if (rest.length === 0) {
         await rm(this.fileFor(doc), { force: true });
       } else {

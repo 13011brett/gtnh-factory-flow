@@ -17,6 +17,16 @@ export function LiveNotice() {
     >
       <Info aria-hidden className="h-3.5 w-3.5 shrink-0" />
       <p className="min-w-0 flex-1">{notice.text}</p>
+      {notice.action ? (
+        <button
+          type="button"
+          data-live-notice-action
+          onClick={notice.action.run}
+          className="shrink-0 rounded border border-sky-500/70 px-2 py-0.5 text-sky-50 hover:bg-sky-900/60"
+        >
+          {notice.action.label}
+        </button>
+      ) : null}
       <button
         type="button"
         onClick={dismissLiveNotice}

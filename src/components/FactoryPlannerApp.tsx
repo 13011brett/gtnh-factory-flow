@@ -400,7 +400,7 @@ function BoardColumn() {
       <div className="min-w-0">
         {covering ? null : publicView ? <PublicViewBar key={publicView.id} /> : null}
         {covering ? null : <TabConflictNotice />}
-        {covering ? null : <LiveNotice />}
+        <LiveNotice />
       </div>
       {/*
         Welcome COVERS the board rather than replacing it: unmounting the board

@@ -314,6 +314,33 @@ describe("live editing in the store", () => {
     expect(useLiveSession.getState().present.map((person) => person.username)).toEqual(["bob"]);
   });
 
+  it("says who shared a plan with the player, with a key to open it, once however often it is sent", async () => {
+    await openLiveDesign(planWith(annotation("n1", "one")));
+    const other = `${BOB}:bbbbbbbb-0000-4000-8000-000000000002`;
+    const shared: ServerFrame = {
+      t: "shared",
+      doc: other,
+      owner: { id: BOB, username: "bob" },
+      name: "Big mall",
+    };
+    service.reply(shared);
+    await settle();
+    const notice = useLiveSession.getState().notice;
+    expect(notice?.text).toBe("bob shared Big mall with you");
+    expect(notice?.action?.label).toBe("Open");
+
+    useLiveSession.setState({ notice: undefined });
+    service.reply(shared);
+    await settle();
+    expect(useLiveSession.getState().notice).toBeUndefined();
+
+    // Taken off the plan, it can be announced afresh.
+    service.reply({ t: "unshared", doc: other });
+    service.reply(shared);
+    await settle();
+    expect(useLiveSession.getState().notice?.text).toBe("bob shared Big mall with you");
+  });
+
   it("converts a live plan in an old mode to the one board mode once, as an edit undo never takes back", async () => {
     // The game writes Solve plans; an older build wrote Build plans. Both land through the live room.
     const old: FactoryProject = { ...createEmptyProject(), id: "plan-live", name: "Live", solveMode: true, annotations: [annotation("n1", "one")] };

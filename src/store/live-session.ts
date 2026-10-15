@@ -31,6 +31,9 @@ import { APP_VERSION } from "@/lib/version";
 import { useCommunityAuthStore } from "./community-auth-store";
 import { useDesignStore } from "./design-store";
 import { useFactoryStore } from "./factory-store";
+import { syncLibraryNow } from "@/lib/library/library-sync";
+import { openSharedPlan } from "@/lib/library/open-shared";
+import { leaveLibrary } from "@/lib/library/library-tab";
 import {
   clearDesignOpenLive,
   isQuietChange,
@@ -74,6 +77,8 @@ export type LiveStatus = "off" | "connecting" | "live" | "offline";
 export interface LiveNotice {
   id: number;
   text: string;
+  /** A key beside the words (Open, for a plan just shared with you). */
+  action?: { label: string; run: () => void };
 }
 
 export interface LiveSessionState {
@@ -523,12 +528,54 @@ export class LiveSession {
           this.onKicked(frame.reason);
         }
         return;
+      case "shared":
+        this.onShared(frame);
+        return;
+      case "unshared":
+        this.announced.delete(frame.doc);
+        // The list of plans shared with this account follows at once; a copy
+        // of the plan on this device goes with it (the sync drops copies the
+        // account no longer lists).
+        void syncLibraryNow();
+        return;
       case "error":
         this.onError(frame);
         return;
       case "pong":
         return;
     }
+  }
+
+  /** Plans already announced this session: the service may say one twice (a notice it had to try again). */
+  private readonly announced = new Set<string>();
+
+  /** Someone shared a plan with this account: the list refreshes and a notice offers to open it. */
+  private onShared(frame: Extract<ServerFrame, { t: "shared" }>): void {
+    const key = parseDocKey(frame.doc);
+    void syncLibraryNow();
+    if (!key || this.announced.has(frame.doc)) {
+      return;
+    }
+    this.announced.add(frame.doc);
+    const name = frame.name || "a plan";
+    const ref = { ownerId: key.ownerId, ownerName: frame.owner.username, designId: key.designId };
+    useLiveSession.setState({
+      notice: {
+        ...noticeOf(`${frame.owner.username} shared ${name} with you`),
+        action: {
+          label: "Open",
+          run: () => {
+            dismissLiveNotice();
+            leaveLibrary();
+            openSharedPlan(ref, frame.name).catch((error: unknown) => {
+              useLiveSession.setState({
+                notice: noticeOf(error instanceof Error ? error.message : "The plan could not be opened."),
+              });
+            });
+          },
+        },
+      },
+    });
   }
 
   private onSnapshot(frame: Extract<ServerFrame, { t: "snapshot" }>): void {

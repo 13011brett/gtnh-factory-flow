@@ -18,6 +18,7 @@ import { withoutRuntimeTables } from "@/lib/import-export/plan-code";
 import { useCommunityAuthStore } from "@/store/community-auth-store";
 import { useDesignStore } from "@/store/design-store";
 import { isDesignOpenLive } from "@/store/live-edit-gate";
+import { isLiveConfigured } from "@/lib/live/live-config";
 import { forgetRemoteLibrary, noteRemoteLibrary } from "./cloud-library";
 import {
   deleteRemoteDesign,
@@ -70,6 +71,10 @@ import {
  * WHY SO CAREFUL: every push rewrites the WHOLE plan on a small Supabase
  * instance. Pushing after every autosave, or resending refused plans on
  * every poll, is enough load to stall the database.
+ *
+ * IN THE ACCOUNT FROM THE START: with live plans configured and someone signed in, a design that appears here (new,
+ * imported, pasted, a library copy) is created in the account at once, empty or not, rather than after the quiet
+ * period: the live plan joins as soon as the row exists, and Share with people never waits on a save.
  *
  * LIVE PLANS (live-session.ts): a design open live, in this tab or another
  * (`isDesignOpenLive`), is the live service's to write. Its plan body is
@@ -656,6 +661,8 @@ export function startLibrarySync(): () => void {
   let lastDesigns = useDesignStore.getState().designs;
   let lastFolders = useDesignStore.getState().folders;
   let lastSignature = libraryChangeSignature(lastDesigns, lastFolders);
+  // Designs already sent for creation: a design is created once, however often it is edited before the row exists.
+  const creating = new Set<string>();
   const unsubscribeDesigns = useDesignStore.subscribe((state) => {
     if (state.designs === lastDesigns && state.folders === lastFolders) {
       return;
@@ -665,7 +672,18 @@ export function startLibrarySync(): () => void {
     const signature = libraryChangeSignature(state.designs, state.folders);
     if (signature !== lastSignature) {
       lastSignature = signature;
-      scheduleSync();
+      const fresh =
+        isLiveConfigured() && isSignedIn()
+          ? state.designs.filter(
+              (design) => !design.cloud && !design.remoteUpdatedAt && !creating.has(design.id),
+            )
+          : [];
+      if (fresh.length > 0) {
+        fresh.forEach((design) => creating.add(design.id));
+        scheduleSync(0);
+      } else {
+        scheduleSync();
+      }
     }
   });
   const unsubscribeDeletes = subscribeToLibraryDeletions(() => scheduleSync(500));

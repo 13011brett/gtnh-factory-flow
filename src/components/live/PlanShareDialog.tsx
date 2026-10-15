@@ -48,7 +48,7 @@ export function PlanShareDialog({ onClose }: { onClose: () => void }) {
   const [actionError, setActionError] = useState<string>();
   const [busy, setBusy] = useState<string>();
 
-  // A plan not in the account yet is saved there first: sharing needs its row.
+  // Plans are created in the account as they appear; this only covers a row still on its way.
   useEffect(() => {
     if (user && design && !synced) {
       void syncLibraryNow();
@@ -166,14 +166,9 @@ export function PlanShareDialog({ onClose }: { onClose: () => void }) {
         <div className="pn-body">
           {!user ? (
             <p className="text-sm text-fg-muted">Sign in to share.</p>
-          ) : !synced ? (
-            <p className="flex items-center gap-2 text-sm text-fg-muted">
-              <LoaderCircle className="h-4 w-4 animate-spin" /> Saving the plan to your account
-              first.
-            </p>
           ) : loadError ? (
             <p className="text-sm text-red-400">{loadError}</p>
-          ) : !info ? (
+          ) : !synced || !info ? (
             <p className="flex items-center gap-2 text-sm text-fg-muted">
               <LoaderCircle className="h-4 w-4 animate-spin" /> Loading.
             </p>

@@ -4,9 +4,8 @@ import { useEffect, useMemo, useState } from "react";
 import { formatRelativeDate } from "@/components/shelf-cards";
 import { LibraryTile } from "@/components/library/LibraryTile";
 import { LibraryMenu, MenuItem } from "@/components/library/library-menu";
-import { parseFactoryProjectJson } from "@/lib/import-export";
+import { openSharedPlan } from "@/lib/library/open-shared";
 import {
-  fetchSharedPlan,
   removePlanMember,
   useCloudLibraryStore,
 } from "@/lib/library/cloud-library";
@@ -26,7 +25,6 @@ import { Face } from "./LiveFaces";
 export function SharedWithMe() {
   const shared = useCloudLibraryStore((state) => state.shared);
   const designs = useDesignStore((state) => state.designs);
-  const openSharedDesign = useDesignStore((state) => state.openSharedDesign);
   const removeDesign = useDesignStore((state) => state.removeDesign);
   const me = useLiveSession((state) => state.me);
   const [busy, setBusy] = useState<string>();
@@ -55,13 +53,7 @@ export function SharedWithMe() {
     setBusy(keyOf(plan));
     setError(undefined);
     try {
-      if (copies.has(keyOf(plan))) {
-        await openSharedDesign(ref, plan.name);
-        return;
-      }
-      const read = await fetchSharedPlan(plan.ownerId, plan.id);
-      const project = parseFactoryProjectJson(JSON.stringify(read.plan));
-      await openSharedDesign(ref, plan.name, project);
+      await openSharedPlan(ref, plan.name);
     } catch (thrown) {
       setError(thrown instanceof Error ? thrown.message : "The plan could not be opened.");
     } finally {
@@ -103,7 +95,7 @@ export function SharedWithMe() {
         </p>
       ) : shared.length === 0 ? (
         <p className="px-0.5 pt-1 text-[12px] leading-relaxed text-[var(--mc-ink-muted)]">
-          Nothing is shared with you yet. Plans people share with you show here.
+          Nothing shared with you yet
         </p>
       ) : (
         <div className="grid grid-cols-[repeat(auto-fill,minmax(250px,1fr))] gap-2">

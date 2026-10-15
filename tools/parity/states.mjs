@@ -47,7 +47,7 @@ export const states = [
   { id: "ebf-strip-chip-hover", ref: "card-settings-strip-coil-chip-hover", plan: ebfOne, node: "ebf", setup: async (c) => { await pin(c, 2); await wait(c, 1000); await hoverSel(c, ".cc-sc"); } },
   { id: "ebf-strip-coil-menu", ref: "card-settings-strip-coil-menu-open", plan: ebfOne, node: "ebf", setup: async (c) => { await pin(c, 2); await wait(c, 1000); await clickSel(c, ".cc-sc"); } },
   // ---- forced rows (zoom 0.5 in the reference) ----
-  { id: "card-forced-in", ref: "card-forced-in-row-aniline-reactor", plan: forcedPlan, node: "an", setup: none },
+  { id: "card-forced-in", ref: "card-forced-in-row-aniline-reactor", plan: forcedPlan, node: "an", anchor: { x: 4, y: 2 }, zoom: 0.42, setup: none },
   // ---- shared machine ----
   {
     id: "shared-machine",

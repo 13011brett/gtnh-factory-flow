@@ -114,8 +114,8 @@ const entries = [
   { ref: "library-view-my-plans-shelf", plan: refChain, setup: async ({ page }) => { await key(page, "library").click(); await wait(page, 2000); }, clip: railTop },
   { ref: "library-view-public-setups-shelf", plan: refChain, setup: async ({ page }) => { await key(page, "library").click(); await wait(page, 2000); await page.getByText(/public setups/i).first().click().catch(() => {}); await wait(page, 2000); }, clip: railTop },
   // ---- the rail ----
-  { ref: "overview-rail-folded", plan: drawerPlan, setup: async ({ page, ids }) => { await frame(page, ids.dt, 0.5, 592, 120); await page.locator(".rail-key-fold").click(); await wait(page); }, clip: railTop },
-  { ref: "overview-rail-unfolded-again", plan: drawerPlan, setup: async ({ page }) => { await page.locator(".rail-key-fold").click(); await wait(page, 500); await page.locator(".rail-strip").click(); await wait(page); }, clip: railTop },
+  { ref: "overview-rail-folded", plan: drawerPlan, setup: async ({ page, ids }) => { await frame(page, ids.dt, 0.5, 592, 120); await page.locator(".rail-root .rail-key-fold").click(); await wait(page); }, clip: railTop },
+  { ref: "overview-rail-unfolded-again", plan: drawerPlan, setup: async ({ page }) => { await page.locator(".rail-root .rail-key-fold").click(); await wait(page, 500); await page.locator(".rail-strip").click(); await wait(page); }, clip: railTop },
   { ref: "overview-filter-typed", plan: drawerPlan, setup: async ({ page }) => { await page.locator(".rail-filter").fill("pro"); await wait(page); }, clip: railTop },
   { ref: "overview-input-row-hover", plan: drawerPlan, setup: async ({ page, ids }) => { await frame(page, ids.dt, 0.5, 592, 80 + 40); await hover(page, page.locator(".rail-row", { hasText: "Sulfuric Acid" })); }, clip: railTop },
   { ref: "overview-row-hover-scope-propene", plan: drawerPlan, setup: async ({ page, ids }) => { await frame(page, ids.dt, 0.5, 592, 120); await hover(page, page.locator(".rail-row", { hasText: "Propene" })); }, clip: railTop },
@@ -247,7 +247,8 @@ async function importPlanFile(page, rel) {
 
 /** The ref's crops start under the mod's top bar, at the rail's top: the web window starts at its rail's top. */
 async function railTop({ page }) {
-  const b = await page.locator(".rail-root, .rail-strip").first().boundingBox();
+  const rail = page.locator(".rail-root, .rail-strip").first();
+  const b = (await rail.count()) ? await rail.boundingBox() : null;
   return [0, b ? b.y : 40];
 }
 

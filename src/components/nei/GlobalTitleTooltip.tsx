@@ -174,6 +174,12 @@ export function GlobalTitleTooltip() {
       });
     };
 
+    // A wheel or scroll re-reads only a tip that is up or pending: with none, the next mouse move finds one (the
+    // board's camera scrolls every frame it moves, and each re-read is a hit test of everything on screen).
+    const recheckShown = () => {
+      if (hovered) recheckAtPointer();
+    };
+
     const onPointerDown = (event: PointerEvent) => {
       pointerRef.current = { x: event.clientX, y: event.clientY };
       buttons = event.buttons;
@@ -196,8 +202,8 @@ export function GlobalTitleTooltip() {
     };
     const options = { capture: true, passive: true } as const;
     document.addEventListener("mousemove", onMove, options);
-    window.addEventListener("wheel", recheckAtPointer, options);
-    window.addEventListener("scroll", recheckAtPointer, options);
+    window.addEventListener("wheel", recheckShown, options);
+    window.addEventListener("scroll", recheckShown, options);
     window.addEventListener("pointerdown", onPointerDown, options);
     window.addEventListener("pointerup", onPointerUp, options);
     window.addEventListener("click", recheckAtPointer, options);
@@ -208,8 +214,8 @@ export function GlobalTitleTooltip() {
     return () => {
       observer.disconnect();
       document.removeEventListener("mousemove", onMove, options);
-      window.removeEventListener("wheel", recheckAtPointer, options);
-      window.removeEventListener("scroll", recheckAtPointer, options);
+      window.removeEventListener("wheel", recheckShown, options);
+      window.removeEventListener("scroll", recheckShown, options);
       if (settleFrame !== undefined) {
         window.cancelAnimationFrame(settleFrame);
       }

@@ -60,3 +60,14 @@
   transform: translate(calc(-6px / var(--board-zoom, 1)), calc(-4px / var(--board-zoom, 1)))
     scale(min(calc(1 / var(--board-zoom, 1)), 4.5));
 }
+
+/*
+ * While only the camera moves (VirtualizationController.tsx) nothing on the board takes the pointer: the browser
+ * hit-tests every pointer move and wheel tick against all of it otherwise.
+ */
+.factory-flow-board[data-camera-moving] .react-flow__nodes,
+.factory-flow-board[data-camera-moving] .react-flow__edges,
+.factory-flow-board[data-camera-moving] .react-flow__edgelabel-renderer,
+.factory-flow-board[data-camera-moving] .react-flow__viewport-portal {
+  pointer-events: none !important;
+}

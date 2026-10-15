@@ -14,6 +14,11 @@ import { boardEdges } from "./board-edges";
 import { FAR_ATTRIBUTE } from "./VirtualCard";
 import { applyZoomTo, setZoomTargets } from "./zoom-var";
 
+/** On the board while only the camera is moving (virtual.css turns the board's pointer events off). */
+export const CAMERA_MOVING_ATTRIBUTE = "data-camera-moving";
+/** The camera counts as moving until it has rested this long. */
+const CAMERA_REST_MS = 150;
+
 /**
  * Feeds the camera to the virtualizer and runs its steps (card-virtualizer.ts), culls the wires
  * (board-edges.ts), and pins the cards in use. Renders nothing.
@@ -206,9 +211,33 @@ export const VirtualizationController = memo(function VirtualizationController({
       wasGlance = glance;
     };
     feedView();
+    // While only the camera moves, the cards and wires take no pointer events (virtual.css): the browser hit-tests
+    // every pointer move and wheel tick against everything on screen, 10 ms an event with a thousand shells in view
+    // and 2 s of a pan. Not while a wire, a card or a marquee is in hand: those find what is under the pointer.
+    let movingTimer: ReturnType<typeof setTimeout> | undefined;
+    const stopMoving = () => {
+      movingTimer = undefined;
+      board.removeAttribute(CAMERA_MOVING_ATTRIBUTE);
+    };
+    const cameraMoved = (state: ReturnType<typeof flowStore.getState>) => {
+      if (movingTimer === undefined) {
+        if (state.connection.inProgress || state.userSelectionActive || board.querySelector(".react-flow__node.dragging")) {
+          return;
+        }
+        board.setAttribute(CAMERA_MOVING_ATTRIBUTE, "");
+      } else {
+        clearTimeout(movingTimer);
+      }
+      movingTimer = setTimeout(stopMoving, CAMERA_REST_MS);
+    };
     const unsubscribeStore = flowStore.subscribe((state, previous) => {
       if (state.transform !== previous.transform || state.width !== previous.width || state.height !== previous.height) {
         feedView();
+      }
+      if (state.transform !== previous.transform) cameraMoved(state);
+      else if (movingTimer !== undefined && (state.connection.inProgress || state.userSelectionActive)) {
+        clearTimeout(movingTimer);
+        stopMoving();
       }
     });
     const unsubscribeLevel = subscribeNodeDetailLevel(feedView);
@@ -289,6 +318,8 @@ export const VirtualizationController = memo(function VirtualizationController({
       cancelAnimationFrame(frame);
       boardVirtualizer.wake = undefined;
       unsubscribeStore();
+      if (movingTimer !== undefined) clearTimeout(movingTimer);
+      board.removeAttribute(CAMERA_MOVING_ATTRIBUTE);
       unsubscribeLevel();
       holdObserver.disconnect();
       wrapperObserver?.disconnect();

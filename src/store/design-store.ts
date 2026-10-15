@@ -8,6 +8,7 @@ import {
   createDesign as createDesignRecord,
   createFolder as createFolderRecord,
   duplicateDesign as duplicateDesignRecord,
+  makeUniqueDesignName,
   normalizeDesignName,
   normalizeFolderName,
   openDesigns,
@@ -74,6 +75,8 @@ import type { SharedPlanRef } from "@/lib/designs/design-library";
 
 export type DesignSaveState = "idle" | "saving" | "saved" | "error";
 
+const TASK_BOARD_NAME = "Task board";
+
 type PublicView = { id: string; name: string; authorName?: string; project: FactoryProject };
 
 interface DesignStore {
@@ -94,6 +97,8 @@ interface DesignStore {
   /** Puts `id` on the canvas, and back on the strip if it was closed. */
   switchToDesign: (id: string) => Promise<void>;
   addDesign: () => Promise<void>;
+  /** A new design that opens on its task board (`primaryView: "tasks"`). */
+  addTaskBoard: () => Promise<void>;
   /** Adds `project` as a new design tab and switches to it (community imports). */
   importProjectAsDesign: (project: FactoryProject, name: string) => Promise<void>;
   /**
@@ -593,6 +598,24 @@ export const useDesignStore = create<DesignStore>((set, get) => ({
     const record = createDesignRecord(createEmptyProject(), UNTITLED_DESIGN_NAME);
     await writeDesign(record);
     landOnDesign(set, record);
+    leaveLibrary();
+    set(await listLibrary());
+  },
+
+  addTaskBoard: async () => {
+    const { activeDesignId, designs } = get();
+    await flushCanvasInto(designs.find((design) => design.id === activeDesignId));
+
+    const record = createDesignRecord(
+      { ...createEmptyProject(), primaryView: "tasks" },
+      makeUniqueDesignName(
+        TASK_BOARD_NAME,
+        designs.map((design) => design.name),
+      ),
+    );
+    await writeDesign(record);
+    landOnDesign(set, record);
+    leaveWelcomeTab();
     leaveLibrary();
     set(await listLibrary());
   },

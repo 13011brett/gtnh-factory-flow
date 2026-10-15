@@ -272,6 +272,11 @@ interface FactoryStore {
    * this tab's, never in history, never sent back.
    */
   applyLiveOps: (ops: LiveOp[]) => void;
+  /**
+   * A task board edit (src/lib/tasks/task-board.ts): one undo step and, on a
+   * live plan, one batch. Tasks never feed the solve, so the books stay.
+   */
+  editTasks: (edit: (project: FactoryProject) => FactoryProject) => void;
   setDatasetManifest: (manifest: DatasetManifest, manifestUrl: string) => void;
   setDataset: (dataset: RecipeDataset) => void;
   /**
@@ -1185,6 +1190,15 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
         };
       }),
     );
+  },
+  editTasks: (edit) => {
+    set((state) => {
+      const next = edit(state.project);
+      if (next === state.project) {
+        return state;
+      }
+      return withProjectHistory(state, { project: touchProject(next) });
+    });
   },
   undo: () => {
     const live = liveUndoHandler();

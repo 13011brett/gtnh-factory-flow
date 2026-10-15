@@ -40,6 +40,9 @@ import { PublicViewBar } from "./community/PublicViewBar";
 import { ViewOnlyNotice } from "./community/ViewOnlyNotice";
 import { TabConflictNotice } from "./TabConflictNotice";
 import { LiveNotice } from "./live/LiveNotice";
+import { TaskBoard, TaskFaceController } from "./tasks/TaskBoard";
+import { isLiveConfigured } from "@/lib/live/live-config";
+import { usePlanFace } from "@/lib/tasks/task-view";
 import { BlueprintSaveDialog } from "./BlueprintSaveDialog";
 import { PowerSourceOverlay } from "./PowerSourceOverlay";
 import { FactoryFlow } from "./flow/FactoryFlow";
@@ -371,6 +374,10 @@ function PlacementRevealer() {
 function BoardColumn() {
   const covering = useCoveringPage();
   const publicView = useDesignStore((state) => state.publicView);
+  // The task board is the plan's other face, over the board like the
+  // Library. Only with live plans configured (tasks come with them).
+  const face = usePlanFace();
+  const showTasks = TASKS_ENABLED && face === "tasks" && !covering;
 
   return (
     <div className="grid h-full min-h-0 min-w-0 grid-rows-[auto_minmax(0,1fr)]">
@@ -385,6 +392,12 @@ function BoardColumn() {
       */}
       <div className="relative min-h-0">
         <FactoryFlow />
+        {TASKS_ENABLED ? <TaskFaceController /> : null}
+        {showTasks ? (
+          <div className="absolute inset-0 z-30">
+            <TaskBoard />
+          </div>
+        ) : null}
         {covering === "welcome" ? (
           <div className="absolute inset-0 z-40">
             <WelcomePage />
@@ -506,6 +519,8 @@ function CompactWorkspace({ workspace, onLoadDatasetVersion }: WorkspaceProps) {
     </main>
   );
 }
+
+const TASKS_ENABLED = isLiveConfigured();
 
 /** Wide enough for one 24px button plus its border. */
 const RAIL_WIDTH = 26;

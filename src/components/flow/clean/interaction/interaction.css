@@ -113,12 +113,13 @@
   padding-top: 1px;
 }
 .cc-row[data-port][data-wired="false"]:not([data-forced]):not([data-carried]) .cc-num {
-  height: 15px;
-  line-height: 15px;
+  height: 14px;
+  line-height: 14px;
 }
 .cc-row[data-open] .cc-prk,
 .cc-row[data-open] .cc-prb {
-  bottom: 0;
+  /* The mod's ctrlY: the box a few px clear of the striped box's foot, not on it. */
+  bottom: 2px;
 }
 .cc-row[data-carried] .cc-prk,
 .cc-row[data-carried] .cc-prb {

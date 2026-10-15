@@ -3,15 +3,14 @@
 // web right) and merges tools/parity/out/gallery/capture.json.
 //   node tools/parity/gallery-capture.mjs [ref-regex]
 //
-// Scale. "screen": fixed chrome is compared at the same size on screen. The mod shots are screen px at GUI scale 2, so
-// the web is captured in css px (screen px at 100% browser zoom) and its board zoom is twice the mod's (a mod card at
-// zoom 0.5 is 320 screen px, the website's at zoom 1). "board": a board crop is compared as run.mjs does, one mod GUI px
-// to one css px (cards both 320), at the mod's zoom.
+// Scale: everything is compared at its size on screen. The mod shots are screen px at GUI scale 2, where the board
+// draws at twice the zoom it reports; the web is captured in css px (screen px at 100% browser zoom) with its board at
+// twice the mod's zoom, so a mod card at zoom 0.5 and a web card at zoom 1 are both 320 screen px.
 import fs from "node:fs";
 import zlib from "node:zlib";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { boot, loadPlan, panTo, rectOf, setZoom, DSF } from "./lib/app.mjs";
+import { boot, loadPlan, panTo, rectOf, setZoom } from "./lib/app.mjs";
 import { readPng, writePng, sideBySide, blank, copyInto } from "./lib/png.mjs";
 import { refChain, drawerPlan, forcedPlan, ebfOne } from "./lib/plans.mjs";
 
@@ -290,12 +289,13 @@ for (const e of entries) {
     if (e.setup && !e.board) await e.setup(ctx);
     if (e.board) {
       const [k, z, rx, ry] = e.board;
-      await setZoom(page, ids[k], z);
-      await panTo(page, ids[k], 420 + rx / DSF, 160 + ry / DSF);
+      // Screen scale, as everything else: the board at twice the mod's zoom, clear of the overview.
+      await setZoom(page, ids[k], 2 * z);
+      await panTo(page, ids[k], 400 + rx, 40 + ry);
       await idle(page);
       await wait(page, 400);
       if (e.setup) await e.setup(ctx);
-      await page.screenshot({ path: shot, clip: { x: 420, y: 160, width: ref.width / DSF, height: ref.height / DSF } });
+      await page.screenshot({ path: shot, scale: "css", clip: { x: 400, y: 40, width: Math.min(ref.width, 1520), height: Math.min(ref.height, 1040) } });
       if (e.hold) await page.mouse.up();
     } else if (e.full) {
       await page.screenshot({ path: shot, scale: "css" });

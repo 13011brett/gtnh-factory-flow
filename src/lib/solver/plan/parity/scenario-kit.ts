@@ -5,6 +5,7 @@
  */
 import { buildRailPorts, deriveNodeVerdict } from "@/components/flow/node-verdict";
 import { buildRailModel } from "@/components/flow/clean/rail/rail-model";
+import { buildNotices } from "@/components/flow/clean/rail/notices";
 import { portRowPerSecond } from "@/components/flow/clean/clean-model";
 import { CUSTOM_RATE_MACHINE_TYPE } from "../../../model/custom-rate";
 import { FLUID_TANK_MACHINE_TYPE, FLUID_TANK_MAP } from "../../../model/fluid-tank";
@@ -215,7 +216,15 @@ export interface CardReading {
 export interface BoardReading {
   cards: Map<number, CardReading>;
   drawers: Map<number, { rate: number; unset: boolean }>;
-  totals: { inputs: Record<string, number>; outputs: Record<string, number> };
+  totals: {
+    inputs: Record<string, number>;
+    outputs: Record<string, number>;
+    internal: Record<string, number>;
+    /** The overview's machine lines: card id to count. */
+    machines: Record<string, number>;
+  };
+  /** The notices bar, by kind (`no-pin`, `unmet:<drawer>`, `overshoot`, ...). */
+  notices: string[];
 }
 
 /**
@@ -276,8 +285,11 @@ export function readBoard(
     });
   }
   const rail = buildRailModel(project, result);
-  const totals = { inputs: {} as Record<string, number>, outputs: {} as Record<string, number> };
+  const totals: BoardReading["totals"] = { inputs: {}, outputs: {}, internal: {}, machines: {} };
   for (const line of rail.inputs) if (line.amount > 1e-9) totals.inputs[line.label] = line.amount;
   for (const line of rail.outputs) if (line.amount > 1e-9) totals.outputs[line.label] = line.amount;
-  return { cards, drawers, totals };
+  for (const line of rail.internal) if (line.amount > 1e-9) totals.internal[line.label] = line.amount;
+  for (const line of rail.machines) totals.machines[line.nodeId] = line.count;
+  const notices = buildNotices(project, result).map((n) => n.id.replace(/^(overshoot|unwired|ignored):.*/, "$1"));
+  return { cards, drawers, totals, notices };
 }

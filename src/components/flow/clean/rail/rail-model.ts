@@ -1,4 +1,5 @@
 import { isCustomRateRecipe } from "@/lib/model/custom-rate";
+import { isFluidTankRecipe } from "@/lib/model/fluid-tank";
 import { buildMachineList, type MachineListEntry } from "@/lib/model/machine-list";
 import { makeResourceKey } from "@/lib/model/resources";
 import { getStorageRoles, type StorageRole } from "@/lib/model/storage-role";
@@ -222,6 +223,8 @@ export function buildRailModel(
 
   const machineEntries = buildMachineList(project, result);
   const machines: RailMachine[] = machineEntries
+    // A fluid tank is free and instant: nothing to build (the mod leaves it out of the machine lines).
+    .filter((entry) => !isFluidTankRecipe(recipes.get(nodesById.get(entry.nodeId)?.recipeId ?? "")))
     .filter((entry) => entry.count > 1e-9 || (nodesById.get(entry.nodeId)?.solvePin ?? 0) > 0)
     .map((entry) => {
       const pin = nodesById.get(entry.nodeId)?.solvePin;
@@ -402,7 +405,7 @@ export function buildRailModel(
     },
     hasMade: machineEntries.some((e) => e.madeEuT !== undefined),
   };
-  const wholeMachines = machineEntries.reduce((total, e) => total + Math.ceil(e.count - 1e-9), 0);
+  const wholeMachines = machines.reduce((total, e) => total + Math.ceil(e.count - 1e-9), 0);
   return { inputs, outputs, internal, machines, wholeMachines, power, aliases };
 }
 

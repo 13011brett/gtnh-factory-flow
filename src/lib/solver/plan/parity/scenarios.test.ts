@@ -70,7 +70,13 @@ interface ModScenario {
     nothingToSolveFor: boolean;
     cards: Record<string, ModCard>;
     drawers: Record<string, { rate: number; unset: boolean }>;
-    totals: { inputs: Record<string, number>; outputs: Record<string, number> };
+    totals: {
+      inputs: Record<string, number>;
+      outputs: Record<string, number>;
+      internal: Record<string, number>;
+      machines: Record<string, number>;
+    };
+    notices: string[];
   };
 }
 
@@ -229,11 +235,25 @@ function compare(s: Scenario): Run {
     if (!closeF(reading.rate, want.rate)) diffs.push(`board: drawer ${did} rate ${reading.rate} vs mod ${want.rate}`);
     if (reading.unset !== want.unset) diffs.push(`board: drawer ${did} set-rate prompt ${reading.unset} vs mod ${want.unset}`);
   }
-  for (const side of ["inputs", "outputs"] as const) {
+  for (const side of ["inputs", "outputs", "internal"] as const) {
     const web = Object.entries(board.totals[side]).map(([k, v]) => `${k}=${+v.toFixed(5)}`).sort();
     const want = Object.entries(m.board.totals[side]).map(([k, v]) => `${k}=${+v.toFixed(5)}`).sort();
     if (JSON.stringify(web) !== JSON.stringify(want)) diffs.push(`board: rail ${side} ${web} vs mod ${want}`);
   }
+  // Machine lines, by card (a shared machine's sections are one line on the website: summed on the mod's side).
+  const modLines = new Map<string, number>();
+  for (const [id, count] of Object.entries(m.board.totals.machines)) {
+    const card = webOf(id)?.card ?? id;
+    modLines.set(card, (modLines.get(card) ?? 0) + count);
+  }
+  const lineSig = (entries: Iterable<[string, number]>) =>
+    [...entries].map(([id, count]) => `${id.slice(-3)}=${+count.toFixed(5)}`).sort();
+  const webLines = lineSig(Object.entries(board.totals.machines));
+  const wantLines = lineSig(modLines);
+  if (JSON.stringify(webLines) !== JSON.stringify(wantLines)) diffs.push(`board: rail machines ${webLines} vs mod ${wantLines}`);
+  const notices = [...board.notices].sort();
+  const wantNotices = [...m.board.notices].sort();
+  if (JSON.stringify(notices) !== JSON.stringify(wantNotices)) diffs.push(`board: notices ${notices} vs mod ${wantNotices}`);
   void webOf;
   return { input, answer, diffs };
 }

@@ -549,6 +549,10 @@ export interface FactoryAnnotation {
   };
   /** Arrow only: which corners of the bounding box the arrow connects (tail → head). */
   arrowDirection?: FactoryAnnotationArrowDirection;
+  /** Arrow only: a head at the end only (default) or at both ends. */
+  arrowHeads?: "end" | "both";
+  /** Arrow only: the line's thickness in the mod's board px (1 thin, 2 normal and default, 4 thick). */
+  arrowWidth?: number;
   /**
    * Zone only: the outline's vertices, in order, relative to `position`.
    * Drawn as a closed loop; `position`/`size` stay the bounding box so the

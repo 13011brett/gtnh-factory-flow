@@ -22,20 +22,11 @@ export const DRAWING = {
   /** Arrowhead: length and full width. */
   headLength: 14 * K,
   headWidth: 10 * K,
-  /** Image panel: frame, inset and caption strip. */
-  frame: 2 * K,
-  inset: 3 * K,
-  caption: 16 * K,
-  captionFont: 10 * K,
   /** Surface alphas, in 256ths: a tint and a solid. */
   tintAlpha: 0x14,
   solidAlpha: 0x47,
   /** Marks' alpha. */
   marksAlpha: 0x40,
-  /** The clean card's frame grey and panel dark. */
-  frameGrey: "#3c3e45",
-  panel: "#26282c",
-  captionInk: "#9a9ca4",
   selection: "#22d3ee",
 } as const;
 
@@ -61,10 +52,9 @@ export function drawingLook(annotation: FactoryAnnotation): DrawingLook {
   const raw = style?.fill;
   const surface: DrawingSurface = raw === "none" || raw === "solid" ? raw : raw === "paper" ? "solid" : "tint";
   const marks = (style?.marks ?? (raw && LEGACY_MARKS.has(raw) ? raw : "none")) as FactoryAnnotationMarks;
-  const neutral = annotation.kind === "image" && !annotation.colorTag && !style?.borderColor;
   return {
     border: style?.border ?? "solid",
-    borderColor: neutral ? DRAWING.frameGrey : swatch(style?.borderColor ?? annotation.colorTag),
+    borderColor: swatch(style?.borderColor ?? annotation.colorTag),
     fillColor: swatch(style?.fillColor ?? annotation.colorTag),
     surface,
     marks,
@@ -157,4 +147,50 @@ export function scalePoints(
   const sx = from.width > 0 ? to.width / from.width : 1;
   const sy = from.height > 0 ? to.height / from.height : 1;
   return points.map((p) => ({ x: Math.round(p.x * sx), y: Math.round(p.y * sy) }));
+}
+
+/** An arrow's line thickness (board px) and whether it wears a head at both ends. */
+export function arrowStyle(annotation: Pick<FactoryAnnotation, "arrowWidth" | "arrowHeads">): {
+  width: number;
+  both: boolean;
+} {
+  const mod = annotation.arrowWidth && annotation.arrowWidth > 0 ? annotation.arrowWidth : 2;
+  return { width: mod * K, both: annotation.arrowHeads === "both" };
+}
+
+type Pt = { x: number; y: number };
+
+/**
+ * The box and direction an arrow from `tail` to `head` is stored as (board points, any frame): the bounding
+ * box's corner, its size, and which corners tail and head are at. Dead straight arrows have a size of 0 on one axis.
+ */
+export function arrowFromEnds(
+  tail: Pt,
+  head: Pt,
+): { position: Pt; size: { width: number; height: number }; arrowDirection: NonNullable<FactoryAnnotation["arrowDirection"]> } {
+  const left = head.x < tail.x;
+  const up = head.y < tail.y;
+  return {
+    position: { x: Math.min(tail.x, head.x), y: Math.min(tail.y, head.y) },
+    size: { width: Math.abs(head.x - tail.x), height: Math.abs(head.y - tail.y) },
+    arrowDirection: `${up ? "up" : "down"}-${left ? "left" : "right"}` as NonNullable<FactoryAnnotation["arrowDirection"]>,
+  };
+}
+
+/** The style patch a menu choice makes on a box or zone: fill and marks stay two separate choices. */
+export function boxStyleWith(
+  annotation: Pick<FactoryAnnotation, "style">,
+  change: { fill?: DrawingSurface; marks?: FactoryAnnotationMarks; border?: FactoryAnnotationBorderStyle },
+): NonNullable<FactoryAnnotation["style"]> {
+  const style = annotation.style ?? {};
+  const raw = style.fill;
+  // A legacy fill that names a mark keeps wearing it once the surface is chosen on its own.
+  const legacyMarks = raw && LEGACY_MARKS.has(raw) ? (raw as FactoryAnnotationMarks) : undefined;
+  const next = { ...style };
+  if (change.fill) next.fill = change.fill;
+  else if (legacyMarks || raw === "paper") next.fill = raw === "paper" ? "solid" : "tint";
+  if (change.marks) next.marks = change.marks;
+  else if (legacyMarks && !style.marks) next.marks = legacyMarks;
+  if (change.border) next.border = change.border;
+  return next;
 }

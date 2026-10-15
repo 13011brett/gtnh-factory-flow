@@ -10,7 +10,8 @@ import type { DatasetResourceIndexEntry } from "@/lib/datasets/types";
 import type { ResourceAmount } from "@/lib/model/types";
 import { getUiScale } from "@/lib/ui-scale";
 import { useFactoryStore } from "@/store/factory-store";
-import { addStickyNoteAt } from "./clean/note/note-actions";
+import { AnnotationMenu } from "./clean/note/AnnotationMenu";
+import { addArrowAt, addBoxAt, addStickyNoteAt } from "./clean/note/note-actions";
 
 /**
  * THE BOARD'S ONE RIGHT-CLICK MENU. Right click the void, a card, a drawer
@@ -38,6 +39,7 @@ export type BoardMenuTarget = {
   | { kind: "pane" }
   | { kind: "node"; id: string }
   | { kind: "storage"; id: string }
+  | { kind: "annotation"; id: string }
   | { kind: "edge"; ids: string[]; resource: ResourceAmount | undefined }
 );
 
@@ -49,6 +51,9 @@ export function BoardContextMenu({
   onClose: () => void;
 }) {
   const [picking, setPicking] = useState(false);
+  const annotation = useFactoryStore((state) =>
+    target.kind === "annotation" ? state.project.annotations?.find((entry) => entry.id === target.id) : undefined,
+  );
   const planMode = useFactoryStore((state) => state.project.planMode === true);
   const datasetManifestUrl = useFactoryStore((state) => state.datasetManifestUrl);
   const datasetManifest = useFactoryStore((state) => state.datasetManifest);
@@ -117,6 +122,12 @@ export function BoardContextMenu({
     );
   }
 
+  if (target.kind === "annotation") {
+    return annotation ? (
+      <AnnotationMenu annotation={annotation} x={target.x} y={target.y} onClose={onClose} />
+    ) : null;
+  }
+
   const store = () => useFactoryStore.getState();
   const run = (action: () => void) => () => {
     action();
@@ -126,7 +137,12 @@ export function BoardContextMenu({
   return (
     <LibraryMenu left={target.x} top={target.y} label="Board menu" onClose={onClose}>
       {target.kind === "pane" && planMode ? (
-        <MenuItem label="Add a sticky note" onClick={run(() => addStickyNoteAt(target.flow))} />
+        <>
+          <MenuItem label="Add sticky note" onClick={run(() => addStickyNoteAt(target.flow))} />
+          <MenuItem label="Add box" onClick={run(() => addBoxAt(target.flow))} />
+          <MenuItem label="Add arrow" onClick={run(() => addArrowAt(target.flow))} />
+          <MenuRule />
+        </>
       ) : null}
       {target.kind === "pane" ? (
         <MenuItem label="New product drawer" onClick={() => setPicking(true)} />

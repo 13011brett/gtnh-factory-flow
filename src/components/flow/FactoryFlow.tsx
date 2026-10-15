@@ -2191,8 +2191,9 @@ export function FactoryFlow() {
             type: "annotationNode",
             position: annotation.position,
             ...childOf(annotation.pocketId),
-            width: annotation.size.width,
-            height: annotation.size.height,
+            // A level arrow has no height: keep the node a hair tall so it is still measured.
+            width: Math.max(annotation.size.width, 1),
+            height: Math.max(annotation.size.height, 1),
             // Boxes, zones and images sit under everything as backdrops;
             // arrows and notes float above the nodes they point at. The class
             // keeps the global "selected nodes rise" rule from lifting a
@@ -5237,6 +5238,15 @@ export function FactoryFlow() {
   const handleNodeContextMenu = useCallback(
     (event: ReactMouseEvent, node: BoardFlowNode) => {
       if (event.defaultPrevented) {
+        return;
+      }
+      if (node.type === "annotationNode") {
+        // A box, zone or arrow on a plan board has its own menu; a sticky note answers for itself.
+        const drawn = useFactoryStore.getState().project.annotations?.find((entry) => entry.id === node.id);
+        if (drawn && drawn.kind !== "text" && useFactoryStore.getState().project.planMode === true) {
+          event.preventDefault();
+          setBoardMenu({ kind: "annotation", id: node.id, ...menuPoint(event) });
+        }
         return;
       }
       if (node.type !== "recipeNode" && node.type !== "storageNode") {

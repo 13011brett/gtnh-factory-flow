@@ -17,6 +17,9 @@ function AnnotationSwitchComponent(props: NodeProps<AnnotationFlowNode>) {
   if (planMode && props.data.annotation.kind === "text") {
     return <StickyNote {...(props as unknown as NodeProps<StickyNoteFlowNode>)} />;
   }
+  if (planMode && props.data.annotation.kind === "image") {
+    return null; // pictures are not supported: kept in the data, shown nowhere
+  }
   if (planMode) {
     return <CleanDrawing {...props} />;
   }

@@ -3124,7 +3124,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
           ...(state.project.annotations ?? []),
           {
             ...annotation,
-            ...snapAnnotationToGrid(annotation),
+            ...snapAnnotationToGrid(annotation, annotation.kind),
             id: createId("annotation"),
           },
         ],
@@ -3139,7 +3139,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
         ...state.project,
         annotations: (state.project.annotations ?? []).map((annotation) =>
           annotation.id === annotationId
-            ? { ...annotation, ...patch, ...snapAnnotationToGrid(patch) }
+            ? { ...annotation, ...patch, ...snapAnnotationToGrid(patch, annotation.kind) }
             : annotation,
         ),
       });
@@ -6538,16 +6538,19 @@ const CLONE_OFFSET = BOARD_GRID * 2;
  * box drawn freehand still ends up a whole number of cells, on a cell corner.
  * Only the keys present in the patch are touched.
  */
-function snapAnnotationToGrid(patch: Partial<FactoryAnnotation>): Partial<FactoryAnnotation> {
+function snapAnnotationToGrid(
+  patch: Partial<FactoryAnnotation>,
+  kind?: FactoryAnnotation["kind"],
+): Partial<FactoryAnnotation> {
   const snapped: Partial<FactoryAnnotation> = {};
   if (patch.position) {
     snapped.position = snapPositionToGrid(patch.position);
   }
   if (patch.size) {
-    snapped.size = {
-      width: snapSizeUpToGrid(patch.size.width),
-      height: snapSizeUpToGrid(patch.size.height),
-    };
+    // An arrow may run dead straight (an axis of 0); anything else grows to a whole cell.
+    const axis = (value: number) =>
+      kind === "arrow" ? Math.max(0, Math.round(value / BOARD_GRID) * BOARD_GRID) : snapSizeUpToGrid(value);
+    snapped.size = { width: axis(patch.size.width), height: axis(patch.size.height) };
   }
   if (patch.points) {
     snapped.points = patch.points.map((point) => snapPositionToGrid(point));

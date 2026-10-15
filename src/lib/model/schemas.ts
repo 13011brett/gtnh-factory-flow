@@ -428,6 +428,8 @@ export const factoryAnnotationSchema = z.object({
     height: z.number(),
   }),
   arrowDirection: z.enum(["down-right", "down-left", "up-right", "up-left"]).optional(),
+  arrowHeads: z.enum(["end", "both"]).optional(),
+  arrowWidth: z.number().min(1).max(8).optional(),
   // Zone outlines: bounded so an imported plan cannot carry a pathological
   // vertex soup; a drawn zone simplifies to a handful of corners.
   points: z.array(z.object({ x: z.number(), y: z.number() })).max(64).optional(),

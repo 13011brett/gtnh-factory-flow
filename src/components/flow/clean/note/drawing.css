@@ -1,7 +1,7 @@
 /*
- * Box, zone, arrow and image annotations on a plan board (docs/annotations.md; the mod's DrawingPaint draws the same):
- * flat, square, a thin line, the card font. Interiors let clicks through; only the elements with the drag-handle
- * class (the border strips, the line, the picture panel) take the pointer.
+ * Box, zone and arrow annotations on a plan board (docs/annotations.md; the mod's DrawingPaint draws the same): flat,
+ * square, a thin line, the card font. Interiors let clicks through; only the elements with the drag-handle class (the
+ * border strips, the line) and the resize and end handles take the pointer.
  */
 .dw {
   position: relative;
@@ -10,7 +10,8 @@
   -webkit-font-smoothing: none;
   user-select: none;
 }
-.dw[data-selected="true"]::after {
+/* The selection outline: only with several things selected (a single one wears its handles). */
+.dw[data-multi]::after {
   content: "";
   position: absolute;
   inset: -2px;
@@ -23,40 +24,67 @@
   box-sizing: border-box;
   pointer-events: none;
 }
+/* A box moves by its border: the line and a band inside it. Outside the line is the resize band (below). */
 .dw-strip {
   position: absolute;
   pointer-events: all;
   cursor: grab;
 }
 .dw-top {
-  top: -12px;
+  top: -2px;
   left: 16px;
   right: 16px;
-  height: 24px;
+  height: 14px;
 }
 .dw-bottom {
-  bottom: -12px;
+  bottom: -2px;
   left: 16px;
   right: 16px;
-  height: 24px;
+  height: 14px;
 }
 .dw-left {
-  left: -12px;
+  left: -2px;
   top: 16px;
   bottom: 16px;
-  width: 24px;
+  width: 14px;
 }
 .dw-right {
-  right: -12px;
+  right: -2px;
   top: 16px;
   bottom: 16px;
-  width: 24px;
+  width: 14px;
+}
+/* The resize edges of a selected box: a band just outside each side (React Flow's lines, thickened). */
+.dw .react-flow__resize-control.line {
+  border: 0;
+  background: transparent;
+}
+.dw .react-flow__resize-control.line.top {
+  top: 0;
+  height: 8px;
+  transform: translate(0, -100%);
+}
+.dw .react-flow__resize-control.line.bottom {
+  top: auto;
+  bottom: 0;
+  height: 8px;
+  transform: translate(0, 100%);
+}
+.dw .react-flow__resize-control.line.left {
+  left: 0;
+  width: 8px;
+  transform: translate(-100%, 0);
+}
+.dw .react-flow__resize-control.line.right {
+  left: auto;
+  right: 0;
+  width: 8px;
+  transform: translate(100%, 0);
 }
 .dw-svg {
   position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  left: 0;
+  top: 0;
   overflow: visible;
   pointer-events: none;
 }
@@ -64,42 +92,21 @@
   pointer-events: stroke;
   cursor: grab;
 }
-.dw-image {
+/* An arrow's end handles: shown while it is selected or the pointer is on it. */
+.dw-end {
   position: absolute;
-  inset: 0;
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
   box-sizing: border-box;
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  background: #26282c;
+  background: #22d3ee;
+  border: 1px solid #0e7490;
+  cursor: crosshair;
+  display: none;
   pointer-events: all;
-  cursor: grab;
-  overflow: hidden;
+  z-index: 10;
 }
-.dw-picture {
-  position: relative;
-  flex: 1 1 auto;
-  min-height: 0;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-.dw-picture img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-  user-select: none;
-}
-.dw-missing {
-  position: absolute;
-  font-size: 12px;
-  color: #9a9ca4;
-}
-.dw-caption {
-  flex: none;
-  line-height: 1.6;
-  color: #9a9ca4;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+.dw[data-selected="true"] .dw-end,
+.dw:hover .dw-end {
+  display: block;
 }

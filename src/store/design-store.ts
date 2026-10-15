@@ -432,7 +432,8 @@ function isBlankDesign(record: DesignRecord): boolean {
     project.nodes.length === 0 &&
     (project.storages?.length ?? 0) === 0 &&
     (project.annotations?.length ?? 0) === 0 &&
-    (project.pockets?.length ?? 0) === 0
+    (project.pockets?.length ?? 0) === 0 &&
+    (project.tasks?.length ?? 0) === 0
   );
 }
 

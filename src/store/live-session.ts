@@ -359,6 +359,8 @@ export class LiveSession {
     if (this.room) {
       this.room.joined = false;
       this.room.joinSent = false;
+      // Who is here is unknown until the next snapshot.
+      this.room.present = [];
     }
     clearPresence();
     if (ws) {
@@ -382,6 +384,8 @@ export class LiveSession {
     if (this.room) {
       this.room.joined = false;
       this.room.joinSent = false;
+      // Who is here is unknown until the next snapshot.
+      this.room.present = [];
     }
     clearPresence();
     if (code === 4001) {
@@ -403,6 +407,22 @@ export class LiveSession {
       this.retryTimer = undefined;
       this.connect();
     }, delay);
+  }
+
+  /** The connection drops as if the network went (development probes). */
+  dropConnection(): void {
+    const ws = this.ws;
+    if (!ws) {
+      return;
+    }
+    ws.onclose = null;
+    ws.onmessage = null;
+    try {
+      ws.close(4000, "dropped");
+    } catch {
+      // Already closed.
+    }
+    this.onClosed(1006);
   }
 
   /** The network or the tab came back: try at once rather than wait out the backoff. */
@@ -961,6 +981,7 @@ export function startLiveSessions(options?: LiveSessionOptions): () => void {
       session: useLiveSession,
       factory: useFactoryStore,
       design: useDesignStore,
+      drop: () => started.dropConnection(),
     };
   }
   return () => {

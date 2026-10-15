@@ -312,7 +312,9 @@ class SqlBuilder {
       const joined =
         condition.items.length === 0
           ? "true"
-          : condition.items.map((item) => `(${this.condition(item)})`).join(condition.op === "and" ? " and " : " or ");
+          : condition.items
+              .map((item) => `(${this.condition(item)})`)
+              .join(condition.op === "and" ? " and " : " or ");
       return condition.negate ? `not (${joined})` : joined;
     }
     const sql = this.filter(condition.column, condition.op, condition.value);
@@ -438,7 +440,10 @@ function contentRange(offset: number, rows: number, total: number | undefined): 
 
 const SINGLE_OBJECT = "application/vnd.pgrst.object+json";
 
-export function createPostgrestHandler(db: SqlDatabase, options: PostgrestHandlerOptions = {}): PostgrestHandler {
+export function createPostgrestHandler(
+  db: SqlDatabase,
+  options: PostgrestHandlerOptions = {},
+): PostgrestHandler {
   let schema: Promise<Map<string, TableInfo>> | undefined;
 
   const loadSchema = async (): Promise<Map<string, TableInfo>> => {
@@ -516,7 +521,12 @@ export function createPostgrestHandler(db: SqlDatabase, options: PostgrestHandle
     });
   };
 
-  const read = async (request: Request, tableName: string, url: URL, head: boolean): Promise<Response> => {
+  const read = async (
+    request: Request,
+    tableName: string,
+    url: URL,
+    head: boolean,
+  ): Promise<Response> => {
     const { info } = await tableFor(tableName);
     const parsed = parseRequest(url);
     const prefer = parsePrefer(request.headers);
@@ -526,7 +536,10 @@ export function createPostgrestHandler(db: SqlDatabase, options: PostgrestHandle
     const filterParams = builder.params.slice();
     let total: number | undefined;
     if (prefer.count) {
-      const counted = await db.query(`select count(*)::bigint as n from ${builder.qualified}${where}`, filterParams);
+      const counted = await db.query(
+        `select count(*)::bigint as n from ${builder.qualified}${where}`,
+        filterParams,
+      );
       total = Number(counted.rows[0]?.n ?? 0);
     }
     const offset = parsed.offset ?? 0;
@@ -563,7 +576,9 @@ export function createPostgrestHandler(db: SqlDatabase, options: PostgrestHandle
     );
     const body = String(rows[0]?.body ?? "[]");
     const affected = Number(rows[0]?.n ?? 0);
-    const headers = { "content-range": contentRange(0, affected, prefer.count ? affected : undefined) };
+    const headers = {
+      "content-range": contentRange(0, affected, prefer.count ? affected : undefined),
+    };
     if (!prefer.representation) {
       return new Response(null, { status: status.withoutBody, headers });
     }
@@ -580,10 +595,15 @@ export function createPostgrestHandler(db: SqlDatabase, options: PostgrestHandle
 
     if (method === "DELETE") {
       const where = builder.where(parsed.conditions);
-      return mutate(request, `delete from ${builder.qualified}${where} returning ${returning}`, builder.params, {
-        withBody: 200,
-        withoutBody: 204,
-      });
+      return mutate(
+        request,
+        `delete from ${builder.qualified}${where} returning ${returning}`,
+        builder.params,
+        {
+          withBody: 200,
+          withoutBody: 204,
+        },
+      );
     }
 
     let payload: unknown;
@@ -597,10 +617,19 @@ export function createPostgrestHandler(db: SqlDatabase, options: PostgrestHandle
       for (const name of names) {
         const column = info.columns.get(name);
         if (!column) {
-          fail(400, "PGRST204", `Could not find the '${name}' column of '${tableName}' in the schema cache`);
+          fail(
+            400,
+            "PGRST204",
+            `Could not find the '${name}' column of '${tableName}' in the schema cache`,
+          );
         }
         if (column.generated) {
-          fail(400, "428C9", `cannot insert a non-DEFAULT value into column "${name}"`, `Column "${name}" is a generated column.`);
+          fail(
+            400,
+            "428C9",
+            `cannot insert a non-DEFAULT value into column "${name}"`,
+            `Column "${name}" is a generated column.`,
+          );
         }
       }
     };
@@ -634,11 +663,14 @@ export function createPostgrestHandler(db: SqlDatabase, options: PostgrestHandle
       if (rows.some((row) => typeof row !== "object" || row === null || Array.isArray(row))) {
         fail(400, "PGRST102", "An insert needs JSON objects");
       }
-      const names =
-        parsed.columns ?? [...new Set(rows.flatMap((row) => Object.keys(row as object)))];
+      const names = parsed.columns ?? [
+        ...new Set(rows.flatMap((row) => Object.keys(row as object))),
+      ];
       checkColumns(names);
       if (rows.length === 0) {
-        return prefer.representation ? answerRows(request, 201, "[]", {}) : new Response(null, { status: 201 });
+        return prefer.representation
+          ? answerRows(request, 201, "[]", {})
+          : new Response(null, { status: 201 });
       }
       const columnList = names.map(quoteIdent).join(", ");
       const recordset = builder.jsonParam(rows);
@@ -682,7 +714,12 @@ export function createPostgrestHandler(db: SqlDatabase, options: PostgrestHandle
       }
       const rest = /^\/rest\/v1\/([^/]+)$/.exec(url.pathname);
       if (!rest) {
-        return json(404, { code: "PGRST125", message: `Invalid path: ${url.pathname}`, details: null, hint: null });
+        return json(404, {
+          code: "PGRST125",
+          message: `Invalid path: ${url.pathname}`,
+          details: null,
+          hint: null,
+        });
       }
       const tableName = decodeURIComponent(rest[1]!);
       if (!IDENTIFIER.test(tableName)) {

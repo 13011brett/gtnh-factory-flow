@@ -6,7 +6,10 @@ import type { IncomingMessage, ServerResponse } from "node:http";
  */
 
 /** The request as a Fetch API Request; the body is read whole, refused past `maxBytes`. */
-export async function toWebRequest(req: IncomingMessage, maxBytes = 8 * 1024 * 1024): Promise<Request> {
+export async function toWebRequest(
+  req: IncomingMessage,
+  maxBytes = 8 * 1024 * 1024,
+): Promise<Request> {
   const host = req.headers.host ?? "localhost";
   const url = new URL(req.url ?? "/", `http://${host}`);
   const headers = new Headers();

@@ -31,7 +31,9 @@ export function schemaFiles(supabaseDir: string): string[] {
   const files = [path.join(supabaseDir, "schema.sql")];
   const migrations = path.join(supabaseDir, "migrations");
   try {
-    for (const name of readdirSync(migrations).filter((file) => file.endsWith(".sql")).sort()) {
+    for (const name of readdirSync(migrations)
+      .filter((file) => file.endsWith(".sql"))
+      .sort()) {
       files.push(path.join(migrations, name));
     }
   } catch {
@@ -59,7 +61,9 @@ create table if not exists local_storage.objects (
 );
 `;
 
-export async function openLocalDatabase(options: OpenLocalDatabaseOptions = {}): Promise<LocalDatabase> {
+export async function openLocalDatabase(
+  options: OpenLocalDatabaseOptions = {},
+): Promise<LocalDatabase> {
   if (options.dir) {
     mkdirSync(options.dir, { recursive: true });
   }
@@ -73,7 +77,9 @@ export async function openLocalDatabase(options: OpenLocalDatabaseOptions = {}):
     query: (text, params) => db.query<Record<string, unknown>>(text, params),
     exec: (text) => db.exec(text),
   };
-  const handle = createPostgrestHandler(sql, { storage: (request, rest) => storage(db, request, rest) });
+  const handle = createPostgrestHandler(sql, {
+    storage: (request, rest) => storage(db, request, rest),
+  });
   await handle.reloadSchema();
   return {
     db,
@@ -83,7 +89,10 @@ export async function openLocalDatabase(options: OpenLocalDatabaseOptions = {}):
 }
 
 function storageJson(status: number, body: unknown): Response {
-  return new Response(JSON.stringify(body), { status, headers: { "content-type": "application/json" } });
+  return new Response(JSON.stringify(body), {
+    status,
+    headers: { "content-type": "application/json" },
+  });
 }
 
 function storageError(status: number, error: string, message: string): Response {
@@ -91,7 +100,9 @@ function storageError(status: number, error: string, message: string): Response 
 }
 
 /** The bytes and type of an upload: a raw body, or the multipart form supabase-js sends for a Blob. */
-async function uploadBody(request: Request): Promise<{ bytes: Uint8Array; contentType: string; cacheControl?: string }> {
+async function uploadBody(
+  request: Request,
+): Promise<{ bytes: Uint8Array; contentType: string; cacheControl?: string }> {
   const type = request.headers.get("content-type") ?? "application/octet-stream";
   if (type.startsWith("multipart/form-data")) {
     const form = await request.formData();
@@ -127,7 +138,12 @@ async function storage(db: PGlite, request: Request, rest: string): Promise<Resp
       );
       const bucket = rows[0];
       return bucket
-        ? storageJson(200, { id: bucket.id, name: bucket.id, public: bucket.public, created_at: bucket.created_at })
+        ? storageJson(200, {
+            id: bucket.id,
+            name: bucket.id,
+            public: bucket.public,
+            created_at: bucket.created_at,
+          })
         : storageError(404, "Bucket not found", "Bucket not found");
     }
     if (method === "POST" && parts.length === 1) {
@@ -136,10 +152,10 @@ async function storage(db: PGlite, request: Request, rest: string): Promise<Resp
       if (!id) {
         return storageError(400, "Invalid request", "A bucket needs a name");
       }
-      const { rows } = await db.query("insert into local_storage.buckets (id, public) values ($1, $2) on conflict do nothing returning id", [
-        id,
-        body.public === true,
-      ]);
+      const { rows } = await db.query(
+        "insert into local_storage.buckets (id, public) values ($1, $2) on conflict do nothing returning id",
+        [id, body.public === true],
+      );
       return rows.length > 0
         ? storageJson(200, { name: id })
         : storageError(409, "Duplicate", "The resource already exists");
@@ -156,7 +172,12 @@ async function storage(db: PGlite, request: Request, rest: string): Promise<Resp
     const publicOnly = parts[1] === "public";
     const authenticated = parts[1] === "authenticated";
     const [bucket, ...objectPath] = parts.slice(publicOnly || authenticated ? 2 : 1);
-    const { rows } = await db.query<{ bytes: Uint8Array; content_type: string; cache_control: string | null; public: boolean }>(
+    const { rows } = await db.query<{
+      bytes: Uint8Array;
+      content_type: string;
+      cache_control: string | null;
+      public: boolean;
+    }>(
       `select o.bytes, o.content_type, o.cache_control, b.public
          from local_storage.objects o join local_storage.buckets b on b.id = o.bucket
         where o.bucket = $1 and o.path = $2`,

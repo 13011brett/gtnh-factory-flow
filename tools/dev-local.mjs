@@ -95,7 +95,10 @@ async function stop(code = 0) {
   stopping = true;
   // The database first and gently, so PGlite writes everything out.
   await fetch(`${dbUrl}/__local-db/shutdown`, { method: "POST" }).catch(() => undefined);
-  const exited = children.map((child) => new Promise((resolve) => (child.exitCode !== null ? resolve() : child.once("exit", resolve))));
+  const exited = children.map(
+    (child) =>
+      new Promise((resolve) => (child.exitCode !== null ? resolve() : child.once("exit", resolve))),
+  );
   await Promise.race([Promise.all(exited), new Promise((resolve) => setTimeout(resolve, 5000))]);
   for (const child of children) {
     if (child.exitCode === null && child.pid) {

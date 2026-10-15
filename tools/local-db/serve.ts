@@ -45,7 +45,12 @@ async function main() {
       } catch (error) {
         const status = error instanceof BodyTooLargeError ? 413 : 500;
         res.writeHead(status, { "content-type": "application/json" });
-        res.end(JSON.stringify({ code: "PGRST000", message: error instanceof Error ? error.message : "error" }));
+        res.end(
+          JSON.stringify({
+            code: "PGRST000",
+            message: error instanceof Error ? error.message : "error",
+          }),
+        );
       }
     })();
   });

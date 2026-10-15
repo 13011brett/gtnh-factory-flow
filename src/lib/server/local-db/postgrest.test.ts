@@ -35,7 +35,11 @@ async function makeUser(username: string): Promise<string> {
 describe("the local database's PostgREST stand-in", () => {
   it("inserts, reads one row back, and answers no row as maybeSingle does", async () => {
     const id = await makeUser("alice");
-    const { data } = await db.from("community_users").select("id,username,is_admin").eq("id", id).single();
+    const { data } = await db
+      .from("community_users")
+      .select("id,username,is_admin")
+      .eq("id", id)
+      .single();
     expect(data).toEqual({ id, username: "alice", is_admin: false });
     const missing = await db
       .from("community_users")
@@ -53,7 +57,9 @@ describe("the local database's PostgREST stand-in", () => {
 
   it("refuses a duplicate with Postgres's code and PostgREST's status", async () => {
     await makeUser("bob");
-    const { error, status } = await db.from("community_users").insert({ username: "bob", password_hash: "x" });
+    const { error, status } = await db
+      .from("community_users")
+      .insert({ username: "bob", password_hash: "x" });
     expect(status).toBe(409);
     expect(error?.code).toBe("23505");
   });
@@ -93,7 +99,12 @@ describe("the local database's PostgREST stand-in", () => {
       })
       .select("id,name,updated_at,deleted_at")
       .single();
-    expect(inserted.data).toEqual({ id: "design-1", name: "Steel", updated_at: "2026-10-14T12:00:00+00:00", deleted_at: null });
+    expect(inserted.data).toEqual({
+      id: "design-1",
+      name: "Steel",
+      updated_at: "2026-10-14T12:00:00+00:00",
+      deleted_at: null,
+    });
     const read = await db
       .from("library_designs")
       .select("id,plan")
@@ -132,11 +143,42 @@ describe("the local database's PostgREST stand-in", () => {
   it("searches, filters, orders with nulls last and pages with a total (community list)", async () => {
     const userId = await makeUser("erin");
     // Rows of one insert carry the same keys: a key missing from one is null there, as in PostgREST.
-    const base = { uploader_key: "u", user_id: userId, author_name: "erin", plan: {}, description: "", tags: [], tags_text: "", is_public: true, last_activity_at: null };
+    const base = {
+      uploader_key: "u",
+      user_id: userId,
+      author_name: "erin",
+      plan: {},
+      description: "",
+      tags: [],
+      tags_text: "",
+      is_public: true,
+      last_activity_at: null,
+    };
     const inserted = await db.from("community_plans").insert([
-      { ...base, name: "Oil cracking", tags: ["oil"], tags_text: "oil", outputs: [{ kind: "fluid", resourceId: "diesel", rate: 2 }], highest_tier_index: 3, last_activity_at: "2026-10-01T00:00:00Z" },
-      { ...base, name: "Steel line", tags_text: "metal", outputs: [], highest_tier_index: 1, is_public: false },
-      { ...base, name: "Diesel power", description: "oil to EU", outputs: [{ kind: "fluid", resourceId: "diesel", rate: 9 }], highest_tier_index: 2 },
+      {
+        ...base,
+        name: "Oil cracking",
+        tags: ["oil"],
+        tags_text: "oil",
+        outputs: [{ kind: "fluid", resourceId: "diesel", rate: 2 }],
+        highest_tier_index: 3,
+        last_activity_at: "2026-10-01T00:00:00Z",
+      },
+      {
+        ...base,
+        name: "Steel line",
+        tags_text: "metal",
+        outputs: [],
+        highest_tier_index: 1,
+        is_public: false,
+      },
+      {
+        ...base,
+        name: "Diesel power",
+        description: "oil to EU",
+        outputs: [{ kind: "fluid", resourceId: "diesel", rate: 9 }],
+        highest_tier_index: 2,
+      },
     ]);
     expect(inserted.error).toBeNull();
     const term = "oil";
@@ -152,8 +194,15 @@ describe("the local database's PostgREST stand-in", () => {
       .range(0, 0);
     expect(count).toBe(2);
     expect((data as Array<{ name: string }>).map((row) => row.name)).toEqual(["Oil cracking"]);
-    const nullable = await db.from("community_plans").select("name").or("is_public.eq.true,is_public.is.null").order("name");
-    expect((nullable.data as Array<{ name: string }>).map((row) => row.name)).toEqual(["Diesel power", "Oil cracking"]);
+    const nullable = await db
+      .from("community_plans")
+      .select("name")
+      .or("is_public.eq.true,is_public.is.null")
+      .order("name");
+    expect((nullable.data as Array<{ name: string }>).map((row) => row.name)).toEqual([
+      "Diesel power",
+      "Oil cracking",
+    ]);
   });
 
   it("filters with in, deletes, and refuses unknown tables and columns", async () => {
@@ -166,25 +215,39 @@ describe("the local database's PostgREST stand-in", () => {
     const planId = (plan as { id: string }).id;
     await db.from("community_votes").upsert({ plan_id: planId, voter_key: "v1", value: 1 });
     await db.from("community_votes").upsert({ plan_id: planId, voter_key: "v1", value: -1 });
-    const votes = await db.from("community_votes").select("plan_id,value").eq("voter_key", "v1").in("plan_id", [planId]);
+    const votes = await db
+      .from("community_votes")
+      .select("plan_id,value")
+      .eq("voter_key", "v1")
+      .in("plan_id", [planId]);
     expect(votes.data).toEqual([{ plan_id: planId, value: -1 }]);
     await db.from("community_votes").delete().eq("plan_id", planId).eq("voter_key", "v1");
-    const { count } = await db.from("community_votes").select("plan_id", { count: "exact", head: true }).eq("plan_id", planId);
+    const { count } = await db
+      .from("community_votes")
+      .select("plan_id", { count: "exact", head: true })
+      .eq("plan_id", planId);
     expect(count).toBe(0);
     const table = await db.from("no_such_table").select("id");
     expect(table.error?.code).toBe("PGRST205");
     const column = await db.from("community_plans").select("no_such_column");
     expect(column.error?.code).toBe("42703");
-    const insertColumn = await db.from("community_events").insert({ actor_key: "k", action: "a", nope: 1 });
+    const insertColumn = await db
+      .from("community_events")
+      .insert({ actor_key: "k", action: "a", nope: 1 });
     expect(insertColumn.error?.code).toBe("PGRST204");
   });
 
   it("stores, serves and removes objects (storage buckets)", async () => {
     expect((await db.storage.getBucket("previews")).data).toBeNull();
     expect((await db.storage.createBucket("previews", { public: true })).error).toBeNull();
-    expect((await db.storage.getBucket("previews")).data).toMatchObject({ id: "previews", public: true });
+    expect((await db.storage.getBucket("previews")).data).toMatchObject({
+      id: "previews",
+      public: true,
+    });
     const bytes = Buffer.from([137, 80, 78, 71, 1, 2, 3]);
-    const upload = await db.storage.from("previews").upload("a/b.png", bytes, { contentType: "image/png", upsert: true });
+    const upload = await db.storage
+      .from("previews")
+      .upload("a/b.png", bytes, { contentType: "image/png", upsert: true });
     expect(upload.error).toBeNull();
     const download = await db.storage.from("previews").download("a/b.png");
     expect(Buffer.from(await download.data!.arrayBuffer())).toEqual(bytes);

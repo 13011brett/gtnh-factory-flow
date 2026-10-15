@@ -567,6 +567,10 @@ input.rail-box-edit {
   color: var(--rail-muted, #9a9ca4);
   cursor: pointer;
 }
+.rail-strip[data-side="right"] {
+  border-right: 0;
+  border-left: 1px solid #0c0d10;
+}
 .rail-strip:hover {
   background: #2a2d33;
 }

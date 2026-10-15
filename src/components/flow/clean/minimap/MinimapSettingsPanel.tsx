@@ -3,8 +3,6 @@
 import { useEffect, useRef } from "react";
 import {
   MINIMAP_CORNER_LABELS,
-  MINIMAP_FADE_MAX,
-  MINIMAP_FADE_STEP,
   MINIMAP_SIZE_LABELS,
   MINIMAP_ZOOMS,
   setMinimap,
@@ -25,8 +23,9 @@ export function zoomLabel(index: number): string {
 }
 
 /**
- * The minimap's settings, row by row, as the mod's Minimap section: Show, Size, Shape, Position, Zoom, Centre on
- * the card you point at, See-through. Used by the map's own gear and by the settings dialog.
+ * The minimap's settings, row by row, as the mod's Minimap section: Show, Size, Shape, Position, Zoom (Fit, the
+ * default, shows the whole plan; the slider zooms by hand), Centre on the card you select. No see-through row: the
+ * map is see-through enough (the owner). Used by the map's own gear and by the settings dialog.
  */
 export function MinimapSettingsRows({ className = "" }: { className?: string }) {
   const s = useMinimapSettings();
@@ -104,17 +103,31 @@ export function MinimapSettingsRows({ className = "" }: { className?: string }) 
         <span className="mmap-row-name">
           Zoom <kbd className="mmap-kbd">[</kbd> <kbd className="mmap-kbd">]</kbd>
         </span>
+        <div
+          role="switch"
+          aria-checked={s.fit}
+          aria-label="Fit the whole plan"
+          title="Fit the whole plan"
+          tabIndex={0}
+          className="mmap-seg mmap-seg-item mmap-fit"
+          data-on={s.fit ? "" : undefined}
+          onClick={() => setMinimap({ fit: !s.fit })}
+          onKeyDown={(e) => (e.key === " " || e.key === "Enter") && setMinimap({ fit: !s.fit })}
+        >
+          Fit
+        </div>
         <input
           type="range"
-          className="mmap-slider"
+          className="mmap-slider mmap-slider-zoom"
           min={0}
           max={MINIMAP_ZOOMS.length - 1}
           step={1}
           value={s.zoom}
           aria-label="Zoom"
-          onChange={(e) => setMinimap({ zoom: Number(e.target.value) })}
+          data-fit={s.fit ? "" : undefined}
+          onChange={(e) => setMinimap({ fit: false, zoom: Number(e.target.value) })}
         />
-        <span className="mmap-row-value">{zoomLabel(s.zoom)}</span>
+        <span className="mmap-row-value">{s.fit ? "Fit" : zoomLabel(s.zoom)}</span>
       </div>
       <div className="mmap-row">
         <span className="mmap-row-name">Centre on the card you select</span>
@@ -127,20 +140,6 @@ export function MinimapSettingsRows({ className = "" }: { className?: string }) 
           onClick={() => setMinimap({ follow: !s.follow })}
           onKeyDown={(e) => (e.key === " " || e.key === "Enter") && setMinimap({ follow: !s.follow })}
         />
-      </div>
-      <div className="mmap-row">
-        <span className="mmap-row-name">See-through</span>
-        <input
-          type="range"
-          className="mmap-slider"
-          min={0}
-          max={MINIMAP_FADE_MAX}
-          step={MINIMAP_FADE_STEP}
-          value={s.fade}
-          aria-label="Minimap see-through"
-          onChange={(e) => setMinimap({ fade: Number(e.target.value) })}
-        />
-        <span className="mmap-row-value">{s.fade}%</span>
       </div>
     </div>
   );

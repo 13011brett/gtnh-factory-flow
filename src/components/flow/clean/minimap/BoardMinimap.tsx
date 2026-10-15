@@ -3,18 +3,19 @@
 import { useReactFlow, useStore, useStoreApi } from "@xyflow/react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { useFactoryStore } from "@/store/factory-store";
-import { fitZoomIndex, toBoard } from "./minimap-draw";
+import { toBoard } from "./minimap-draw";
 import { MinimapEngine } from "./minimap-engine";
-import { getMinimap, MINIMAP_SIZES, MINIMAP_ZOOMS, setMinimap, stepMinimapZoom, useMinimapSettings } from "./minimap-settings";
+import { getMinimap, MINIMAP_SIZES, setMinimap, stepMinimapZoom, useMinimapSettings } from "./minimap-settings";
+import { clearDockOfMinimap } from "./dock-clearance";
 import { MinimapSettingsPanel } from "./MinimapSettingsPanel";
 import "./minimap.css";
 
 /**
- * The minimap (the mod's, on the board): the plan zoomed far out in a corner, drawn on ONE canvas from the
- * board's own state, never from the DOM per frame (`MinimapEngine`). It centres on what the board shows (or on the
- * selected card), draws the board's view as a frame, and a press or drag on it carries the board there. The
- * wheel over it, or the [ and ] keys, zoom the map; N shows or hides it. Mount it inside the board's ReactFlow.
+ * The minimap (the mod's, on the board): the whole plan fitted in the board's corner, drawn on ONE canvas from
+ * the board's own state, never from the DOM per frame (`MinimapEngine`). It holds still while the board pans and
+ * zooms; only the frame of the board's view moves, and a press or drag on it carries the board there. The wheel over
+ * it, or the [ and ] keys, zoom it by hand; a double click fits the plan again; N shows or hides it. No title: the
+ * plan's tab names it. Mount it inside the board's ReactFlow.
  */
 
 function isTyping(target: EventTarget | null): boolean {
@@ -30,10 +31,8 @@ export function BoardMinimap({ hidden = false }: { hidden?: boolean }) {
   const engineRef = useRef<MinimapEngine | null>(null);
   const dragRef = useRef<number | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
-  const planName = useFactoryStore((s) => s.project.name);
   const visible = settings.show && !hidden;
   const size = MINIMAP_SIZES[settings.size];
-  const circle = settings.shape === "circle";
 
   // The camera scrolls the flow's own container, so the map lives on the board's root instead.
   const domNode = useStore((s) => s.domNode);
@@ -54,6 +53,12 @@ export function BoardMinimap({ hidden = false }: { hidden?: boolean }) {
   useEffect(() => {
     engineRef.current?.schedule("draw");
   }, [settings]);
+
+  // NEI's search field, centred under the board, steps aside so it never covers the map in a bottom corner.
+  useEffect(() => {
+    if (!visible || !host) return;
+    return clearDockOfMinimap(host, () => wrapRef.current, settings.corner);
+  }, [visible, host, settings.corner, settings.size]);
 
   // N, [ and ]: not while typing, not with a modifier.
   useEffect(() => {
@@ -112,7 +117,7 @@ export function BoardMinimap({ hidden = false }: { hidden?: boolean }) {
       data-minimap=""
       data-corner={settings.corner}
       data-shape={settings.shape}
-      style={{ width: size, height: size, opacity: 1 - settings.fade / 100 }}
+      style={{ width: size, height: size }}
       onContextMenu={(event) => event.preventDefault()}
     >
       <canvas
@@ -134,12 +139,9 @@ export function BoardMinimap({ hidden = false }: { hidden?: boolean }) {
         }}
         onPointerCancel={release}
         onDoubleClick={() => {
-          setMinimap({ zoom: fitZoomIndex(engineRef.current?.scene?.bounds, size, MINIMAP_ZOOMS) });
+          setMinimap({ fit: true });
         }}
       />
-      <div className="mmap-title" data-circle={circle ? "" : undefined} title={planName}>
-        {planName}
-      </div>
       <div
         role="button"
         aria-label="Minimap settings"

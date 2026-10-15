@@ -512,7 +512,7 @@ const nonRecipe: Step = {
 const minimapStep: Step = {
   id: "minimap",
   actions: [
-    A.run(() => setMinimap({ show: true, size: "medium", shape: "square", corner: "bottom-right", zoom: 2 })),
+    A.run(() => setMinimap({ show: true, size: "small", shape: "square", corner: "bottom-right", fit: true })),
     A.wait(300),
     A.key("]", { caps: ["]"] }),
     A.wait(150),

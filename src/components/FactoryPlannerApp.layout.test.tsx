@@ -94,13 +94,21 @@ describe("workspace layout", () => {
     expect(JSON.parse(window.localStorage.getItem("gtnh-factory-flow-overview-rail")!).open).toBe(true);
   });
 
-  it("folds the items to a 26px rail on the right", () => {
+  it("folds the items to a 26px rail on the right, the overview's own strip", () => {
     setProject({ planMode: true });
     act(() => writeWorkspaceView({ leftPanelOpen: false }));
+    act(() => writeRailView({ open: false }));
     const { container } = renderColumns();
-    expect(container.querySelector("main")!.style.gridTemplateColumns).toBe("234px minmax(0,1fr) 26px");
-    const rail = screen.getByRole("button", { name: "Show Items" });
-    expect(rail.className).toContain("border-l");
+    expect(container.querySelector("main")!.style.gridTemplateColumns).toBe("26px minmax(0,1fr) 26px");
+    const rail = screen.getByRole("button", { name: "Open the items" });
+    const overview = screen.getByRole("button", { name: "Open the overview" });
+    // One strip for both: same class, the arrow first (at the top), the name after it.
+    expect(rail.className).toBe(overview.className);
+    expect(rail.getAttribute("data-side")).toBe("right");
+    expect(overview.getAttribute("data-side")).toBe("left");
+    expect(rail.firstElementChild?.tagName.toLowerCase()).toBe("svg");
+    expect(rail.textContent).toBe("ITEMS");
+    act(() => writeRailView({ open: true }));
     fireEvent.click(rail);
     expect(readWorkspaceViewSnapshot().leftPanelOpen).toBe(true);
   });

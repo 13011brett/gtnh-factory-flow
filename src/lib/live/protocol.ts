@@ -23,7 +23,7 @@ export const LIVE_LIMITS = {
   /** Presence frames relayed a second from one connection; more are dropped. */
   presencePerSecond: 20,
   /** Ops in one batch. */
-  opsPerBatch: 5000,
+  opsPerBatch: 1000,
   /** Rooms one connection may have open at once. */
   roomsPerConnection: 8,
   /** Selected ids carried in one presence frame. */

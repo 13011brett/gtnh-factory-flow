@@ -740,4 +740,62 @@ describe("the live service", { timeout: 30_000 }, () => {
     });
     expect(internal.status).toBe(401);
   });
+
+  it("stores only what the plan schema keeps, and refuses names that reach a prototype", async () => {
+    const { port } = await startService();
+    const { designId, doc } = await makeDesign();
+    const ann = await TestClient.open(port, { who: "ann" });
+    await ann.hello();
+    const state = new LiveClientState(await ann.join(doc));
+    // Through JSON.parse, `__proto__` is an own key: once it set the stored
+    // thing's prototype, so deleting a required field passed the schema.
+    ann.ws.send(
+      `{"t":"ops","doc":"${doc}","base":0,"cid":"proto","ops":[{"o":"patch","c":"tasks","id":"t1","f":{"__proto__":{"title":"x"}},"d":["title"]}]}`,
+    );
+    expect(await ann.next("error", (frame) => frame.cid === "proto")).toMatchObject({
+      code: "bad_op",
+    });
+    const junk = state.localOps([
+      {
+        o: "put",
+        c: "tasks",
+        id: "t2",
+        v: { id: "t2", title: "Two", status: "todo", order: "a1", junk: { deep: true } },
+      },
+      { o: "patch", c: "tasks", id: "t1", f: { stray: 1, title: "One" } },
+    ])!;
+    ann.send(state.frame(doc, junk));
+    state.receive(await ann.next("ops", (frame) => frame.cid === junk.cid));
+    const tasks = state.view.tasks as Array<Record<string, unknown>>;
+    expect(tasks).toEqual([
+      { id: "t1", title: "One", status: "todo", order: "a0" },
+      { id: "t2", title: "Two", status: "todo", order: "a1" },
+    ]);
+    await ann.close();
+    await until(async () => (await storedRow(designId)).live_lease_until === null);
+    expect(plansEqual((await storedRow(designId)).plan, state.view)).toBe(true);
+  });
+
+  it("holds an account to its batches' working time and a batch to its op count", async () => {
+    const { port } = await startService({ limits: { editMsPerSecond: 0.001, editMsBurst: 0.001 } });
+    const { doc } = await makeDesign();
+    const ann = await TestClient.open(port, { who: "ann" });
+    await ann.hello();
+    await ann.join(doc);
+    ann.send({ t: "ops", doc, base: 0, cid: "w1", ops: [taskPatch("t1", { title: "One" })] });
+    await ann.next("ops", (frame) => frame.cid === "w1");
+    ann.send({ t: "ops", doc, base: 1, cid: "w2", ops: [taskPatch("t1", { title: "Two" })] });
+    expect(await ann.next("error", (frame) => frame.cid === "w2")).toMatchObject({ code: "rate" });
+
+    const roomy = await startService();
+    const other = await makeDesign();
+    const bob = await TestClient.open(roomy.port, { who: "bob" });
+    await bob.hello();
+    await bob.join(other.doc);
+    const many = Array.from({ length: 1001 }, (_, at) => taskPatch(`gone-${at}`, { title: "x" }));
+    bob.send({ t: "ops", doc: other.doc, base: 0, cid: "many", ops: many });
+    expect(await bob.next("error", (frame) => frame.cid === "many")).toMatchObject({
+      code: "too_big",
+    });
+  });
 });

@@ -1,5 +1,5 @@
 import { COMMUNITY_UPLOAD_MAX_BYTES } from "@/lib/community/types";
-import { applyOps, cloneJson, type LiveOp, type LivePlan } from "@/lib/live/ops";
+import { cloneJson, type LiveOp, type LivePlan } from "@/lib/live/ops";
 import {
   colorFor,
   parseDocKey,
@@ -7,7 +7,8 @@ import {
   type LivePerson,
   type ServerFrame,
 } from "@/lib/live/protocol";
-import { checkBatch } from "@/lib/live/validate";
+import { prepareBatch } from "./batch";
+import { LiveDoc } from "./doc";
 import type { AppliedCid, Journal } from "./journal";
 import type { PlanStore } from "./store";
 
@@ -63,16 +64,6 @@ function sizeOf(value: unknown): number {
   return value === undefined ? 0 : JSON.stringify(value).length;
 }
 
-function findThing(plan: LivePlan, c: string, id: string): Record<string, unknown> | undefined {
-  const things = plan[c];
-  if (!Array.isArray(things)) {
-    return undefined;
-  }
-  return things.find(
-    (thing) => typeof thing === "object" && thing !== null && (thing as { id?: unknown }).id === id,
-  ) as Record<string, unknown> | undefined;
-}
-
 /** The fields the server writes on a comment: who wrote it and when. */
 const COMMENT_STAMPS = ["by", "byName", "at"] as const;
 
@@ -80,7 +71,8 @@ export class Room {
   readonly doc: string;
   readonly ownerId: string;
   readonly designId: string;
-  plan: LivePlan = {};
+  /** The plan, kept so a batch costs what it touches (doc.ts). */
+  content = new LiveDoc({});
   seq = 0;
   members: LiveMember[] = [];
   ownerName = "";
@@ -118,7 +110,7 @@ export class Room {
     if (!loaded) {
       return undefined;
     }
-    room.plan = loaded.plan && typeof loaded.plan === "object" ? loaded.plan : {};
+    room.content = new LiveDoc(loaded.plan && typeof loaded.plan === "object" ? loaded.plan : {});
     room.seq = loaded.seq;
     room.flushedSeq = loaded.seq;
     room.lastFlushAt = Date.now();
@@ -142,7 +134,7 @@ export class Room {
     for (const entry of replay) {
       // The same batch journalled twice is applied once; its seq still counts.
       if (!room.recent.has(entry.cid)) {
-        room.plan = applyOps(room.plan, entry.ops);
+        room.content.commit(entry.ops);
         room.remember(entry.cid, entry.seq);
       }
       room.seq = entry.seq;
@@ -163,6 +155,11 @@ export class Room {
       room.scheduleFlush();
     }
     return room;
+  }
+
+  /** The plan as it stands: a plain object that stays as it is while the room goes on. */
+  get plan(): LivePlan {
+    return this.content.toPlan();
   }
 
   get dirty(): boolean {
@@ -213,13 +210,12 @@ export class Room {
     if ("error" in stamped) {
       return { kind: "refused", code: "bad_op", msg: stamped.error };
     }
-    const ops = stamped.ops;
-    const after = applyOps(this.plan, ops);
-    const problem = checkBatch(after, ops);
-    if (problem) {
-      return { kind: "refused", code: "bad_op", msg: problem };
+    const prepared = prepareBatch(this.content, stamped.ops);
+    if ("error" in prepared) {
+      return { kind: "refused", code: "bad_op", msg: prepared.error };
     }
-    const size = this.size + this.sizeChange(this.plan, after, ops);
+    const ops = prepared.ops;
+    const size = this.size + prepared.sizeChange;
     const limit = this.deps.maxPlanChars ?? COMMUNITY_UPLOAD_MAX_BYTES;
     if (size > limit) {
       return {
@@ -236,7 +232,7 @@ export class Room {
       at: new Date().toISOString(),
       ops,
     });
-    this.plan = after;
+    this.content.commit(ops);
     this.size = size;
     this.seq = seq;
     this.remember(cid, seq);
@@ -263,7 +259,7 @@ export class Room {
         out.push(op);
         continue;
       }
-      const old = putInBatch.has(op.id) ? undefined : findThing(this.plan, op.c, op.id);
+      const old = putInBatch.has(op.id) ? undefined : this.content.find(op.c, op.id);
       if (op.o === "put") {
         if (old && old.by !== peer.userId) {
           return { error: "Only its author can change a comment." };
@@ -293,35 +289,6 @@ export class Room {
       }
     }
     return { ops: out };
-  }
-
-  /** How much longer the plan's JSON gets, from what the batch touched (exact again at each flush). */
-  private sizeChange(before: LivePlan, after: LivePlan, ops: LiveOp[]): number {
-    let change = 0;
-    const touched = new Set<string>();
-    const metaKeys = new Set<string>();
-    for (const op of ops) {
-      if (op.o === "meta") {
-        Object.keys(op.f ?? {}).forEach((key) => metaKeys.add(key));
-        (op.d ?? []).forEach((key) => metaKeys.add(key));
-      } else {
-        touched.add(`${op.c}\u0000${op.id}`);
-      }
-    }
-    for (const key of touched) {
-      const [c, id] = key.split("\u0000") as [string, string];
-      const old = findThing(before, c, id);
-      const next = findThing(after, c, id);
-      change += sizeOf(next) - sizeOf(old) + (next ? 1 : 0) - (old ? 1 : 0);
-    }
-    for (const key of metaKeys) {
-      const old = before[key];
-      const next = after[key];
-      change +=
-        (next === undefined ? 0 : key.length + 4 + sizeOf(next)) -
-        (old === undefined ? 0 : key.length + 4 + sizeOf(old));
-    }
-    return change;
   }
 
   private cidKey(cid: string): string {
@@ -396,6 +363,7 @@ export class Room {
     const run = (async () => {
       const plan = this.plan;
       const seq = this.seq;
+      const sizeAtCapture = this.size;
       this.lastFlushAt = Date.now();
       try {
         const stored = await this.deps.store.flush(
@@ -410,7 +378,8 @@ export class Room {
           return false;
         }
         this.flushedSeq = Math.max(this.flushedSeq, seq);
-        this.size = sizeOf(this.plan);
+        // Exact again: the stored plan measured, plus what came after it.
+        this.size = sizeOf(plan) + (this.size - sizeAtCapture);
         await this.deps.journal.trim(this.doc, seq, this.recentCids());
         return true;
       } catch (error) {

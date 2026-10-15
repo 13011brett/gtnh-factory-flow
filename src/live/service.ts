@@ -36,6 +36,18 @@ import type { PlanStore } from "./store";
  * they were, so a restart picks up its own leases at once.
  */
 
+/** Limits the service keeps beyond the protocol's (LIVE_LIMITS). */
+export const SERVICE_LIMITS = {
+  /**
+   * Milliseconds of batch work (reading, checking, applying) an account may
+   * use a second, across its connections, and how much it may bank: past it,
+   * batches are refused as `rate` until it refills. A typical batch takes well
+   * under one.
+   */
+  editMsPerSecond: 250,
+  editMsBurst: 1000,
+};
+
 export interface LiveServiceOptions {
   store: PlanStore;
   journalDir: string;
@@ -46,7 +58,7 @@ export interface LiveServiceOptions {
   timing?: Partial<RoomTiming>;
   /** Plan size limit in JSON characters (default: the library's upload limit). */
   maxPlanChars?: number;
-  limits?: Partial<typeof LIVE_LIMITS>;
+  limits?: Partial<typeof LIVE_LIMITS & typeof SERVICE_LIMITS>;
   /** A connection silent this long is dropped (default 90 s). */
   idleMs?: number;
   /** Called on POST /internal/shutdown (how dev-local stops it where signals do not reach). */
@@ -60,6 +72,31 @@ const FRAMES_PER_SECOND = 200;
 const JOINS_PER_SECOND = 10;
 /** Sockets one account may hold at once (a game and a few browser tabs). */
 const CONNECTIONS_PER_ACCOUNT = 16;
+
+/** A bucket of milliseconds refilled at a steady rate, for one account's batch work. */
+class TimeBudget {
+  private left: number;
+  private at = performance.now();
+  constructor(
+    private readonly perSecond: number,
+    private readonly burst: number,
+  ) {
+    this.left = burst;
+  }
+  private refill(): void {
+    const now = performance.now();
+    this.left = Math.min(this.burst, this.left + ((now - this.at) / 1000) * this.perSecond);
+    this.at = now;
+  }
+  allows(): boolean {
+    this.refill();
+    return this.left > 0;
+  }
+  spend(ms: number): void {
+    this.refill();
+    this.left -= ms;
+  }
+}
 
 class RateWindow {
   private stamps: number[] = [];
@@ -114,7 +151,9 @@ export class LiveService {
   private readonly connections = new Set<Connection>();
   private readonly cids = new Map<string, number>();
   private readonly timing: RoomTiming;
-  private readonly limits: typeof LIVE_LIMITS;
+  private readonly limits: typeof LIVE_LIMITS & typeof SERVICE_LIMITS;
+  /** Each account's batch work budget, while it has connections. */
+  private readonly budgets = new Map<string, TimeBudget>();
   private readonly origins: Set<string>;
   private readonly log: (message: string) => void;
   private heartbeat?: ReturnType<typeof setInterval>;
@@ -123,7 +162,7 @@ export class LiveService {
   constructor(private readonly options: LiveServiceOptions) {
     this.journal = new Journal(options.journalDir);
     this.timing = { ...DEFAULT_TIMING, ...options.timing };
-    this.limits = { ...LIVE_LIMITS, ...options.limits };
+    this.limits = { ...LIVE_LIMITS, ...SERVICE_LIMITS, ...options.limits };
     this.origins = new Set(
       options.allowedOrigins.map(normalizeOrigin).filter((origin): origin is string => !!origin),
     );
@@ -401,6 +440,9 @@ export class LiveService {
       clearTimeout(helloTimer);
       clearTimeout(conn.presenceTimer);
       this.connections.delete(conn);
+      if (![...this.connections].some((other) => other.userId === conn.userId)) {
+        this.budgets.delete(conn.userId);
+      }
       for (const room of conn.rooms.values()) {
         void room.enqueue(() => room.leave(conn));
       }
@@ -631,13 +673,20 @@ export class LiveService {
       this.error(conn, "rate", "Too many edits a second.", { doc, cid });
       return;
     }
-    const read = readOps(frame.ops);
-    if ("error" in read) {
-      this.error(conn, "bad_op", read.error, { doc, cid });
+    if (Array.isArray(frame.ops) && frame.ops.length > this.limits.opsPerBatch) {
+      this.error(conn, "too_big", "Too many changes in one batch.", { doc, cid });
       return;
     }
-    if (read.ops.length > this.limits.opsPerBatch) {
-      this.error(conn, "too_big", "Too many changes in one batch.", { doc, cid });
+    const budget = this.budget(conn.userId);
+    if (!budget.allows()) {
+      this.error(conn, "rate", "Too much editing at once. It goes again shortly.", { doc, cid });
+      return;
+    }
+    const readStarted = performance.now();
+    const read = readOps(frame.ops);
+    budget.spend(performance.now() - readStarted);
+    if ("error" in read) {
+      this.error(conn, "bad_op", read.error, { doc, cid });
       return;
     }
     if (read.ops.length === 0) {
@@ -648,7 +697,12 @@ export class LiveService {
       if (!room.peers.has(conn)) {
         return undefined;
       }
-      return room.apply(conn, cid, read.ops);
+      // An async call runs up to its first await at once: that part is the
+      // batch's work, the rest waits on the disk.
+      const started = performance.now();
+      const applying = room.apply(conn, cid, read.ops);
+      budget.spend(performance.now() - started);
+      return applying;
     });
     if (!result) {
       this.error(conn, "forbidden", "Join the plan first.", { doc, cid });
@@ -659,6 +713,15 @@ export class LiveService {
     } else if (result.kind === "refused") {
       this.error(conn, result.code, result.msg, { doc, cid });
     }
+  }
+
+  private budget(userId: string): TimeBudget {
+    let budget = this.budgets.get(userId);
+    if (!budget) {
+      budget = new TimeBudget(this.limits.editMsPerSecond, this.limits.editMsBurst);
+      this.budgets.set(userId, budget);
+    }
+    return budget;
   }
 
   private onPresence(

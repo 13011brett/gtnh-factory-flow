@@ -376,6 +376,28 @@ function writeFields(
 }
 
 /**
+ * A patch's writes, in place, on a copy of the thing: exactly what applying
+ * the patch does to it (`id` is never written). For a server that keeps a
+ * plan its own way and must apply ops as `applyOps` does.
+ */
+export function writeThingFields(
+  thing: Record<string, unknown>,
+  f: Record<string, unknown> | undefined,
+  d: string[] | undefined,
+): void {
+  writeFields(thing, f, d, isThingKey);
+}
+
+/** A meta op's writes, in place, on the plan's top-level fields (collection names are skipped). */
+export function writeMetaFields(
+  plan: Record<string, unknown>,
+  f: Record<string, unknown> | undefined,
+  d: string[] | undefined,
+): void {
+  writeFields(plan, f, d, isMetaKey);
+}
+
+/**
  * The plan after a batch, ops in order. Pure: the input plan and the ops are
  * never changed, and the result shares only what the batch did not touch.
  */

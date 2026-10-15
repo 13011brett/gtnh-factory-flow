@@ -79,11 +79,14 @@ class TestClient {
 
   static open(
     port: number,
-    options: { who?: string; origin?: string | null } = {},
+    options: { who?: string; origin?: string | null; address?: string } = {},
   ): Promise<TestClient> {
     const headers: Record<string, string> = {};
     if (options.who) {
       headers.cookie = users[options.who]!.cookie;
+    }
+    if (options.address) {
+      headers["x-client-ip"] = options.address;
     }
     if (options.origin !== null) {
       headers.origin = options.origin ?? ORIGIN;
@@ -131,7 +134,10 @@ class TestClient {
     });
   }
 
-  async hello(client: "web" | "game" = "web", game?: { server: string }): Promise<void> {
+  async hello(
+    client: "web" | "game" = "web",
+    game?: { server: string; mcName?: string },
+  ): Promise<void> {
     this.send({ t: "hello", v: 1, client, clientVersion: "test", ...(game ? { game } : {}) });
     await this.next("welcome");
   }
@@ -785,18 +791,32 @@ describe("the live service", { timeout: 30_000 }, () => {
     await game.hello("game");
   });
 
-  it("names signed-in players on the same game server, and answers pings", async () => {
-    const { port } = await startService();
+  it("names signed-in players in the asker's game, by the names it sees there, and answers pings", async () => {
+    const { port } = await startService({ limits: { nearbyPerMinuteByAccount: 3 } });
     const ann = await TestClient.open(port, { who: "ann", origin: null });
     const bob = await TestClient.open(port, { who: "bob", origin: null });
     const carol = await TestClient.open(port, { who: "carol", origin: null });
-    await ann.hello("game", { server: "same-world" });
-    await bob.hello("game", { server: "same-world" });
-    await carol.hello("game", { server: "other-world" });
-    const response = await fetch(`http://127.0.0.1:${port}/live/nearby`, {
-      headers: { cookie: users.ann!.cookie },
+    await ann.hello("game", { server: "same-world", mcName: "Ann_MC" });
+    await bob.hello("game", { server: "same-world", mcName: "BobTheBuilder" });
+    await carol.hello("game", { server: "same-world", mcName: "Carol" });
+    const nearby = async (names?: string) => {
+      const query = names === undefined ? "" : `?names=${encodeURIComponent(names)}`;
+      const response = await fetch(`http://127.0.0.1:${port}/live/nearby${query}`, {
+        headers: { cookie: users.ann!.cookie },
+      });
+      return { status: response.status, body: (await response.json()) as unknown };
+    };
+    // Only who the asker's game shows it: the server's hash alone lists nobody.
+    expect(await nearby("bobthebuilder,Someone_Else")).toEqual({
+      status: 200,
+      body: { accounts: [{ id: users.bob!.id, username: "bob" }] },
     });
-    expect(await response.json()).toEqual({ accounts: [{ id: users.bob!.id, username: "bob" }] });
+    expect(await nearby()).toEqual({ status: 200, body: { accounts: [] } });
+    // A name on another server is not there.
+    const elsewhere = await TestClient.open(port, { who: "carol", origin: null });
+    await elsewhere.hello("game", { server: "other-world", mcName: "Elsewhere" });
+    expect((await nearby("Elsewhere")).body).toEqual({ accounts: [] });
+    expect((await nearby("BobTheBuilder")).status).toBe(429);
     expect((await fetch(`http://127.0.0.1:${port}/live/nearby`)).status).toBe(401);
     ann.send({ t: "ping" });
     expect(await ann.next("pong")).toEqual({ t: "pong" });
@@ -957,6 +977,27 @@ describe("the live service", { timeout: 30_000 }, () => {
     expect(await owner.next("members", (frame) => frame.members.length === 0)).toMatchObject({
       doc: other,
     });
+  });
+
+  it("limits socket upgrades by address and by account, and looks an account up once a minute", async () => {
+    const { store, calls } = countingStore();
+    const { port } = await startService({
+      store,
+      limits: { upgradesPerMinuteByAddress: 3, upgradesPerMinuteByAccount: 2 },
+    });
+    // Behind Caddy every socket comes from loopback: X-Client-Ip names the client.
+    const first = await TestClient.open(port, { who: "ann", address: "203.0.113.5" });
+    await first.hello();
+    await TestClient.open(port, { who: "ann", address: "203.0.113.5" });
+    await expect(TestClient.open(port, { who: "ann", address: "203.0.113.6" })).rejects.toThrow(
+      "HTTP 429",
+    );
+    expect(calls.account).toBe(1);
+    await TestClient.open(port, { who: "bob", address: "203.0.113.5" });
+    await expect(TestClient.open(port, { who: "carol", address: "203.0.113.5" })).rejects.toThrow(
+      "HTTP 429",
+    );
+    await TestClient.open(port, { who: "carol", address: "198.51.100.7" });
   });
 
   it("stores only what the plan schema keeps, and refuses names that reach a prototype", async () => {

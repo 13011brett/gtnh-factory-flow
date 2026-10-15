@@ -28,7 +28,8 @@ import type { PlanStore } from "./store";
  * memory (`Room`), speaking the live protocol over WebSockets at `/live`,
  * plus a little HTTP on the same port:
  *
- * - `GET /live/nearby` (cookie): accounts connected from the same game server.
+ * - `GET /live/nearby?names=` (cookie): accounts in the asker's game, by the
+ *   Minecraft names the asker sees there (see `nearby`).
  * - `GET /live/health`: rooms and connections, for checks after a deploy.
  * - `POST /internal/members` and `/internal/deleted` (LIVE_INTERNAL_TOKEN):
  *   the Next.js routes reporting sharing changes and deleted plans.
@@ -57,7 +58,20 @@ export const SERVICE_LIMITS = {
   maxRooms: 500,
   /** Whole-plan writes to the database at once, across every room. */
   flushConcurrency: 4,
+  /** Socket upgrades a minute from one account, and from one address (X-Client-Ip behind Caddy). */
+  upgradesPerMinuteByAccount: 30,
+  upgradesPerMinuteByAddress: 60,
+  /** `/live/nearby` asks a minute from one account, and from one address. */
+  nearbyPerMinuteByAccount: 20,
+  nearbyPerMinuteByAddress: 60,
+  /** How long an account looked up for a session is taken as it was. */
+  accountCacheMs: 60_000,
 };
+
+/** Minecraft names, as the game sends its player's and the names it sees. */
+const MC_NAME = /^[A-Za-z0-9_]{1,32}$/;
+/** How many names one `/live/nearby` ask may carry. */
+const NEARBY_NAMES = 100;
 
 export interface LiveServiceOptions {
   store: PlanStore;
@@ -120,6 +134,11 @@ class RateWindow {
     private readonly limit: number,
     private readonly windowMs = 1000,
   ) {}
+  /** Nothing in the window: it can be forgotten. */
+  quiet(now = Date.now()): boolean {
+    const last = this.stamps[this.stamps.length - 1];
+    return last === undefined || last <= now - this.windowMs;
+  }
   take(now = Date.now()): boolean {
     const since = now - this.windowMs;
     while (this.stamps.length > 0 && this.stamps[0]! <= since) {
@@ -133,10 +152,56 @@ class RateWindow {
   }
 }
 
+/** A RateWindow per key (an account, an address); keys gone quiet are forgotten. */
+class RateLimiter {
+  private readonly windows = new Map<string, RateWindow>();
+  constructor(
+    private readonly limit: number,
+    private readonly windowMs: number,
+  ) {}
+  take(key: string): boolean {
+    let window = this.windows.get(key);
+    if (!window) {
+      window = new RateWindow(this.limit, this.windowMs);
+      this.windows.set(key, window);
+    }
+    return window.take();
+  }
+  sweep(now = Date.now()): void {
+    for (const [key, window] of this.windows) {
+      if (window.quiet(now)) {
+        this.windows.delete(key);
+      }
+    }
+  }
+}
+
+const LOOPBACK = new Set(["127.0.0.1", "::1", "::ffff:127.0.0.1"]);
+
+/**
+ * Where a request came from. Behind Caddy (the service listens on loopback)
+ * that is the X-Client-Ip header Caddy sets from Cloudflare's client address,
+ * overwriting whatever the client sent; CF-Connecting-IP when it is missing.
+ * A request not from loopback came straight to the service: its own address.
+ */
+function clientAddress(req: IncomingMessage): string {
+  const peer = req.socket.remoteAddress ?? "unknown";
+  if (!LOOPBACK.has(peer)) {
+    return peer;
+  }
+  const header = (name: string) => {
+    const value = req.headers[name];
+    return (Array.isArray(value) ? value[0] : value)?.split(",")[0]?.trim() || undefined;
+  };
+  return header("x-client-ip") ?? header("cf-connecting-ip") ?? peer;
+}
+
 interface Connection extends RoomPeer {
   ws: WebSocket;
   hello: boolean;
   gameServer?: string;
+  /** The player's Minecraft name in that game (lower case), when the game sent it. */
+  mcName?: string;
   rooms: Map<string, Room>;
   lastSeen: number;
   frames: RateWindow;
@@ -179,6 +244,15 @@ export class LiveService {
   private readonly budgets = new Map<string, TimeBudget>();
   private readonly origins: Set<string>;
   private readonly log: (message: string) => void;
+  private readonly upgradesByAccount: RateLimiter;
+  private readonly upgradesByAddress: RateLimiter;
+  private readonly nearbyByAccount: RateLimiter;
+  private readonly nearbyByAddress: RateLimiter;
+  /** Accounts looked up for sessions, each kept `accountCacheMs`. */
+  private readonly accounts = new Map<
+    string,
+    { at: number; account: Promise<{ id: string; username: string } | undefined> }
+  >();
   private heartbeat?: ReturnType<typeof setInterval>;
   private stopping = false;
 
@@ -187,6 +261,10 @@ export class LiveService {
     this.timing = { ...DEFAULT_TIMING, ...options.timing };
     this.limits = { ...LIVE_LIMITS, ...SERVICE_LIMITS, ...options.limits };
     this.flushes = new FlushQueue(this.limits.flushConcurrency);
+    this.upgradesByAccount = new RateLimiter(this.limits.upgradesPerMinuteByAccount, 60_000);
+    this.upgradesByAddress = new RateLimiter(this.limits.upgradesPerMinuteByAddress, 60_000);
+    this.nearbyByAccount = new RateLimiter(this.limits.nearbyPerMinuteByAccount, 60_000);
+    this.nearbyByAddress = new RateLimiter(this.limits.nearbyPerMinuteByAddress, 60_000);
     this.origins = new Set(
       options.allowedOrigins.map(normalizeOrigin).filter((origin): origin is string => !!origin),
     );
@@ -230,6 +308,19 @@ export class LiveService {
             conn.ws.terminate();
           } else if (conn.ws.readyState === WebSocket.OPEN) {
             conn.ws.ping();
+          }
+        }
+        for (const limiter of [
+          this.upgradesByAccount,
+          this.upgradesByAddress,
+          this.nearbyByAccount,
+          this.nearbyByAddress,
+        ]) {
+          limiter.sweep(now);
+        }
+        for (const [userId, cached] of this.accounts) {
+          if (now - cached.at >= this.limits.accountCacheMs) {
+            this.accounts.delete(userId);
           }
         }
       },
@@ -312,11 +403,22 @@ export class LiveService {
       return { status: 200, body: { ok: !this.stopping, ...this.stats } };
     }
     if (method === "GET" && url.pathname === `${LIVE_PATH}/nearby`) {
-      const user = await this.authenticate(req);
+      if (!this.nearbyByAddress.take(clientAddress(req))) {
+        return { status: 429, body: { error: "Too many asks. Try again in a minute." } };
+      }
+      const session = this.session(req);
+      if (!session) {
+        return { status: 401, body: { error: "Sign in first." } };
+      }
+      if (!this.nearbyByAccount.take(session.userId)) {
+        return { status: 429, body: { error: "Too many asks. Try again in a minute." } };
+      }
+      const user = await this.account(session.userId);
       if (!user) {
         return { status: 401, body: { error: "Sign in first." } };
       }
-      return { status: 200, body: { accounts: this.nearby(user.id) } };
+      const names = readNames(url.searchParams.get("names"));
+      return { status: 200, body: { accounts: this.nearby(user.id, names) } };
     }
     if (method === "POST" && url.pathname.startsWith("/internal/")) {
       if (!this.options.internalToken) {
@@ -361,28 +463,59 @@ export class LiveService {
     return { status: 404, body: { error: "Not found." } };
   }
 
-  /** Signed-in accounts playing on the same game server as `userId`, for the game's share helper. */
-  private nearby(userId: string): LiveMember[] {
-    const servers = new Set(
-      [...this.connections]
-        .filter((conn) => conn.userId === userId && conn.gameServer)
-        .map((conn) => conn.gameServer!),
-    );
+  /**
+   * Signed-in accounts in the asker's game, for the game's share helper:
+   * connected from a game with the same server hash as one of the asker's
+   * game connections, and playing under one of `names`, the Minecraft names
+   * the asker's game shows it (its tab list). Knowing a server's address is
+   * not enough to list who is on it: the asker must already see them there.
+   */
+  private nearby(userId: string, names: ReadonlySet<string>): LiveMember[] {
+    const servers = new Set<string>();
+    for (const conn of this.byUser.get(userId) ?? []) {
+      if (conn.gameServer) {
+        servers.add(conn.gameServer);
+      }
+    }
     const found = new Map<string, LiveMember>();
+    if (servers.size === 0 || names.size === 0) {
+      return [];
+    }
     for (const conn of this.connections) {
-      if (conn.userId !== userId && conn.gameServer && servers.has(conn.gameServer)) {
+      if (
+        conn.userId !== userId &&
+        conn.gameServer &&
+        servers.has(conn.gameServer) &&
+        conn.mcName &&
+        names.has(conn.mcName)
+      ) {
         found.set(conn.userId, { id: conn.userId, username: conn.username });
       }
     }
     return [...found.values()];
   }
 
-  private async authenticate(
-    req: IncomingMessage,
-  ): Promise<{ id: string; username: string } | undefined> {
+  /** The account a request's session cookie names, when its signature holds (no database). */
+  private session(req: IncomingMessage): { userId: string } | undefined {
     const token = readSessionCookie(req.headers.cookie);
-    const session = token ? verifySessionToken(token) : undefined;
-    return session ? this.options.store.account(session.userId) : undefined;
+    return token ? verifySessionToken(token) : undefined;
+  }
+
+  /** An account by id, looked up at most once every `accountCacheMs`. */
+  private account(userId: string): Promise<{ id: string; username: string } | undefined> {
+    const cached = this.accounts.get(userId);
+    if (cached && Date.now() - cached.at < this.limits.accountCacheMs) {
+      return cached.account;
+    }
+    const account = this.options.store.account(userId);
+    const entry = { at: Date.now(), account };
+    this.accounts.set(userId, entry);
+    account.catch(() => {
+      if (this.accounts.get(userId) === entry) {
+        this.accounts.delete(userId);
+      }
+    });
+    return account;
   }
 
   // -------------------------------------------------------------------------
@@ -407,22 +540,36 @@ export class LiveService {
         return;
       }
     }
+    // Limits first, all without the database: an address, then the account
+    // the session names (its signature checked here), then its sockets.
+    if (!this.upgradesByAddress.take(clientAddress(req))) {
+      refuse(429, "Too Many Requests");
+      return;
+    }
+    const session = this.session(req);
+    if (session && !this.upgradesByAccount.take(session.userId)) {
+      refuse(429, "Too Many Requests");
+      return;
+    }
+    const tooMany = () =>
+      !!session && (this.byUser.get(session.userId)?.size ?? 0) >= CONNECTIONS_PER_ACCOUNT;
     let user: { id: string; username: string } | undefined;
-    try {
-      user = await this.authenticate(req);
-    } catch (error) {
-      this.log(`sign-in check failed: ${String(error)}`);
+    if (session && !tooMany()) {
+      try {
+        user = await this.account(session.userId);
+      } catch (error) {
+        this.log(`sign-in check failed: ${String(error)}`);
+      }
     }
     this.wss.handleUpgrade(req, socket, head, (ws) => {
+      if (tooMany()) {
+        ws.send(JSON.stringify({ t: "error", code: "rate", msg: "Too many live connections." }));
+        ws.close(4029, "rate");
+        return;
+      }
       if (!user) {
         ws.send(JSON.stringify({ t: "error", code: "auth", msg: "Sign in to use live plans." }));
         ws.close(4001, "auth");
-        return;
-      }
-      const held = this.byUser.get(user.id)?.size ?? 0;
-      if (held >= CONNECTIONS_PER_ACCOUNT) {
-        ws.send(JSON.stringify({ t: "error", code: "rate", msg: "Too many live connections." }));
-        ws.close(4029, "rate");
         return;
       }
       this.accept(ws, user);
@@ -593,9 +740,12 @@ export class LiveService {
     }
     const client: LiveClientKind = frame.client === "game" ? "game" : "web";
     (conn as { client: LiveClientKind }).client = client;
-    const game = frame.game as { server?: unknown } | undefined;
+    const game = frame.game as { server?: unknown; mcName?: unknown } | undefined;
     if (client === "game" && game && typeof game.server === "string" && game.server.length <= 128) {
       conn.gameServer = game.server;
+      if (typeof game.mcName === "string" && MC_NAME.test(game.mcName)) {
+        conn.mcName = game.mcName.toLowerCase();
+      }
     }
     conn.hello = true;
     conn.send({
@@ -939,6 +1089,21 @@ export class LiveService {
       this.flushPresence(conn);
     }
   }
+}
+
+/** The Minecraft names a `/live/nearby` ask carries (`names=a,b,c`), lower case, at most NEARBY_NAMES. */
+function readNames(raw: string | null): Set<string> {
+  const names = new Set<string>();
+  for (const part of (raw ?? "").split(",")) {
+    const name = part.trim();
+    if (MC_NAME.test(name)) {
+      names.add(name.toLowerCase());
+      if (names.size >= NEARBY_NAMES) {
+        break;
+      }
+    }
+  }
+  return names;
 }
 
 /**

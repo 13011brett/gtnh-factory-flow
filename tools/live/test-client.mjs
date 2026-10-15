@@ -29,8 +29,10 @@
  *                                  `leave`, `quit`
  *   send <doc> <json ops array>    join, send one batch, print its echo (or the error)
  *   presence <doc> <x> <y>         join and send one presence frame
- *   nearby                         signed-in players on the same game server (with --game,
- *                                  after a moment connected)
+ *   nearby <mc names...>           signed-in players in the same game (with --game, after a
+ *                                  moment connected) whose Minecraft name is one given, as
+ *                                  the game asks with the names on its tab list (here each
+ *                                  account plays under its own username)
  *
  * The session is cached per base and user in the system temp folder, so
  * repeated runs do not hit the sign-in rate limit.
@@ -433,7 +435,8 @@ switch (command) {
     }
     const live = new URL(liveUrl());
     const httpBase = `${live.protocol === "wss:" ? "https" : "http"}://${live.host}`;
-    const response = await fetch(`${httpBase}/live/nearby`, {
+    const names = encodeURIComponent(args.join(","));
+    const response = await fetch(`${httpBase}/live/nearby?names=${names}`, {
       headers: { cookie: `gtnh_session=${await session()}` },
     });
     out({ status: response.status, ...(await response.json()) });

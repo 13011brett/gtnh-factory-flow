@@ -86,7 +86,7 @@ describe("the plan tabs", () => {
     expect(rows()).toEqual([
       "Rename",
       "Copy plan codeto paste or share",
-      "Save to library...for other players",
+      "Post a copy to Community...for other players",
       "Close tabkept in My plans",
       "Close other tabskept in My plans",
       "Delete plan",

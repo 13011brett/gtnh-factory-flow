@@ -104,7 +104,7 @@ export function ModLibrary() {
           />
         ) : null}
         <ShelfTab
-          label="PUBLIC SETUPS"
+          label="COMMUNITY"
           count={publicTotal === undefined ? "..." : compact(publicTotal)}
           on={shelf === "public"}
           onClick={() => setLibraryView({ kind: "public" })}
@@ -153,7 +153,7 @@ export function ModLibrary() {
         <div
           className="mb-key ml-close"
           role="button"
-          aria-label="Close the library"
+          aria-label="Close the panel"
           onClick={() => {
             playBoardSound("tick");
             leaveLibrary();

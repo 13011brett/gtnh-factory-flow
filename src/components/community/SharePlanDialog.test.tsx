@@ -47,7 +47,7 @@ async function renderDialog(mode?: "save" | "update" | "new") {
 describe("saving to the library", () => {
   it("Update in library pushes the plan as it is now to the plan's own post, only when asked", async () => {
     await renderDialog("update");
-    expect(screen.getByRole("dialog", { name: "Update in library" })).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: "Update my post" })).toBeTruthy();
     expect(client.patchCommunityPlan).not.toHaveBeenCalled();
     await act(async () => {
       fireEvent.click(screen.getByText("Update post"));
@@ -64,7 +64,7 @@ describe("saving to the library", () => {
     await renderDialog("new");
     expect(screen.getByRole("dialog", { name: "Save as new post" })).toBeTruthy();
     await act(async () => {
-      fireEvent.click(screen.getByText("Save to library"));
+      fireEvent.click(screen.getByText("Post a copy to Community"));
     });
     expect(client.uploadCommunityPlan).toHaveBeenCalledTimes(1);
     expect(client.patchCommunityPlan).not.toHaveBeenCalled();

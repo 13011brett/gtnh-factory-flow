@@ -40,7 +40,7 @@ import { parsePlanSearch } from "@/lib/community/search-query";
  * Your designs are ONE GRID: the OPEN chip marks designs on the tab strip and
  * the globe marks posted ones (green posted, dim not; clicking dim posts).
  * The left rail is All, your folders (drop a tile on one, or use Move to),
- * then Public setups. Search, tier and sort apply to whatever is showing.
+ * then Community. Search, tier and sort apply to whatever is showing.
  * Closing a tab never deletes; delete lives here, armed.
  */
 
@@ -78,7 +78,7 @@ export function LibraryPage() {
   const deleteFolder = useDesignStore((state) => state.deleteFolder);
   const updateDesignIdentity = useDesignStore((state) => state.updateDesignIdentity);
 
-  // The same bar and the same fields as Public setups (SetupsFilterBar);
+  // The same bar and the same fields as Community (SetupsFilterBar);
   // here they are applied in memory over the designs.
   const filters = useSetupFilters("edited");
   const { query, maxTier, setMaxTier } = filters;
@@ -429,7 +429,7 @@ export function LibraryPage() {
               {showShared ? (
                 <option value="shared">Shared with me ({sharedCount ?? 0})</option>
               ) : null}
-              <option value="public">Public setups</option>
+              <option value="public">Community</option>
               <option value="saved">Saved ({savedIds.length})</option>
             </select>
           </div>
@@ -523,7 +523,7 @@ export function LibraryPage() {
             <div className="mx-1 my-2 border-t-2 border-[#23262d] compact:mx-2 compact:my-0 compact:h-4 compact:border-l compact:border-t-0" />
             <RailItem
               icon={Factory}
-              label="Public setups"
+              label="Community"
               selected={library.view.kind === "public"}
               onClick={() => setLibraryView({ kind: "public" })}
             />

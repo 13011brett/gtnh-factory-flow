@@ -101,18 +101,18 @@ export function useModReach(active: boolean): ModReach {
   return reach;
 }
 
-/** The Share menu's "Open in the mod" row for what the probe found. */
+/** The Share menu's "Open in the game" row for what the probe found. */
 export function openInModRow(reach: ModReach, project: () => FactoryProject): MenuEntry {
   if (reach.kind === "blocked") {
     return {
-      label: "Open in the mod",
+      label: "Open in the game",
       tip: "Your browser keeps this page from the game. This copies the plan code for the planner's + tab.",
       onSelect: () => void copyCodeForMod(project()),
     };
   }
   const ready = reach.kind === "found" || reach.kind === "asks";
   return {
-    label: "Open in the mod",
+    label: "Open in the game",
     disabled: !ready,
     tip: ready ? "Send this plan to the game. It asks before it opens it." : "Start the game with GTNH Planner installed",
     onSelect: () => void openInMod(project(), reach.kind === "found" ? reach.game : undefined),

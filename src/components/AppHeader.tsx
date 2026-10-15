@@ -91,7 +91,7 @@ export function AppHeader(_props: AppHeaderProps) {
       <ModBar
         onShare={(mode) => setShareMode(mode)}
         onScreenshot={() => setExportOpen(true)}
-        onSettings={() => setSettingsOpen(true)}
+        onSettings={() => setSettingsOpen((open) => !open)}
         onChangelog={() => {
           setUnseenVersions(new Set(unseenEntries().map((entry) => entry.version)));
           markNotesReadAndNotify();

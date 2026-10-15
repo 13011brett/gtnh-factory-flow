@@ -23,7 +23,7 @@ import { Face } from "./LiveFaces";
 /**
  * Who the open plan is shared with. The owner adds people by name and
  * removes them; someone it is shared with sees who else is in it and can
- * leave. Everyone in it edits it live together. Publishing to the library is
+ * leave. Everyone in it edits it live together. Posting a copy to Community is
  * a separate thing (the Share menu's Publish to library): it posts a copy,
  * never this plan. In the mod's panel skin, as the other boxes of its bar.
  */
@@ -155,17 +155,17 @@ export function PlanShareDialog({ onClose }: { onClose: () => void }) {
         ref={dialogRef}
         role="dialog"
         aria-modal="true"
-        aria-label="Share with people"
+        aria-label="Plan together"
         data-plan-share-dialog
         className="pn pn-skin"
       >
         <div className="pn-title">
-          <span>Share with people</span>
+          <span>Plan together</span>
           <button type="button" onClick={onClose} aria-label="Close" className="pn-x" />
         </div>
         <div className="pn-body">
           {!user ? (
-            <p className="text-sm text-fg-muted">Sign in to share.</p>
+            <p className="text-sm text-fg-muted">Sign in to invite.</p>
           ) : loadError ? (
             <p className="text-sm text-red-400">{loadError}</p>
           ) : !synced || !info ? (
@@ -175,7 +175,7 @@ export function PlanShareDialog({ onClose }: { onClose: () => void }) {
           ) : (
             <div className="space-y-3">
               <p className="text-xs text-fg-muted">
-                Everyone here can edit the plan with you, live. Publishing to the library is
+                Everyone here can edit the plan with you, live. Posting a copy to Community is
                 separate.
               </p>
               <ul className="space-y-1" data-plan-members>

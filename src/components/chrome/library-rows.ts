@@ -18,12 +18,12 @@ export function libraryRows(
   if (!linked) {
     return [
       isLiveConfigured()
-        ? { label: "Publish to library...", detail: "a copy for everyone", onSelect: () => open("save"), disabled: options.disabled }
-        : { label: "Save to library...", detail: "for other players", onSelect: () => open("save"), disabled: options.disabled },
+        ? { label: "Post a copy to Community...", detail: "a copy for everyone", onSelect: () => open("save"), disabled: options.disabled }
+        : { label: "Post a copy to Community...", detail: "for other players", onSelect: () => open("save"), disabled: options.disabled },
     ];
   }
   return [
-    { label: "Update in library...", detail: "with the plan as it is", onSelect: () => open("update"), disabled: options.disabled },
-    { label: "Save as new post...", detail: "a post of its own", onSelect: () => open("new"), disabled: options.disabled },
+    { label: "Update my post...", detail: "with the plan as it is", onSelect: () => open("update"), disabled: options.disabled },
+    { label: "Post a new copy...", detail: "a post of its own", onSelect: () => open("new"), disabled: options.disabled },
   ];
 }

@@ -58,21 +58,21 @@ afterEach(() => cleanup());
 describe("the mod's top bar", () => {
   it("every key is in the Tab order and Enter or Space presses it", () => {
     renderBar();
-    for (const id of ["library", "share", "account", "feedback", "settings", "help"]) {
+    for (const id of ["share", "plans", "community", "account", "feedback", "settings", "help"]) {
       expect(key(id).getAttribute("tabindex"), id).toBe("0");
     }
-    key("library").focus();
-    fireEvent.keyDown(key("library"), { key: "Enter" });
+    key("plans").focus();
+    fireEvent.keyDown(key("plans"), { key: "Enter" });
     expect(readLibraryTabState().active).toBe(true);
-    fireEvent.keyDown(key("library"), { key: " " });
+    fireEvent.keyDown(key("plans"), { key: " " });
     expect(readLibraryTabState().active).toBe(false);
   });
 
-  it("holds the account's keys only, in order: Library, Share, the account, feedback, settings, help", () => {
+  it("holds the account's keys only, in order: Share, Plans, Community, the account, feedback, settings, help", () => {
     renderBar();
     const order = [...document.querySelectorAll("[data-mb]")].map((element) => element.getAttribute("data-mb"));
-    expect(order).toEqual(["library", "share", "account", "feedback", "settings", "help"]);
-    expect(key("library").textContent).toBe("Library");
+    expect(order).toEqual(["share", "plans", "community", "account", "feedback", "settings", "help"]);
+    expect(key("plans").textContent).toBe("Plans");
     expect(key("account").textContent).toBe("Sign in");
   });
 
@@ -101,12 +101,12 @@ describe("the mod's top bar", () => {
     renderBar();
     await openShare();
     expect(shareRows()).toEqual([
-      "Save to library...",
       "Copy plan link",
       "Copy plan code",
       "Export plan file",
-      "Open in the mod",
       "Screenshot...",
+      "Open in the game",
+      "Post a copy to Community...",
     ]);
   });
 
@@ -117,15 +117,15 @@ describe("the mod's top bar", () => {
     });
     renderBar({ onShare });
     await openShare();
-    expect(shareRows().slice(0, 2)).toEqual(["Update in library...", "Save as new post..."]);
-    fireEvent.click(shareRow("Save as new post..."));
+    expect(shareRows().slice(-2)).toEqual(["Update my post...", "Post a new copy..."]);
+    fireEvent.click(shareRow("Post a new copy..."));
     expect(onShare).toHaveBeenCalledWith("new");
   });
 
   it("Open in the mod is greyed with a tip while no game answers", async () => {
     renderBar();
     await openShare();
-    const row = shareRow("Open in the mod");
+    const row = shareRow("Open in the game");
     expect(row.getAttribute("aria-disabled")).toBe("true");
     expect(row.getAttribute("data-tip")).toContain("Start the game with GTNH Planner installed");
     fireEvent.click(row);
@@ -137,7 +137,7 @@ describe("the mod's top bar", () => {
     modLink.sendPlanToMod.mockResolvedValue(true);
     renderBar();
     await openShare();
-    const row = shareRow("Open in the mod");
+    const row = shareRow("Open in the game");
     expect(row.getAttribute("aria-disabled")).toBeNull();
     await act(async () => {
       fireEvent.click(row);
@@ -154,7 +154,7 @@ describe("the mod's top bar", () => {
     renderBar();
     await openShare();
     await act(async () => {
-      fireEvent.click(shareRow("Open in the mod"));
+      fireEvent.click(shareRow("Open in the game"));
     });
     await vi.waitFor(() => expect(clipboard.copyToClipboard).toHaveBeenCalled());
     expect(clipboard.copyToClipboard.mock.calls[0][0]).toMatch(/^gtnh1\./);
@@ -165,7 +165,7 @@ describe("the mod's top bar", () => {
     renderBar();
     await openShare();
     expect(modLink.findModGame).not.toHaveBeenCalled();
-    expect(shareRow("Open in the mod").getAttribute("aria-disabled")).toBeNull();
+    expect(shareRow("Open in the game").getAttribute("aria-disabled")).toBeNull();
   });
 
   it("a browser told no still reaches a game it may, and else the row copies the code for the + tab", async () => {
@@ -173,12 +173,12 @@ describe("the mod's top bar", () => {
     modLink.findModGame.mockResolvedValue({ port: 25640, version: "0.2.0" });
     renderBar();
     await openShare();
-    expect(shareRow("Open in the mod").getAttribute("aria-disabled")).toBeNull();
+    expect(shareRow("Open in the game").getAttribute("aria-disabled")).toBeNull();
     cleanup();
     modLink.findModGame.mockResolvedValue(undefined);
     renderBar();
     await openShare();
-    const row = shareRow("Open in the mod");
+    const row = shareRow("Open in the game");
     expect(row.getAttribute("aria-disabled")).toBeNull();
     expect(row.getAttribute("data-tip")).toContain("copies the plan code");
     await act(async () => {
@@ -239,7 +239,7 @@ describe("the mod's top bar", () => {
 
   it("every key carries a tip for the tip host", () => {
     renderBar();
-    for (const id of ["library", "share", "account", "feedback", "settings", "help"]) {
+    for (const id of ["share", "plans", "community", "account", "feedback", "settings", "help"]) {
       expect(key(id).getAttribute("data-tip-id"), id).toBe(`bar|${id}`);
       expect(JSON.parse(key(id).getAttribute("data-tip")!).title.length).toBeGreaterThan(3);
     }

@@ -235,12 +235,12 @@ export function SharePlanDialog({
   };
 
   const dialogTitle = linkedPost
-    ? "Update in library"
+    ? "Update my post"
     : mode === "new"
       ? "Save as new post"
       : isLiveConfigured()
-        ? "Publish to library"
-        : "Save to library";
+        ? "Post a copy to Community"
+        : "Post a copy to Community";
 
   return (
     <div className="pn-backdrop">
@@ -256,7 +256,7 @@ export function SharePlanDialog({
             <p className="text-sm">
               {shared.updated
                 ? "Your post is up to date."
-                : "Your setup is in the library. When the plan changes, Update in library brings the post up to date."}
+                : "Your setup is in Community. When the plan changes, Update my post brings the post up to date."}
             </p>
             <div className="flex flex-wrap gap-2">
               <button
@@ -281,7 +281,7 @@ export function SharePlanDialog({
               }}
               className="inline-flex rounded border border-cyan-700 bg-cyan-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-cyan-500"
             >
-              See it in your library
+              See it in Community
             </button>
           </div>
         ) : isUserLoading ? (
@@ -303,7 +303,7 @@ export function SharePlanDialog({
             </p>
             <p className="text-xs text-fg-subtle">
               {isPublic
-                ? "Public: it shows in Public setups. Anyone who opens it gets their own copy."
+                ? "Public: it shows in Community. Anyone who opens it gets their own copy."
                 : "Private: only you can see it. The link opens nothing for anyone else."}
             </p>
             {error ? <p className="text-sm text-red-500">{error}</p> : null}
@@ -351,7 +351,7 @@ export function SharePlanDialog({
                 }}
                 className="inline-flex items-center gap-1.5 rounded border border-line-strong px-3 py-1.5 text-sm hover:bg-surface-raised"
               >
-                See it in your library
+                See it in Community
               </button>
             </div>
           </div>
@@ -481,7 +481,7 @@ export function SharePlanDialog({
                 className="inline-flex items-center gap-2 rounded border border-cyan-700 bg-cyan-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isUploading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-                Save to library
+                Post a copy to Community
               </button>
             </div>
           </div>

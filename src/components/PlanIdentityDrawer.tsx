@@ -169,10 +169,10 @@ export function PlanIdentityDrawer() {
               project.nodes.length === 0
                 ? `${live ? "Publish" : "Share"}: build something first`
                 : live
-                  ? "Publish a copy to the library"
+                  ? "Post a copy to Community"
                   : "Share"
             }
-            aria-label={live ? "Publish to the library" : "Share this setup"}
+            aria-label={live ? "Post a copy to Community" : "Share this setup"}
             className="plan-summary-action inline-flex h-6 shrink-0 items-center justify-center gap-1.5 rounded border border-line-strong px-2 text-fg hover:bg-surface-raised disabled:opacity-40"
           >
             <Share2 className="h-3 w-3" />
@@ -448,7 +448,7 @@ function LinkedPostStrip({ planId }: { planId: string }) {
         type="button"
         onClick={() => setSharingAsOwn(true)}
         title={isLiveConfigured() ? "Published: the post and its link" : "Share"}
-        aria-label={isLiveConfigured() ? "Publish to the library" : "Share this setup"}
+        aria-label={isLiveConfigured() ? "Post a copy to Community" : "Share this setup"}
         className={BAR_BUTTON}
       >
         <Share2 className="h-3.5 w-3.5" />

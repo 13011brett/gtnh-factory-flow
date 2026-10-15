@@ -30,7 +30,7 @@ import { isLiveConfigured } from "@/lib/live/live-config";
  * With live plans, Share invites people into a plan (the plan bar) and
  * posting a copy to the library is Publish; without, posting is Share.
  */
-const PUBLISH_LABEL = isLiveConfigured() ? "Publish to the library" : "Share this setup";
+const PUBLISH_LABEL = isLiveConfigured() ? "Post a copy to Community" : "Share this setup";
 
 interface BoardActionsProps {
   /**

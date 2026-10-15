@@ -254,7 +254,7 @@ export const undoKey: Target = barKey("undo");
 export const redoKey: Target = barKey("redo");
 export const rateUnitKey: Target = barKey("rate");
 export const powerUnitKey: Target = barKey("power");
-export const libraryKey: Target = barKey("library");
+export const libraryKey: Target = barKey("community");
 export const feedbackKey: Target = barKey("feedback");
 
 export const railRoot: Target = () => q(".rail-root");

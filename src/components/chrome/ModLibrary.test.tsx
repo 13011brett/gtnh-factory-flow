@@ -68,15 +68,15 @@ afterEach(() => cleanup());
 const tileNames = () => [...document.querySelectorAll(".ml-tile:not(.ml-new) .ml-name")].map((element) => element.textContent);
 
 describe("the library", () => {
-  it("has the mod's header: MY PLANS with its count, PUBLIC SETUPS, a Find a plan box and a close key, and no sign-in key (that is the top bar's account key)", () => {
+  it("has the mod's header: MY PLANS with its count, COMMUNITY, a Find a plan box and a close key, and no sign-in key (that is the top bar's account key)", () => {
     render(<ModLibrary />);
     const tabs = [...document.querySelectorAll(".ml-tab")].map((tab) => tab.textContent);
-    expect(tabs).toEqual(["MY PLANS3", "PUBLIC SETUPS..."]);
+    expect(tabs).toEqual(["MY PLANS3", "COMMUNITY..."]);
     expect(document.querySelector(".ml-tab[data-on]")?.textContent).toContain("MY PLANS");
     expect(screen.getByPlaceholderText("Find a plan")).toBeTruthy();
     expect(document.querySelector(".ml-signin")).toBeNull();
     expect(screen.queryByText("Sign in")).toBeNull();
-    expect(screen.getByLabelText("Close the library")).toBeTruthy();
+    expect(screen.getByLabelText("Close the panel")).toBeTruthy();
   });
 
   it("My plans lists every plan, the most recently open first, after the new-plan tile", () => {
@@ -109,7 +109,7 @@ describe("the library", () => {
     expect(actions.switchToDesign).toHaveBeenCalledWith("a");
     fireEvent.click(screen.getByText("+ New plan"));
     expect(actions.addDesign).toHaveBeenCalled();
-    fireEvent.click(screen.getByLabelText("Close the library"));
+    fireEvent.click(screen.getByLabelText("Close the panel"));
     expect(readLibraryTabState().active).toBe(false);
   });
 
@@ -121,7 +121,7 @@ describe("the library", () => {
       "Open",
       "Rename",
       "Copy plan codeto paste or share",
-      "Save to library...for other players",
+      "Post a copy to Community...for other players",
       "Delete plan",
     ]);
     fireEvent.click(screen.getByText("Delete plan"));
@@ -130,14 +130,14 @@ describe("the library", () => {
     expect(actions.removeDesign).toHaveBeenCalledWith("a");
   });
 
-  it("PUBLIC SETUPS shows the public shelf with its sort and tier, and counts what it found", () => {
+  it("COMMUNITY shows the public shelf with its sort and tier, and counts what it found", () => {
     render(<ModLibrary />);
-    fireEvent.click(screen.getByText("PUBLIC SETUPS"));
+    fireEvent.click(screen.getByText("COMMUNITY"));
     expect(screen.getByTestId("public-grid")).toBeTruthy();
     expect(screen.getByPlaceholderText("Search setups (#tag, @name)")).toBeTruthy();
     expect(document.querySelector(".ml-drop")?.textContent).toBe("Top voted");
     expect([...document.querySelectorAll(".ml-drop")].map((key) => key.textContent)).toEqual(["Top voted", "Any tier"]);
-    expect([...document.querySelectorAll(".ml-tab")].at(-1)?.textContent).toBe("PUBLIC SETUPS7");
+    expect([...document.querySelectorAll(".ml-tab")].at(-1)?.textContent).toBe("COMMUNITY7");
   });
 
   it("a signed-in player sees a line saying who they are, and nothing to press", () => {

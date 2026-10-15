@@ -566,8 +566,8 @@ const libraryTab: Target = libraryKey;
 
 const libraryStep: Step = {
   id: "library",
-  actions: [A.click(libraryTab, { label: "Library" }), A.wait(1200)],
-  note: { text: "The *Library* is where your plans are kept, and where people share theirs. You can browse them here.", at: libraryTab },
+  actions: [A.click(libraryTab, { label: "Community" }), A.wait(1200)],
+  note: { text: "*Community* is where people post their plans. You can browse them here.", at: libraryTab },
 };
 
 const newPlan: Step = {

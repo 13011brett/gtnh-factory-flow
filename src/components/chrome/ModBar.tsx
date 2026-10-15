@@ -30,6 +30,7 @@ import { HelpLinks } from "./help-links";
 import { isLiveConfigured } from "@/lib/live/live-config";
 import { useCommunityAuthStore } from "@/store/community-auth-store";
 import { useLiveSession } from "@/store/live-session";
+import { closeFeedback, useFeedbackOpen } from "@/components/flow/clean/feedback/feedback-store";
 import { PlanShareDialog } from "@/components/live/PlanShareDialog";
 import { initialsOf, inkOn } from "@/components/live/LiveFaces";
 
@@ -75,7 +76,7 @@ export interface ModBarProps {
 }
 
 /**
- * The top bar holds the account's things only: the plan tabs and +, the live state and faces, then Library and Share,
+ * The top bar holds the account's things only: the plan tabs and +, the live state and faces, then Invite, Share, Plans and Community,
  * the account key, and feedback, settings and help. What edits or views the board (Non-recipe, undo and redo, Arrange,
  * Fit, the rate unit, EU/t, Avg) is the board's own toolbar (BoardToolbar), along the top of the board.
  */
@@ -100,6 +101,9 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
   const sideOpen = workspace.rightPanelOpen && !bothOpen;
   const library = useLibraryTab();
   const isReadOnly = useFactoryStore((state) => state.isReadOnly);
+  const onCommunity = library.view.kind === "public" || library.view.kind === "saved";
+  const onPlans = !onCommunity;
+  const feedbackOpen = useFeedbackOpen();
   const [menu, setMenu] = useState<{ kind: "share" | "help"; anchor: ChromeAnchor }>();
   const [pasting, setPasting] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
@@ -134,32 +138,18 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
   // Whether a game with the mod is listening, asked each time the menu opens.
   const modReach = useModReach(menu?.kind === "share");
 
-  // The mod's Share menu has the same rows, in the same words. Labels only. With live plans the first row invites
-  // people into this plan (greyed signed out); posting a copy to the library is the next row, Publish.
+  // The mod's Share menu has the same rows, in the same words: copies only. Labels only. People are invited with
+  // the Invite key; a copy posted to Community is the last row (never for a task board).
   const shareEntries: MenuEntry[] = [
-    ...(LIVE
-      ? [
-          signedIn
-            ? { label: "Share with people...", onSelect: () => setInviting(true) }
-            : {
-                // Greyed with the mod's words for why.
-                label: "Share with people",
-                detail: "Sign in to share",
-                disabled: true,
-                tip: "Sign in to share",
-                onSelect: () => undefined,
-              },
-        ]
-      : []),
-    ...libraryRows(Boolean(linkedPost), onShare, { disabled: isReadOnly, taskBoard: isTaskBoardPlan }).map(({ detail, ...row }) => {
-      void detail;
-      return row;
-    }),
-    { label: "Copy plan link", onSelect: () => void copyPlanLink(plan()), ruleAbove: true },
+    { label: "Copy plan link", onSelect: () => void copyPlanLink(plan()) },
     { label: "Copy plan code", onSelect: () => void copyPlanCode(plan()) },
     { label: "Export plan file", onSelect: () => downloadPlanFile(plan()) },
-    openInModRow(modReach, plan),
     { label: "Screenshot...", onSelect: onScreenshot },
+    openInModRow(modReach, plan),
+    ...libraryRows(Boolean(linkedPost), onShare, { disabled: isReadOnly, taskBoard: isTaskBoardPlan }).map(({ detail, ...row }, index) => {
+      void detail;
+      return index === 0 ? { ...row, ruleAbove: true } : row;
+    }),
   ];
 
   const openMenuFrom = (kind: "share" | "help", event: MouseEvent<HTMLElement>) => {
@@ -195,31 +185,56 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
           />
         </>
       ) : null}
-      <BarKey
-        id="library"
-        gap
-        label={library.active ? "Board" : "Library"}
-        width={50}
-        tip="Library: your plans, and plans other players shared"
-        onClick={() => (library.active ? leaveLibrary() : openLibrary())}
-      />
+      {LIVE ? (
+        <BarKey
+          id="invite"
+          gap
+          label="Invite"
+          width={44}
+          off={!signedIn}
+          tip={signedIn ? "Invite people to edit this plan with you" : "Sign in to invite"}
+          onClick={() => setInviting(true)}
+        />
+      ) : null}
       <BarKey
         id="share"
+        gap={!LIVE}
         label="Share"
         width={42}
-        tip="Share this plan: with people, to the library, as a link, a code or a file, to the game, or as a picture"
+        tip="Share a copy of this plan: a link, a code, a file or a picture, to the game, or post it to Community"
         open={menu?.kind === "share"}
         onClick={(event) => openMenuFrom("share", event)}
         menuAnchor
+      />
+      <BarKey
+        id="plans"
+        label="Plans"
+        width={42}
+        open={library.active && onPlans}
+        tip="Plans: every plan you have, and the plans shared with you"
+        onClick={() => (library.active && library.view.kind === "all" ? leaveLibrary() : openLibrary({ kind: "all" }))}
+      />
+      <BarKey
+        id="community"
+        label="Community"
+        width={66}
+        open={library.active && onCommunity}
+        tip="Community: plans other players posted"
+        onClick={() => (library.active && onCommunity ? leaveLibrary() : openLibrary({ kind: "public" }))}
       />
       <AccountKey />
       <BarKey
         id="feedback"
         gap
         icon
+        open={feedbackOpen}
         ariaLabel="Feedback"
         tip="Feedback: report a bug, share an idea, or ask for help"
         onClick={() => {
+          if (feedbackOpen) {
+            closeFeedback();
+            return;
+          }
           if (!knock(OPEN_FEEDBACK_EVENT)) window.open(HelpLinks.bugReport, "_blank", "noopener,noreferrer");
         }}
       >

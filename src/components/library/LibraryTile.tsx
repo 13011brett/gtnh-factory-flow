@@ -77,7 +77,7 @@ export interface LibraryTileProps {
   /** Starred, and the star to click. Your designs only. */
   favorite?: boolean;
   onFavorite?: () => void;
-  /** Bookmarked, and the ribbon to click. Public setups only. */
+  /** Bookmarked, and the ribbon to click. Community only. */
   saved?: boolean;
   onSave?: () => void;
   /** Not posted yet: the dim globe posts it. */
@@ -421,8 +421,8 @@ function PostGlyph({
       <button
         type="button"
         onClick={onPost}
-        aria-label="Post to Public setups"
-        title="Post to Public setups"
+        aria-label="Post to Community"
+        title="Post to Community"
         className="p-0.5 text-[var(--mc-ink-muted)] opacity-70 hover:bg-[var(--mc-61)] hover:text-emerald-300"
       >
         <Globe className="h-3 w-3" aria-hidden />

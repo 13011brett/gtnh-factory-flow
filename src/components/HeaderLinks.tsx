@@ -104,7 +104,7 @@ export function MenuLinks({ onAction, auxiliary = false }: { onAction?: () => vo
         <span className="flex h-4 w-4 shrink-0 items-center justify-center">
           <Library className="h-3.5 w-3.5" aria-hidden />
         </span>
-        <span className="truncate">Library</span>
+        <span className="truncate">Community</span>
       </button> : null}
       <button
         type="button"

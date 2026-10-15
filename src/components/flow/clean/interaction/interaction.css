@@ -6,26 +6,27 @@
 
 /* ---- Tooltip (spec 10.2) --------------------------------------------------- */
 
+/* Tips at the mod's size on screen: the game font's 8 px at GUI scale 2 is 16 screen px, 14 here at the interface's 1.17. */
 .tp {
   position: fixed;
   z-index: 9999;
   box-sizing: border-box;
   width: max-content;
-  max-width: 300px;
-  padding: 7px 9px;
+  max-width: 420px;
+  padding: 10px 13px;
   background: #26282d;
   color: #f5f5f5;
   /* The mod's pixel face, as the card and the drawer. */
   font-family: var(--cc-font);
-  font-size: 10px;
-  line-height: 15px;
+  font-size: 14px;
+  line-height: 21px;
   -webkit-font-smoothing: none;
   pointer-events: none;
   box-shadow:
     0 0 0 1px #111317,
     inset 1px 1px 0 #4a4c54,
     inset -1px -1px 0 #17191d,
-    2px 3px 6px rgba(0, 0, 0, 0.2);
+    2px 4px 8px rgba(0, 0, 0, 0.2);
 }
 .tp-title {
   font-weight: 400;
@@ -37,8 +38,8 @@
 .tp-row {
   display: flex;
   justify-content: space-between;
-  gap: 16px;
-  margin-top: 4px;
+  gap: 22px;
+  margin-top: 6px;
 }
 .tp-row + .tp-row {
   margin-top: 0;
@@ -63,7 +64,7 @@
   color: #a3a3a3;
 }
 .tp-note {
-  margin-top: 4px;
+  margin-top: 6px;
   color: #e5e5e5;
 }
 .tp-gold {
@@ -71,18 +72,18 @@
 }
 .tp-rule {
   height: 1px;
-  margin: 6px 0 4px;
+  margin: 8px 0 6px;
   background: #3a3b40;
 }
 .tp-actions {
   display: flex;
   flex-wrap: wrap;
-  gap: 2px 10px;
+  gap: 2px 14px;
 }
 .tp-action {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 6px;
   color: #e5e5e5;
 }
 .tp-icon {
@@ -97,10 +98,10 @@
 .tp-power {
   display: flex;
   align-items: flex-start;
-  gap: 10px;
+  gap: 14px;
 }
 .tp-power-guide {
-  padding-left: 10px;
+  padding-left: 14px;
   border-left: 1px solid #3a3b40;
 }
 

@@ -597,8 +597,8 @@ input.rail-box-edit {
 .rail-tip {
   position: fixed;
   z-index: 80;
-  max-width: 300px;
-  padding: 8px 10px;
+  max-width: 420px;
+  padding: 10px 13px;
   background: #26282d;
   border: 1px solid #111317;
   box-shadow:
@@ -606,8 +606,8 @@ input.rail-box-edit {
     inset -1px -1px 0 #17191d,
     2px 3px 6px rgba(0, 0, 0, 0.2);
   font-family: var(--cc-font);
-  font-size: 12px;
-  line-height: 16px;
+  font-size: 14px;
+  line-height: 21px;
   color: #e5e5e5;
   pointer-events: none;
 }

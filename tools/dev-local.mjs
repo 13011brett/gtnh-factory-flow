@@ -55,7 +55,7 @@ function start(name, args, env) {
       const lines = buffered.split(/\r?\n/);
       buffered = lines.pop() ?? "";
       for (const line of lines) {
-        out.write(`${prefix}${line}\n`);
+        out.write(line.startsWith(prefix) ? `${line}\n` : `${prefix}${line}\n`);
       }
     });
   };

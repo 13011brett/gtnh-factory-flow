@@ -40,7 +40,7 @@
   flex-direction: column;
   width: 640px;
   max-width: calc(100vw / var(--ui-scale, 1) - 16px);
-  height: 216px;
+  height: 262px;
   background: var(--ms-surface);
   box-shadow:
     inset 0 0 0 1px var(--ms-edge),
@@ -112,8 +112,8 @@
   position: relative;
   display: flex;
   align-items: center;
-  height: 22px;
-  padding: 0 10px 0 10px;
+  min-height: 22px;
+  padding: 3px 10px;
   white-space: nowrap;
 }
 .ms-row + .ms-row::before {
@@ -439,4 +439,39 @@
 }
 .ms-rows {
   overflow-y: auto;
+}
+
+/* The mod's size: the bar's zoom on top of the interface's. */
+.ms-backdrop.ms-zoom {
+  zoom: calc(var(--ui-scale) * 1.7094);
+}
+.ms-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.ms-name {
+  display: flex;
+  align-items: baseline;
+}
+.ms-about {
+  margin-top: 1px;
+  color: var(--mc-muted);
+  font-size: 0.8em;
+  line-height: 10px;
+  opacity: 0.8;
+}
+
+/* The game's box has no pictures: one column of sections, one of rows. */
+.ms {
+  width: 400px;
+}
+.ms-body {
+  grid-template-columns: 96px minmax(0, 1fr);
+}
+.ms-preview {
+  display: none;
+}
+.ms-slider {
+  width: 80px;
 }

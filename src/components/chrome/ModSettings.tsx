@@ -108,6 +108,7 @@ export function ModSettings({
       rows: [
         {
           label: "Size",
+          about: "Sets how big the planner is.",
           hint: "of the planner",
           kind: "choice",
           names: SIZE_NAMES,
@@ -116,6 +117,7 @@ export function ModSettings({
         },
         {
           label: "Names when zoomed out",
+          about: "Names each card when you zoom far out.",
           kind: "switch",
           names: ["Off", "On"],
           at: settings.zoomedOutNames ? 1 : 0,
@@ -123,6 +125,7 @@ export function ModSettings({
         },
         {
           label: "Circuit as an input",
+          about: "Shows a circuit as an input.",
           kind: "switch",
           names: ["Off", "On"],
           at: settings.circuitAsInput ? 1 : 0,
@@ -130,6 +133,7 @@ export function ModSettings({
         },
         {
           label: "See-through",
+          about: "Fades the board and the overview.",
           kind: "slider",
           names: SEE_THROUGH_NAMES,
           at: seeThrough / SEE_THROUGH_STEP,
@@ -137,6 +141,7 @@ export function ModSettings({
         },
         {
           label: "Font",
+          about: "Sets the font of the planner.",
           kind: "button",
           names: [APP_FONTS.find((option) => option.id === font)?.label ?? "Minecraft"],
           at: 0,
@@ -146,6 +151,7 @@ export function ModSettings({
           ? [
               {
                 label: "Machine list",
+                about: "Opens the list of machines.",
                 kind: "button" as const,
                 names: ["Open"],
                 at: 0,
@@ -158,6 +164,7 @@ export function ModSettings({
           : []),
         {
           label: "Animation",
+          about: "Plays the plan being built.",
           hint: "build timelapse",
           kind: "button" as const,
           names: BOARD_TIMELAPSE_PRESETS.map((preset) => preset.name),
@@ -176,6 +183,7 @@ export function ModSettings({
       rows: [
         {
           label: "Sounds",
+          about: "Sets how loud the clicks are.",
           kind: "choice",
           names: SOUND_NAMES,
           at: soundIndex,
@@ -188,6 +196,7 @@ export function ModSettings({
       rows: [
         {
           label: "Controls and shortcuts",
+          about: "Opens the list of keys.",
           kind: "button",
           names: ["Open"],
           at: 0,
@@ -198,6 +207,7 @@ export function ModSettings({
         },
         {
           label: "The tour",
+          about: "Walks you through the planner.",
           kind: "button",
           names: ["Take it"],
           at: 0,
@@ -233,7 +243,7 @@ export function ModSettings({
 
   return createPortal(
     <div
-      className="ms-backdrop ui-zoom"
+      className="ms-backdrop ui-zoom ms-zoom"
       onPointerDown={(event) => {
         if (event.target === event.currentTarget) close();
       }}
@@ -403,8 +413,13 @@ function SettingRow({
         }
       }}
     >
-      <span className="ms-label">{row.label}</span>
-      {row.hint ? <span className="ms-hint">{row.hint}</span> : null}
+      <span className="ms-text">
+        <span className="ms-name">
+          <span className="ms-label">{row.label}</span>
+          {row.hint ? <span className="ms-hint">{row.hint}</span> : null}
+        </span>
+        {row.about ? <span className="ms-about">{row.about}</span> : null}
+      </span>
       <span className="ms-spacer" />
       {control}
     </div>

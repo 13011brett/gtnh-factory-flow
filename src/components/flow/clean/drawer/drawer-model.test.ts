@@ -95,7 +95,7 @@ describe("the drawer view", () => {
   it("prompts with Set rate only where nothing sets the plan", () => {
     const asked = buildDrawerView({ ...base, storage: storage(), role: "source", result: undefined, unanchored: true });
     expect(asked.prompt).toBe(true);
-    expect(asked.boxText).toBe("Set rate");
+    expect(asked.boxText).toBe("Set");
     const set = buildDrawerView({ ...base, storage: storage({ targetPerSecond: -1, targetMode: "exact" }), role: "source", result: undefined, unanchored: true });
     expect(set.prompt).toBe(false);
   });

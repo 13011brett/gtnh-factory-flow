@@ -6,11 +6,10 @@ import "./special.css";
 
 import { Handle, Position } from "@xyflow/react";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
-import { Copy, Plus, RefreshCw, Trash2 } from "lucide-react";
 import type { FactoryNode, Recipe } from "@/lib/model/types";
 import { ResourceIcon } from "@/components/nei/ResourceIcon";
 import { useFactoryStore } from "@/store/factory-store";
-import { MenuShell } from "../../EnergyHatchMenu";
+import { CardActionsMenu } from "../menus/CardActionsMenu";
 import { CropPickerMenu } from "../../CropPickerMenu";
 import { checklistLocked } from "../../RecipeNode";
 import { CountBox, CleanPortRow, StripChip, TierChip, AmpsChip, glyph } from "../CleanCard";
@@ -363,8 +362,6 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
   }, [view.unset]);
   const deleteNode = useFactoryStore((state) => state.deleteNode);
   const duplicateNode = useFactoryStore((state) => state.duplicateNode);
-  const beginRecipeRefactor = useFactoryStore((state) => state.beginRecipeRefactor);
-  const browseMachineRecipes = useFactoryStore((state) => state.browseMachineRecipes);
   const [listOpen, setListOpen] = useState(false);
   const [listAnchor, setListAnchor] = useState<MenuAnchor>();
   const [sheetAnchor, setSheetAnchor] = useState<MenuAnchor>();
@@ -415,6 +412,7 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
   const openMenu = (event: MouseEvent<HTMLElement>) => {
     event.stopPropagation();
     if (!wasClick(event)) return;
+    // The menu hangs under the key, as the mod's (RecipeCard.openActions).
     const card = event.currentTarget.closest("[data-node-glance-root]") ?? undefined;
     const r = (card ?? event.currentTarget).getBoundingClientRect();
     setMenu(
@@ -693,48 +691,12 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
       />
 
       {menu ? (
-        <MenuShell
-          anchor={menu}
-          align="left"
-          width={224}
-          maxHeight={280}
+        <CardActionsMenu
+          anchor={{ left: menu.x, top: menu.top, bottom: menu.bottom }}
           onClose={() => setMenu(undefined)}
-        >
-          <div role="menu" aria-label="Card actions" className="text-[13px] leading-[18px]">
-            {[
-              { label: "Clone node", icon: Copy, run: () => cloneWithSound(duplicateNode, node.id), show: true },
-              {
-                label: "Replace the recipe",
-                icon: RefreshCw,
-                run: () => beginRecipeRefactor(node.id),
-                show: view.kind === "shared" || view.kind === "power",
-              },
-              {
-                label: "Add another recipe",
-                icon: Plus,
-                run: () => browseMachineRecipes(node.id),
-                show: shared,
-              },
-              { label: "Delete node", icon: Trash2, run: () => deleteNode(node.id), show: true },
-            ]
-              .filter((entry) => entry.show)
-              .map(({ label, icon: Icon, run }) => (
-                <button
-                  key={label}
-                  type="button"
-                  role="menuitem"
-                  onClick={() => {
-                    setMenu(undefined);
-                    run();
-                  }}
-                  className="flex min-h-8 w-full items-center gap-2 px-2 py-1.5 text-left text-[var(--mc-ink)] hover:bg-[var(--mc-93)] focus-visible:bg-[var(--mc-93)] focus-visible:outline-none"
-                >
-                  <Icon className="h-3 w-3 shrink-0" />
-                  <span className="min-w-0">{label}</span>
-                </button>
-              ))}
-          </div>
-        </MenuShell>
+          onClone={() => cloneWithSound(duplicateNode, node.id)}
+          onDelete={() => deleteNode(node.id)}
+        />
       ) : null}
       {sheetAnchor ? (
         context.sheet.kind === "machine" ? (

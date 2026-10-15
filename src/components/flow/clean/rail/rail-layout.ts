@@ -15,8 +15,9 @@ import { sparedByResource, type SpareView } from "./spare-model";
  * layouts. The structure is the mod's `OverviewRail.list`.
  */
 
-export const SECTION_H = 22;
-export const ROW_H = 24;
+/** The mod's 12 and 13 px bars and rows (OverviewRail.SECTION_H, ROW_H), 24 and 26 screen px at GUI scale 2. */
+export const SECTION_H = 20;
+export const ROW_H = 22;
 export const SETTER_H = 20;
 export const SPARE_HEAD_H = 22;
 export const POWER_H = 20;

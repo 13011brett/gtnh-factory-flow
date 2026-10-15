@@ -38,6 +38,7 @@ import {
   RESOURCE_SEARCH_DEBOUNCE_MS,
   type IndexedResource,
 } from "./ResourceIndexPane";
+import { FoldGlyph } from "./flow/clean/fold/FoldKey";
 import { usePlanLayout } from "./use-plan-layout";
 import {
   RecipeSearchOverlay,
@@ -824,7 +825,7 @@ export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
               onClick={() => writeWorkspaceView({ leftPanelOpen: false })}
               tip={() => ({ title: "Fold the items" })}
             >
-              {itemsOnRight ? "»" : "«"}
+              <FoldGlyph direction={itemsOnRight ? "right" : "left"} />
             </RailKey>
           }
         />

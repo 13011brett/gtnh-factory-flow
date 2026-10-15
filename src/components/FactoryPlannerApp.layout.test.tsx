@@ -78,7 +78,7 @@ describe("workspace layout", () => {
     expect(screen.queryByTestId("inspector")).toBeNull();
     const main = container.querySelector("main")!;
     expect(main.getAttribute("data-items-side")).toBe("right");
-    expect(main.style.gridTemplateColumns).toBe("234px minmax(0,1fr) 256px");
+    expect(main.style.gridTemplateColumns).toBe("336px minmax(0,1fr) 256px");
   });
 
   it("folds the overview to a strip that survives a reload", () => {
@@ -106,8 +106,7 @@ describe("workspace layout", () => {
     expect(rail.className).toBe(overview.className);
     expect(rail.getAttribute("data-side")).toBe("right");
     expect(overview.getAttribute("data-side")).toBe("left");
-    expect(rail.firstElementChild?.tagName.toLowerCase()).toBe("svg");
-    expect(rail.textContent).toBe("ITEMS");
+    expect(rail.textContent).toBe("«ITEMS");
     act(() => writeRailView({ open: true }));
     fireEvent.click(rail);
     expect(readWorkspaceViewSnapshot().leftPanelOpen).toBe(true);

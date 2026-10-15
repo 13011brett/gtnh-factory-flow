@@ -69,8 +69,8 @@ export function SpecialSheet({
     <>
       <MenuPortal
         anchor={anchor}
-        width={wide ? (none ? 420 : 560) : 260}
-        maxHeight={520}
+        width={wide ? (none ? 533 : 711) : 330}
+        maxHeight={660}
         label="Settings"
         onClose={onClose}
         keepOpenOn="[data-cc-sheet]"

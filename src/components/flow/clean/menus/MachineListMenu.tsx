@@ -32,7 +32,7 @@ export function MachineListMenu({
   const ordered = useMemo(() => orderMachineHandlers(handlers), [handlers]);
   const mapIcon = mapIcons.get(recipeMap) as MachineHandlerIcon | undefined;
   return (
-    <MenuPortal anchor={anchor} width={300} maxHeight={420} label="Machines that run this recipe" onClose={onClose}>
+    <MenuPortal anchor={anchor} width={381} maxHeight={533} label="Machines that run this recipe" onClose={onClose}>
       <div className="cm-head">Machines that run this recipe</div>
       <div className="cm-scroll">
         {ordered.map((handler) => {

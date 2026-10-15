@@ -112,7 +112,7 @@ export function SettingsSheet({ nodeId, anchor, onClose }: { nodeId: string; anc
 
   return (
     <>
-      <MenuPortal anchor={anchor} width={wide ? (none ? 470 : 640) : 260} maxHeight={520} label="Machine settings" onClose={onClose} keepOpenOn="[data-cc-sheet]">
+      <MenuPortal anchor={anchor} width={wide ? (none ? 597 : 813) : 330} maxHeight={660} label="Machine settings" onClose={onClose} keepOpenOn="[data-cc-sheet]">
         <div ref={sheetRef} className="cs-body" data-cc-sheet="" style={{ display: "flex", flexDirection: "column", minHeight: 0 }}>
           <div style={{ display: "flex", alignItems: "stretch", minHeight: 0, overflowY: "auto" }}>
             <div className="cs-col" style={{ flex: wide ? "0 0 auto" : "1 1 auto", minWidth: wide ? (none ? 220 : 250) : 0 }}>

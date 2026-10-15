@@ -48,6 +48,7 @@ import { PlanOverview, usePlanOverviewWidth } from "./PlanOverviewMount";
 import { ColumnStrip } from "./flow/clean/rail/OverviewRail";
 import { INSPECTOR_WIDTH, ITEMS_WIDTH, PANEL_RAIL_WIDTH, workspaceColumns } from "@/lib/workspace-columns";
 import { RecipeBrowser } from "./RecipeBrowser";
+import { FoldGlyph } from "./flow/clean/fold/FoldKey";
 
 export function FactoryPlannerApp() {
   const project = useFactoryStore((state) => state.project);
@@ -575,20 +576,9 @@ function PanelRail({ side, label }: { side: "left" | "right"; label: "Items" | "
         side === "left" ? "border-r border-line" : "border-l border-line",
       ].join(" ")}
     >
-      {/* One drawing for both sides, mirrored, so they cannot differ. */}
+      {/* The one fold arrow (the overview's), pointing the way the column opens. */}
       <span className="flex h-6 w-6 shrink-0 items-center justify-center">
-        <svg
-          viewBox="0 0 16 16"
-          className={["h-4 w-4", side === "left" ? "" : "rotate-180"].join(" ")}
-          fill="none"
-          stroke="currentColor"
-          strokeWidth="1.8"
-          strokeLinecap="round"
-          strokeLinejoin="round"
-          aria-hidden
-        >
-          <path d="M6 3l5 5-5 5" />
-        </svg>
+        <FoldGlyph direction={side === "left" ? "right" : "left"} />
       </span>
       <span
         aria-hidden

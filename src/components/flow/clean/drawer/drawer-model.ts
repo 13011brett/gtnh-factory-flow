@@ -5,7 +5,7 @@ import { storageTargetMode, type TargetMode } from "@/lib/model/storage-target";
 import { rateMultiplierForKind, rateSuffixForKind } from "@/lib/model/rate-unit";
 import { RULE_MARK, RULE_NAME, trimFlow } from "../../rate-rule";
 import type { DrawerKind } from "../tokens";
-import { measureClean } from "../text-measure";
+import { mcTextWidth, measureClean } from "../text-measure";
 import type { TipSpec } from "../interaction/tip-spec";
 
 /**
@@ -257,13 +257,14 @@ export function buildDrawerView(input: DrawerViewInput): CleanDrawerView {
     unit,
     zero,
     numberSmall: measureClean(number, 13) + 2 + measureClean(unit, 8) > WORDS,
-    nameSmall: measureClean(label, 8) > WORDS,
-    nameClipped: measureClean(label, 6) > WORDS,
+    // The mod's rule, as the card's (CardPaint.words).
+    nameSmall: mcTextWidth(label) > 71,
+    nameClipped: measureClean(label, mcTextWidth(label) > 71 ? 6 : 8) > WORDS,
     hasRule,
     rule,
     ruleMark: kind === "trash" ? "×" : RULE_MARK[rule],
     target: targetParts,
-    boxText: kind === "trash" ? "Voided" : prompt ? "Set rate" : "Set",
+    boxText: kind === "trash" ? "Voided" : "Set", // the mod says "Set", pulsing gold while nothing is set
     prompt,
     unmet: isUnmet,
     reaches,

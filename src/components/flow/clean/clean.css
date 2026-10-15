@@ -58,7 +58,8 @@
   line-height: 10px;
   font-weight: 400;
   letter-spacing: 0;
-  text-shadow: none;
+  /* The game's text shadow (Hyb.text draws every word with it): a quarter of the colour, a pixel down and right. */
+  text-shadow: 1px 1px 0 color-mix(in srgb, currentColor 25%, #000);
   -webkit-font-smoothing: none;
   /* The frame is an inset shadow, never a border: a border would push rows off the grid. */
   box-shadow:
@@ -391,23 +392,32 @@
   background-clip: content-box;
 }
 
+/*
+ * Monocraft is shorter and wider than the game's font: at 14 px its capitals are the mod's x1.5 figures' 10.5 px, and a
+ * letter spacing of -0.8 px keeps each figure as wide as at 13 px (what the fit checks measure). The same holds below:
+ * names at 9 px (-0.6 px) stand as tall as the game's 8 px. Line 13: the name's glyphs start 14 px under the number's,
+ * as the mod's (12 px figures, 2 px gap).
+ */
 .cc-num {
   display: block;
   max-width: 70px;
-  font-size: 13px;
+  font-size: 14px;
+  letter-spacing: -0.8px;
   font-weight: 400;
-  line-height: 16px;
+  line-height: 13px;
   color: var(--cc-ink);
   white-space: nowrap;
 }
+/* The unit small beside the number, a space and 2 px after it, its foot a pixel above the number's (CardPaint.words). */
 .cc-num::after {
   content: attr(data-unit);
-  margin-left: 2px;
-  font-size: 8px;
+  margin-left: 6px;
+  font-size: 9px;
+  letter-spacing: -0.6px;
   font-weight: 400;
   color: var(--cc-muted);
   position: relative;
-  top: -3px;
+  top: -1px;
 }
 .cc-num[data-zero] {
   color: var(--cc-idle);
@@ -416,8 +426,9 @@
   color: var(--cc-gold);
 }
 .cc-num[data-small] {
-  font-size: 8px;
-  line-height: 16px;
+  font-size: 9px;
+  letter-spacing: -0.6px;
+  line-height: 13px;
 }
 .cc-num[data-small]::after {
   top: 0;
@@ -429,7 +440,8 @@
   display: block;
   width: 70px;
   max-width: 70px;
-  font-size: 8px;
+  font-size: 9px;
+  letter-spacing: -0.6px;
   font-weight: 400;
   line-height: 10px;
   color: var(--cc-muted);
@@ -437,7 +449,8 @@
   overflow: hidden;
 }
 .cc-pname[data-small] {
-  font-size: 6px;
+  font-size: 7px;
+  letter-spacing: -0.45px;
 }
 .cc-pname[data-clip] {
   -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 10px), transparent);
@@ -552,12 +565,12 @@
   display: flex;
   align-items: flex-start;
   justify-content: center;
-  padding-top: 8px;
   box-sizing: border-box;
 }
+/* The art fitted in the 88 px square box, centred both ways, as the mod draws it (RecipeCard.drawMachineArt). */
 .cc-art {
-  max-width: 88px;
-  max-height: 88px;
+  width: 88px;
+  height: 88px;
   object-fit: contain;
   image-rendering: pixelated;
   filter: drop-shadow(5px 7px 6px rgba(0, 0, 0, 0.6));
@@ -566,35 +579,49 @@
 .cc-machine {
   width: 64px !important;
   height: 64px !important;
+  /* A single block sits 4 px down the box, clear of the count. */
+  margin-top: 4px;
   filter: drop-shadow(5px 7px 6px rgba(0, 0, 0, 0.6));
   pointer-events: none;
 }
 .cc-circuit {
   position: absolute !important;
-  left: 4px;
-  top: 60px;
+  left: 0;
+  top: 62px;
   width: 24px !important;
   height: 24px !important;
 }
 
-/* The count: bottom right, with a line under it that never moves it. */
+/* The count, as the mod draws it (CardPaint.count): a block on the picture box's bottom right, its right edge 2 px
+   in from the 88 px box, as wide as the widest of the count, "(set count)" and the line under it, so the count never
+   moves whatever is under it; the count (x1.5, 12 px) centred in the block, its top 65 px down the mod's picture box (60 here: the website's box starts 2 px lower and Monocraft sits 1 px low), and
+   the line (8 px) centred 1 px under the count. Drawn over the machine's art. */
 .cc-count {
-  /* The mod's picture box is 88 square: the count sits at its bottom right whatever the rails' height. */
   position: absolute;
   right: 2px;
-  top: 58px;
-  min-width: 64px;
-  height: 30px;
+  top: 60px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
   box-sizing: border-box;
-  padding-top: 4px;
-  text-align: right;
   font-size: 12px;
   font-weight: 400;
-  line-height: 16px;
+  line-height: 13px;
   color: var(--cc-ink);
   cursor: text;
   user-select: none;
   white-space: nowrap;
+}
+/* Reserves the width of "(set count)", as the mod's block does. */
+.cc-count::before {
+  content: "(set count)";
+  display: block;
+  height: 0;
+  overflow: hidden;
+  visibility: hidden;
+  font-size: 8px;
+  line-height: 0;
 }
 .cc-count::after {
   content: attr(data-note);
@@ -775,4 +802,14 @@
   box-shadow:
     0 0 0 min(max(3px, calc(6px / var(--board-zoom, 1))), 24px) var(--cc-select),
     0 0 0 min(max(5px, calc(8px / var(--board-zoom, 1))), 32px) var(--cc-red);
+}
+
+/* A selection outline shows only when several things are selected (the mod's BoardSession.showsSelected): with one
+   selected (no selected node followed by another), the card wears no ring; "cannot run" keeps its red. */
+.react-flow__nodes:not(:has(> .react-flow__node.selected ~ .react-flow__node.selected)) .cc-card[data-selected]::before {
+  box-shadow: none;
+}
+.react-flow__nodes:not(:has(> .react-flow__node.selected ~ .react-flow__node.selected))
+  .cc-card[data-selected][data-cannot-run]::before {
+  box-shadow: 0 0 0 2px var(--cc-red);
 }

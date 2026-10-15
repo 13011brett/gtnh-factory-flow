@@ -93,12 +93,12 @@ export const HEAD_ROW_HEIGHT = cells(2); // 40
 export const CONFIG_PANEL_ROW_HEIGHT = cells(3); // 60
 
 /**
- * Drawers and tanks: six cells by four, a one-port machine card. A one-cell
- * title bar to move it by, and a three-cell port chip to wire from. Shared by
+ * Drawers and tanks: the mod's drawer, 116 x 48 (DrawerPaint.W, H): a bar to move it by over one port row to wire
+ * from. Not whole cells: the drawer sits on the grid by its corner, as the mod's does. Shared by
  * placement, routing, and drag previews.
  */
-export const STORAGE_NODE_WIDTH = cells(6); // 120
-export const STORAGE_NODE_HEIGHT = cells(4); // 80
+export const STORAGE_NODE_WIDTH = 116;
+export const STORAGE_NODE_HEIGHT = 48;
 
 /** Trash cans, same tile. */
 export const TRASH_NODE_WIDTH = cells(4); // 80

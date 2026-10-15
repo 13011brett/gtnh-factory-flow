@@ -1,6 +1,7 @@
 "use client";
 
 import "./rail.css";
+import { fluidSwatchStyle } from "../fluid-swatch";
 
 import { Zap } from "lucide-react";
 import {
@@ -16,6 +17,7 @@ import {
 } from "react";
 import { createPortal } from "react-dom";
 import { machineArtPixels } from "../../MachinePicker";
+import { FoldGlyph } from "../fold/FoldKey";
 import { useMachineHandlerIcons } from "../../machine-icons";
 import { getFallbackFluidColor, ResourceIcon } from "@/components/nei/ResourceIcon";
 import { formatCompact } from "@/lib/model/resources";
@@ -70,12 +72,12 @@ import { SpareBlock } from "./SpareBlock";
  * strip (kept per device). Hovering a row lights its resource on the board.
  */
 
-export const RAIL_WIDTH = 234;
+export const RAIL_WIDTH = 336;
 export const RAIL_FOLDED_WIDTH = 26;
-/** The rail's type: Monocraft at 10 px (the mod's 8 px at the rail's 234 against its 198, to whole pixels). */
-export const RAIL_FONT = 10;
-/** A rule key, a gap and a rate box: the controls' block at a line's right (the mod's 26% of the rail). */
-export const CONTROLS_W = 62;
+/** The rail's type: Monocraft at 13 px (the mod's 8 px at the rail's 336 against its 198: its size on screen). */
+export const RAIL_FONT = 13;
+/** A rule key, a gap and a rate box: the controls' block at a line's right (the mod's 12 + 2 + 38 of its 198). */
+export const CONTROLS_W = 88;
 /** A machine line's room between its left indent (30) and the right padding (8). */
 const MACHINE_INNER = RAIL_WIDTH - 30 - 8;
 
@@ -134,7 +136,7 @@ function ResourceGlyph({ line }: { line: Pick<RailLine, "resource" | "energy"> }
     );
   }
   if (line.resource.kind === "fluid") {
-    // The mod's flat square in the fluid's own colour, as on the cards and drawers.
+    // The mod's square of the fluid's texture, as on the cards and drawers.
     const resource = line.resource;
     const color = resource.dominantColor ?? resource.iconAtlas?.dominantColor ?? getFallbackFluidColor(resource.id);
     return (
@@ -142,7 +144,7 @@ function ResourceGlyph({ line }: { line: Pick<RailLine, "resource" | "energy"> }
         className="rail-icon rail-swatch"
         role="img"
         aria-label={resource.displayName}
-        style={{ backgroundColor: color }}
+        style={fluidSwatchStyle({ ...resource, dominantColor: color })}
       />
     );
   }
@@ -154,7 +156,7 @@ function ResourceGlyph({ line }: { line: Pick<RailLine, "resource" | "energy"> }
         showAmount={false}
         bare
         tooltip={false}
-        className="!h-full !w-full"
+        className="rail-icon-art"
       />
     </span>
   );
@@ -220,19 +222,7 @@ export function ColumnStrip({
       }}
       {...tipProps(`rail|open|${label}`, () => ({ title: open }))}
     >
-      <svg
-        viewBox="0 0 16 16"
-        width="16"
-        height="16"
-        fill="none"
-        stroke="currentColor"
-        strokeWidth="1.8"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-        aria-hidden
-      >
-        <path d={side === "left" ? "M6 3l5 5-5 5" : "M10 3l-5 5 5 5"} />
-      </svg>
+      <FoldGlyph direction={side === "left" ? "right" : "left"} />
       <span className="rail-strip-label">{label}</span>
     </div>
   );
@@ -374,7 +364,7 @@ function OpenRail() {
           onClick={() => writeRailView({ open: false })}
           tip={() => ({ title: "Fold the overview" })}
         >
-          «
+          <FoldGlyph direction="left" />
         </RailKey>
       </div>
       <input
@@ -964,8 +954,8 @@ function MachineGlyph({ entry }: { entry: RailMachine }) {
         showAmount={false}
         bare
         tooltip={false}
-        iconPixelSize={machineArtPixels(16)}
-        className="!h-full !w-full"
+        iconPixelSize={machineArtPixels(20)}
+        className="rail-icon-art"
       />
     </span>
   );

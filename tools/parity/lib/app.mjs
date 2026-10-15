@@ -11,16 +11,17 @@ export const WEB_CARD_CSS = 320;
 /** deviceScaleFactor that makes the website's card the same pixel width as the mod's reference card. */
 export const DSF = MOD_CARD_PX / WEB_CARD_CSS;
 
-export async function boot({ width = 1920, height = 1080, dsf = DSF, headless = true } = {}) {
+export async function boot({ width = 1920, height = 1080, dsf = DSF, headless = true, offer = false } = {}) {
   const browser = await chromium.launch({ headless });
   const context = await browser.newContext({ viewport: { width, height }, deviceScaleFactor: dsf, reducedMotion: "no-preference" });
   const page = await context.newPage();
-  await page.addInitScript(() => {
+  await page.addInitScript((offer) => {
     try {
       localStorage.setItem("gtnh-factory-flow.mod-announcement-dismissed.v1", "x");
-      localStorage.setItem("gtnhplanner.tour.offered", "1");
+      // The first-run tour offer covers the board: asked already, unless a state wants it.
+      if (!offer) localStorage.setItem("gtnhplanner.tour.offered", "1");
     } catch {}
-  });
+  }, offer);
   page.on("pageerror", (e) => console.log("[pageerror]", String(e).slice(0, 300)));
   await page.goto(PAGE_URL, { waitUntil: "networkidle", timeout: 180000 });
   await page.waitForFunction(() => window.__ccStore?.getState().dataset, null, { timeout: 180000 });

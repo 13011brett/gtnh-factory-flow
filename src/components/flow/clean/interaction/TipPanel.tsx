@@ -9,14 +9,14 @@ import "./interaction.css";
 export function MouseIcon({ input }: { input: TipInput }) {
   if (input === "key") {
     return (
-      <svg className="tp-icon" width="7" height="10" viewBox="0 0 7 10" aria-hidden>
+      <svg className="tp-icon" width="10" height="14" viewBox="0 0 7 10" aria-hidden>
         <rect x="0.5" y="1.5" width="6" height="6" fill="none" stroke="#a3a3a3" />
         <rect x="2" y="3" width="3" height="3" fill="#f5f5f5" />
       </svg>
     );
   }
   return (
-    <svg className="tp-icon" width="7" height="10" viewBox="0 0 7 10" aria-hidden shapeRendering="crispEdges">
+    <svg className="tp-icon" width="10" height="14" viewBox="0 0 7 10" aria-hidden shapeRendering="crispEdges">
       <path d="M1.5 .5H5.5L6.5 1.5V8.5L5.5 9.5H1.5L.5 8.5V1.5Z" fill="none" stroke="#a3a3a3" />
       {input === "left" || input === "drag" ? <rect x="1" y="1" width="2.5" height="3" fill="#f5f5f5" /> : null}
       {input === "right" ? <rect x="3.5" y="1" width="2.5" height="3" fill="#f5f5f5" /> : null}

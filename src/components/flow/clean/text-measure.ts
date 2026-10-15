@@ -91,3 +91,19 @@ export function measureText(text: string, size: number, weight = 500): number {
   widths.set(key, width);
   return width;
 }
+
+/**
+ * A string's width in the game's own font at its one size (8 px), from Minecraft's glyph widths (each glyph's width
+ * and a pixel after it). The mod decides by this whether a port's name stands at full size or drops to 0.75
+ * (CardPaint.words), so the website takes the same decision whatever Monocraft's widths are.
+ */
+const MC_NARROW: Record<string, number> = {
+  " ": 4, "!": 2, "'": 2, ",": 2, ".": 2, ":": 2, ";": 2, "|": 2, "i": 2, "`": 3, "l": 3,
+  "\"": 4, "(": 4, ")": 4, "*": 4, "I": 4, "[": 4, "]": 4, "t": 4, "{": 4, "}": 4,
+  "<": 5, ">": 5, "f": 5, "k": 5, "@": 7, "~": 7,
+};
+export function mcTextWidth(text: string): number {
+  let width = 0;
+  for (const ch of text) width += MC_NARROW[ch] ?? 6;
+  return width;
+}

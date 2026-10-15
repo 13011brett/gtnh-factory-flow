@@ -25,7 +25,7 @@ export function OptionListMenu({
   const needle = query.trim().toLowerCase();
   const shown = control.options.filter((option) => option.label.toLowerCase().includes(needle));
   return (
-    <MenuPortal anchor={anchor} width={230} maxHeight={360} label={control.label} onClose={onClose}>
+    <MenuPortal anchor={anchor} width={292} maxHeight={457} label={control.label} onClose={onClose}>
       <input
         autoFocus
         className="cm-filter nodrag"

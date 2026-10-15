@@ -1,4 +1,7 @@
 /*
+ * Sizes are the mod's on screen: its menus are drawn at the board's GUI scale (game type 16 screen px at GUI scale
+ * 2), so every length here is 1.27x the first version's, which matched the card's css px.
+ *
  * The clean card's menus (the mod's machine list, gear sheet, strip-chip list, power input panel). Plain unlayered
  * CSS on classes and data attributes, in the tooltip skin. Everything renders in a body portal: nothing here is in
  * the card's DOM. Tokens come from clean.css (:root).
@@ -13,21 +16,23 @@
   overflow: hidden;
   background: #26282d;
   color: #f5f5f5;
-  font-family: var(--app-font, ui-sans-serif, system-ui, sans-serif);
-  font-size: 11px;
-  line-height: 14px;
+  /* The mod draws every menu and panel in the game font. */
+  font-family: var(--cc-font);
+  -webkit-font-smoothing: none;
+  font-size: 14px;
+  line-height: 18px;
   box-shadow:
     0 0 0 1px #111317,
     inset 1px 1px 0 #4a4c54,
     inset -1px -1px 0 #17191d,
-    2px 3px 6px rgba(0, 0, 0, 0.35);
+    2px 4px 8px rgba(0, 0, 0, 0.35);
 }
 .cm-head {
   flex: none;
-  padding: 6px 10px 4px;
+  padding: 8px 13px 5px;
   color: #8a8d96;
-  font-size: 10px;
-  line-height: 12px;
+  font-size: 13px;
+  line-height: 15px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
   background: #2c2e34;
@@ -42,10 +47,10 @@
 .cm-row {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   box-sizing: border-box;
-  height: 24px;
-  padding: 0 8px;
+  height: 30px;
+  padding: 0 10px;
   cursor: pointer;
   user-select: none;
   white-space: nowrap;
@@ -56,8 +61,8 @@
 }
 .cm-icon {
   flex: none;
-  width: 20px;
-  height: 20px;
+  width: 25px;
+  height: 25px;
 }
 .cm-name {
   flex: 1 1 auto;
@@ -68,25 +73,25 @@
 .cm-note {
   flex: none;
   color: #8a8d96;
-  font-size: 10px;
+  font-size: 13px;
 }
 .cm-empty {
-  padding: 8px 10px;
+  padding: 10px 13px;
   color: #8a8d96;
 }
 .cm-filter {
   flex: none;
   box-sizing: border-box;
-  width: calc(100% - 8px);
-  height: 24px;
-  margin: 4px;
-  padding: 0 6px;
+  width: calc(100% - 10px);
+  height: 30px;
+  margin: 5px;
+  padding: 0 8px;
   border: 0;
   outline: 0;
   background: #000;
   color: #f5f5f5;
   font: inherit;
-  font-size: 12px;
+  font-size: 15px;
   box-shadow: 0 0 0 1px #111317;
 }
 .cm-filter::placeholder {
@@ -101,29 +106,29 @@
 }
 .cs-col {
   box-sizing: border-box;
-  padding: 6px 0 4px;
+  padding: 8px 0 5px;
 }
 .cs-col + .cs-col {
   border-left: 1px solid #2c2e34;
 }
 .cs-title {
-  padding: 2px 10px 4px;
+  padding: 2px 13px 5px;
   color: #8a8d96;
-  font-size: 12px;
-  line-height: 16px;
+  font-size: 15px;
+  line-height: 20px;
 }
 .cs-none {
-  padding: 4px 10px;
+  padding: 5px 13px;
   color: #8a8d96;
-  font-size: 12px;
+  font-size: 15px;
   white-space: nowrap;
 }
 .cs-row {
   display: flex;
   align-items: center;
-  gap: 6px;
-  height: 24px;
-  padding: 0 10px 0 6px;
+  gap: 8px;
+  height: 30px;
+  padding: 0 13px 0 8px;
   user-select: none;
 }
 .cs-row[data-warn] .cs-value {
@@ -132,8 +137,8 @@
 .cs-pin {
   flex: none;
   box-sizing: border-box;
-  width: 16px;
-  height: 22px;
+  width: 20px;
+  height: 28px;
   padding: 0;
   border: 0;
   background: transparent;
@@ -165,12 +170,12 @@
   flex: none;
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 6px;
   box-sizing: border-box;
-  min-width: 96px;
-  max-width: 170px;
-  height: 22px;
-  padding: 0 6px;
+  min-width: 122px;
+  max-width: 216px;
+  height: 28px;
+  padding: 0 8px;
   background: #1b1d21;
   box-shadow: 0 0 0 1px #34363c;
   cursor: pointer;
@@ -189,27 +194,27 @@
   flex: none;
   width: 0;
   height: 0;
-  border: 4px solid transparent;
+  border: 5px solid transparent;
   border-top-color: #9a9ca4;
   border-bottom-width: 0;
 }
 .cs-foot {
   margin: 2px 0 0;
-  padding: 5px 10px 0;
+  padding: 6px 13px 0;
   border-top: 1px solid #2c2e34;
   color: #6e7179;
-  font-size: 12px;
-  line-height: 16px;
+  font-size: 15px;
+  line-height: 20px;
 }
 .cs-f {
   display: grid;
-  grid-template-columns: 64px minmax(0, 1fr) auto;
-  column-gap: 6px;
+  grid-template-columns: 81px minmax(0, 1fr) auto;
+  column-gap: 8px;
   align-items: baseline;
-  padding: 0 10px;
-  min-height: 16px;
-  font-size: 11px;
-  line-height: 16px;
+  padding: 0 13px;
+  min-height: 20px;
+  font-size: 14px;
+  line-height: 20px;
   white-space: nowrap;
   font-variant-numeric: tabular-nums;
 }
@@ -226,7 +231,7 @@
   color: #8a8d96;
 }
 .cs-f-math sup {
-  font-size: 9px;
+  font-size: 11px;
   line-height: 0;
 }
 .cs-f-result {
@@ -252,57 +257,59 @@
   z-index: 9999;
   display: flex;
   align-items: flex-end;
-  gap: 4px;
+  gap: 5px;
   pointer-events: none;
-  font-family: var(--app-font, ui-sans-serif, system-ui, sans-serif);
+  /* The mod draws every menu and panel in the game font. */
+  font-family: var(--cc-font);
+  -webkit-font-smoothing: none;
 }
 .pw {
   box-sizing: border-box;
-  width: 320px;
-  padding: 8px 10px;
+  width: 406px;
+  padding: 10px 13px;
   background: #26282d;
   color: #f5f5f5;
-  font-size: 11px;
-  line-height: 14px;
+  font-size: 14px;
+  line-height: 18px;
   font-variant-numeric: tabular-nums;
   box-shadow:
     0 0 0 1px #111317,
     inset 1px 1px 0 #4a4c54,
     inset -1px -1px 0 #17191d,
-    2px 3px 6px rgba(0, 0, 0, 0.35);
+    2px 4px 8px rgba(0, 0, 0, 0.35);
 }
 .pw-guide {
-  width: 200px;
+  width: 254px;
 }
 .pw-title {
   color: #f5f5f5;
-  font-size: 13px;
-  line-height: 18px;
+  font-size: 17px;
+  line-height: 23px;
 }
 .pw-line {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 6px;
+  gap: 8px;
   white-space: nowrap;
 }
 .pw-line > span {
   display: inline-flex;
   align-items: center;
-  gap: 4px;
+  gap: 5px;
 }
 .pw-subtle {
   color: #a3a3a3;
 }
 .pw-rule {
   height: 1px;
-  margin: 5px 0;
+  margin: 6px 0;
   background: #3a3b40;
 }
 .pw-tag {
   display: inline-block;
-  padding: 0 4px;
-  line-height: 14px;
+  padding: 0 5px;
+  line-height: 18px;
   border: 1px solid var(--tag-border);
   background: var(--tag-bg);
   color: var(--tag-ink);
@@ -310,12 +317,12 @@
 .pw-stats {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  column-gap: 14px;
+  column-gap: 18px;
 }
 .pw-stat {
   display: flex;
   justify-content: space-between;
-  gap: 6px;
+  gap: 8px;
   white-space: nowrap;
 }
 .pw-stat > :first-child {
@@ -324,12 +331,12 @@
 .pw-boxes {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
-  gap: 4px;
-  margin-top: 3px;
+  gap: 5px;
+  margin-top: 4px;
 }
 .pw-box {
   box-sizing: border-box;
-  padding: 3px 2px;
+  padding: 4px 2px;
   text-align: center;
   background: #1b1d21;
   box-shadow: 0 0 0 1px #3a3b40;
@@ -341,7 +348,7 @@
 }
 .pw-box > span small {
   color: #6f737c;
-  font-size: 11px;
+  font-size: 14px;
 }
 .pw-box > b {
   display: block;
@@ -350,15 +357,15 @@
 }
 .pw-scale {
   position: relative;
-  height: 62px;
-  margin-top: 4px;
+  height: 79px;
+  margin-top: 5px;
 }
 .pw-bar {
   position: absolute;
   left: 0;
   right: 0;
-  top: 30px;
-  height: 7px;
+  top: 38px;
+  height: 9px;
   background: #1b1d21;
   box-shadow: 0 0 0 1px #111317;
 }
@@ -372,7 +379,7 @@
 }
 .pw-tick {
   position: absolute;
-  width: 4px;
+  width: 5px;
   margin-left: -2px;
   background: #111317;
 }
@@ -392,8 +399,8 @@
 }
 .pw-guide-sec {
   position: relative;
-  padding-left: 6px;
-  margin-bottom: 6px;
+  padding-left: 8px;
+  margin-bottom: 8px;
 }
 .pw-guide-sec[data-on]::before {
   content: "";
@@ -407,9 +414,18 @@
 .pw-guide-row {
   display: flex;
   justify-content: space-between;
-  gap: 8px;
+  gap: 10px;
   white-space: nowrap;
 }
 .pw-guide-row > :first-child {
   color: #a3a3a3;
+}
+
+/* ---- The card's actions menu (the mod's PickList: plain rows, Delete in red) ---------------------------------- */
+
+.cm-actions {
+  padding: 3px 0;
+}
+.cm-row[data-danger] {
+  color: #e05252;
 }

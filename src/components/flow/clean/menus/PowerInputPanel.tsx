@@ -65,9 +65,9 @@ function Scale({ facts }: { facts: PowerFacts }) {
       </span>
       <div className="pw-bar">
         <div className="pw-fill" style={{ width: `calc((100% - 2px) * ${ps})` }} />
-        <i className="pw-tick" style={{ left: `calc(1px + (100% - 2px) * ${ps})`, top: -3, height: 13 }} />
-        <i className="pw-tick" style={{ left: `calc(1px + (100% - 2px) * ${pd})`, top: 0, height: 7 }} />
-        <i className="pw-tick" style={{ left: "calc(100% - 2px)", top: -3, height: 13 }} />
+        <i className="pw-tick" style={{ left: `calc(1px + (100% - 2px) * ${ps})`, top: -4, height: 17 }} />
+        <i className="pw-tick" style={{ left: `calc(1px + (100% - 2px) * ${pd})`, top: 0, height: 9 }} />
+        <i className="pw-tick" style={{ left: "calc(100% - 2px)", top: -4, height: 17 }} />
       </div>
       <span className="pw-mark" style={{ ...slide(pd), top: 44 }}>
         {amps(draw)} draw

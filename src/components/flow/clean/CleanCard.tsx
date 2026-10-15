@@ -4,7 +4,6 @@ import "./clean.css";
 
 import { Handle, Position } from "@xyflow/react";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type WheelEvent } from "react";
-import { Copy, Plus, RefreshCw, Trash2 } from "lucide-react";
 import type { FactoryNode, Recipe } from "@/lib/model/types";
 import { fluidArtPixels, getFallbackFluidColor, isSwatchFluid, ResourceIcon } from "@/components/nei/ResourceIcon";
 import { type BrowseMode as PortBrowseMode } from "@/components/browse-menu";
@@ -12,7 +11,7 @@ import { useFactoryStore } from "@/store/factory-store";
 import { buildPortFlowScope } from "../flow-scope";
 import { usePortRowBrowse } from "../use-port-row-browse";
 import { isWiringConnection } from "../connection-drag";
-import { MenuShell } from "../EnergyHatchMenu";
+import { CardActionsMenu } from "./menus/CardActionsMenu";
 import { checklistLocked } from "../RecipeNode";
 import { MobPickerMenu } from "../MobPickerMenu";
 import { isControllerSlotInput } from "@/lib/model/free-input";
@@ -557,8 +556,6 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
   }, [view.unset]);
   const deleteNode = useFactoryStore((state) => state.deleteNode);
   const duplicateNode = useFactoryStore((state) => state.duplicateNode);
-  const beginRecipeRefactor = useFactoryStore((state) => state.beginRecipeRefactor);
-  const browseMachineRecipes = useFactoryStore((state) => state.browseMachineRecipes);
   const [listOpen, setListOpen] = useState(false);
   const [listAnchor, setListAnchor] = useState<MenuAnchor>();
   const [sheetAnchor, setSheetAnchor] = useState<MenuAnchor>();
@@ -804,50 +801,12 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
         />
       ) : null}
       {menu?.kind === "actions" ? (
-        <MenuShell anchor={menu} align="left" width={224} maxHeight={280} onClose={() => setMenu(undefined)}>
-          <div role="menu" aria-label={menu.kind === "actions" ? "Card actions" : "Machine settings"} className="text-[13px] leading-[18px]">
-            {(menu.kind === "actions"
-              ? [
-                  { label: "Clone node", icon: Copy, run: () => cloneWithSound(duplicateNode, node.id) },
-                  { label: "Replace the recipe", icon: RefreshCw, run: () => beginRecipeRefactor(node.id) },
-                  { label: "Add another recipe", icon: Plus, run: () => browseMachineRecipes(node.id) },
-                  { label: "Delete node", icon: Trash2, run: () => deleteNode(node.id) },
-                ].map(({ label, icon: Icon, run }) => (
-                  <button
-                    key={label}
-                    type="button"
-                    role="menuitem"
-                    onClick={() => {
-                      setMenu(undefined);
-                      run();
-                    }}
-                    className="flex min-h-8 w-full items-center gap-2 px-2 py-1.5 text-left text-[var(--mc-ink)] hover:bg-[var(--mc-93)] focus-visible:bg-[var(--mc-93)] focus-visible:outline-none"
-                  >
-                    <Icon className="h-3 w-3 shrink-0" />
-                    <span className="min-w-0">{label}</span>
-                  </button>
-                ))
-              : context.settings.length > 0
-                ? context.settings.map((setting) => (
-                    <button
-                      key={setting.id}
-                      type="button"
-                      role="menuitem"
-                      disabled={!setting.steps}
-                      onClick={() => actions.stepSetting(setting.id, 1)}
-                      onContextMenu={(event) => {
-                        event.preventDefault();
-                        actions.stepSetting(setting.id, -1);
-                      }}
-                      className="flex min-h-8 w-full items-center justify-between gap-2 px-2 py-1.5 text-left text-[var(--mc-ink)] hover:bg-[var(--mc-93)] focus-visible:outline-none"
-                    >
-                      <span className="min-w-0 truncate">{setting.label}</span>
-                      <span className="shrink-0 text-[var(--mc-ink-muted)]">{setting.value}</span>
-                    </button>
-                  ))
-                : [<div key="none" className="px-2 py-2 text-[var(--mc-ink-muted)]">This machine has no settings.</div>])}
-          </div>
-        </MenuShell>
+        <CardActionsMenu
+          anchor={{ left: menu.x, top: menu.top, bottom: menu.bottom }}
+          onClose={() => setMenu(undefined)}
+          onClone={() => cloneWithSound(duplicateNode, node.id)}
+          onDelete={() => deleteNode(node.id)}
+        />
       ) : null}
     </div>
   );

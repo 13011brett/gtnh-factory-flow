@@ -591,14 +591,14 @@ const FLOW_MODE_MIN_WIDTH = 4;
  */
 const idleDots = (strokeWidth: number) => `0.1 ${Math.max(8, strokeWidth * 2.5)}`;
 /**
- * The ink a routed lane width draws at: 4px stays 4px, a full 16px lane
- * draws at 32px, linear between. The router still packs and prices by lane
- * width, so two fat pipes on neighbouring grid lines touch on purpose.
+ * The ink a routed lane width draws at: the mod's wire (WireLayer.withWidths), 1.35 x (2 + 5 x heat) board px, so
+ * 2.7 px at the quietest and 9.45 at the busiest. The heat comes back from the lane width (a quarter lane at 0, a full
+ * lane at 1); the router still packs and prices by lane width, untouched.
  */
-const drawnStrokeWidth = (laneWidth: number) =>
-  FLOW_MODE_MIN_WIDTH +
-  (laneWidth - FLOW_MODE_MIN_WIDTH) *
-    ((2 * LANE_CAPACITY - FLOW_MODE_MIN_WIDTH) / (LANE_CAPACITY - FLOW_MODE_MIN_WIDTH));
+const drawnStrokeWidth = (laneWidth: number) => {
+  const heat = Math.min(Math.max((laneWidth / LANE_CAPACITY - 0.25) / 0.75, 0), 1);
+  return 1.35 * (2 + 5 * heat);
+};
 const FLOW_MODE_MAX_WIDTH = LANE_CAPACITY;
 /**
  * Dash travel in flow pixels per second: the quietest line on the board, and
@@ -12417,8 +12417,8 @@ const ARROW_SETBACK = 10;
  */
 let lastWaypointRemovalAt = 0;
 
-/** A long run wears an arrow every this many px (8 cells). */
-const ARROW_SPACING = 160;
+/** A long run wears an arrow every this many px (the mod's ARROW_EVERY, 16 cells). */
+const ARROW_SPACING = 320;
 
 /**
  * Direction arrows along a routed wire, as SVG polygon point strings
@@ -12440,8 +12440,9 @@ function getRouteArrows(
     return [];
   }
   const scale = glance ? 1.6 : 1;
-  const length = Math.min(Math.max(16, strokeWidth * 2.2), 32) * scale;
-  const halfWidth = Math.min(Math.max(8, strokeWidth * 1.0), 16) * scale;
+  // The mod's heads (WireLayer.arrows): 1.25 x (2w + 3) long within 7..12, 1.25 x (0.9w + 1.5) half wide within 3.5..6.
+  const length = 1.25 * Math.min(Math.max(7, 2 * strokeWidth + 3), 12) * scale;
+  const halfWidth = 1.25 * Math.min(Math.max(3.5, strokeWidth * 0.9 + 1.5), 6) * scale;
 
   // Segment starts along the polyline, so an arrow can be kept inside one.
   const starts: number[] = [];

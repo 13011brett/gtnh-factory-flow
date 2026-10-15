@@ -25,7 +25,7 @@ function byTierThenName(a: RecipeSummary, b: RecipeSummary): number {
 function CropHover({ crop }: { crop: RecipeSummary }) {
   const tier = cropTier(crop);
   return (
-    <div className="min-w-[170px]">
+    <div className="min-w-[170px]" style={{ fontFamily: "var(--font-minecraft), monospace" }}>
       <p className="text-[14px] font-bold leading-4 text-white">
         {cropDisplayName(crop.name)}
         {tier ? <span className="text-[11px] font-normal text-slate-400"> · Tier {tier}</span> : null}

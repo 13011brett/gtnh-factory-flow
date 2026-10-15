@@ -196,7 +196,30 @@ function boardEntries() {
     const r = await rectOf(page, `.react-flow__node[data-id="${ids[key]}"]`);
     return [r.x + r.w * fx, r.y + r.h * fy];
   };
+  // The mod's hop scene: the tower, the two reactors, the vinyl chloride card right, Aniline's drawer above it, the
+  // tower's ethylene wire crossing the aniline wire.
+  const H = {
+    nodes: [
+      { ...refChain.nodes[0], x: 0, y: 0 },
+      { ...refChain.nodes[1], x: 20, y: 580 },
+      { ...refChain.nodes[2], x: 360, y: 580 },
+      { ...vcm, tier: "LV", x: 560, y: 280 },
+    ],
+    drawers: [
+      { key: "aniline", kind: "fluid", id: "aniline", name: "Aniline", x: 620, y: 180, rate: 1, mode: "at-least" },
+      { key: "acid", kind: "fluid", id: "sulfuricacid", name: "Sulfuric Acid", x: -120, y: 700, rate: 0.2, mode: "at-most" },
+    ],
+    wires: [
+      { from: "dt", to: "nb", res: ["fluid", "benzene"] },
+      { from: "nb", to: "an", res: ["fluid", "nitrobenzene"] },
+      { from: "an", to: "aniline", res: ["fluid", "aniline"] },
+      { from: "acid", to: "nb", res: ["fluid", "sulfuricacid"] },
+      { from: "dt", to: "vcm", res: ["fluid", "ethylene"] },
+    ],
+  };
   return [
+    { ref: "board-wire-over-card-aniline-drawer-moved-hop-zoom-half", plan: H, board: ["dt", 0.5, 220, 60], setup: async ({ page }) => idle(page) },
+    { ref: "wires-hop-bump-at-crossing-zoom-1-5", plan: H, board: ["vcm", 1.5, 290, -55], setup: async ({ page }) => idle(page) },
     { ref: "wire-in-hand-acceptance-glow-card-green", plan: W, board: ["vcm", 0.66, 352, 114], hold: true, setup: async ({ page, ids }) => { await grab(page, ids); const [x, y] = await cardAt(page, ids, "vcm", -0.25, 0.3); await page.mouse.move(x, y, { steps: 8 }); await wait(page, 700); } },
     { ref: "wire-in-hand-snapped-to-port-green", plan: W, board: ["vcm", 0.66, 354, 116], hold: true, setup: async ({ page, ids }) => { await grab(page, ids); const [x, y] = await cardAt(page, ids, "vcm", 0.12, 0.25); await page.mouse.move(x, y, { steps: 8 }); await wait(page, 700); } },
     { ref: "wire-in-hand-over-empty-red", plan: W, board: ["vcm", 0.66, 354, 116], hold: true, setup: async ({ page, ids }) => { await grab(page, ids); const [x, y] = await cardAt(page, ids, "vcm", -0.15, -0.6); await page.mouse.move(x, y, { steps: 8 }); await wait(page, 700); } },

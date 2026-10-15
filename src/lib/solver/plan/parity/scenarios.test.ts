@@ -254,7 +254,6 @@ function compare(s: Scenario): Run {
   const notices = [...board.notices].sort();
   const wantNotices = [...m.board.notices].sort();
   if (JSON.stringify(notices) !== JSON.stringify(wantNotices)) diffs.push(`board: notices ${notices} vs mod ${wantNotices}`);
-  void webOf;
   return { input, answer, diffs };
 }
 

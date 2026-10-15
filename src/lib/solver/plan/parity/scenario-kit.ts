@@ -9,7 +9,6 @@ import { buildNotices } from "@/components/flow/clean/rail/notices";
 import { portRowPerSecond } from "@/components/flow/clean/clean-model";
 import { CUSTOM_RATE_MACHINE_TYPE } from "../../../model/custom-rate";
 import { FLUID_TANK_MACHINE_TYPE, FLUID_TANK_MAP } from "../../../model/fluid-tank";
-import { getStorageRoles } from "../../../model/storage-role";
 import { makeResourceHandleId } from "@/components/flow/resource-handles";
 import {
   PROJECT_SCHEMA_VERSION,
@@ -274,11 +273,9 @@ export function readBoard(
     });
   }
   const drawers = new Map<number, { rate: number; unset: boolean }>();
-  const roles = getStorageRoles(project);
   for (const d of s.drawers ?? []) {
     const id = uuid(d.id);
     const storage = result.storages[id];
-    void roles;
     drawers.set(d.id, {
       rate: Math.abs(storage?.netPerSecond ?? 0),
       unset: plan?.unanchored.includes(id) ?? false,

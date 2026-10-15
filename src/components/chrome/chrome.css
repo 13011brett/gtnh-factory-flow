@@ -171,6 +171,14 @@
   white-space: nowrap;
   cursor: pointer;
 }
+.mt-tab {
+  user-select: none;
+}
+.mt-tab[data-dragging] {
+  cursor: grabbing;
+  background: #3a3c44;
+  box-shadow: 0 0 0 1px var(--mc-ring);
+}
 .mt-tab:hover {
   background: #2d2f35;
 }

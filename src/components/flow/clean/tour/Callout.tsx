@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef } from "react";
+import { getUiScale } from "@/lib/ui-scale";
 import { getTourCursor } from "./tour-controller";
 import type { Aim, NoteSpec } from "./director";
 import { mouseGlyphSvg } from "./cursor";
@@ -77,7 +78,10 @@ export function Callout({
     let avoidAt = -1000;
     let cards: Rect[] = [];
     const loop = () => {
-      const size = { w: box.offsetWidth, h: box.offsetHeight };
+      // The note wears the interface zoom as the menus do: measured in real pixels, placed in its own (zoomed) ones.
+      const zoom = getUiScale();
+      const box0 = box.getBoundingClientRect();
+      const size = { w: box0.width, h: box0.height };
       const viewport = { w: window.innerWidth, h: window.innerHeight };
       let rect = note.nothing ? null : aimRect(note.at);
       // The thing never showed: say it in the middle after a moment.
@@ -112,9 +116,9 @@ export function Callout({
       const key = `${Math.round(place.x)},${Math.round(place.y)},${place.side},${Math.round(place.tip)}`;
       if (key !== last) {
         last = key;
-        box.style.transform = `translate(${Math.round(place.x)}px, ${Math.round(place.y)}px)`;
+        box.style.transform = `translate(${Math.round(place.x / zoom)}px, ${Math.round(place.y / zoom)}px)`;
         box.dataset.side = place.side;
-        box.style.setProperty("--tip", `${Math.round(place.tip)}px`);
+        box.style.setProperty("--tip", `${Math.round(place.tip / zoom)}px`);
       }
       box.style.visibility = "visible";
       if (frame) {
@@ -138,7 +142,7 @@ export function Callout({
   return (
     <>
       <div ref={frameRef} className="tour-frame" data-tour="frame" />
-      <div ref={boxRef} className="tour-note" data-tour="note" data-nothing={note.nothing ? "" : undefined} key={note.text} role="note">
+      <div ref={boxRef} className="tour-note ui-zoom" data-tour="note" data-nothing={note.nothing ? "" : undefined} key={note.text} role="note">
         <div className="tour-note-tip" />
         <div className="tour-note-body" data-glyphs={withGlyphs ? "" : undefined}>
           {lines.map((line, i) => (

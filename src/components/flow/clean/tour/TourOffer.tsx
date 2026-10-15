@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { createPortal } from "react-dom";
+import { getUiScale } from "@/lib/ui-scale";
 import { startTour, tourAvailable } from "./tour-controller";
 import { getTour, markTourOffered, tourOffered } from "./tour-store";
 import "./tour.css";
@@ -40,7 +41,14 @@ export function TourOffer() {
     if (take) void startTour();
   };
   return createPortal(
-    <div className="tour-offer" data-tour="offer" role="dialog" aria-label="Take the tour" style={{ left: at.x, top: at.y }}>
+    <div
+      className="tour-offer ui-zoom"
+      data-tour="offer"
+      role="dialog"
+      aria-label="Take the tour"
+      // Drawn at the interface zoom, as the menus are: its place in real pixels, divided back.
+      style={{ left: at.x / getUiScale(), top: at.y / getUiScale() }}
+    >
       <div className="tour-offer-title">New to GTNH Planner?</div>
       <div>A quick tour shows you around in about three minutes.</div>
       <div className="tour-offer-keys">

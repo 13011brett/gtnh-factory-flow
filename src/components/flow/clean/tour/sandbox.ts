@@ -25,6 +25,8 @@ interface Saved {
   minimap: MinimapSettings;
   seeThrough: number;
   recipeSearch: string;
+  /** The designs there were once the tour's plan was made: any other was made by the tour (a task board). */
+  known?: Set<string>;
 }
 
 let saved: Saved | undefined;
@@ -55,6 +57,7 @@ export async function enterSandbox(): Promise<void> {
   leaveLibrary();
   await designs.importProjectAsDesign(tourProject(), TOUR_PLAN_NAME);
   saved.tourDesignId = useDesignStore.getState().activeDesignId;
+  saved.known = new Set(useDesignStore.getState().designs.map((d) => d.id));
   // The tour shows its own board: the map on, the paper solid.
   setMinimap({ show: true });
 }
@@ -64,6 +67,33 @@ export function resetBorrowedSettings(): void {
   if (!saved) return;
   setMinimap({ ...saved.minimap, show: true });
   setSeeThrough(saved.seeThrough);
+}
+
+function madeByTour(s: Saved): string[] {
+  return useDesignStore
+    .getState()
+    .designs.map((d) => d.id)
+    .filter((id) => s.known !== undefined && !s.known.has(id));
+}
+
+/** The design in front of the player, so a step's start can name it. */
+export function currentDesignId(): string | undefined {
+  return useDesignStore.getState().activeDesignId;
+}
+
+/**
+ * Back to the design a step started on. Back to the tour's own plan, the designs the tour made after it (a task board
+ * from a later step) go: the step makes them again.
+ */
+export async function returnToDesign(designId: string | undefined): Promise<void> {
+  const s = saved;
+  if (!s || !designId) return;
+  const designs = useDesignStore.getState();
+  if (designs.activeDesignId !== designId && designs.designs.some((d) => d.id === designId)) {
+    await designs.switchToDesign(designId);
+  }
+  if (designId !== s.tourDesignId) return;
+  for (const id of madeByTour(s)) await useDesignStore.getState().removeDesign(id);
 }
 
 /** Puts the tour's plan back to what a step started from (Back). */
@@ -86,6 +116,12 @@ export async function leaveSandbox(): Promise<void> {
   if (!s) return;
   saved = undefined;
   leaveLibrary();
+  // What the tour made besides its plan (a task board) goes; left on one, the player is back on the tour's plan.
+  const made = madeByTour(s);
+  if (s.tourDesignId && made.includes(useDesignStore.getState().activeDesignId ?? "")) {
+    await useDesignStore.getState().switchToDesign(s.tourDesignId);
+  }
+  for (const id of made) await useDesignStore.getState().removeDesign(id);
   const designs = useDesignStore.getState();
   const factory = useFactoryStore.getState();
   factory.clearResourceBrowser();

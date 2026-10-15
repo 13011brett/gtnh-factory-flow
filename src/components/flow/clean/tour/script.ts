@@ -1,5 +1,6 @@
 "use client";
 
+import { isLiveConfigured } from "@/lib/live/live-config";
 import { useFactoryStore } from "@/store/factory-store";
 import { setMinimap } from "../minimap/minimap-settings";
 import { setSeeThrough } from "../seethrough/see-through";
@@ -7,6 +8,7 @@ import { A, type Action, type Step } from "./director";
 import { pressKey } from "./input";
 import {
   addRecipe,
+  barKey,
   around,
   leftOf,
   rightOf,
@@ -548,7 +550,7 @@ const stickyNote: Step = {
     closeMenus,
     fit,
     A.right(boardSpot(0.16, 0.2), { label: "free board" }),
-    A.click(textOf("button, [role=menuitem], [role=button], li", /^Add a sticky note$/), { label: "Add a sticky note" }),
+    A.click(textOf("button, [role=menuitem], [role=button], li", /^Add (a )?sticky note$/), { label: "Add sticky note" }),
     A.until(() => css(".sn")() !== null, "the note"),
     A.wait(300),
     A.type(css(".sn-area"), "Ingots come in from the left.", { keep: true, label: "the note's text" }),
@@ -561,6 +563,59 @@ const stickyNote: Step = {
     at: css(".sn"),
   },
 };
+
+// region Your plans, plans together, task boards
+
+const inviteKey: Target = barKey("invite");
+const plansKey: Target = barKey("plans");
+
+const inviteStep: Step = {
+  id: "invite",
+  actions: [closeMenus, A.wait(300)],
+  note: {
+    text: "Sign in and your plans save as you edit, on any computer and in the game. *Invite* someone and you build the plan together, live.",
+    at: inviteKey,
+  },
+};
+
+const plansStep: Step = {
+  id: "plans",
+  actions: [closeMenus, A.click(plansKey, { label: "Plans" }), A.wait(1000)],
+  note: { text: "*Plans* has all your plans, and the ones people shared with you.", at: plansKey },
+};
+
+const noticeOpen: Target = textOf("button", /^Open$/, css("[data-live-notice]"));
+
+const taskBoardStep: Step = {
+  id: "task-board",
+  actions: [
+    closeMenus,
+    A.click(cardPart(0, "menu"), { label: "card menu" }),
+    A.click(menuRow(/^Add to a task/), { label: "Add to a task" }),
+    A.click(menuRow(/^New task board/), { label: "New task board" }),
+    A.until(() => noticeOpen() !== null, "the notice"),
+    A.wait(400),
+  ],
+  note: {
+    text: "*Add to a task* puts machines on a task board, with how many to build.",
+    at: css("[data-live-notice] p"),
+  },
+};
+
+const taskStep: Step = {
+  id: "task",
+  actions: [
+    A.click(noticeOpen, { label: "Open" }),
+    A.until(() => css('[aria-label="Task title"]')() !== null, "the task box"),
+    A.wait(600),
+  ],
+  note: {
+    text: "A *task* holds notes, a checklist, comments and who is on it. Drag it across the columns as the work goes.",
+    at: css('[aria-label^="Task: "]'),
+  },
+};
+
+// endregion
 
 const libraryTab: Target = libraryKey;
 
@@ -584,7 +639,7 @@ const newPlan: Step = {
 
 const feedback: Step = {
   id: "feedback",
-  actions: [A.run(() => setSeeThrough(0)), A.wait(200)],
+  actions: [closeMenus, A.run(() => setSeeThrough(0)), A.wait(200)],
   note: {
     text:
       "That's everything! Found a bug, or have an idea? *Feedback* sends it from here. Questions about your own setup do well in GTNH Planner's thread on the *GT New Horizons Discord*.",
@@ -624,7 +679,10 @@ export const STEPS: Step[] = [
   minimapStep,
   seeThrough,
   stickyNote,
+  ...(isLiveConfigured() ? [inviteStep] : []),
+  plansStep,
   libraryStep,
   newPlan,
+  ...(isLiveConfigured() ? [taskBoardStep, taskStep] : []),
   feedback,
 ];

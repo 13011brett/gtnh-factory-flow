@@ -4,7 +4,7 @@ import { useFactoryStore } from "@/store/factory-store";
 import { Cursor, draws, sleep, type MouseGlyph } from "./cursor";
 import * as input from "./input";
 import type { Mods } from "./input";
-import { resetBorrowedSettings, restoreProject } from "./sandbox";
+import { currentDesignId, resetBorrowedSettings, restoreProject, returnToDesign } from "./sandbox";
 import { bringIntoView, centreOf, ensureHittable, scrollToShow, settled, type Target } from "./targets";
 import { getTour, resetTour, setTour } from "./tour-store";
 import { setSfxHurried } from "@/lib/sound/sfx";
@@ -162,7 +162,14 @@ export const A = {
         document.activeElement instanceof HTMLInputElement || document.activeElement instanceof HTMLTextAreaElement
           ? document.activeElement
           : null;
-      if (!box && at.el) box = at.el.querySelector("input, textarea");
+      // The box itself, or one inside what was aimed at, when the click left the focus elsewhere.
+      if (!box && at.el) {
+        box =
+          at.el instanceof HTMLInputElement || at.el instanceof HTMLTextAreaElement
+            ? at.el
+            : at.el.querySelector("input, textarea");
+        box?.focus({ preventScroll: true });
+      }
       if (!box) {
         // The click may have swapped a button for a box; give it a frame or two.
         await draws(3);
@@ -374,6 +381,8 @@ export interface DirectorHooks {
 
 interface Start {
   project: ReturnType<typeof useFactoryStore.getState>["project"];
+  /** The design the step began on: the tour's plan, or a task board it made. */
+  designId?: string;
 }
 
 export class Director {
@@ -414,7 +423,10 @@ export class Director {
     this.hooks.onNote(null);
     setTour({ phase: "playing", index, total: this.steps.length, noteReady: false });
     // The plans at the start of every step, so Back can put them back.
-    if (!this.starts.has(index)) this.starts.set(index, { project: structuredClone(useFactoryStore.getState().project) });
+    if (!this.starts.has(index)) this.starts.set(index, {
+        project: structuredClone(useFactoryStore.getState().project),
+        designId: currentDesignId(),
+      });
     const isFast = () => this.fast;
     const ctx: Ctx = {
       cursor: this.cursor,
@@ -472,7 +484,10 @@ export class Director {
     const target = index - 1;
     const start = this.starts.get(target);
     this.closeThings();
-    if (start) restoreProject(start.project);
+    if (start) {
+      await returnToDesign(start.designId);
+      restoreProject(start.project);
+    }
     await draws(3);
     await this.play(target, true);
   }
@@ -485,7 +500,10 @@ export class Director {
     while (begin > 0 && !this.starts.has(begin)) begin--;
     const start = this.starts.get(begin);
     this.closeThings();
-    if (start) restoreProject(start.project);
+    if (start) {
+      await returnToDesign(start.designId);
+      restoreProject(start.project);
+    }
     await draws(3);
     for (let i = begin; i < from; i++) {
       await this.play(i, true);

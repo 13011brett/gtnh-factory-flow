@@ -30,7 +30,7 @@ const q = (selector: string): Element | null => {
 
 // region The items column and the recipe search
 
-export const itemsSearch: Target = () => q('input[placeholder^="Search item"]');
+export const itemsSearch: Target = () => q('input[aria-label="Search items and fluids"]');
 
 export const itemTile =
   (name: string): Target =>

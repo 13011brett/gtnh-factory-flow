@@ -169,6 +169,13 @@ export type ServerFrame =
   | { t: "present"; doc: string; present: LivePerson[] }
   | { t: "members"; doc: string; members: LiveMember[] }
   | { t: "kicked"; doc: string; reason: "unshared" | "deleted" }
+  /**
+   * An account was added to a plan (an addition to the contract): sent to
+   * every open socket of that account, in or out of the plan's room.
+   */
+  | { t: "shared"; doc: string; owner: LiveMember; name: string }
+  /** An account was removed from a plan: every open socket of it, beside the room's `kicked`. */
+  | { t: "unshared"; doc: string }
   | {
       t: "error";
       doc?: string;

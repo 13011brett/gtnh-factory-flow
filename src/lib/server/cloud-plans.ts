@@ -117,7 +117,17 @@ export function sameSecret(
 }
 
 export type LiveNotice =
-  | { kind: "members"; ownerId: string; designId: string; members: PlanMember[] }
+  | {
+      kind: "members";
+      ownerId: string;
+      designId: string;
+      members: PlanMember[];
+      /** Accounts just added (they hear `shared`) and just removed (`unshared`). */
+      added?: string[];
+      removed?: string[];
+      owner?: { id: string; username: string };
+      name?: string;
+    }
   | { kind: "deleted"; ownerId: string; designId: string };
 
 /** Waits before each retry of a notice the live service did not take (down, or restarting). */
@@ -143,7 +153,16 @@ export async function notifyLive(
   }
   const doc = docKey(notice.ownerId, notice.designId);
   const body = JSON.stringify(
-    notice.kind === "members" ? { doc, members: notice.members } : { doc },
+    notice.kind === "members"
+      ? {
+          doc,
+          members: notice.members,
+          added: notice.added,
+          removed: notice.removed,
+          owner: notice.owner,
+          name: notice.name,
+        }
+      : { doc },
   );
   const send = async (): Promise<"taken" | "refused" | "again"> => {
     try {

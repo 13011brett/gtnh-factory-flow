@@ -433,7 +433,7 @@ export class LiveService {
         setTimeout(() => this.options.onShutdownRequest?.(), 10);
         return { status: 200, body: { ok: true } };
       }
-      const body = (await readJson(req)) as { doc?: unknown; members?: unknown };
+      const body = (await readJson(req)) as InternalBody;
       const key = parseDocKey(body?.doc);
       if (!key) {
         return { status: 400, body: { error: "Bad doc." } };
@@ -448,6 +448,7 @@ export class LiveService {
         if (room) {
           await room.enqueue(() => room.updateMembers(members));
         }
+        this.announceSharing(doc, body);
         return { status: 200, body: { ok: true, open: Boolean(room) } };
       }
       if (url.pathname === "/internal/deleted") {
@@ -461,6 +462,40 @@ export class LiveService {
       }
     }
     return { status: 404, body: { error: "Not found." } };
+  }
+
+  /**
+   * Tells every open socket of an account just added to a plan (`shared`,
+   * with the owner and the plan's name) or just removed from it
+   * (`unshared`), in or out of the plan's room. The REST route names who
+   * changed; a notice without them announces nothing.
+   */
+  private announceSharing(doc: string, body: InternalBody): void {
+    const owner = body.owner as { id?: unknown; username?: unknown } | undefined;
+    if (Array.isArray(body.added) && isAccountId(owner?.id) && typeof owner?.username === "string") {
+      const frame: ServerFrame = {
+        t: "shared",
+        doc,
+        owner: { id: owner.id.toLowerCase(), username: owner.username },
+        name: typeof body.name === "string" ? body.name.slice(0, 200) : "",
+      };
+      for (const id of body.added) {
+        if (isAccountId(id)) {
+          for (const conn of this.byUser.get(id.toLowerCase()) ?? []) {
+            conn.send(frame);
+          }
+        }
+      }
+    }
+    if (Array.isArray(body.removed)) {
+      for (const id of body.removed) {
+        if (isAccountId(id)) {
+          for (const conn of this.byUser.get(id.toLowerCase()) ?? []) {
+            conn.send({ t: "unshared", doc });
+          }
+        }
+      }
+    }
   }
 
   /**
@@ -1162,6 +1197,15 @@ async function readJson(req: IncomingMessage, maxBytes = 256 * 1024): Promise<un
   } catch {
     return undefined;
   }
+}
+
+interface InternalBody {
+  doc?: unknown;
+  members?: unknown;
+  added?: unknown;
+  removed?: unknown;
+  owner?: unknown;
+  name?: unknown;
 }
 
 function readMembers(value: unknown): LiveMember[] | undefined {

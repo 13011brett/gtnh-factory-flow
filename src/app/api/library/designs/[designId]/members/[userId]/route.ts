@@ -89,6 +89,7 @@ export async function PUT(request: Request, context: RouteContext) {
       return NextResponse.json({ error: "No such account." }, { status: 404 });
     }
     const before = await listMembers(db, ownerId, designId);
+    let added = false;
     if (!before.some((member) => member.id === userId)) {
       if (before.length >= LIBRARY_MAX_MEMBERS) {
         return NextResponse.json(
@@ -118,9 +119,22 @@ export async function PUT(request: Request, context: RouteContext) {
           { status: 500 },
         );
       }
+      added = true;
     }
     const members = await listMembers(db, ownerId, designId);
-    await notifyLive({ kind: "members", ownerId, designId, members });
+    await notifyLive({
+      kind: "members",
+      ownerId,
+      designId,
+      members,
+      ...(added
+        ? {
+            added: [userId],
+            owner: { id: ownerId, username: sessionUser.username },
+            name: String(design.name ?? ""),
+          }
+        : {}),
+    });
     return NextResponse.json({ members });
   } catch (error) {
     return NextResponse.json(
@@ -163,7 +177,7 @@ export async function DELETE(request: Request, context: RouteContext) {
       );
     }
     const members = await listMembers(db, ownerId, designId);
-    await notifyLive({ kind: "members", ownerId, designId, members });
+    await notifyLive({ kind: "members", ownerId, designId, members, removed: [userId] });
     return NextResponse.json({ members });
   } catch (error) {
     return NextResponse.json(

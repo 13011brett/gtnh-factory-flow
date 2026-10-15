@@ -113,6 +113,14 @@ The frames are the contract's (version 1). What the service adds or decides:
 - **Reload.** A room whose journal cannot be written, or whose lease is no longer its own, closes the sockets of
   everyone in it with 1012: the client reconnects, joins again and resends what was never acknowledged.
 - **Slow readers.** A socket with more than 8 MB waiting to be sent is dropped.
+- **Shared and unshared** (additions to the contract's table). `{ t: "shared", doc, owner: { id, username }, name }` goes to
+  EVERY open socket of an account the moment it is added to a plan, whether or not it has the plan's room open (the
+  members route's internal call names who was added); `{ t: "unshared", doc }` goes to every socket of an account
+  taken off a plan (or leaving it), beside the room's `kicked` for sockets that were in it. Clients show
+  "<owner> shared <plan> with you" with an Open key and refresh their Shared with me list at once (`unshared` only
+  refreshes it). Neither frame is replayed: an account that was offline finds the plan in `GET /api/library`'s
+  `shared` list. A notice the service did not take is tried again, so a client may hear `shared` twice for one
+  share and must ignore the second.
 - **People.** `Person` and relayed `presence` carry `conn`, the connection, as one account can be in a plan twice (a
   game and a browser). `snapshot` carries `owner: { id, username }`.
 - **Presence** is relayed to the others in the room, never stored, at most 20 frames a second per connection: between
@@ -132,7 +140,7 @@ The frames are the contract's (version 1). What the service adds or decides:
 
 HTTP on the same port: `GET /live/health` (`{ ok, rooms, connections, flushBacklog }`), `GET /live/nearby` (below), and,
 for the Next.js routes only,
-`POST /internal/members` (`{ doc, members }`), `/internal/deleted` (`{ doc }`) and `/internal/shutdown` (store
+`POST /internal/members` (`{ doc, members, added?, removed?, owner?, name? }`: `added` and `removed` are account ids that just joined or left, `owner` and `name` what `shared` carries), `/internal/deleted` (`{ doc }`) and `/internal/shutdown` (store
 everything and exit), each with `Authorization: Bearer $LIVE_INTERNAL_TOKEN`. Caddy routes only `/live` and `/live/*`
 to the service, so `/internal` is never reachable from outside.
 

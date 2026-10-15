@@ -509,6 +509,58 @@ describe("the live service", { timeout: 30_000 }, () => {
     expect(await old.next("error")).toMatchObject({ code: "version" });
   });
 
+  it("tells every socket of an account when it is shared with or removed, in the room or not", async () => {
+    const { port } = await startService();
+    vi.stubEnv("LIVE_INTERNAL_URL", `http://127.0.0.1:${port}`);
+    vi.stubEnv("LIVE_INTERNAL_TOKEN", INTERNAL_TOKEN);
+    const { designId, doc } = await makeDesign();
+    const bobWeb = await TestClient.open(port, { who: "bob" });
+    const bobGame = await TestClient.open(port, { who: "bob" });
+    const carol = await TestClient.open(port, { who: "carol" });
+    await bobWeb.hello();
+    await bobGame.hello();
+    await carol.hello();
+
+    const req = (method: "PUT" | "DELETE") =>
+      new Request(`http://localhost/api/library/designs/${designId}/members/${users.bob!.id}`, {
+        method,
+        headers: { cookie: users.ann!.cookie },
+      });
+    const params = { params: Promise.resolve({ designId, userId: users.bob!.id }) };
+    // The helper shares with bob up front: take him off first.
+    await memberRoute.DELETE(req("DELETE"), params);
+    for (const socket of [bobWeb, bobGame]) {
+      expect(await socket.next("unshared")).toEqual({ t: "unshared", doc });
+    }
+
+    const share = await memberRoute.PUT(
+      new Request(`http://localhost/api/library/designs/${designId}/members/${users.bob!.id}`, {
+        method: "PUT",
+        headers: { cookie: users.ann!.cookie },
+      }),
+      { params: Promise.resolve({ designId, userId: users.bob!.id }) },
+    );
+    expect(share.status).toBe(200);
+    for (const socket of [bobWeb, bobGame]) {
+      expect(await socket.next("shared")).toEqual({
+        t: "shared",
+        doc,
+        owner: { id: users.ann!.id, username: "ann" },
+        name: expect.any(String),
+      });
+    }
+    // Sharing again adds nobody: no second notice.
+    await memberRoute.PUT(req("PUT"), params);
+    await memberRoute.DELETE(req("DELETE"), params);
+    for (const socket of [bobWeb, bobGame]) {
+      expect(await socket.next("unshared")).toEqual({ t: "unshared", doc });
+      expect(socket.frames.some((frame) => frame.t === "shared")).toBe(false);
+    }
+    expect(carol.frames.some((frame) => frame.t === "shared" || frame.t === "unshared")).toBe(false);
+    vi.stubEnv("LIVE_INTERNAL_URL", "");
+    vi.stubEnv("LIVE_INTERNAL_TOKEN", "");
+  });
+
   it("drops a member the owner unshares, and everyone when the plan is deleted", async () => {
     const { port } = await startService();
     vi.stubEnv("LIVE_INTERNAL_URL", `http://127.0.0.1:${port}`);

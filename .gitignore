@@ -65,3 +65,6 @@ dev-server*.log
 next-env.d.ts
 public/highs.wasm
 public/highs.js
+
+# the live service bundle (npm run build:live)
+/dist-live/

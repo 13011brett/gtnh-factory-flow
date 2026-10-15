@@ -93,7 +93,13 @@ async function stop(code = 0) {
     return;
   }
   stopping = true;
-  // The database first and gently, so PGlite writes everything out.
+  // The live service first (it stores open plans), then the database, both
+  // gently: on Windows a child process gets no signal.
+  await fetch(`${shared.LIVE_INTERNAL_URL}/internal/shutdown`, {
+    method: "POST",
+    headers: { authorization: `Bearer ${shared.LIVE_INTERNAL_TOKEN}` },
+  }).catch(() => undefined);
+  await new Promise((resolve) => setTimeout(resolve, 1500));
   await fetch(`${dbUrl}/__local-db/shutdown`, { method: "POST" }).catch(() => undefined);
   const exited = children.map(
     (child) =>

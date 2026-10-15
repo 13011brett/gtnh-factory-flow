@@ -101,6 +101,11 @@ export interface LiveMember {
 export interface LivePerson extends LiveMember {
   color: string;
   client: LiveClientKind;
+  /**
+   * The connection (an addition to the contract's Person): one account can be
+   * in a plan twice, from the game and a browser, and presence names both.
+   */
+  conn: string;
 }
 
 export interface LiveCursor {
@@ -147,12 +152,16 @@ export type ServerFrame =
       role: "owner" | "editor";
       members: LiveMember[];
       present: LivePerson[];
+      /** The plan's owner (an addition: the doc key holds only its id). */
+      owner: LiveMember;
     }
   | { t: "ops"; doc: string; seq: number; by: string; cid: string; ops: LiveOp[] }
   | {
       t: "presence";
       doc: string;
       who: string;
+      /** Which of `who`'s connections moved (an addition, see LivePerson.conn). */
+      conn: string;
       cursor: LiveCursor | null;
       sel: string[];
       view?: LiveView;
@@ -160,5 +169,12 @@ export type ServerFrame =
   | { t: "present"; doc: string; present: LivePerson[] }
   | { t: "members"; doc: string; members: LiveMember[] }
   | { t: "kicked"; doc: string; reason: "unshared" | "deleted" }
-  | { t: "error"; doc?: string; code: LiveErrorCode; msg: string }
+  | {
+      t: "error";
+      doc?: string;
+      code: LiveErrorCode;
+      msg: string;
+      /** The refused batch, when the error is about one (the client drops it from pending). */
+      cid?: string;
+    }
   | { t: "pong" };

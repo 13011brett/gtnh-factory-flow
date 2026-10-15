@@ -60,3 +60,18 @@ The instance is small and has gone down under load. Rules:
   `scratch/local-db/pgdata`). Tests open it in memory and register it in-process (`useInProcessLocalDb`).
 - The stand-in covers the query shapes this code sends (filters, or-trees, counts, single, upserts, storage buckets).
   A new shape (an embed, an rpc) needs it added there and a case in `postgrest.test.ts`.
+
+## Cloud plans (cloud-plans.ts, app/api/library, app/api/accounts)
+
+- A design id is unique per owner only: every route under `/api/library/designs/[id]` takes `?owner=<ownerId>`
+  (absent: the caller's own). Owners and members read; members save the plan and its name, never the owner's folders,
+  order or stars; only the owner shares, unshares and deletes; a member leaves by removing themselves.
+- While `live_lease_until` is in the future the live service is the plan's only writer: the PUT refuses a plan body
+  (409 `{ live: true }`) and its write is conditional on the lease. Metadata still goes through.
+- `GET /api/library` keeps listing tombstones (clients rely on it never to reuse a deleted id) and adds each design's
+  `members` and the `shared` plans, in one extra read when nothing is shared.
+- Deleting a design deletes its member rows (designs are tombstoned, so the foreign key's cascade never fires) and
+  tells the live service; sharing changes tell it too (`notifyLive`, only with `LIVE_INTERNAL_URL` and
+  `LIVE_INTERNAL_TOKEN`). A failed notice loses nothing: the service checks membership on every join.
+- Account search is limited in memory (`memory-rate.ts`): a share box asks on every keystroke.
+- Exam: `app/api/library/cloud-plans.test.ts` (against the local database).

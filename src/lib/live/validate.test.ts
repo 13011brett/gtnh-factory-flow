@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { applyOps, type LiveOp, type LivePlan } from "./ops";
-import { colorFor, LIVE_COLORS, parseDocKey } from "./protocol";
+import { colorFor, LIVE_COLORS, liveSocketUrl, parseDocKey } from "./protocol";
 import { checkBatch } from "./validate";
 
 const plan: LivePlan = {
@@ -73,5 +73,18 @@ describe("live protocol helpers", () => {
     const id = "11111111-1111-4111-8111-111111111111";
     expect(colorFor(id)).toBe(colorFor(id));
     expect(LIVE_COLORS).toContain(colorFor(id));
+  });
+});
+
+describe("the live socket address", () => {
+  it("is the configured one, or a path on the page's own host", () => {
+    const page = { protocol: "https:", host: "new.gtnhplanner.com" };
+    expect(liveSocketUrl(undefined, page)).toBeUndefined();
+    expect(liveSocketUrl("", page)).toBeUndefined();
+    expect(liveSocketUrl("/live", page)).toBe("wss://new.gtnhplanner.com/live");
+    expect(liveSocketUrl("/live", { protocol: "http:", host: "localhost:3000" })).toBe(
+      "ws://localhost:3000/live",
+    );
+    expect(liveSocketUrl("ws://localhost:3001/live", page)).toBe("ws://localhost:3001/live");
   });
 });

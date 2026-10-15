@@ -178,3 +178,24 @@ export type ServerFrame =
       cid?: string;
     }
   | { t: "pong" };
+
+/**
+ * The live socket's address for a page: NEXT_PUBLIC_LIVE_URL as given
+ * (`wss://host/live`), or, when it is a path (`/live`), that path on the
+ * page's own host (wss on https), so one build serves every host it runs
+ * on and the host-only session cookie goes with it. Undefined when unset:
+ * the site then has no live features.
+ */
+export function liveSocketUrl(
+  configured: string | undefined,
+  page: { protocol: string; host: string },
+): string | undefined {
+  const value = configured?.trim();
+  if (!value) {
+    return undefined;
+  }
+  if (value.startsWith("/")) {
+    return `${page.protocol === "https:" ? "wss" : "ws"}://${page.host}${value}`;
+  }
+  return value;
+}

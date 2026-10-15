@@ -18,7 +18,8 @@ before changing that area; it names the tests that pin its behaviour.
 | Domain model: resources, cells vs fluids, oredict context, sections, boards | `src/lib/model/CLAUDE.md` |
 | Power generation | `src/lib/power/CLAUDE.md` |
 | Designs, tabs, saving, account sync, plan import/export, public view | `src/store/CLAUDE.md` |
-| Server, recipe API, Supabase | `src/lib/server/CLAUDE.md` |
+| Server, recipe API, Supabase, cloud plans, local database | `src/lib/server/CLAUDE.md` |
+| Live service: live plan editing over WebSockets | `src/live/CLAUDE.md`, `docs/live.md` |
 | Dataset pipeline: export, normalize, rebuild, publish | `tools/dataset-pipeline/CLAUDE.md` |
 
 Longer references, read on demand: `docs/solver-equations.md` (solver doctrine),
@@ -28,6 +29,7 @@ Longer references, read on demand: `docs/solver-equations.md` (solver doctrine),
 
 ```bash
 npm run dev          # http://localhost:3000
+npm run dev:local    # the same with a local database and the live service: no Supabase credentials
 npm run typecheck
 npm run test         # full vitest suite, must be green
 ```

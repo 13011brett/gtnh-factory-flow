@@ -67,3 +67,13 @@ Every save goes through `persistCanvas` in design-store.ts:
 
 `browseResource`, `browseBack` / `browseForward`, `recipeBrowserMachinePin`,
 `beginRecipeRefactor` live in factory-store; the rules are in `src/components/CLAUDE.md`.
+
+## Cloud plans and live editing (not wired into the editor yet)
+
+The server side is in place (`docs/live.md`): shared plans in `GET /api/library` (`shared`, each design's
+`members`), `?owner=` on every design route, and the live service. When the editor is wired:
+- A plan open live is edited through `src/lib/live/client-state.ts` (confirmed + pending, undo by inverse), never by
+  the account sync's whole-plan PUT: that PUT answers 409 `{ live: true }` while the plan is held live, and the sync
+  must treat it as "not mine to push", not as an error.
+- Strip the same derived fields before every diff as the game does (solve results, runtime tables).
+- The socket address is `liveSocketUrl(process.env.NEXT_PUBLIC_LIVE_URL, location)`; unset, no live features.

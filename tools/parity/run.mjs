@@ -60,7 +60,7 @@ for (const st of states) {
       centre: async (fx, fy) => { const r = await rectOf(page, nodeSel); return [r.x + r.w * fx, r.y + r.h * fy]; },
     };
     let zr = null;
-    if (!st.add) zr = (await zoomTo(page, K * zoom)) / K;
+    zr = (await zoomTo(page, K * zoom)) / K;
     if (zr && Math.abs(zr - zoom) > 0.02) console.log("  zoom wanted", zoom, "got", zr);
     const offX = det.x, offY = det.y;
     // Clear of the overview (336 shell px at the interface's 1.17: 393 screen px).

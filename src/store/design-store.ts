@@ -69,6 +69,8 @@ import { leaveLibrary, openLibrary } from "@/lib/library/library-tab";
 import { leaveWelcomeTab } from "@/lib/welcome/welcome-tab";
 import type { EntryIcon, FactoryProject } from "@/lib/model/types";
 import { LOCAL_STORAGE_KEY, useFactoryStore } from "./factory-store";
+import { liveDesignIdInThisTab } from "./live-edit-gate";
+import type { SharedPlanRef } from "@/lib/designs/design-library";
 
 export type DesignSaveState = "idle" | "saving" | "saved" | "error";
 
@@ -94,6 +96,12 @@ interface DesignStore {
   addDesign: () => Promise<void>;
   /** Adds `project` as a new design tab and switches to it (community imports). */
   importProjectAsDesign: (project: FactoryProject, name: string) => Promise<void>;
+  /**
+   * Opens a plan someone shared with this account: its local copy when this
+   * device has one (`cloud`), else a new local copy of `project`. It then
+   * opens live (live-session.ts) and the live plan replaces what the copy held.
+   */
+  openSharedDesign: (ref: SharedPlanRef, name: string, project?: FactoryProject) => Promise<boolean>;
   copyDesign: (id: string) => Promise<void>;
   renameDesign: (id: string, name: string) => Promise<void>;
   /**
@@ -300,7 +308,13 @@ function persistCanvas(summary: DesignSummary, canvas: FactoryProject): Promise<
   return turn;
 }
 
+/** The canvas last written as a live design's local copy. */
+let lastLiveCopy: { designId: string; canvas: FactoryProject } | undefined;
+
 async function persistCanvasNow(summary: DesignSummary, canvas: FactoryProject): Promise<PersistOutcome> {
+  if (liveDesignIdInThisTab() === summary.id && canvasBase?.designId === summary.id) {
+    return persistLiveCopy(summary, canvas);
+  }
   if (!canvasPlanEdited && !canvasViewEdited) {
     return { outcome: "clean" };
   }
@@ -343,6 +357,30 @@ async function persistCanvasNow(summary: DesignSummary, canvas: FactoryProject):
   await writeDesign(copy);
   useDesignStore.setState({ tabConflict: { name: current.name, copyName: copy.name } });
   return { outcome: "copied", copy };
+}
+
+/**
+ * A design open live is the live service's plan; the record here is this
+ * device's copy of it, for opening offline and for the library's tile. Every
+ * tab holding it converges through the service, so there is no version to
+ * guard and no conflict copy: the canvas is written as it is, everyone's
+ * edits in it. The sync stamps stay as they were, so the account sync never
+ * sends this plan (live-session.ts writes it).
+ */
+async function persistLiveCopy(summary: DesignSummary, canvas: FactoryProject): Promise<PersistOutcome> {
+  if (lastLiveCopy?.designId === summary.id && lastLiveCopy.canvas === canvas && !canvasViewEdited) {
+    return { outcome: "clean" };
+  }
+  const current = useDesignStore.getState().designs.find((design) => design.id === summary.id) ?? summary;
+  const project = withCurrentView(canvas);
+  const record = withStats({ ...current, project: { ...project, name: current.name } });
+  await writeDesign(record);
+  lastLiveCopy = { designId: summary.id, canvas };
+  if (currentProject() === canvas) {
+    canvasPlanEdited = false;
+    canvasViewEdited = false;
+  }
+  return { outcome: "written" };
 }
 
 /**
@@ -575,6 +613,33 @@ export const useDesignStore = create<DesignStore>((set, get) => ({
     set(await listLibrary());
   },
 
+  openSharedDesign: async (ref, name, project) => {
+    const local = get().designs.find(
+      (design) => design.cloud?.ownerId === ref.ownerId && design.cloud.designId === ref.designId,
+    );
+    if (local) {
+      await get().switchToDesign(local.id);
+      leaveWelcomeTab();
+      return true;
+    }
+    if (!project) {
+      return false;
+    }
+    const { activeDesignId, designs } = get();
+    await flushCanvasInto(designs.find((design) => design.id === activeDesignId));
+    const record: DesignRecord = {
+      ...createDesignRecord(project, name || UNTITLED_DESIGN_NAME),
+      id: sharedDesignLocalId(ref),
+      cloud: ref,
+    };
+    await writeDesign(record);
+    landOnDesign(set, record);
+    leaveWelcomeTab();
+    leaveLibrary();
+    set(await listLibrary());
+    return true;
+  },
+
   copyDesign: async (id) => {
     const { activeDesignId, designs } = get();
     // Copying the tab you are editing has to copy what is on screen, not the
@@ -656,7 +721,7 @@ export const useDesignStore = create<DesignStore>((set, get) => ({
       if (record && isBlankDesign(record)) {
         await deleteDesign(design.id);
         forgetDesignCameras([design.id]);
-        if (record.remoteUpdatedAt) {
+        if (record.remoteUpdatedAt && !record.cloud) {
           noteLibraryDeletion("design", design.id);
         }
         continue;
@@ -691,10 +756,12 @@ export const useDesignStore = create<DesignStore>((set, get) => ({
   removeDesign: async (id, options) => {
     const { designs, activeDesignId } = get();
     const nextActiveId = pickDesignAfterDelete(openDesigns(designs), id);
+    // A shared plan's copy is this device's alone: the account has nothing to delete.
+    const sharedCopy = Boolean(designs.find((design) => design.id === id)?.cloud);
 
     await deleteDesign(id);
     forgetDesignCameras([id]);
-    if (!options?.fromSync) {
+    if (!options?.fromSync && !sharedCopy) {
       // The account hears about it as a tombstone on the next push.
       noteLibraryDeletion("design", id);
     }
@@ -929,6 +996,11 @@ export function startDesignTabSync(): () => void {
     if (checking || !activeDesignId || publicView || !isHydrated) {
       return;
     }
+    if (liveDesignIdInThisTab() === activeDesignId) {
+      // Live: other tabs' edits arrive through the live service, not storage.
+      useDesignStore.setState({ designs: sortDesigns(await listDesignSummaries()) });
+      return;
+    }
     checking = true;
     try {
       const stored = await readDesignSummary(activeDesignId);
@@ -1067,6 +1139,11 @@ function readLegacyProject(): FactoryProject | undefined {
   } catch {
     return undefined;
   }
+}
+
+/** The local id of a shared plan's copy: never one of our own design ids. */
+export function sharedDesignLocalId(ref: Pick<SharedPlanRef, "ownerId" | "designId">): string {
+  return `shared-${ref.ownerId}-${ref.designId}`;
 }
 
 export type { DesignFolder, DesignRecord, DesignSummary };

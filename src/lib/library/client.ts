@@ -38,12 +38,33 @@ export class LibraryRequestRefused extends Error {
   }
 }
 
+/**
+ * The plan is open live (the live service holds it): its body is the
+ * service's to write, so the push goes again without it. Not a refusal and
+ * not a conflict: the sync just has nothing of the plan to send.
+ */
+export class LibraryPlanLive extends Error {
+  readonly live = true;
+
+  constructor(message: string) {
+    super(message);
+    this.name = "LibraryPlanLive";
+  }
+}
+
+export function isPlanLiveRefusal(error: unknown): boolean {
+  return error instanceof Error && (error as { live?: unknown }).live === true;
+}
+
 async function parseJsonOrThrow<T>(response: Response): Promise<T> {
   const body = (await response.json().catch(() => undefined)) as
-    | (T & { error?: string })
+    | (T & { error?: string; live?: boolean })
     | undefined;
   if (!response.ok || !body) {
     const message = body?.error ?? `Request failed (${response.status})`;
+    if (response.status === 409 && body?.live === true) {
+      throw new LibraryPlanLive(message);
+    }
     if (response.status === 401 || response.status === 503 || /schema\.sql/.test(message)) {
       throw new LibrarySyncUnavailable(message);
     }

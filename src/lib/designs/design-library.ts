@@ -47,6 +47,19 @@ export interface DesignSummary {
   favorite?: boolean;
   /** The tile's stat row, stamped at save. Local only; never synced. */
   stats?: DesignStats;
+  /**
+   * Set on this device's copy of a plan someone else shared with this
+   * account: whose it is and its id there (`<ownerId>:<designId>` is its live
+   * doc). It opens live and is never pushed to the account as one of ours.
+   */
+  cloud?: SharedPlanRef;
+}
+
+/** A plan shared with this account, as its local copy names it. */
+export interface SharedPlanRef {
+  ownerId: string;
+  ownerName: string;
+  designId: string;
 }
 
 /** A library folder. Flat: folders hold designs, never other folders. */
@@ -302,6 +315,9 @@ export function toDesignSummary(record: DesignRecord): DesignSummary {
   }
   if (communityPlanId) {
     summary.communityPlanId = communityPlanId;
+  }
+  if (record.cloud) {
+    summary.cloud = record.cloud;
   }
   return summary;
 }

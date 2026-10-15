@@ -41,6 +41,8 @@ import {
   type RateUnit,
 } from "@/lib/model/rate-unit";
 import { registerBooksSink, solveBooks, solveBooksNow } from "./solve-books";
+import { liveUndoHandler, quietly } from "./live-edit-gate";
+import { applyOps, type LiveOp } from "@/lib/live/ops";
 import { applyEdgeInputOverride } from "@/lib/model/edge-input-overrides";
 import { applyRecipeInputOverrides, inputOverrideAmount } from "@/lib/model/recipe-input-overrides";
 import type { AlternativeCycleFace } from "@/lib/nei/alternative-cycle";
@@ -256,6 +258,20 @@ interface FactoryStore {
   markHydratedProject: (project: FactoryProject) => void;
   undo: () => void;
   redo: () => void;
+  /**
+   * Set while a live plan is on the canvas: undo and redo apply recorded
+   * inverses of this person's own edits (live-session.ts), and these say
+   * whether there is one. Undefined: the store's own snapshot history.
+   */
+  liveUndo?: { canUndo: boolean; canRedo: boolean };
+  setLiveUndo: (liveUndo?: { canUndo: boolean; canRedo: boolean }) => void;
+  /**
+   * A live plan changed under the canvas (someone else's batch, an undo, a
+   * fresh snapshot): the ops land on the project as they are, keeping every
+   * untouched card the same object, and the books re-solve. Never an edit of
+   * this tab's, never in history, never sent back.
+   */
+  applyLiveOps: (ops: LiveOp[]) => void;
   setDatasetManifest: (manifest: DatasetManifest, manifestUrl: string) => void;
   setDataset: (dataset: RecipeDataset) => void;
   /**
@@ -1008,7 +1024,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
   loadViewedProject: (project) => {
     quietBoardSoundsFor(1500);
     const nextProject = normalizeLoadedProject(project);
-    write({
+    quietly(() => write({
       isReadOnly: true,
       project: nextProject,
       lastResult: solveBooks(nextProject),
@@ -1017,7 +1033,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
       pendingBoardSelectionIds: undefined, pendingResourceConnection: undefined,
       nodeColorPaintMode: undefined, checklistMode: false,
       recipeBrowserResource: undefined, powerMenuOpen: false,
-    });
+    }));
   },
   checklistMode: false,
   setChecklistMode: (checklistMode) => set({ checklistMode, ...(checklistMode ? { nodeColorPaintMode: undefined, pendingResourceConnection: undefined } : {}) }),
@@ -1108,7 +1124,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
     // its writes must not be mistaken for a giant paste and swept audibly.
     quietBoardSoundsFor(1500);
     const nextProject = touchProject(normalizeLoadedProject(project));
-    set({
+    quietly(() => set({
       project: nextProject,
       selectedNodeId: nextProject.nodes[0]?.id,
       selectedRecipeId: nextProject.nodes[0]?.recipeId ?? nextProject.recipes[0]?.id,
@@ -1117,12 +1133,12 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
       lastResult: solveBooks(nextProject),
       undoHistory: [],
       redoHistory: [],
-    });
+    }));
   },
   markHydratedProject: (project) => {
     quietBoardSoundsFor(1500);
     const nextProject = normalizeLoadedProject(project);
-    write({
+    quietly(() => write({
       isReadOnly: false,
       project: nextProject,
       selectedNodeId: nextProject.nodes[0]?.id,
@@ -1132,9 +1148,50 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
       lastResult: solveBooks(nextProject),
       undoHistory: [],
       redoHistory: [],
-    });
+    }));
+  },
+  liveUndo: undefined,
+  setLiveUndo: (liveUndo) => {
+    const current = get().liveUndo;
+    if (
+      current === liveUndo ||
+      (current && liveUndo && current.canUndo === liveUndo.canUndo && current.canRedo === liveUndo.canRedo)
+    ) {
+      return;
+    }
+    // Entering or leaving live editing: the snapshot history belongs to the
+    // other mode and must never restore over a live plan.
+    write(Boolean(current) === Boolean(liveUndo) ? { liveUndo } : { liveUndo, undoHistory: [], redoHistory: [] });
+  },
+  applyLiveOps: (ops) => {
+    if (ops.length === 0) {
+      return;
+    }
+    quietly(() =>
+      write((state) => {
+        const project = applyOps(state.project as unknown as Record<string, unknown>, ops) as unknown as FactoryProject;
+        const present = new Set<string>([
+          ...project.nodes.map((node) => node.id),
+          ...(project.storages ?? []).map((storage) => storage.id),
+          ...(project.annotations ?? []).map((annotation) => annotation.id),
+          ...(project.pockets ?? []).map((pocket) => pocket.id),
+        ]);
+        const selectedBoardIds = state.selectedBoardIds.filter((id) => present.has(id));
+        return {
+          project,
+          lastResult: solveBooks(project),
+          ...(selectedBoardIds.length === state.selectedBoardIds.length ? {} : { selectedBoardIds }),
+          ...(state.selectedNodeId && !present.has(state.selectedNodeId) ? { selectedNodeId: undefined } : {}),
+        };
+      }),
+    );
   },
   undo: () => {
+    const live = liveUndoHandler();
+    if (live) {
+      live.undo();
+      return;
+    }
     set((state) => {
       const previousProject = state.undoHistory.at(-1);
       if (!previousProject) {
@@ -1149,6 +1206,11 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
     });
   },
   redo: () => {
+    const live = liveUndoHandler();
+    if (live) {
+      live.redo();
+      return;
+    }
     set((state) => {
       const nextProject = state.redoHistory.at(-1);
       if (!nextProject) {
@@ -1191,7 +1253,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
       isDatasetLoading: false,
     }));
   },
-  refreshProjectRecipes: (recipes, migration = {}) => {
+  refreshProjectRecipes: (recipes, migration = {}) => quietly(() => {
     setPresentation((state) => {
       if (recipes.length === 0) {
         return state;
@@ -1252,7 +1314,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
         lastResult: solveBooks(project),
       };
     });
-  },
+  }),
   clearDataset: () => {
     set({
       dataset: undefined,
@@ -2612,7 +2674,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
       });
     });
   },
-  setPoolCellRatios: (ratios) => {
+  setPoolCellRatios: (ratios) => quietly(() => {
     setPresentation((state) => {
       const current = state.project.poolCellRatios ?? {};
       let changed = false;
@@ -2629,7 +2691,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
       const project = touchProject({ ...state.project, poolCellRatios: merged });
       return { project, lastResult: solveBooks(project) };
     });
-  },
+  }),
   addPoolStorage: (resource, side, at, productionGroupId) => {
     set((state) => {
       if (productionGroupId && !state.project.productionGroups?.some((group) => group.id === productionGroupId)) return state;
@@ -2954,21 +3016,21 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
       });
     });
   },
-  setProjectCommunityLink: (communityPlanId) => {
+  setProjectCommunityLink: (communityPlanId) => quietly(() => {
     set((state) => ({
       project: {
         ...state.project,
         metadata: { ...state.project.metadata, communityPlanId },
       },
     }));
-  },
-  clearProjectCommunityLink: () => {
+  }),
+  clearProjectCommunityLink: () => quietly(() => {
     set((state) => {
       const { communityPlanId: droppedId, ...metadata } = state.project.metadata ?? {};
       void droppedId;
       return { project: { ...state.project, metadata } };
     });
-  },
+  }),
   setProjectIdentity: (identity) => {
     set((state) => {
       const project = { ...state.project };
@@ -4628,6 +4690,11 @@ function withProjectHistory(
   updates: Partial<FactoryStore> & { project?: FactoryProject },
 ): Partial<FactoryStore> {
   if (!updates.project || updates.project === state.project) {
+    return updates;
+  }
+  // A live plan's undo is its recorded inverses (live-session.ts), never a
+  // snapshot: restoring one would wipe everyone else's edits since.
+  if (liveUndoHandler()) {
     return updates;
   }
 

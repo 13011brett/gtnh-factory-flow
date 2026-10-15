@@ -7434,8 +7434,8 @@ const SourceToolbar = memo(function SourceToolbar({
   // array itself would re-render this toolbar on every project edit.
   const undo = useFactoryStore((state) => state.undo);
   const redo = useFactoryStore((state) => state.redo);
-  const canUndo = useFactoryStore((state) => state.undoHistory.length > 0);
-  const canRedo = useFactoryStore((state) => state.redoHistory.length > 0);
+  const canUndo = useFactoryStore((state) => state.liveUndo ? state.liveUndo.canUndo : state.undoHistory.length > 0);
+  const canRedo = useFactoryStore((state) => state.liveUndo ? state.liveUndo.canRedo : state.redoHistory.length > 0);
   const historyButtonClass = (enabled: boolean) =>
     [
       "pointer-events-auto relative z-10 flex h-8 w-8 items-center justify-center border-2 border-[var(--mc-15)] bg-[var(--mc-49)] text-white shadow-[inset_2px_2px_0_var(--mc-85),inset_-2px_-2px_0_var(--mc-25)]",

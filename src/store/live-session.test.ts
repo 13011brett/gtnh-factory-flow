@@ -1,0 +1,480 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import type { DesignRecord, DesignSummary } from "@/lib/designs/design-library";
+import type { PendingBatch } from "@/lib/live/client-state";
+
+/**
+ * Live editing wired into the stores, against a fake live service speaking
+ * the real protocol and applying ops with the real engine: what a local edit
+ * sends, what a remote batch does to the canvas, undo of own edits only,
+ * offline edits kept and resent, refusals, being removed, and that nothing at
+ * all happens without NEXT_PUBLIC_LIVE_URL.
+ */
+
+const storage = vi.hoisted(() => ({
+  records: new Map<string, DesignRecord>(),
+}));
+
+vi.mock("@/lib/designs/design-storage", () => ({
+  listDesignSummaries: vi.fn(async () =>
+    [...storage.records.values()].map((record) => {
+      const summary: Partial<DesignRecord> = { ...record };
+      delete summary.project;
+      return summary as DesignSummary;
+    }),
+  ),
+  listDesignFolders: vi.fn(async () => []),
+  readDesign: vi.fn(async (id: string) => storage.records.get(id)),
+  readDesignSummary: vi.fn(async (id: string) => storage.records.get(id)),
+  writeDesign: vi.fn(async (record: DesignRecord) => {
+    storage.records.set(record.id, record);
+  }),
+  writeDesignIfUnchanged: vi.fn(async (record: DesignRecord) => {
+    storage.records.set(record.id, record);
+    return "written";
+  }),
+  writeDesignSummary: vi.fn(async () => undefined),
+  writeDesignFolder: vi.fn(async () => undefined),
+  deleteDesign: vi.fn(async (id: string) => {
+    storage.records.delete(id);
+  }),
+  deleteDesignFolder: vi.fn(async () => undefined),
+  readActiveDesignId: vi.fn(() => undefined),
+  writeActiveDesignId: vi.fn(),
+}));
+vi.mock("@/lib/designs/design-tab-sync", () => ({
+  THIS_TAB_ID: "tab-a",
+  isEditingInThisTab: () => true,
+  announceDesignSaved: vi.fn(),
+  subscribeDesignSaved: () => () => undefined,
+}));
+vi.mock("@/lib/designs/design-camera", () => ({
+  keepDesignCameras: vi.fn(),
+  forgetDesignCameras: vi.fn(),
+  rememberDesignCamera: vi.fn(),
+  readDesignCamera: vi.fn(),
+  beginDesignCameraHandover: vi.fn(),
+}));
+
+const pendingStore = vi.hoisted(() => ({
+  entries: new Map<string, { key: string; doc: string; tabId: string; pending: PendingBatch[] }>(),
+  alive: new Set<string>(["tab-a"]),
+}));
+vi.mock("@/lib/live/live-pending-store", () => ({
+  pendingKey: (doc: string, tabId: string) => `${doc}|${tabId}`,
+  writePending: vi.fn(async (doc: string, tabId: string, pending: PendingBatch[]) => {
+    const key = `${doc}|${tabId}`;
+    if (pending.length === 0) {
+      pendingStore.entries.delete(key);
+    } else {
+      pendingStore.entries.set(key, { key, doc, tabId, pending: structuredClone(pending) });
+    }
+  }),
+  readPending: vi.fn(async (doc?: string) =>
+    [...pendingStore.entries.values()].filter((entry) => !doc || entry.doc === doc),
+  ),
+  deletePending: vi.fn(async (key: string) => {
+    pendingStore.entries.delete(key);
+  }),
+  holdTabLock: vi.fn(),
+  aliveTabs: vi.fn(async () => pendingStore.alive),
+}));
+
+import { createEmptyProject } from "@/examples";
+import { applyOps, type LiveOp, type LivePlan, type LiveThing } from "@/lib/live/ops";
+import type { ServerFrame } from "@/lib/live/protocol";
+import type { FactoryAnnotation, FactoryProject } from "@/lib/model/types";
+import { useCommunityAuthStore } from "./community-auth-store";
+import { useDesignStore } from "./design-store";
+import { useFactoryStore } from "./factory-store";
+import { liveUndoHandler } from "./live-edit-gate";
+import { startLiveSessions, useLiveSession, type LiveSocketLike } from "./live-session";
+
+const ANN = "11111111-1111-4111-8111-111111111111";
+const BOB = "22222222-2222-4222-8222-222222222222";
+const DESIGN = "aaaaaaaa-0000-4000-8000-000000000001";
+const DOC = `${ANN}:${DESIGN}`;
+
+/** The live service as one client sees it: the real ops engine, one room. */
+class FakeService {
+  plan: LivePlan = {};
+  seq = 0;
+  socket?: FakeSocket;
+  readonly received: Array<Record<string, unknown>> = [];
+  /** cids the service refuses (an `error` with the cid). */
+  readonly refuse = new Set<string>();
+  /** Set: the service takes frames but answers nothing (a dead link). */
+  silent = false;
+  readonly applied = new Map<string, number>();
+
+  connect(url: string): FakeSocket {
+    void url;
+    this.socket = new FakeSocket(this);
+    return this.socket;
+  }
+
+  reply(frame: ServerFrame): void {
+    const socket = this.socket;
+    queueMicrotask(() => socket?.deliver(frame));
+  }
+
+  handle(frame: Record<string, unknown>): void {
+    this.received.push(frame);
+    if (this.silent) {
+      return;
+    }
+    switch (frame.t) {
+      case "hello":
+        this.reply({ t: "welcome", v: 1, you: { id: ANN, username: "ann", color: "#e5484d" } });
+        return;
+      case "join":
+        this.reply({
+          t: "snapshot",
+          doc: frame.doc as string,
+          seq: this.seq,
+          plan: this.plan,
+          role: "owner",
+          members: [{ id: BOB, username: "bob" }],
+          present: [
+            { id: ANN, username: "ann", color: "#e5484d", client: "web", conn: "c-ann" },
+            { id: BOB, username: "bob", color: "#46a758", client: "game", conn: "c-bob" },
+          ],
+          owner: { id: ANN, username: "ann" },
+        });
+        return;
+      case "ops": {
+        const cid = frame.cid as string;
+        if (this.refuse.has(cid)) {
+          this.reply({ t: "error", doc: DOC, cid, code: "bad_op", msg: "No." });
+          return;
+        }
+        const seen = this.applied.get(cid);
+        if (seen !== undefined) {
+          this.reply({ t: "ops", doc: DOC, seq: seen, by: ANN, cid, ops: [] });
+          return;
+        }
+        this.plan = applyOps(this.plan, frame.ops as LiveOp[]);
+        this.seq += 1;
+        this.applied.set(cid, this.seq);
+        this.reply({ t: "ops", doc: DOC, seq: this.seq, by: ANN, cid, ops: frame.ops as LiveOp[] });
+        return;
+      }
+    }
+  }
+
+  /** Someone else's batch. */
+  remote(ops: LiveOp[], cid = `bob-${this.seq + 1}`): void {
+    this.plan = applyOps(this.plan, ops);
+    this.seq += 1;
+    this.reply({ t: "ops", doc: DOC, seq: this.seq, by: BOB, cid, ops });
+  }
+
+  sent(t: string): Array<Record<string, unknown>> {
+    return this.received.filter((frame) => frame.t === t);
+  }
+}
+
+class FakeSocket implements LiveSocketLike {
+  readyState = 0;
+  onopen: ((event: unknown) => void) | null = null;
+  onmessage: ((event: { data: unknown }) => void) | null = null;
+  onclose: ((event: { code: number }) => void) | null = null;
+  onerror: ((event: unknown) => void) | null = null;
+
+  constructor(private readonly service: FakeService) {
+    queueMicrotask(() => {
+      if (this.readyState === 0) {
+        this.readyState = 1;
+        this.onopen?.({});
+      }
+    });
+  }
+
+  send(data: string): void {
+    if (this.readyState !== 1) {
+      throw new Error("not open");
+    }
+    this.service.handle(JSON.parse(data) as Record<string, unknown>);
+  }
+
+  deliver(frame: ServerFrame): void {
+    if (this.readyState === 1) {
+      this.onmessage?.({ data: JSON.stringify(frame) });
+    }
+  }
+
+  close(): void {
+    this.readyState = 3;
+  }
+
+  /** The connection drops. */
+  drop(code = 1006): void {
+    this.readyState = 3;
+    this.onclose?.({ code });
+  }
+}
+
+const settle = async (rounds = 6) => {
+  for (let i = 0; i < rounds; i += 1) {
+    await new Promise((resolve) => setTimeout(resolve, 0));
+  }
+};
+
+function annotation(id: string, text: string, x = 0): FactoryAnnotation {
+  return {
+    id,
+    kind: "text",
+    text,
+    position: { x, y: 0 },
+    size: { width: 200, height: 40 },
+  } as FactoryAnnotation;
+}
+
+function planWith(...annotations: FactoryAnnotation[]): FactoryProject {
+  return { ...createEmptyProject(), id: "plan-live", name: "Live", annotations };
+}
+
+function annotations(): FactoryAnnotation[] {
+  return useFactoryStore.getState().project.annotations ?? [];
+}
+
+let service: FakeService;
+let stop: (() => void) | undefined;
+
+async function openLiveDesign(local: FactoryProject, server: FactoryProject = local) {
+  service.plan = JSON.parse(JSON.stringify(server)) as LivePlan;
+  const record: DesignRecord = {
+    id: DESIGN,
+    name: "Live",
+    createdAt: "2026-10-01T00:00:00.000Z",
+    updatedAt: "2026-10-01T00:00:00.000Z",
+    remoteUpdatedAt: "2026-10-01T00:00:00.000Z",
+    project: local,
+  };
+  storage.records.set(DESIGN, record);
+  useFactoryStore.getState().markHydratedProject(local);
+  const summary: Partial<DesignRecord> = { ...record };
+  delete summary.project;
+  useDesignStore.setState({
+    designs: [summary as DesignSummary],
+    activeDesignId: DESIGN,
+    isHydrated: true,
+  });
+  useCommunityAuthStore.setState({ user: { username: "ann" }, hasHydrated: true });
+  stop = startLiveSessions({
+    url: () => "ws://live.test/live",
+    createSocket: (url) => service.connect(url),
+  });
+  await settle();
+}
+
+beforeEach(() => {
+  vi.stubEnv("NEXT_PUBLIC_LIVE_URL", "ws://live.test/live");
+  service = new FakeService();
+  storage.records.clear();
+  pendingStore.entries.clear();
+  useLiveSession.setState({
+    status: "off",
+    members: [],
+    present: [],
+    pending: 0,
+    notice: undefined,
+  });
+});
+
+afterEach(async () => {
+  stop?.();
+  stop = undefined;
+  useCommunityAuthStore.setState({ user: undefined });
+  useDesignStore.setState({ designs: [], activeDesignId: undefined });
+  vi.unstubAllEnvs();
+  await settle();
+});
+
+describe("live editing in the store", () => {
+  it("joins the open cloud design and lands its live plan on the canvas, as the same design", async () => {
+    await openLiveDesign(planWith(annotation("n1", "old")), planWith(annotation("n1", "new")));
+
+    expect(service.sent("join")).toEqual([{ t: "join", doc: DOC }]);
+    expect(useLiveSession.getState()).toMatchObject({ status: "live", doc: DOC, role: "owner" });
+    expect(annotations()[0]!.text).toBe("new");
+    // Same design, no new tab, no snapshot history: undo is the live one.
+    expect(useDesignStore.getState().designs.map((design) => design.id)).toEqual([DESIGN]);
+    expect(useDesignStore.getState().activeDesignId).toBe(DESIGN);
+    expect(useFactoryStore.getState().undoHistory).toEqual([]);
+    expect(liveUndoHandler()).toBeDefined();
+    // Bob is here (the game); ann's own connection is not a face.
+    expect(useLiveSession.getState().present.map((person) => person.username)).toEqual(["bob"]);
+  });
+
+  it("sends each edit as the batch of what changed, nothing derived, confirmed by its echo", async () => {
+    await openLiveDesign(planWith(annotation("n1", "one"), annotation("n2", "two")));
+
+    useFactoryStore.getState().updateAnnotation("n2", { text: "TWO" });
+    await settle();
+
+    const batches = service.sent("ops");
+    expect(batches).toHaveLength(1);
+    expect(batches[0]!.ops).toEqual([
+      { o: "patch", c: "annotations", id: "n2", f: { text: "TWO" } },
+    ]);
+    expect(useLiveSession.getState().pending).toBe(0);
+    expect((service.plan.annotations as FactoryAnnotation[])[1]!.text).toBe("TWO");
+    // The store kept no snapshot of the plan for undo.
+    expect(useFactoryStore.getState().undoHistory).toEqual([]);
+    expect(useFactoryStore.getState().liveUndo).toEqual({ canUndo: true, canRedo: false });
+  });
+
+  it("lands someone else's batch on the canvas, leaving untouched things the same objects", async () => {
+    await openLiveDesign(planWith(annotation("n1", "one"), annotation("n2", "two")));
+    const untouched = annotations()[0];
+
+    service.remote([{ o: "patch", c: "annotations", id: "n2", f: { text: "from bob" } }]);
+    await settle();
+
+    expect(annotations()[1]!.text).toBe("from bob");
+    expect(annotations()[0]).toBe(untouched);
+    // Not an edit of ours: nothing went back, nothing to undo.
+    expect(service.sent("ops")).toHaveLength(0);
+    expect(useFactoryStore.getState().liveUndo?.canUndo).toBe(false);
+  });
+
+  it("undoes only this person's own edit, with its recorded inverse, never a snapshot", async () => {
+    await openLiveDesign(planWith(annotation("n1", "one"), annotation("n2", "two")));
+
+    useFactoryStore.getState().updateAnnotation("n1", { text: "mine" });
+    await settle();
+    service.remote([{ o: "patch", c: "annotations", id: "n2", f: { text: "bob's" } }]);
+    await settle();
+
+    useFactoryStore.getState().undo();
+    await settle();
+
+    expect(annotations().map((note) => note.text)).toEqual(["one", "bob's"]);
+    const batches = service.sent("ops");
+    expect(batches.at(-1)!.ops).toEqual([
+      { o: "patch", c: "annotations", id: "n1", f: { text: "one" } },
+    ]);
+    expect((service.plan.annotations as FactoryAnnotation[]).map((note) => note.text)).toEqual([
+      "one",
+      "bob's",
+    ]);
+
+    useFactoryStore.getState().redo();
+    await settle();
+    expect(annotations().map((note) => note.text)).toEqual(["mine", "bob's"]);
+  });
+
+  it("keeps edits made offline, stored, and sends them when the connection is back", async () => {
+    await openLiveDesign(planWith(annotation("n1", "one")));
+    vi.useFakeTimers({ toFake: ["setTimeout", "clearTimeout", "setInterval", "clearInterval"] });
+    try {
+      service.socket!.drop();
+      expect(useLiveSession.getState().status).toBe("offline");
+
+      useFactoryStore.getState().updateAnnotation("n1", { text: "offline" });
+      expect(useLiveSession.getState().pending).toBe(1);
+      expect(annotations()[0]!.text).toBe("offline");
+      await vi.advanceTimersByTimeAsync(250);
+      expect(pendingStore.entries.get(`${DOC}|tab-a`)?.pending).toHaveLength(1);
+
+      // Someone edited meanwhile; the backoff runs out and the session joins again.
+      service.remote([
+        {
+          o: "put",
+          c: "annotations",
+          id: "n9",
+          v: annotation("n9", "bob") as unknown as LiveThing,
+        },
+      ]);
+      await vi.advanceTimersByTimeAsync(2000);
+
+      expect(useLiveSession.getState().status).toBe("live");
+      expect(useLiveSession.getState().pending).toBe(0);
+      expect(annotations().map((note) => note.text)).toEqual(["offline", "bob"]);
+      expect((service.plan.annotations as FactoryAnnotation[])[0]!.text).toBe("offline");
+      await vi.advanceTimersByTimeAsync(250);
+      expect(pendingStore.entries.size).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("sends a closed tab's leftover edits with its own", async () => {
+    pendingStore.entries.set(`${DOC}|tab-gone`, {
+      key: `${DOC}|tab-gone`,
+      doc: DOC,
+      tabId: "tab-gone",
+      pending: [
+        {
+          cid: "left-1",
+          ops: [{ o: "patch", c: "annotations", id: "n1", f: { text: "left behind" } }],
+          inverse: [{ o: "patch", c: "annotations", id: "n1", f: { text: "one" } }],
+        },
+      ],
+    });
+    await openLiveDesign(planWith(annotation("n1", "one")));
+    await settle();
+
+    expect(service.sent("ops").map((frame) => frame.cid)).toEqual(["left-1"]);
+    expect(annotations()[0]!.text).toBe("left behind");
+    expect(pendingStore.entries.has(`${DOC}|tab-gone`)).toBe(false);
+  });
+
+  it("takes a refused edit back off the canvas and says so", async () => {
+    await openLiveDesign(planWith(annotation("n1", "one")));
+    service.refuse.add("__all__");
+    const send = service.handle.bind(service);
+    service.handle = (frame) => {
+      if (frame.t === "ops") {
+        service.refuse.add(frame.cid as string);
+      }
+      send(frame);
+    };
+
+    useFactoryStore.getState().updateAnnotation("n1", { text: "too much" });
+    await settle();
+
+    expect(annotations()[0]!.text).toBe("one");
+    expect(useLiveSession.getState().pending).toBe(0);
+    expect(useLiveSession.getState().notice?.text).toBe("An edit was not saved: No.");
+  });
+
+  it("closes a shared plan's copy when its owner stops sharing it", async () => {
+    await openLiveDesign(planWith(annotation("n1", "one")));
+    // Make the open design a copy of bob's plan, shared with ann.
+    const bobDoc = `${BOB}:${DESIGN}`;
+    service.plan = { ...service.plan };
+    useDesignStore.setState({
+      designs: useDesignStore
+        .getState()
+        .designs.map((design) => ({
+          ...design,
+          cloud: { ownerId: BOB, ownerName: "bob", designId: DESIGN },
+        })),
+    });
+    await settle();
+    expect(useLiveSession.getState().doc).toBe(bobDoc);
+
+    service.reply({ t: "kicked", doc: bobDoc, reason: "unshared" });
+    await settle();
+
+    expect(useLiveSession.getState().status).toBe("off");
+    expect(useLiveSession.getState().notice?.text).toBe("You were removed from Live.");
+    expect(storage.records.has(DESIGN)).toBe(false);
+    expect(liveUndoHandler()).toBeUndefined();
+  });
+
+  it("does nothing at all without a live service configured", async () => {
+    vi.stubEnv("NEXT_PUBLIC_LIVE_URL", "");
+    const createSocket = vi.fn((url: string) => service.connect(url));
+    useCommunityAuthStore.setState({ user: { username: "ann" }, hasHydrated: true });
+    stop = startLiveSessions({ url: () => "ws://live.test/live", createSocket });
+    await settle();
+
+    expect(createSocket).not.toHaveBeenCalled();
+    useFactoryStore.getState().markHydratedProject(planWith(annotation("n1", "one")));
+    useFactoryStore.getState().updateAnnotation("n1", { text: "local" });
+    expect(useFactoryStore.getState().undoHistory).toHaveLength(1);
+    expect(useFactoryStore.getState().liveUndo).toBeUndefined();
+  });
+});

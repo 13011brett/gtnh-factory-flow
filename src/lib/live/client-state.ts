@@ -116,7 +116,10 @@ export class LiveClientState {
   }
 
   /** A local edit given as ops. Null when there are none. */
-  localOps(ops: LiveOp[], options: { keepRedo?: boolean; undoable?: boolean } = {}): PendingBatch | null {
+  localOps(
+    ops: LiveOp[],
+    options: { keepRedo?: boolean; undoable?: boolean } = {},
+  ): PendingBatch | null {
     if (ops.length === 0) {
       return null;
     }
@@ -163,6 +166,22 @@ export class LiveClientState {
     this.pending.splice(at, 1);
     this.shown = null;
     return true;
+  }
+
+  /**
+   * Batches another client of this person's left unsent (a closed tab's, read
+   * back from storage), added to the end of `pending` as they are, so they are
+   * shown and go out with ours. Batches already pending are skipped. They
+   * stay out of undo: they were not edits made here. Returns those added.
+   */
+  adopt(batches: PendingBatch[]): PendingBatch[] {
+    const known = new Set(this.pending.map((batch) => batch.cid));
+    const added = batches.filter((batch) => !known.has(batch.cid));
+    if (added.length > 0) {
+      this.pending.push(...added);
+      this.shown = null;
+    }
+    return added;
   }
 
   /**

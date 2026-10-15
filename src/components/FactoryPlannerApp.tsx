@@ -28,6 +28,7 @@ import { forgetSharedPlanId, readSharedPlanId, syncSharedPlanAddress } from "@/l
 import { useIsCompactViewport } from "@/lib/compact-view";
 import { startLibrarySync } from "@/lib/library/library-sync";
 import { startDesignTabSync } from "@/store/design-store";
+import { startLiveSessions } from "@/store/live-session";
 import { useLibraryTab } from "@/lib/library/library-tab";
 import { useWelcomeTab } from "@/lib/welcome/welcome-tab";
 import { AppHeader } from "./AppHeader";
@@ -198,6 +199,10 @@ export function FactoryPlannerApp() {
   // Other browser tabs of the planner share this library: keep the open
   // design current with their saves (design-store.ts, canvasBase).
   useEffect(() => startDesignTabSync(), []);
+
+  // A cloud plan on the canvas is edited live with everyone in it. Nothing at
+  // all without NEXT_PUBLIC_LIVE_URL (live-session.ts).
+  useEffect(() => startLiveSessions(), []);
 
   // Recorded here rather than in the resource panel: the charts must not lose
   // their history because the right column happened to be closed, and every

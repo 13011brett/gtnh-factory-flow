@@ -3,11 +3,9 @@
 import "./chrome.css";
 
 import { useCallback, useEffect, useLayoutEffect, useRef, useState } from "react";
-import { copyToClipboard } from "@/lib/clipboard";
 import { activateOnKey } from "@/lib/hooks/button-keys";
 import { openDesigns } from "@/lib/designs/design-library";
 import { readDesign } from "@/lib/designs/design-storage";
-import { encodePlanCode, planCodeLink } from "@/lib/import-export/plan-code";
 import { leaveLibrary, openLibrary } from "@/lib/library/library-tab";
 import { leaveWelcomeTab } from "@/lib/welcome/welcome-tab";
 import { playBoardSound } from "@/lib/board-sounds";
@@ -19,13 +17,16 @@ import { tipAttrs } from "@/components/flow/clean/interaction";
 import { openPlanFile } from "@/lib/import-export/open-plan-file";
 import { flashNotice } from "@/components/flow/clean/rail/NoticeBar";
 import { ChromeMenu, chromeAnchorOf, MENU_ANCHOR_ATTR, type ChromeAnchor, type MenuEntry } from "./ChromeMenu";
+import { libraryRows } from "./library-rows";
+import { copyPlanCode } from "./share-actions";
+import type { ShareMode } from "@/components/community/SharePlanDialog";
 
 /** What the tab strip asks of the bar: the dialogs it does not own. */
 export interface ModTabsActions {
   /** "Paste plan": the paste dialog. */
   onPaste: () => void;
-  /** "Share to library..." for the plan open now. */
-  onShare: () => void;
+  /** The library dialog for the plan open now: Save to library, Update in library, Save as new post. */
+  onShare: (mode?: ShareMode) => void;
 }
 
 type TabMenu =
@@ -99,8 +100,7 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
     try {
       const project = id === activeDesignId ? useFactoryStore.getState().project : (await readDesign(id))?.project;
       if (!project) return;
-      const code = await encodePlanCode(project);
-      await copyToClipboard(planCodeLink(code, window.location.origin));
+      await copyPlanCode(project);
     } catch (error) {
       console.error(error);
     }
@@ -147,16 +147,15 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
     const rows: MenuEntry[] = [
       { label: "Rename", onSelect: () => setRenaming(m.id) },
       { label: "Copy plan code", detail: "to paste or share", onSelect: () => void copyCode(m.id) },
-      {
-        label: m.id === activeDesignId && linkedPostId ? "Update in library..." : "Share to library...",
-        detail: "for other players",
-        onSelect: () => {
+      ...libraryRows(
+        Boolean(m.id === activeDesignId ? linkedPostId : designs.find((design) => design.id === m.id)?.communityPlanId),
+        (mode) => {
           void (async () => {
             if (m.id !== activeDesignId) await activate(m.id);
-            onShare();
+            onShare(mode);
           })();
         },
-      },
+      ),
     ];
     if (canClose) {
       rows.push(

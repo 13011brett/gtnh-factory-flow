@@ -201,8 +201,8 @@ export async function logoutCommunityUser(): Promise<void> {
 
 /**
  * Stamps a downloaded plan with the community post it IS: only for the
- * owner's own post coming back into their library. The link is what makes
- * the post follow the design from then on (see post-follow.ts).
+ * owner's own post coming back into their library. The link is what lets
+ * Share update that post (Update in library); nothing syncs by itself.
  */
 export function tagPlanWithCommunityId(plan: unknown, planId: string): unknown {
   if (typeof plan !== "object" || plan === null) {

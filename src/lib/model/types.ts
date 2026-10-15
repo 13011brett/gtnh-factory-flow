@@ -802,9 +802,9 @@ export interface FactoryProject {
     createdAt?: string;
     updatedAt?: string;
     /**
-     * The community post this design IS. Only the owner's design carries it;
-     * the post follows every save (post-follow.ts). A copy of someone else's
-     * post has none.
+     * The community post this design went up as. Only the owner's design
+     * carries it, and Share's Update in library updates that post. A copy of
+     * someone else's post has none.
      */
     communityPlanId?: string;
   };

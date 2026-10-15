@@ -26,11 +26,29 @@ import { renderIoStats, TierBadge } from "@/components/shelf-cards";
 import { AuthForm, useCommunityUser } from "./auth";
 
 /**
- * Posting the open tab to the network. The dialog leads with WHAT is being
- * posted (the tab, its headline numbers), then the post's face: icon, name,
- * description, tags. Updating a linked post keeps its votes and downloads.
+ * What the Share menu asked for: a new post for a plan not posted yet
+ * (`save`), the plan's own post brought up to date (`update`), or a new post
+ * for a plan already posted (`new`, Save as new post). The same words as the
+ * mod's Share menu.
  */
-export function SharePlanDialog({ onClose }: { onClose: () => void }) {
+export type ShareMode = "save" | "update" | "new";
+
+/**
+ * Posting the open tab to the library. A post is a copy, like an uploaded
+ * file: nothing follows the plan by itself. The plan's own post changes only
+ * when the player updates it here.
+ *
+ * The dialog leads with WHAT is being posted (the tab, its headline numbers),
+ * then the post's face: icon, name, description, tags. Updating a linked post
+ * keeps its votes and downloads.
+ */
+export function SharePlanDialog({
+  onClose,
+  mode: askedMode,
+}: {
+  onClose: () => void;
+  mode?: ShareMode;
+}) {
   const dialogRef = useRef<HTMLDivElement>(null);
   useDialogA11y(dialogRef, { onClose });
   const project = useFactoryStore((state) => state.project);
@@ -58,12 +76,16 @@ export function SharePlanDialog({ onClose }: { onClose: () => void }) {
     posts: CommunityPlanSummary[];
   }>();
   const myPosts = user && myPostsFor?.username === user.username ? myPostsFor.posts : [];
-  // A design that is posted IS its post: the post follows every save, so
-  // for it this dialog is only the link and the public switch.
-  const linkedPost = myPosts.find((post) => post.id === project.metadata?.communityPlanId);
+  // The plan's own post, when it has one: Update brings it up to date.
+  // Save as new post ignores it and makes another.
+  const [mode, setMode] = useState<ShareMode | undefined>(askedMode);
+  const linkedPost =
+    mode === "new"
+      ? undefined
+      : myPosts.find((post) => post.id === project.metadata?.communityPlanId);
   const [isUploading, setUploading] = useState(false);
   const [error, setError] = useState<string>();
-  const [shared, setShared] = useState<{ planId: string }>();
+  const [shared, setShared] = useState<{ planId: string; updated?: boolean }>();
   const [isLinkCopied, setLinkCopied] = useState(false);
   const [linkedIsPublic, setLinkedIsPublic] = useState<boolean>();
   const isPublic = linkedIsPublic ?? linkedPost?.isPublic ?? true;
@@ -127,7 +149,7 @@ export function SharePlanDialog({ onClose }: { onClose: () => void }) {
 
       const { id } = await uploadCommunityPlan(payload);
       setShared({ planId: id });
-      // From here on the post follows the design (post-follow.ts).
+      // The plan remembers its post, so Share offers to update it.
       setProjectCommunityLink(id);
 
       const preview = await previewPromise;
@@ -142,6 +164,38 @@ export function SharePlanDialog({ onClose }: { onClose: () => void }) {
       notifySetupsChanged();
     } catch (uploadError) {
       setError(uploadError instanceof Error ? uploadError.message : "Sharing failed.");
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  // The post brought up to date with the plan as it is now: its plan, name,
+  // description and icon. Votes, downloads and comments stay; tags are the
+  // post's own.
+  const update = async () => {
+    if (!linkedPost) {
+      return;
+    }
+    setUploading(true);
+    setError(undefined);
+    try {
+      const previewPromise = capturePlanPreviewPng();
+      await patchCommunityPlan(linkedPost.id, {
+        name: project.name || linkedPost.name,
+        description: project.description ?? "",
+        icon: project.icon ?? null,
+        plan: JSON.parse(
+          serializeFactoryProject({ ...project, view: capturePlanView() }),
+        ) as unknown,
+      });
+      setShared({ planId: linkedPost.id, updated: true });
+      const preview = await previewPromise;
+      if (preview) {
+        await uploadPlanPreview(linkedPost.id, preview).catch(() => undefined);
+      }
+      notifySetupsChanged();
+    } catch (updateError) {
+      setError(updateError instanceof Error ? updateError.message : "Updating failed.");
     } finally {
       setUploading(false);
     }
@@ -179,18 +233,28 @@ export function SharePlanDialog({ onClose }: { onClose: () => void }) {
     window.setTimeout(() => setLinkCopied(false), 1500);
   };
 
+  const dialogTitle = linkedPost
+    ? "Update in library"
+    : mode === "new"
+      ? "Save as new post"
+      : "Save to library";
+
   return (
     <div className="pn-backdrop">
-      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label="Share your setup" className="pn pn-skin" data-wide="">
+      <div ref={dialogRef} role="dialog" aria-modal="true" aria-label={dialogTitle} className="pn pn-skin" data-wide="">
         <div className="pn-title">
-          <span>Share your setup</span>
+          <span>{dialogTitle}</span>
           <button type="button" onClick={onClose} aria-label="Close" className="pn-x" />
         </div>
         <div className="pn-body">
 
         {shared ? (
           <div className="space-y-3">
-            <p className="text-sm">Your setup is live. From now on every save updates the post.</p>
+            <p className="text-sm">
+              {shared.updated
+                ? "Your post is up to date."
+                : "Your setup is in the library. When the plan changes, Update in library brings the post up to date."}
+            </p>
             <div className="flex flex-wrap gap-2">
               <button
                 type="button"
@@ -231,17 +295,32 @@ export function SharePlanDialog({ onClose }: { onClose: () => void }) {
         ) : linkedPost ? (
           <div className="space-y-3">
             <p className="text-sm">
-              This design is posted as{" "}
-              <span className="font-semibold text-fg">{linkedPost.name}</span>. Every save
-              updates the post: there is nothing to update by hand.
+              Update <span className="font-semibold text-fg">{linkedPost.name}</span> with the
+              plan as it is now. Its votes and comments stay.
             </p>
             <p className="text-xs text-fg-subtle">
               {isPublic
-                ? "Public: it shows in Public setups. Anyone with the link can view it and open their own copy."
+                ? "Public: it shows in Public setups. Anyone who opens it gets their own copy."
                 : "Private: only you can see it. The link opens nothing for anyone else."}
             </p>
             {error ? <p className="text-sm text-red-500">{error}</p> : null}
             <div className="flex flex-wrap gap-2">
+              <button
+                type="button"
+                onClick={() => void update()}
+                disabled={isUploading || project.nodes.length === 0}
+                className="inline-flex items-center gap-2 rounded border border-cyan-700 bg-cyan-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
+              >
+                {isUploading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
+                Update post
+              </button>
+              <button
+                type="button"
+                onClick={() => setMode("new")}
+                className="inline-flex items-center gap-1.5 rounded border border-line-strong px-3 py-1.5 text-sm hover:bg-surface-raised"
+              >
+                Save as new post
+              </button>
               <button
                 type="button"
                 onClick={() => void copyShareLink()}
@@ -399,7 +478,7 @@ export function SharePlanDialog({ onClose }: { onClose: () => void }) {
                 className="inline-flex items-center gap-2 rounded border border-cyan-700 bg-cyan-600 px-3 py-1.5 text-sm font-medium text-white hover:bg-cyan-500 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {isUploading ? <LoaderCircle className="h-4 w-4 animate-spin" /> : null}
-                Post this setup
+                Save to library
               </button>
             </div>
           </div>

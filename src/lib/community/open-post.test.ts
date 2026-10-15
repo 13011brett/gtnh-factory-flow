@@ -44,13 +44,17 @@ describe("opening public posts", () => {
     expect(mocks.viewPublicProject).not.toHaveBeenCalled();
     expect(mocks.switchToDesign).not.toHaveBeenCalled();
   });
-  it("opens another author's setup for viewing, even with an old linked local copy", async () => {
-    expect(await openCommunityPost({ id: "post" })).toBe("viewed");
-    expect(mocks.viewPublicProject).toHaveBeenCalledWith(
-      { id: "post", name: "Public setup", authorName: "Author" },
-      expect.anything(),
-    );
-    expect(mocks.importProjectAsDesign).not.toHaveBeenCalled();
+  it("opens another author's setup as a copy of your own, even with an old linked local copy", async () => {
+    mocks.download.mockResolvedValue({
+      plan: { ...createEmptyProject(), metadata: { communityPlanId: "post" } },
+      name: "Public setup",
+    });
+    expect(await openCommunityPost({ id: "post" })).toBe("copied");
+    expect(mocks.importProjectAsDesign).toHaveBeenCalledTimes(1);
+    const [project, name] = mocks.importProjectAsDesign.mock.calls[0];
+    expect(project.metadata?.communityPlanId).toBeUndefined();
+    expect(name).toBe("Public setup");
+    expect(mocks.viewPublicProject).not.toHaveBeenCalled();
     expect(mocks.switchToDesign).not.toHaveBeenCalled();
   });
 
@@ -79,7 +83,7 @@ it.each(["build", "solve", "pool", "plan"] as const)("opens a posted %s setup in
     plan: { ...createEmptyProject(), solveMode: mode !== "build" || undefined, poolMode: mode === "pool" || undefined, planMode: mode === "plan" || undefined },
   });
   await openCommunityPost({ id: "mode-post", isMine: false, authorName: "Author" });
-  const project = mocks.viewPublicProject.mock.calls[0][1];
+  const project = mocks.importProjectAsDesign.mock.calls[0][0];
   expect(Boolean(project.solveMode)).toBe(mode !== "build");
   expect(Boolean(project.poolMode)).toBe(mode === "pool");
   expect(Boolean(project.planMode)).toBe(mode === "plan");

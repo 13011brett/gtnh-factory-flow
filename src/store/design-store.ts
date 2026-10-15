@@ -43,17 +43,13 @@ import {
 } from "@/lib/designs/design-tab-sync";
 import { subscribeBoardView } from "@/components/flow/board-view";
 import { subscribeWorkspaceView } from "@/lib/workspace-view";
-import { flushPostFollow, schedulePostFollow } from "@/lib/community/post-follow";
 
 /**
- * Every write of a plan goes through here so a posted design's post can
- * follow it: the push is debounced in post-follow.ts and costs nothing for
- * a design with no link. Summary-only writes (rename, star, folder) do not
- * come this way; a rename reaches the post with the next plan save.
+ * Every write of a plan goes through here. A posted design's post is a copy:
+ * nothing is pushed to it. Share's Update in library brings it up to date.
  */
 async function writeDesign(record: DesignRecord): Promise<void> {
   await storeDesignRecord(record);
-  schedulePostFollow(record.id, Boolean(record.project.metadata?.communityPlanId));
 }
 import {
   beginDesignCameraHandover,
@@ -318,7 +314,6 @@ async function persistCanvasNow(summary: DesignSummary, canvas: FactoryProject):
   const record = withStats(updateDesignProject({ ...current, project }, project));
   const outcome = await writeDesignIfUnchanged(record, canvasBase.updatedAt);
   if (outcome === "written") {
-    schedulePostFollow(record.id, Boolean(record.project.metadata?.communityPlanId));
     canvasBase = { designId: summary.id, updatedAt: record.updatedAt };
     if (currentProject() === canvas) {
       canvasPlanEdited = false;
@@ -365,12 +360,7 @@ async function flushCanvasInto(summary: DesignSummary | undefined): Promise<void
     return;
   }
 
-  const { outcome } = await persistCanvas(summary, currentProject());
-  if (outcome === "written") {
-    // The design is leaving the canvas: no autosave will follow, so the post
-    // takes this version now rather than after the debounce.
-    flushPostFollow(summary.id);
-  }
+  await persistCanvas(summary, currentProject());
 }
 
 /**

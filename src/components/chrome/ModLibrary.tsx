@@ -5,12 +5,12 @@ import "./library.css";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { createPortal } from "react-dom";
-import { copyToClipboard } from "@/lib/clipboard";
 import { loginCommunityUser, registerCommunityUser } from "@/lib/community/client";
 import { requestShareDialog } from "@/lib/setups-tab";
 import { openDesigns, type DesignSummary } from "@/lib/designs/design-library";
 import { readDesign } from "@/lib/designs/design-storage";
-import { encodePlanCode, planCodeLink } from "@/lib/import-export/plan-code";
+import { libraryRows } from "./library-rows";
+import { copyPlanCode } from "./share-actions";
 import { agoText, lastOpenOf } from "@/lib/library/last-open";
 import { leaveLibrary, setLibraryView, useLibraryTab } from "@/lib/library/library-tab";
 import { GT_VOLTAGE_TIERS } from "@/lib/model/tiers";
@@ -272,7 +272,7 @@ function MyPlans({ query }: { query: string }) {
     try {
       const project = id === activeDesignId ? useFactoryStore.getState().project : (await readDesign(id))?.project;
       if (!project) return;
-      await copyToClipboard(planCodeLink(await encodePlanCode(project), window.location.origin));
+      await copyPlanCode(project);
     } catch (error) {
       console.error(error);
     }
@@ -289,16 +289,15 @@ function MyPlans({ query }: { query: string }) {
       { label: "Open", onSelect: () => void open(m.id) },
       { label: "Rename", onSelect: () => setRenaming(m.id) },
       { label: "Copy plan code", detail: "to paste or share", onSelect: () => void copyCode(m.id) },
-      {
-        label: m.id === activeDesignId && linkedPostId ? "Update in library..." : "Share to library...",
-        detail: "for other players",
-        onSelect: () => {
+      ...libraryRows(
+        Boolean(m.id === activeDesignId ? linkedPostId : allDesigns.find((design) => design.id === m.id)?.communityPlanId),
+        (mode) => {
           void (async () => {
             await open(m.id);
-            requestShareDialog();
+            requestShareDialog(mode);
           })();
         },
-      },
+      ),
       {
         label: "Delete plan",
         tone: "red",

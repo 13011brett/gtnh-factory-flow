@@ -30,10 +30,16 @@ Every save goes through `persistCanvas` in design-store.ts:
 
 - Every arriving plan (import, paste, `#p=` link, a community copy) opens as a NEW design
   via `importProjectAsDesign`. Nothing calls `setProject` over the open design.
-- Copy plan puts a link on the clipboard: `<origin>/#p=gtnh1.<deflate-raw base64url
-  JSON>` (`plan-code.ts`). The arrival code is captured at module load
-  (`src/lib/open-plan-code.ts`) because the address is rewritten later. Players never see
-  the word "code".
+- The Share menu has the mod's rows in its words: Copy plan link (`<origin>/#p=gtnh1.<deflate-raw
+  base64url JSON>`, `plan-code.ts`), Copy plan code (the code alone), Export plan file, Open in
+  the mod. The arrival code is captured at module load (`src/lib/open-plan-code.ts`) because
+  the address is rewritten later. The mod writes the same codes (its `FfPlanCode.encode`) and
+  opens the site at `#p=` from its own Share menu.
+- Open in the mod (`src/lib/mod-link/`, `components/chrome/share-actions.ts`) POSTs the code to
+  the running game on 127.0.0.1:25640-25649 (the mod's `client/WebsiteListener`, which answers
+  this site's origins only and asks the player before opening anything). Probed as the menu
+  opens, except where the browser would ask the player first (Local Network Access); any
+  failure copies the code for the mod's + tab instead.
 - Plans are slimmed by dropping GregTech `runtimeCalculation` tables
   (`withoutRuntimeTables`), but only for recipes this page has seen the dataset carry
   (`isRestorableRecipe`); the landing refresh re-fetches bare recipes (`recipesToRefresh`).
@@ -44,16 +50,16 @@ Every save goes through `persistCanvas` in design-store.ts:
   re-finds a missing one by CONTENT (`resolve-recipes`, then a name search scored by
   content). Never accept a name match alone.
 
-## Public view
+## Library posts are copies
 
-- Someone else's community post opens VIEW-ONLY (`design-store.publicView`, transient, no
-  design id). Never autosave it into a personal design. Only an explicit copy ("Make a
-  copy" on the view bar, "Open a copy" in the Library) adds it to the library.
-- `factory-store` refuses project edits while `isReadOnly`. Resource clicks must not open
-  recipe search in view mode; `data-viewer-inspect` never wraps ports or editing controls.
-- An owner's posted design follows autosaves (`src/lib/community/post-follow.ts`): plan
-  and metadata only, never a timed live-board photo (capturing forced glance mode and
-  stalled the board every minute).
+- A post is like an uploaded file. Someone else's post opens as a NEW design with no link
+  to it (`openCommunityPost`, `untagCommunityPlan`); there is no view-only mode. Your own
+  post opens as your design, linked (`metadata.communityPlanId`).
+- Nothing syncs a design to its post. Share's Save to library posts it, Update in library
+  pushes the plan as it is now (votes kept), Save as new post makes another
+  (`SharePlanDialog` `mode`, `chrome/library-rows.ts`, the same rows as the mod).
+- The old view-only session (`design-store.publicView`, `PublicViewBar`, `isReadOnly`) is no
+  longer entered by any path.
 
 ## Account sync (src/lib/library/library-sync.ts)
 

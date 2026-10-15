@@ -8,6 +8,7 @@ import { useDropdownDismiss } from "@/lib/hooks/use-dropdown-dismiss";
 import { activateOnKey } from "@/lib/hooks/button-keys";
 import { getUiScale } from "@/lib/ui-scale";
 import { playBoardSound } from "@/lib/board-sounds";
+import { tipAttrs } from "@/components/flow/clean/interaction";
 
 /** Where a menu hangs from, in real (unzoomed) screen pixels. */
 export interface ChromeAnchor {
@@ -31,6 +32,8 @@ export interface MenuEntry {
   disabled?: boolean;
   /** A thin rule above this row. */
   ruleAbove?: boolean;
+  /** A tooltip: why a greyed row does nothing, or more about what it does. */
+  tip?: string;
   onSelect: () => void;
 }
 
@@ -151,6 +154,7 @@ function MenuRow({ entry, onClose }: { entry: MenuEntry; onClose: () => void }):
         data-current={entry.current ? "" : undefined}
         data-off={entry.disabled ? "" : undefined}
         aria-disabled={entry.disabled || undefined}
+        {...(entry.tip ? tipAttrs({ id: `menu|${entry.label}`, title: entry.tip }) : {})}
         onClick={() => {
           if (entry.disabled) return;
           playBoardSound("tick");

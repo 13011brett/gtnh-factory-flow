@@ -3,9 +3,7 @@
 import "./chrome.css";
 
 import { useCallback, useEffect, useState, type MouseEvent, type ReactNode } from "react";
-import { copyToClipboard } from "@/lib/clipboard";
 import { activateOnKey } from "@/lib/hooks/button-keys";
-import { encodePlanCode, planCodeLink } from "@/lib/import-export/plan-code";
 import { useIsCompactViewport } from "@/lib/compact-view";
 import { usePlanLayout } from "@/components/use-plan-layout";
 import { leaveLibrary, openLibrary, useLibraryTab } from "@/lib/library/library-tab";
@@ -25,6 +23,9 @@ import { arrangeLabel, pressArrange, getBoardCommands, useArrangeState } from ".
 import { ChromeMenu, chromeAnchorOf, MENU_ANCHOR_ATTR, type ChromeAnchor, type MenuEntry } from "./ChromeMenu";
 import { knock, OPEN_FEEDBACK_EVENT, OPEN_TOUR_EVENT, OPEN_CONTROLS_EVENT } from "./chrome-events";
 import { ModTabs } from "./ModTabs";
+import { libraryRows } from "./library-rows";
+import { copyPlanCode, copyPlanLink, openInModRow, useModReach } from "./share-actions";
+import type { ShareMode } from "@/components/community/SharePlanDialog";
 import { PixelBolt, PixelIcon } from "./pixel-icons";
 import { ControlsList } from "./ControlsList";
 import { HelpLinks } from "./help-links";
@@ -141,8 +142,8 @@ function BarKey({
 }
 
 export interface ModBarProps {
-  /** Opens the share dialog (to the library). */
-  onShare: () => void;
+  /** Opens the library dialog: a new post, an update of the plan's own post, or another post of it. */
+  onShare: (mode?: ShareMode) => void;
   /** Opens the screenshot panel. */
   onScreenshot: () => void;
   /** Opens the settings box. */
@@ -234,21 +235,21 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
   const peak = !workspace.averageMachineDraw;
   const togglePeak = () => writeWorkspaceView({ averageMachineDraw: peak });
 
-  const copyPlanCode = async () => {
-    try {
-      const code = await encodePlanCode(useFactoryStore.getState().project);
-      await copyToClipboard(planCodeLink(code, window.location.origin));
-    } catch (error) {
-      console.error(error);
-    }
-  };
-
   const linkedPost = useFactoryStore((state) => state.project.metadata?.communityPlanId);
+  const plan = () => useFactoryStore.getState().project;
+  // Whether a game with the mod is listening, asked each time the menu opens.
+  const modReach = useModReach(menu?.kind === "share");
 
+  // The mod's Share menu has the same rows, in the same words. Labels only.
   const shareEntries: MenuEntry[] = [
-    { label: linkedPost ? "Update in library..." : "Share to library...", onSelect: onShare, disabled: isReadOnly },
-    { label: "Copy plan code", onSelect: () => void copyPlanCode() },
-    { label: "Export plan file (.json)", onSelect: () => downloadPlanFile(useFactoryStore.getState().project) },
+    ...libraryRows(Boolean(linkedPost), onShare, { disabled: isReadOnly }).map(({ detail, ...row }) => {
+      void detail;
+      return row;
+    }),
+    { label: "Copy plan link", onSelect: () => void copyPlanLink(plan()), ruleAbove: true },
+    { label: "Copy plan code", onSelect: () => void copyPlanCode(plan()) },
+    { label: "Export plan file", onSelect: () => downloadPlanFile(plan()) },
+    openInModRow(modReach, plan),
     { label: "Screenshot...", onSelect: onScreenshot },
   ];
 
@@ -376,7 +377,7 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
         id="share"
         label="Share"
         width={42}
-        tip="Share this plan: to the library, as a code or as a picture"
+        tip="Share this plan: to the library, as a link, a code or a file, to the game, or as a picture"
         open={menu?.kind === "share"}
         onClick={(event) => openMenuFrom("share", event)}
         menuAnchor

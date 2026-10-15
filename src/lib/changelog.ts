@@ -48,6 +48,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       "Plans you already have open as they were. Build plans keep their counts, Solve plans keep their rates, and Pool plans get a wire from every maker to every user of a resource.",
       "A pool plan says so when it opens, because its shared pools became wires. Nothing is saved until you change something.",
       "The machine list moved to Settings, and the Raw/Net switch, resource trends and the hide and star marks are gone with the old side panel.",
+      "Share matches the mod: copy the plan's link or code, export it, or Open in the mod to send it to your running game.",
+      "Opening a library setup gives you your own copy. Your own post changes only when you pick Update in library.",
     ],
   },
   {

@@ -127,7 +127,8 @@ The frames are the contract's (version 1). What the service adds or decides:
   at the WebSocket level and drops a connection silent for 90 s.
 - **Origins.** A browser's upgrade must come from an origin in `LIVE_ALLOWED_ORIGINS` (403 otherwise); a client that
   sends no Origin (the game) is let in. Sign-in is the `gtnh_session` cookie on the upgrade, checked with
-  `src/lib/server/session.ts`, the module the website uses.
+  `src/lib/server/session.ts`, the module the website uses. When the database cannot say whose the session is, the socket
+  closes with 1013 (try again later), never 4001.
 
 HTTP on the same port: `GET /live/health` (`{ ok, rooms, connections, flushBacklog }`), `GET /live/nearby` (below), and,
 for the Next.js routes only,

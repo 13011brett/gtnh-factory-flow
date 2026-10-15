@@ -254,5 +254,333 @@
  "card-two-cards-selected-combine-button": [
   "DIFFERS",
   "Two cards with selection outlines and the Combine 2 into one machine key match; the web adds 'Wrap 2 in a board' and its notice line sits over the key."
+ ],
+ "board-empty-full": [
+  "DIFFERS",
+  "Same layout (rail left, items right, top bar); the mod shows the tour offer, the website does not (offered already in the harness); the items column is NEI-like but not the same grid."
+ ],
+ "board-full-solved-chain-default": [
+  "DIFFERS",
+  "Rail matches row for row (inputs, outputs, machines with tiers); the board is placed differently (harness positions), the mod's Ethylene and Methane drawers are absent from the web plan; items column differs (R3)."
+ ],
+ "board-full-drawers-all-kinds-default": [
+  "DIFFERS",
+  "As the solved chain: rail and cards match; drawer positions differ, the mod's Ethylene drawer and acid source sit elsewhere."
+ ],
+ "board-full-forced-in-import-default": [
+  "DIFFERS",
+  "Rail with Forced rows and cards match in kind; plan placement and numbers differ (different pins)."
+ ],
+ "board-full-notices-warnings-default": [
+  "DIFFERS",
+  "Mod: two WARN notices (Light Fuel drawer, Sulfuric Acid supply); web: one (Sulfuric Acid), its plan has no Light Fuel drawer."
+ ],
+ "board-full-zoomed-out-glance-view-arranged": [
+  "DIFFERS",
+  "Glance cards with names in both; layout differs (the web plan is not arranged the same)."
+ ],
+ "board-full-large-plan-solved-glance-default": [
+  "DIFFERS",
+  "The titanium plan imported on both; arrangement and zoom differ."
+ ],
+ "board-full-tour-plan-solved-with-forced-block-default": [
+  "DIFFERS",
+  "The tour's step 27 plan on both; the web's tour plan has fewer cards at that step and no acid reactor."
+ ],
+ "settings-panel-open-full-screen": [
+  "DIFFERS",
+  "Same sections and rows; the web box is drawn at about 60% of the mod's size on screen (its sizes are GUI px under the 1.17 interface, not doubled) and lists Font, Machine list and Animation rows the mod has not."
+ ],
+ "settings-panel-board-section": [
+  "DIFFERS",
+  "As above: smaller on screen, extra rows."
+ ],
+ "settings-panel-sound-section": [
+  "DIFFERS",
+  "Smaller on screen; a different picture."
+ ],
+ "settings-panel-minimap-section": [
+  "DIFFERS",
+  "Smaller on screen; rows close."
+ ],
+ "settings-panel-pin-list-section": [
+  "NO EQUIVALENT",
+  "Pin list while playing: no world on the website (the web shows its Board section)."
+ ],
+ "settings-panel-in-the-world-section": [
+  "NO EQUIVALENT",
+  "In the world: no world on the website."
+ ],
+ "settings-panel-keys-section": [
+  "NO EQUIVALENT",
+  "The game's key bindings."
+ ],
+ "topbar-and-plan-tabs": [
+  "DIFFERS",
+  "Bar keys now the mod's size on screen and order; NEI's page keys at the right differ (items column), one tab against the mod's three."
+ ],
+ "tip-topbar-arrange": [
+  "MATCH",
+  "Same text, same size, under the key."
+ ],
+ "tip-topbar-avg-peak": [
+  "MATCH",
+  "Same text and size."
+ ],
+ "tip-topbar-eu-or-amps": [
+  "MATCH",
+  "Same text and size."
+ ],
+ "tip-topbar-feedback": [
+  "MATCH",
+  "Same text and size."
+ ],
+ "tip-topbar-fit": [
+  "MATCH",
+  "Same text and size."
+ ],
+ "tip-topbar-gear": [
+  "MATCH",
+  "Settings."
+ ],
+ "tip-topbar-help": [
+  "MATCH",
+  "Same text and size."
+ ],
+ "tip-topbar-library": [
+  "MATCH",
+  "Same text and size."
+ ],
+ "tip-topbar-non-recipe": [
+  "MATCH",
+  "Same text and size."
+ ],
+ "tip-topbar-rate-unit": [
+  "MATCH",
+  "Same text and size."
+ ],
+ "tip-topbar-share": [
+  "DIFFERS",
+  "Web: 'as a code or as a picture'; mod: 'as a code or in chat'."
+ ],
+ "tip-topbar-undo": [
+  "MATCH",
+  "Undo (Ctrl+Z)."
+ ],
+ "tip-plan-tab-hover": [
+  "DIFFERS",
+  "Same tip ('Middle-click to close, right-click for more'); the web tab is 'Untitled design' (one tab), the mod has three."
+ ],
+ "plan-tab-right-click-menu": [
+  "DIFFERS",
+  "Web: Rename, Copy plan code, Share to library, Delete plan; the mod also has Close tab and Close other tabs."
+ ],
+ "plan-tab-plus-menu": [
+  "DIFFERS",
+  "Web adds 'Open plan file...'; New plan, Open a plan, Paste plan, Browse library match."
+ ],
+ "share-menu-open": [
+  "DIFFERS",
+  "Web has Export plan file (.json) where the mod has Share in chat."
+ ],
+ "help-menu-open": [
+  "DIFFERS",
+  "Web adds Welcome, What's new and links under Take the tour and Controls and shortcuts."
+ ],
+ "help-controls-and-shortcuts-list": [
+  "DIFFERS",
+  "Same list and heading mostly; the web wraps its right column and words a few rows differently."
+ ],
+ "feedback-panel-open": [
+  "DIFFERS",
+  "Same box (faces, Bug/Idea/Help, text box, Send); drawn at about 60% of the mod's size on screen."
+ ],
+ "non-recipe-picker-open": [
+  "DIFFERS",
+  "Same columns and tiles; drawn at about 60% of the mod's size on screen."
+ ],
+ "library-view-my-plans-shelf": [
+  "DIFFERS",
+  "The harness's fresh browser has no saved plans; the mod lists five."
+ ],
+ "library-view-public-setups-shelf": [
+  "DIFFERS",
+  "Web: no setups (no backend in the harness); the mod's mock is empty with its filter row."
+ ],
+ "library-plan-tile-right-click-menu": [
+  "NOT CAPTURED",
+  "Needs saved plans in the library."
+ ],
+ "library-sign-in-form": [
+  "NOT CAPTURED",
+  "Not scripted."
+ ],
+ "overview-rail-folded": [
+  "MATCH",
+  "Folded strip with the fold glyph and OVERVIEW down it."
+ ],
+ "overview-rail-unfolded-again": [
+  "MATCH",
+  "Rail back open, top part."
+ ],
+ "overview-input-row-hover": [
+  "DIFFERS",
+  "Row lit and its resource lit on the board; placements differ."
+ ],
+ "overview-row-hover-scope-propene": [
+  "DIFFERS",
+  "Propene row and its wire lit; placement differs."
+ ],
+ "overview-row-hover-scope-machine-line": [
+  "DIFFERS",
+  "Machine line lit; the mod lights its card on the board, the web lights less."
+ ],
+ "overview-row-tooltip-palladium": [
+  "DIFFERS",
+  "Row tip content close and same size; action wording differs."
+ ],
+ "overview-set-rate-popup": [
+  "DIFFERS",
+  "Web opens the rate box inline on the row; the mod opens its Set popup."
+ ],
+ "overview-port-pinned-row-with-card-rate-set": [
+  "DIFFERS",
+  "Port-pinned row with its = key shows; the plans' pins differ."
+ ],
+ "tip-overview-row-rule-key": [
+  "DIFFERS",
+  "Rule key tip shows; wording differs slightly."
+ ],
+ "tip-overview-machine-line-chip": [
+  "DIFFERS",
+  "Machine line tip; wording differs."
+ ],
+ "overview-forced-block-split-auto-sliders": [
+  "DIFFERS",
+  "Forced block with Split, Auto and bars on both; different plans (web: the alumina line)."
+ ],
+ "notices-bar-two-warnings-show-me": [
+  "DIFFERS",
+  "One notice on the web (its plan has no Light Fuel drawer); same wording, Show me, same size."
+ ],
+ "board-show-me-framed-light-fuel-drawer": [
+  "DIFFERS",
+  "Show me frames the Sulfuric Acid drawer on the web (its only notice)."
+ ],
+ "board-wire-made-ethylene-to-vcm-solved": [
+  "DIFFERS",
+  "Wire made and solved; wire widths now the mod's; placement differs."
+ ],
+ "board-wire-over-card-aniline-drawer-moved-hop-zoom-half": [
+  "DIFFERS",
+  "Hop bump at the crossing, wire widths and arrowheads match; the web's tower solves at 3x the mod's rates (different pins)."
+ ],
+ "wires-hop-bump-at-crossing-zoom-1-5": [
+  "DIFFERS",
+  "Hop bump and widths match; framing differs."
+ ],
+ "wires-hop-bump-at-crossing-zoom-half": [
+  "NOT CAPTURED",
+  "Covered by the zoom-half scene."
+ ],
+ "wire-in-hand-acceptance-glow-card-green": [
+  "MATCH",
+  "Accepting card and its ports glow green, wire in hand from the Ethylene drawer."
+ ],
+ "wire-in-hand-snapped-to-port-green": [
+  "MATCH",
+  "Snapped onto the Ethylene port, card outlined, wire green."
+ ],
+ "wire-in-hand-over-empty-red": [
+  "DIFFERS",
+  "Web: the line over empty board is green dotted (letting go makes a drawer); the mod's is red."
+ ],
+ "wire-in-hand-over-non-accepting-card-red": [
+  "MATCH",
+  "Red line over a card that cannot take it."
+ ],
+ "wire-hover-tooltip-and-scope": [
+  "DIFFERS",
+  "Wire tip and scope show; wording differs."
+ ],
+ "wire-right-click-menu": [
+  "DIFFERS",
+  "Menu shows; entries differ."
+ ],
+ "tip-port-hover-scope": [
+  "DIFFERS",
+  "Port tip and scope; framing differs."
+ ],
+ "glance-view-hover-reveal-card": [
+  "DIFFERS",
+  "Glance cards; the hovered card's reveal differs."
+ ],
+ "glance-view-hover-reveal-distillation": [
+  "DIFFERS",
+  "As above."
+ ],
+ "glance-view-card-carried-wires-rerouting": [
+  "NOT CAPTURED",
+  "A drag in progress: not scripted."
+ ],
+ "glance-view-card-carried-over-other-card": [
+  "NOT CAPTURED",
+  "A drag in progress: not scripted."
+ ],
+ "glance-view-large-plan-unsolved-dotted-wires": [
+  "NOT CAPTURED",
+  "Not scripted."
+ ],
+ "forced-row-in-hand-over-empty-board": [
+  "NOT CAPTURED",
+  "A drag in progress: not scripted."
+ ],
+ "tip-forced-output-row-light-fuel": [
+  "NOT CAPTURED",
+  "The web plan has no Light Fuel forced output."
+ ],
+ "spare-popup-open-from-card-forced-row": [
+  "NOT CAPTURED",
+  "Needs a spare with two places in the web plan."
+ ],
+ "spare-popup-after-split-even": [
+  "NOT CAPTURED",
+  "As above."
+ ],
+ "tip-spare-popup-split-key": [
+  "NOT CAPTURED",
+  "As above."
+ ],
+ "tip-shared-card-section-rule-hover": [
+  "NOT CAPTURED",
+  "Not scripted."
+ ],
+ "tip-non-recipe-picker-item-hover": [
+  "NOT CAPTURED",
+  "Not scripted."
+ ],
+ "screenshot-panel-default-detailed": [
+  "NOT CAPTURED",
+  "Not scripted."
+ ],
+ "screenshot-panel-footer-name-and-flows": [
+  "NOT CAPTURED",
+  "Not scripted."
+ ],
+ "screenshot-panel-simple-cards-with-footer": [
+  "NOT CAPTURED",
+  "Not scripted."
+ ],
+ "tour-callout-recipe-in-a-plan": [
+  "NOT CAPTURED",
+  "Callout selector did not resolve; see tour-step-2."
+ ],
+ "tour-callout-spare-slider-note": [
+  "NOT CAPTURED",
+  "Not scripted."
+ ],
+ "t-v": [
+  "NOT CAPTURED",
+  "Unlabelled reference shot."
  ]
 }

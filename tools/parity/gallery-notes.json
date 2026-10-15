@@ -70,5 +70,189 @@
  "tour-step-3-after-next": [
   "DIFFERS",
   "Mod: 'You can pin a number and it calculates the other numbers' under a card pinned x28. Web: the WASD callout and an unpinned card: steps out of step with the mod's script."
+ ],
+ "card-clean-solved-default": [
+  "DIFFERS",
+  "Layout, sizes, rows, chips, count and swatches match. Left: the web has no place key (no world), so the name runs on ('Large Chemical Reactor' vs the mod's 'Large Chemical React...'); header 40 high vs the mod's 32, so chips fill less of it; Monocraft is wider than the game font, so 'Distilled Water' is cut where the mod fits it; fluid colours close, not equal (Sulfuric Acid web #E26600 vs mod about #FF7A00)."
+ ],
+ "card-hovered-body": [
+  "DIFFERS",
+  "The pointer lands on the Nitric Acid row on the web (port lit, port tip) where the mod's lands on bare card; the card itself matches as card-clean-solved-default."
+ ],
+ "card-tier-chip-hovered-tooltip": [
+  "DIFFERS",
+  "Power input panel and its Amps/Tier guide match in content, type and size; the mod draws it over the card under the chip (no room above), the web below the card."
+ ],
+ "card-amps-chip-hovered-tooltip": [
+  "DIFFERS",
+  "As the tier chip: same panel and guide, placed below the card instead of over it."
+ ],
+ "card-machine-name-hovered": [
+  "MATCH",
+  "Same tip: name, Multiblock, required machines, tier, time, draw, 'Machines that run it / Next machine'. Same size on screen."
+ ],
+ "card-machine-count-hovered": [
+  "MATCH",
+  "Required machines tip (Calculated, Whole machines, Average utilization, Pin count, +1/-1) matches in content and size."
+ ],
+ "card-machine-picker-open": [
+  "DIFFERS",
+  "Same menu skin, heading and rows at the same size; the mod lists Mega Chemical Reactor twice (3 rows), the web 2 rows."
+ ],
+ "card-settings-sheet-open": [
+  "MATCH",
+  "Settings / No settings for this machine and the Formulas column (supply, overclocks, time, draw, recipes) at the same size."
+ ],
+ "card-actions-menu-open": [
+  "MATCH",
+  "Clone node and Delete node in red, under the key, the game font, same size."
+ ],
+ "card-count-pinned": [
+  "MATCH",
+  "x3 in gold over (pinned), centred as CardPaint.count; rows, swatches and power row (23.04k EU/t) match."
+ ],
+ "card-count-pinned-hover-tooltip": [
+  "MATCH",
+  "Pinned machines tip (Pinned x3, Change or unpin, +1/-1) matches."
+ ],
+ "card-ebf-unset-prompts-pulsing-a": [
+  "MATCH",
+  "(set count) gold under x0, gold Set prompts, notice line above; same frame."
+ ],
+ "card-ebf-unset-prompts-pulsing-b": [
+  "MATCH",
+  "The off half-beat: prompts grey together, as the mod."
+ ],
+ "card-ebf-count-pinned-2": [
+  "MATCH",
+  "x2 (pinned), 960 EU/t, rates 0.1/50/0.05/0.3 as the mod."
+ ],
+ "card-ebf-tier-lowered-mv": [
+  "DIFFERS",
+  "The web state is pinned x2 where the mod's ref card is unpinned (set count); otherwise the red ring and TIER! power row match."
+ ],
+ "card-ebf-tier-lowered-lv": [
+  "DIFFERS",
+  "As MV: red ring and TIER! match; the web card is pinned x2, the mod's unpinned."
+ ],
+ "tip-tier-too-low-power-row": [
+  "DIFFERS",
+  "Power input panel at LV matches; placed under the card on the web, beside the power row in the mod."
+ ],
+ "card-settings-strip-coil-chip-hover": [
+  "DIFFERS",
+  "Heating Coil tip matches; the web adds a 'Recipe needs 2140 K' row."
+ ],
+ "card-settings-strip-coil-menu-open": [
+  "MATCH",
+  "Filter box and coil list with icons, hot-enough coils only, same size."
+ ],
+ "card-forced-in-row-aniline-reactor": [
+  "DIFFERS",
+  "Forced rows striped blue under Nitrobenzene as the mod; the web pins differ (Palladium 0.00011 shown, counts x0.005 pinned) so numbers differ."
+ ],
+ "shared-machine-card-two-recipes": [
+  "DIFFERS",
+  "Section rule rows (100% x20 / 0% UNUSED, circuit, arrows, x) match in form; the web's second recipe comes from a different card (the harness adds an aniline recipe to the nitrobenzene reactor) so contents differ."
+ ],
+ "power-card-large-gas-turbine": [
+  "DIFFERS",
+  "Card, art, port and amber warning match; the warning wraps on the web ('100 / EU/t'), and the web lacks the place key."
+ ],
+ "custom-rate-card-empty-holder": [
+  "DIFFERS",
+  "Dashed DRAIN ANY / SUPPLY ANY sockets, gauge and Mode/Rate chips match; the web shows x0 without the mod's '(set count)' under it."
+ ],
+ "fluid-tank-card-empty-holder": [
+  "MATCH",
+  "TAKE/GIVE CELL/FLUID sockets, the tank art, captions; only the place key is missing (no world)."
+ ],
+ "drawer-product-atleast-aniline": [
+  "MATCH",
+  "116 x 48, bar and grip, 1 L/s, Aniline, >= key and 1L/s box at the mod's places."
+ ],
+ "drawer-source-atmost-rule": [
+  "MATCH",
+  "Blue tank, 0.6 L/s Sulfuric Acid, <= key and box; the web box shows 0.6L/s (its plan's rate), the mod's 2L/s."
+ ],
+ "drawer-source-sulfuric-acid": [
+  "MATCH",
+  "As drawer-source-atmost-rule."
+ ],
+ "drawer-trash-voided-methane": [
+  "MATCH",
+  "Grey bin narrowing to its base, 1.33 L/s Methane, x key and Voided box."
+ ],
+ "drawer-product-any-set-rate-pulsing": [
+  "DIFFERS",
+  "Drawer matches (~ key, Set in gold); the web plan's drawer reads 0 L/s Aniline under a notice where the mod's reads 1.33 L/s Ethylene (a different drawer of the ref plan)."
+ ],
+ "drawer-product-atleast-rule": [
+  "MATCH",
+  ">= key, 1L/s box."
+ ],
+ "drawer-product-exactly-rule": [
+  "MATCH",
+  "= key in gold, 1L/s box."
+ ],
+ "drawer-product-atmost-rule": [
+  "MATCH",
+  "<= key, 1L/s box."
+ ],
+ "drawer-product-any-rule-set-rate": [
+  "DIFFERS",
+  "~ key and Set match; the web shows 0 L/s where the mod's plan still runs 1 L/s through it."
+ ],
+ "drawer-trash-void-rule": [
+  "MATCH",
+  "Trash bin with Voided."
+ ],
+ "drawer-rule-menu-open": [
+  "MATCH",
+  "Any, At least (on), Exactly, At most, Void it (trash) in the game font at the same size, under the key."
+ ],
+ "drawer-source-rule-menu": [
+  "MATCH",
+  "Four rules, At most on; same size."
+ ],
+ "drawer-rule-chip-tooltip": [
+  "DIFFERS",
+  "The mod's crop shows the drawer lit with its delete key and no tip in frame; the web shows the Rule tip (At least, Pick/Next/Clear)."
+ ],
+ "drawer-hover-bar-tooltip": [
+  "MATCH",
+  "Aniline / Product, Move / Select tip beside the bar, delete key shown."
+ ],
+ "overview-rail-full": [
+  "DIFFERS",
+  "Rail at the mod's size: rows, sections, counts, controls, tier chips, Avg key match. Monocraft is lighter than the game font; the web orders machines Distillation Tower first (the mod Large Chemical Reactor first) and splits LCR tiers EV, IV (mod IV, EV)."
+ ],
+ "card-ebf-cupronickel-rutile-unset": [
+  "MATCH",
+  "Ilmenite + Carbon EBF, Cupronickel chip, (set count), Set prompts."
+ ],
+ "t-u": [
+  "MATCH",
+  "Naquadah EBF at IV, HSS-G chip, circuit 2, (set count)."
+ ],
+ "card-coil-menu-lists-only-coils-hot-enough": [
+  "MATCH",
+  "The list starts at HSS-G (only coils hot enough), Filter box, icons."
+ ],
+ "card-unset-set-count-prompt-vcm": [
+  "DIFFERS",
+  "LCR vinyl chloride card at LV matches in layout; the web's ports are unwired (open, Set in gold) where the mod's Ethylene port is wired."
+ ],
+ "card-forced-rows-two-reactors-zoom-0-8": [
+  "DIFFERS",
+  "Both reactors with Forced rows; the web's tower drawers (Ethylene, Methane) sit elsewhere and its first reactor has no forced row (its plan solves differently)."
+ ],
+ "tip-forced-input-row": [
+  "DIFFERS",
+  "Web forced-row tip: 'Forced input: Nitrobenzene / Comes in here / The plan brings this in here with nothing to supply it / Choose who takes it / Hand it to another card'. Mod: 'Forced input / You set ... / Satisfying that forces the plan ... / Coming in now ... / Only the Large Chemical Reactor can take it in'."
+ ],
+ "card-two-cards-selected-combine-button": [
+  "DIFFERS",
+  "Two cards with selection outlines and the Combine 2 into one machine key match; the web adds 'Wrap 2 in a board' and its notice line sits over the key."
  ]
 }

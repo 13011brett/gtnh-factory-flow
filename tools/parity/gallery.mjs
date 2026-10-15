@@ -30,9 +30,8 @@ const rows = refs.map((ref) => {
   const has = fs.existsSync(path.join(GAL, ref + ".png"));
   const [verdict, text] = notes[ref] ?? [has ? "UNREVIEWED" : "NOT CAPTURED", ""];
   count[verdict] = (count[verdict] ?? 0) + 1;
-  const scale = byRef.has(ref) ? "board scale (1 mod GUI px = 1 css px, the mod's zoom)" : "screen scale (or board scale for board scenes)";
   return `<section id="${ref}" data-v="${verdict}"><h3>${esc(ref)} <span class="v ${verdict.replace(/\s/g, "-")}">${verdict}</span></h3>
-<p>${esc(text)}</p>${has ? `<img loading="lazy" src="${ref}.png" alt="${ref}: mod left, website right"><small>${scale}. Mod left, website right.</small>` : ""}</section>`;
+<p>${esc(text)}</p>${has ? `<img loading="lazy" src="${ref}.png" alt="${ref}: mod left, website right"><small>Mod left, website right, both at their size on screen.</small>` : ""}</section>`;
 });
 const summary = Object.entries(count).map(([k, v]) => `${k}: ${v}`).join(" · ");
 fs.writeFileSync(
@@ -49,7 +48,10 @@ small{color:#888}
 nav a{color:#9cf;margin-right:8px}
 </style>
 <h1>Mod (left) vs website (right): every reference shot</h1>
-<p>${summary}. Verdicts are strict: anything visibly different is DIFFERS. Rerun: dev server, then
+<p>${summary}. Verdicts are strict: anything visibly different is DIFFERS, except the typeface itself (Monocraft is wider and
+lighter than the game's font everywhere; that is not repeated per shot). Every pair is at screen scale: the mod shot is screen px at GUI
+scale 2 (where its board draws at twice the zoom it reports), the website is captured at 100% with its board at twice the mod's zoom.
+Board plans are rebuilt from the mod's descriptions, so positions and numbers can differ where the plans do. Rerun: dev server, then
 <code>node tools/parity/run.mjs</code>, <code>node tools/parity/gallery-capture.mjs</code>, <code>node tools/parity/gallery.mjs</code>.</p>
 <nav>${["MATCH", "DIFFERS", "NO EQUIVALENT", "NOT CAPTURED"].map((v) => `<a href="#" onclick="for(const s of document.querySelectorAll('section'))s.hidden=s.dataset.v!=='${v}';return false">${v}</a>`).join("")}<a href="#" onclick="for(const s of document.querySelectorAll('section'))s.hidden=false;return false">all</a></nav>
 ${rows.join("\n")}`,

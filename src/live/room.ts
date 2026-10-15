@@ -151,6 +151,8 @@ export class Room {
    * has let it go.
    */
   private ending = false;
+  /** The design went: the room is being dropped, its journal with it. */
+  private dropping = false;
 
   private constructor(
     doc: string,
@@ -377,7 +379,12 @@ export class Room {
           }
         }
       },
-      (error) => this.fail(`the journal could not be written: ${String(error)}`),
+      (error) => {
+        // A plan dropped as deleted takes its journal, and its waiting lines, with it.
+        if (!this.dropping) {
+          this.fail(`the journal could not be written: ${String(error)}`);
+        }
+      },
     );
     this.scheduleFlush();
     return { kind: "applied", seq, ops };
@@ -774,6 +781,7 @@ export class Room {
     if (this.closed) {
       return;
     }
+    this.dropping = true;
     this.broadcast({ t: "kicked", doc: this.doc, reason });
     this.peers.forEach((peer) => peer.forget(this.doc));
     this.peers.clear();

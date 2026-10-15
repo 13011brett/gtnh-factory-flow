@@ -554,10 +554,12 @@ export class LiveService {
     const tooMany = () =>
       !!session && (this.byUser.get(session.userId)?.size ?? 0) >= CONNECTIONS_PER_ACCOUNT;
     let user: { id: string; username: string } | undefined;
+    let lookupFailed = false;
     if (session && !tooMany()) {
       try {
         user = await this.account(session.userId);
       } catch (error) {
+        lookupFailed = true;
         this.log(`sign-in check failed: ${String(error)}`);
       }
     }
@@ -565,6 +567,12 @@ export class LiveService {
       if (tooMany()) {
         ws.send(JSON.stringify({ t: "error", code: "rate", msg: "Too many live connections." }));
         ws.close(4029, "rate");
+        return;
+      }
+      if (lookupFailed) {
+        // The database did not answer: not a refused sign-in (4001 tells a
+        // client to stop until the player signs in again), so try again later.
+        ws.close(1013, "try again");
         return;
       }
       if (!user) {

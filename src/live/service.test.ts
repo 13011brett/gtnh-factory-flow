@@ -1000,6 +1000,16 @@ describe("the live service", { timeout: 30_000 }, () => {
     await TestClient.open(port, { who: "carol", address: "198.51.100.7" });
   });
 
+  it("tells a client to try again later, not to sign in again, when the account cannot be looked up", async () => {
+    const store = supabasePlanStore();
+    const { port } = await startService({
+      store: { ...store, account: () => Promise.reject(new Error("database down")) },
+    });
+    const ann = await TestClient.open(port, { who: "ann" });
+    await until(() => ann.closed);
+    expect(ann.closeCode).toBe(1013);
+  });
+
   it("stores only what the plan schema keeps, and refuses names that reach a prototype", async () => {
     const { port } = await startService();
     const { designId, doc } = await makeDesign();

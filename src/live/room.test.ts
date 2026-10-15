@@ -299,3 +299,20 @@ describe("what the server writes on a task", () => {
     expect(createdBy("t1")).toBeUndefined();
   });
 });
+
+describe("a room dropped as deleted", () => {
+  it("takes its waiting journal lines with it, and nobody is told to reload", async () => {
+    const logged: string[] = [];
+    const room = await openRoom(new HeldStore(), {}, { log: (message) => logged.push(message) });
+    const other = listener();
+    room.peers.add(other.peer);
+    room.apply(peer, "c1", rename("Gone"));
+    await room.drop("deleted");
+    await new Promise((resolve) => setTimeout(resolve, 20));
+    expect(room.closed).toBe(true);
+    expect(other.reloads()).toBe(0);
+    expect(other.frames).toMatchObject([{ t: "kicked", reason: "deleted" }]);
+    // Not a journal failure: nothing to join again for.
+    expect(logged.filter((line) => line.includes("journal"))).toEqual([]);
+  });
+});

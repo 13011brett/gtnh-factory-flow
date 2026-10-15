@@ -165,7 +165,10 @@ The website joins the room of the design on the canvas when it is a cloud plan: 
 - Presence: the pointer on the board at most 10 a second, the selection when it changes, drawn for others by
   `LivePresenceLayer`; faces of who is here on the plan bar.
 - Sharing: the plan bar's Share (members, search, remove, leave) and the Library's Shared with me. Publish (the
-  community post) is separate and never shares the live plan.
+  community post) is separate and never shares the live plan. A plan the service dropped this tab from (unshared,
+  deleted, refused) is not asked for again while its design is still here; once that design is gone, a design for the
+  same plan (shared again and opened from Shared with me) joins. Leaving a plan yourself shows no "removed" notice
+  (`noteLeavingPlan`).
 - Task boards: `src/lib/tasks/` (pure edits, fractional order keys) and `src/components/tasks/`; any plan has a Tasks
   face, a plan with `primaryView: "tasks"` opens on it, and New task board makes one. They work on plans of this
   device alone too.

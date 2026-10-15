@@ -14,7 +14,7 @@ import { syncLibraryNow } from "@/lib/library/library-sync";
 import type { SharedDesign } from "@/lib/library/sync-types";
 import { colorFor } from "@/lib/live/protocol";
 import { useDesignStore } from "@/store/design-store";
-import { useLiveSession } from "@/store/live-session";
+import { noteLeavingPlan, useLiveSession } from "@/store/live-session";
 import { Face } from "./LiveFaces";
 
 /**
@@ -76,6 +76,7 @@ export function SharedWithMe() {
     setBusy(keyOf(plan));
     setError(undefined);
     try {
+      noteLeavingPlan(plan.ownerId, plan.id);
       await removePlanMember(plan.id, me.id, plan.ownerId);
       const copy = copies.get(keyOf(plan));
       if (copy) {

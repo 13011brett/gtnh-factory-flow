@@ -20,6 +20,7 @@ import {
   LIVE_LIMITS,
   LIVE_PING_INTERVAL_MS,
   LIVE_PROTOCOL_VERSION,
+  parseDocKey,
   type LiveCursor,
   type LiveMember,
   type LivePerson,
@@ -647,11 +648,15 @@ export class LiveSession {
     room.engine.pending.length = 0;
     this.unbind();
     const name = design?.name ?? "This plan";
-    useLiveSession.setState({
-      notice: noticeOf(
-        reason === "unshared" ? `You were removed from ${name}.` : `${name} was deleted.`,
-      ),
-    });
+    // Leaving a plan on purpose drops this tab from it too: that is no news.
+    const left = reason === "unshared" && leavingDocs.delete(room.doc);
+    if (!left) {
+      useLiveSession.setState({
+        notice: noticeOf(
+          reason === "unshared" ? `You were removed from ${name}.` : `${name} was deleted.`,
+        ),
+      });
+    }
     if (design && (design.cloud || reason === "deleted")) {
       void useDesignStore.getState().removeDesign(design.id, { fromSync: true });
     }
@@ -700,6 +705,7 @@ export class LiveSession {
       return undefined;
     }
     const { activeDesignId, designs, publicView } = useDesignStore.getState();
+    this.forgetRefusalsOfGoneDesigns(designs);
     if (publicView || !activeDesignId || useFactoryStore.getState().isReadOnly) {
       return undefined;
     }
@@ -714,6 +720,29 @@ export class LiveSession {
       doc = docKey(this.me.id, design.id);
     }
     return doc && !this.refusedDocs.has(doc) ? { doc, designId: design.id } : undefined;
+  }
+
+  /**
+   * A refusal holds while the design it was about is still here. Once that
+   * design is gone (a removed member's copy, a deleted plan), a design for the
+   * same plan is a new one: shared again and opened, it joins.
+   */
+  private forgetRefusalsOfGoneDesigns(
+    designs: ReadonlyArray<{ id: string; cloud?: { ownerId: string; designId: string } }>,
+  ): void {
+    for (const doc of this.refusedDocs) {
+      const key = parseDocKey(doc);
+      const stillHere =
+        key !== undefined &&
+        designs.some((design) =>
+          design.cloud
+            ? design.cloud.ownerId === key.ownerId && design.cloud.designId === key.designId
+            : design.id === key.designId,
+        );
+      if (!stillHere) {
+        this.refusedDocs.delete(doc);
+      }
+    }
   }
 
   private bindNow(): void {
@@ -1047,6 +1076,14 @@ export function startLiveSessions(options?: LiveSessionOptions): () => void {
       session = undefined;
     }
   };
+}
+
+/** Plans this browser is leaving on purpose, by doc key: being dropped from one tells nobody anything. */
+const leavingDocs = new Set<string>();
+
+/** Call before leaving a plan shared with you (its Leave keys): the drop that follows is not news. */
+export function noteLeavingPlan(ownerId: string, designId: string): void {
+  leavingDocs.add(docKey(ownerId, designId));
 }
 
 /** The board's presence layer reports the pointer here. */

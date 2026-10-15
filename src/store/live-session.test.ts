@@ -89,6 +89,7 @@ import { useFactoryStore } from "./factory-store";
 import { liveUndoHandler } from "./live-edit-gate";
 import {
   chunkOps,
+  noteLeavingPlan,
   startLiveSessions,
   useLiveSession,
   utf8Length,
@@ -516,6 +517,38 @@ describe("live editing in the store", () => {
     expect(useLiveSession.getState().notice?.text).toBe("You were removed from Live.");
     expect(storage.records.has(DESIGN)).toBe(false);
     expect(liveUndoHandler()).toBeUndefined();
+
+    // Shared again and opened from Shared with me in the same tab: it joins.
+    await settle();
+    const joinsBefore = service.sent("join").length;
+    await useDesignStore
+      .getState()
+      .openSharedDesign({ ownerId: BOB, ownerName: "bob", designId: DESIGN }, "Live", planWith());
+    await settle();
+    expect(service.sent("join").length).toBe(joinsBefore + 1);
+    expect(useLiveSession.getState()).toMatchObject({ status: "live", doc: bobDoc });
+  });
+
+  it("says nothing when this person leaves a shared plan on purpose", async () => {
+    await openLiveDesign(planWith(annotation("n1", "one")));
+    const bobDoc = `${BOB}:${DESIGN}`;
+    useDesignStore.setState({
+      designs: useDesignStore
+        .getState()
+        .designs.map((design) => ({
+          ...design,
+          cloud: { ownerId: BOB, ownerName: "bob", designId: DESIGN },
+        })),
+    });
+    await settle();
+    expect(useLiveSession.getState().doc).toBe(bobDoc);
+
+    noteLeavingPlan(BOB, DESIGN);
+    service.reply({ t: "kicked", doc: bobDoc, reason: "unshared" });
+    await settle();
+
+    expect(useLiveSession.getState().status).toBe("off");
+    expect(useLiveSession.getState().notice).toBeUndefined();
   });
 
   it("does nothing at all without a live service configured", async () => {

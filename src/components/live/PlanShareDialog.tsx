@@ -15,7 +15,7 @@ import { LIBRARY_MAX_MEMBERS } from "@/lib/library/sync-types";
 import { colorFor } from "@/lib/live/protocol";
 import { useCommunityAuthStore } from "@/store/community-auth-store";
 import { useDesignStore } from "@/store/design-store";
-import { useLiveSession } from "@/store/live-session";
+import { noteLeavingPlan, useLiveSession } from "@/store/live-session";
 import { Face } from "./LiveFaces";
 
 /**
@@ -127,6 +127,7 @@ export function PlanShareDialog({ onClose }: { onClose: () => void }) {
     setBusy("leave");
     setActionError(undefined);
     try {
+      noteLeavingPlan(ownerId, remoteId);
       await removePlanMember(remoteId, me.id, ownerId);
       onClose();
       await removeDesign(design.id, { fromSync: true });

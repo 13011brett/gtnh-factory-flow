@@ -257,12 +257,13 @@ export function buildRailModel(
     // A machine at zero keeps its nameplate rates in the result (its port rows are built from them) but makes and uses
     // nothing: the mod sums solved flows only. A shared machine's unused recipe is one.
     if (!((node.theoreticalMachinesRequired ?? 0) > 1e-9)) continue;
+    const running = Math.min(1, Math.max(0, node.utilization ?? 1));
     for (const side of ["output", "input"] as const) {
       const flows = side === "output" ? node.outputs : node.inputs;
       for (const flow of Object.values(flows)) {
         const key = canonicalOf(aliases, flow.key);
         const bucket = side === "output" ? made : used;
-        bucket.set(key, (bucket.get(key) ?? 0) + flow.amountPerSecond);
+        bucket.set(key, (bucket.get(key) ?? 0) + flow.amountPerSecond * running);
         if (!looks.has(key) || (side === "output" && flow.key === key)) {
           looks.set(key, {
             kind: flow.kind,
@@ -289,7 +290,7 @@ export function buildRailModel(
           nodeId: cardId,
           handle,
           output,
-          perSecond: flow.amountPerSecond,
+          perSecond: flow.amountPerSecond * running,
           machine: nameOf(cardId),
         });
       }
@@ -305,7 +306,7 @@ export function buildRailModel(
     const role = roles.get(storage.id) ?? "idle";
     const key = canonicalOf(aliases, makeResourceKey(storage.kind, storage.resourceId));
     if (role === "trash") {
-      const eaten = result.storages[storage.id]?.consumedPerSecond ?? 0;
+      const eaten = result.storages[storage.id]?.producedPerSecond ?? 0;
       trashed.set(key, (trashed.get(key) ?? 0) + Math.max(0, eaten));
       continue;
     }

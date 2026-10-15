@@ -6,6 +6,7 @@ import {
   LIBRARY_MAX_DESIGNS,
   type DesignUpsertBody,
 } from "@/lib/library/sync-types";
+import { designRole, leaseHeld, notifyLive, requestedOwner } from "@/lib/server/cloud-plans";
 import {
   checkRateLimit,
   getCommunityDb,
@@ -18,6 +19,7 @@ import {
   isIsoTimestamp,
   isLibraryId,
   libraryStorageErrorMessage,
+  readDesignRow,
   rowToDesignMeta,
   type DesignRow,
 } from "@/lib/server/library";
@@ -27,7 +29,15 @@ export const dynamic = "force-dynamic";
 
 type RouteContext = { params: Promise<{ designId: string }> };
 
-/** The plan itself, fetched when a pull finds it missing or moved. */
+const LIVE_REFUSAL = {
+  error: "This plan is open live. Its edits go through the live connection.",
+  live: true,
+};
+
+/**
+ * The plan itself, fetched when a pull finds it missing or moved. `?owner=`
+ * reads a plan shared with the caller; absent, the caller's own.
+ */
 export async function GET(request: Request, context: RouteContext) {
   if (!isCommunityConfigured()) {
     return NextResponse.json({ error: "Cloud storage is not configured." }, { status: 503 });
@@ -38,24 +48,34 @@ export async function GET(request: Request, context: RouteContext) {
   }
 
   const { designId } = await context.params;
+  const ownerId = requestedOwner(request, sessionUser.id);
+  if (!ownerId) {
+    return NextResponse.json({ error: "Bad owner id." }, { status: 400 });
+  }
   const db = getCommunityDb();
-  const { data, error } = await db
-    .from("library_designs")
-    .select(`${DESIGN_META_COLUMNS},plan`)
-    .eq("user_id", sessionUser.id)
-    .eq("id", designId)
-    .maybeSingle();
+  const role = await designRole(db, sessionUser.id, ownerId, designId);
+  if (!role) {
+    return NextResponse.json({ error: "Design not found." }, { status: 404 });
+  }
+  const { data, error } = await readDesignRow(db, ownerId, designId, true);
   if (error) {
     return NextResponse.json(
       { error: libraryStorageErrorMessage(error, "The design could not be loaded.") },
       { status: 500 },
     );
   }
-  if (!data) {
+  // A member never sees a tombstone: the plan is gone for them.
+  if (!data || (role === "editor" && data.deleted_at)) {
     return NextResponse.json({ error: "Design not found." }, { status: 404 });
   }
-  const row = data as DesignRow & { plan: unknown };
-  return NextResponse.json({ design: rowToDesignMeta(row), plan: row.plan });
+  return NextResponse.json({
+    design: rowToDesignMeta(data),
+    plan: data.plan,
+    ownerId,
+    role,
+    seq: Number(data.seq ?? 0),
+    live: leaseHeld(data.live_lease_until),
+  });
 }
 
 /**
@@ -63,6 +83,10 @@ export async function GET(request: Request, context: RouteContext) {
  * `planUpdatedAt` only when the plan did, and the plan rides only then. A
  * row already NEWER than the incoming one (another device wrote since) is
  * left alone and reported back, so the client can pull it instead.
+ *
+ * While the live service holds the plan, a plan body is refused (409,
+ * `live: true`); metadata still lands. A member (`?owner=`) may save the
+ * plan and its name; the owner's folders, order and stars stay theirs.
  */
 export async function PUT(request: Request, context: RouteContext) {
   if (!isCommunityConfigured()) {
@@ -77,6 +101,10 @@ export async function PUT(request: Request, context: RouteContext) {
   const { designId } = await context.params;
   if (!isLibraryId(designId)) {
     return NextResponse.json({ error: "Bad design id." }, { status: 400 });
+  }
+  const ownerId = requestedOwner(request, sessionUser.id);
+  if (!ownerId) {
+    return NextResponse.json({ error: "Bad owner id." }, { status: 400 });
   }
 
   let raw: string;
@@ -116,19 +144,24 @@ export async function PUT(request: Request, context: RouteContext) {
   }
 
   const db = getCommunityDb();
-  const { data: existing, error: readError } = await db
-    .from("library_designs")
-    .select(DESIGN_META_COLUMNS)
-    .eq("user_id", sessionUser.id)
-    .eq("id", designId)
-    .maybeSingle();
+  const isOwner = ownerId === sessionUser.id;
+  if (!isOwner && !(await designRole(db, sessionUser.id, ownerId, designId))) {
+    return NextResponse.json({ error: "Design not found." }, { status: 404 });
+  }
+  const {
+    data: current,
+    error: readError,
+    cloudColumns,
+  } = await readDesignRow(db, ownerId, designId, false);
   if (readError) {
     return NextResponse.json(
       { error: libraryStorageErrorMessage(readError, "The design could not be saved.") },
       { status: 500 },
     );
   }
-  const current = existing as DesignRow | null;
+  if (!isOwner && (!current || current.deleted_at)) {
+    return NextResponse.json({ error: "Design not found." }, { status: 404 });
+  }
 
   // Another device wrote later than this one: the caller is behind, and its
   // pull will sort it out. Nothing is overwritten.
@@ -138,6 +171,9 @@ export async function PUT(request: Request, context: RouteContext) {
 
   let plan: unknown;
   if (body.plan !== undefined) {
+    if (current && leaseHeld(current.live_lease_until)) {
+      return NextResponse.json(LIVE_REFUSAL, { status: 409 });
+    }
     const parsed = factoryProjectSchema.safeParse(body.plan);
     if (!parsed.success) {
       return NextResponse.json({ error: "The plan is not valid." }, { status: 400 });
@@ -161,25 +197,31 @@ export async function PUT(request: Request, context: RouteContext) {
     }
   }
 
-  const row: Record<string, unknown> = {
-    user_id: sessionUser.id,
-    id: designId,
-    name,
-    icon: parseEntryIcon(body.icon),
-    folder_id: body.folderId ?? null,
-    closed: body.closed === true,
-    favorite: body.favorite === true,
-    sort_order: Number.isInteger(body.order) ? body.order : null,
-    community_plan_id:
-      typeof body.communityPlanId === "string" && body.communityPlanId.length <= 64
-        ? body.communityPlanId
-        : null,
-    created_at: body.createdAt,
-    updated_at: body.updatedAt,
-    plan_updated_at: body.planUpdatedAt,
-    // Writing a design brings it back: a tombstone is only ever older.
-    deleted_at: null,
-  };
+  const row: Record<string, unknown> = isOwner
+    ? {
+        user_id: sessionUser.id,
+        id: designId,
+        name,
+        icon: parseEntryIcon(body.icon),
+        folder_id: body.folderId ?? null,
+        closed: body.closed === true,
+        favorite: body.favorite === true,
+        sort_order: Number.isInteger(body.order) ? body.order : null,
+        community_plan_id:
+          typeof body.communityPlanId === "string" && body.communityPlanId.length <= 64
+            ? body.communityPlanId
+            : null,
+        created_at: body.createdAt,
+        updated_at: body.updatedAt,
+        plan_updated_at: body.planUpdatedAt,
+        // Writing a design brings it back: a tombstone is only ever older.
+        deleted_at: null,
+      }
+    : {
+        name,
+        updated_at: body.updatedAt,
+        plan_updated_at: body.planUpdatedAt,
+      };
   if (plan !== undefined) {
     row.plan = plan;
   }
@@ -187,15 +229,23 @@ export async function PUT(request: Request, context: RouteContext) {
   // An UPDATE for a row that exists, an INSERT for one that does not: an
   // upsert forms the insert row first, and a metadata-only save (no plan)
   // would trip the NOT NULL on plan before the conflict was ever checked.
-  const { data, error } = current
-    ? await db
-        .from("library_designs")
-        .update(row)
-        .eq("user_id", sessionUser.id)
-        .eq("id", designId)
-        .select(DESIGN_META_COLUMNS)
-        .single()
-    : await db.from("library_designs").insert(row).select(DESIGN_META_COLUMNS).single();
+  // A plan lands only while no live lease is held: the live service may
+  // have taken one since the read above.
+  const writeRow = () => {
+    if (!current) {
+      return db.from("library_designs").insert(row).select(DESIGN_META_COLUMNS).single();
+    }
+    const update = db.from("library_designs").update(row).eq("user_id", ownerId).eq("id", designId);
+    const unleased =
+      plan !== undefined && cloudColumns
+        ? update.or(`live_lease_until.is.null,live_lease_until.lt.${new Date().toISOString()}`)
+        : update;
+    return unleased.select(DESIGN_META_COLUMNS).maybeSingle();
+  };
+  const { data, error } = await writeRow();
+  if (current && !error && !data) {
+    return NextResponse.json(LIVE_REFUSAL, { status: 409 });
+  }
   if (error || !data) {
     return NextResponse.json(
       { error: libraryStorageErrorMessage(error, "The design could not be saved.") },
@@ -205,7 +255,12 @@ export async function PUT(request: Request, context: RouteContext) {
   return NextResponse.json({ design: rowToDesignMeta(data as DesignRow), behind: false });
 }
 
-/** A tombstone, never a hole: other devices need to hear about it. */
+/**
+ * A tombstone, never a hole: other devices need to hear about it. Only the
+ * owner deletes; the plan's members lose it at once (their rows go, and the
+ * live service drops them from an open room). A member leaves through the
+ * members route instead.
+ */
 export async function DELETE(request: Request, context: RouteContext) {
   if (!isCommunityConfigured()) {
     return NextResponse.json({ error: "Cloud storage is not configured." }, { status: 503 });
@@ -216,6 +271,13 @@ export async function DELETE(request: Request, context: RouteContext) {
   }
 
   const { designId } = await context.params;
+  const ownerId = requestedOwner(request, sessionUser.id);
+  if (!ownerId) {
+    return NextResponse.json({ error: "Bad owner id." }, { status: 400 });
+  }
+  if (ownerId !== sessionUser.id) {
+    return NextResponse.json({ error: "Only the plan's owner can delete it." }, { status: 403 });
+  }
   const now = new Date().toISOString();
   const db = getCommunityDb();
   const { error } = await db
@@ -229,5 +291,12 @@ export async function DELETE(request: Request, context: RouteContext) {
       { status: 500 },
     );
   }
+  // A database without the members table has nobody to drop.
+  await db
+    .from("library_design_members")
+    .delete()
+    .eq("owner_id", sessionUser.id)
+    .eq("design_id", designId);
+  await notifyLive({ kind: "deleted", ownerId: sessionUser.id, designId });
   return NextResponse.json({ ok: true, deletedAt: now });
 }

@@ -24,6 +24,27 @@ export interface RemoteDesignMeta {
   planUpdatedAt: string;
   /** A tombstone: the design was deleted on some device at this time. */
   deletedAt: string | null;
+  /** Accounts the design is shared with (the list endpoint fills it in; empty when it is not shared). */
+  members?: PlanMember[];
+}
+
+/** An account a cloud plan is shared with. */
+export interface PlanMember {
+  id: string;
+  username: string;
+}
+
+/** A plan someone else shared with this account (GET /api/library, `shared`). */
+export interface SharedDesign {
+  ownerId: string;
+  ownerName: string;
+  id: string;
+  name: string;
+  icon: EntryIcon | null;
+  updatedAt: string;
+  planUpdatedAt: string;
+  /** Everyone it is shared with, this account included. */
+  members: PlanMember[];
 }
 
 export interface RemoteFolder {
@@ -37,6 +58,8 @@ export interface RemoteFolder {
 export interface LibraryListResponse {
   designs: RemoteDesignMeta[];
   folders: RemoteFolder[];
+  /** Plans other accounts shared with this one. */
+  shared?: SharedDesign[];
 }
 
 /** PUT /api/library/designs/[id]. The plan rides only when it changed. */
@@ -66,3 +89,5 @@ export const LIBRARY_MAX_DESIGNS = 500;
 export const LIBRARY_MAX_FOLDERS = 200;
 export const LIBRARY_DESIGN_NAME_MAX_LENGTH = 80;
 export const LIBRARY_FOLDER_NAME_MAX_LENGTH = 60;
+/** How many accounts one plan may be shared with. */
+export const LIBRARY_MAX_MEMBERS = 20;

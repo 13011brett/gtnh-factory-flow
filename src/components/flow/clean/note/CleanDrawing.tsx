@@ -159,8 +159,8 @@ function Arrow({ annotation, color }: { annotation: FactoryAnnotation; color: st
   const { from, to } = drag ?? base;
   const style = arrowStyle(annotation);
   const line = `M ${from.x} ${from.y} L ${to.x} ${to.y}`;
-  const front = arrowHead(from, to);
-  const back = style.both ? arrowHead(to, from) : undefined;
+  const front = arrowHead(from, to, style.width);
+  const back = style.both ? arrowHead(to, from, style.width) : undefined;
 
   // An end handle: the pointer's travel in board space moves that end, snapped to the grid; letting go stores the
   // new box and direction in one undoable step. React Flow is kept out of it (nodrag nopan).

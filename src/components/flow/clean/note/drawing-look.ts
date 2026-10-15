@@ -130,11 +130,15 @@ export function arrowEnds(
 export function arrowHead(
   from: { x: number; y: number },
   to: { x: number; y: number },
+  line: number = DRAWING.line,
 ): Array<{ x: number; y: number }> {
+  // 14 long and 10 wide (mod px) on the normal line; a thicker line has a bigger head, as in the mod.
+  const length = Math.max(DRAWING.headLength, 4 * line);
+  const wide = Math.max(DRAWING.headWidth, 3 * line);
   const angle = Math.atan2(to.y - from.y, to.x - from.x);
-  const back = { x: to.x - DRAWING.headLength * Math.cos(angle), y: to.y - DRAWING.headLength * Math.sin(angle) };
-  const nx = -Math.sin(angle) * (DRAWING.headWidth / 2);
-  const ny = Math.cos(angle) * (DRAWING.headWidth / 2);
+  const back = { x: to.x - length * Math.cos(angle), y: to.y - length * Math.sin(angle) };
+  const nx = -Math.sin(angle) * (wide / 2);
+  const ny = Math.cos(angle) * (wide / 2);
   return [to, { x: back.x + nx, y: back.y + ny }, { x: back.x - nx, y: back.y - ny }];
 }
 

@@ -3,11 +3,10 @@
 The mod's sticky note (`ui/note/NoteCard`) on plan boards (`project.planMode`). A note is the website's
 text annotation (`kind: "text"`, `colorTag`, `fontSize`), so import, export and posts are unchanged.
 
-- `AnnotationSwitch` is what FactoryFlow registers as `annotationNode`: text annotations on a plan board are
-  `StickyNote`, everything else the classic `AnnotationNode`.
-- `visibleAnnotations` (used where FactoryFlow builds its nodes): a plan board shows only text annotations. Box, arrow, zone
-  and image annotations stay in the data untouched (old builds still show them), are hidden, and cannot be edited.
-  The pencil menu loses those tools and the image key; image paste and drop do nothing.
+- `AnnotationSwitch` is what FactoryFlow registers as `annotationNode`: on a plan board a text annotation is
+  `StickyNote`, a box, zone or arrow `CleanDrawing`, a picture nothing; classic boards keep the classic `AnnotationNode`.
+- `visibleAnnotations` (used where FactoryFlow builds its nodes): a plan board drops picture annotations (kept in the data
+  untouched). The plan board has no pencil menu or image key; image paste and drop do nothing.
 - `note-model.ts` is pure and tested: the mod's colours (`notePalette`, from `GT_NODE_COLORS` swatches), parts under the
   pointer, key rects (fixed screen size via `--board-zoom`), wrapping, `neededHeight`. Chrome sizes are the mod's scaled by
   380/320; the note's own size is not scaled.
@@ -21,10 +20,16 @@ text annotation (`kind: "text"`, `colorTag`, `fontSize`), so import, export and 
   and the 20 px grid.
 - Selection outline only when several nodes are selected. Stacked over wires, under cards (`STICKY_NOTE_Z_INDEX`).
 
-## Drawn annotations (box, zone, arrow, image)
+## Drawn annotations (box, zone, arrow)
 
 Designed once for both planners: `docs/annotations.md` (the mod has the same file). `AnnotationSwitch` sends them to
-`CleanDrawing` on a plan board (they used to be hidden): flat, square, 2 mod px line, Monocraft caption, sizes the mod's
-times `K` = 380/320 (`drawing-look.ts`, tested). Boxes and zones are backdrops under the cards and click-through inside;
-arrows sit with the notes. On a plan board they can be moved, resized, recoloured (paint tool) and deleted, not
-restyled; the data (style, fillTheme, points) is kept untouched. The mod imports and exports every kind.
+`CleanDrawing` on a plan board: flat, square, 2 mod px line, sizes the mod's times `K` = 380/320 (`drawing-look.ts`,
+tested). Made and edited from the board's right-click menu (`BoardContextMenu`: Add sticky note, Add box, Add arrow;
+right-click a drawing for `AnnotationMenu`: Colour, Fill, Border, Marks, or Thickness, Heads, Delete). A box moves by
+its border strips and resizes by React Flow's corner handles and outer edge bands (`drawing.css`); an arrow moves by its
+line and is reshaped by its two end handles (`CleanDrawing`'s `Arrow`, pointer capture, board space through
+`screenToFlowPosition`, snapped to the grid, one undoable `updateAnnotation`; `arrowFromEnds` turns two ends into box and
+direction). An arrow may have a 0 axis (store `snapAnnotationToGrid` by kind; the node stays 1 px so it is measured).
+Handles: a box's corners while selected, an arrow's ends while selected or hovered; the outline only with several
+selected (`data-multi`). Pictures (`kind: "image"`) are no longer supported: `visibleAnnotations` drops them on a plan
+board and `AnnotationSwitch` renders nothing; the data stays in the project. Zones are shown, not offered in Add.

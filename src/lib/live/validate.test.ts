@@ -49,6 +49,67 @@ describe("live batch checks", () => {
     ).toBeNull();
   });
 
+  it("keep every task field the game writes: priority, the column stamp, what it waits on, spots and screenshots", () => {
+    const fields = { priority: "high", movedAt: "2026-10-15T09:00:00.000Z", blockedBy: ["t2"] };
+    const place = {
+      x: 120,
+      y: 64,
+      z: -30,
+      dim: 0,
+      dimName: "Overworld",
+      world: "server:0123456789abcdef",
+      label: "Ore",
+    };
+    const picture = {
+      thumb: "data:image/jpeg;base64,/9j/4AAQ",
+      w: 1920,
+      h: 1080,
+      takenAt: "2026-10-15T09:00:00.000Z",
+      file: "a.png",
+    };
+    const spot: LiveOp = {
+      o: "put",
+      c: "taskItems",
+      id: "i1",
+      v: {
+        id: "i1",
+        taskId: "t1",
+        kind: "location",
+        text: "Ore at 120 64 -30 in Overworld",
+        done: false,
+        order: "a0",
+        place,
+      },
+    };
+    const shot: LiveOp = {
+      o: "put",
+      c: "taskItems",
+      id: "i2",
+      v: {
+        id: "i2",
+        taskId: "t1",
+        kind: "picture",
+        text: "Screenshot",
+        done: false,
+        order: "a1",
+        picture,
+      },
+    };
+    const after = stored([{ o: "patch", c: "tasks", id: "t1", f: fields }, spot, shot]);
+    expect((after.tasks as Array<Record<string, unknown>>)[0]).toMatchObject(fields);
+    const items = after.taskItems as Array<Record<string, unknown>>;
+    expect(items[0]!.place).toEqual(place);
+    expect(items[1]!.picture).toEqual(picture);
+    // A picture is only ever an image data URL, never a link to another site.
+    const link: LiveOp = {
+      o: "patch",
+      c: "taskItems",
+      id: "i2",
+      f: { picture: { ...picture, thumb: "https://x/y.png" } },
+    };
+    expect(check([shot, link])).toMatch(/^taskItems i2: picture/);
+  });
+
   it("refuse a thing its collection's schema refuses", () => {
     expect(check([{ o: "patch", c: "tasks", id: "t1", f: { status: "later" } }])).toMatch(
       /^tasks t1: status/,

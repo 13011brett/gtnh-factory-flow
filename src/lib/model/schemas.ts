@@ -382,12 +382,7 @@ export const factoryNodeSchema = z.object({
     .positive()
     .transform((value) => Math.max(1, Math.round(value))),
   overclockTier: z.string().min(1),
-  energyHatches: z
-    .number()
-    .int()
-    .min(1)
-    .max(64)
-    .optional(),
+  energyHatches: z.number().int().min(1).max(64).optional(),
   energyHatchType: z.string().min(1).optional(),
   powerEuT: z.number().nonnegative().finite().optional(),
   hatchVoltageTier: z
@@ -491,7 +486,10 @@ export const factoryAnnotationSchema = z.object({
   arrowWidth: z.number().min(1).max(8).optional(),
   // Zone outlines: bounded so an imported plan cannot carry a pathological
   // vertex soup; a drawn zone simplifies to a handful of corners.
-  points: z.array(z.object({ x: z.number(), y: z.number() })).max(64).optional(),
+  points: z
+    .array(z.object({ x: z.number(), y: z.number() }))
+    .max(64)
+    .optional(),
   // Bounded so an imported plan cannot carry a note that swallows the board.
   fontSize: z.number().min(8).max(96).optional(),
   // Image annotations: only ever rendered as an <img> src. Bounded, and http
@@ -614,7 +612,19 @@ export const PLAN_TASK_LIMITS = {
   accountNameLength: 64,
   assignees: 50,
   nodeIds: 500,
+  /** The tasks one task may wait on. */
+  blockedBy: 500,
   stampLength: 40,
+  /** A location's label, as the game clips it. */
+  placeLabelLength: 60,
+  /** A dimension's name or a world's key (`server:<16 hex>`, `world:<uuid>`). */
+  placeNameLength: 120,
+  /**
+   * A screenshot's thumbnail, a JPEG data URL: the game keeps the JPEG under 40 KB (about 54,000 characters in
+   * base64); this leaves room and still keeps one thing well under a live batch's 256 KB.
+   */
+  pictureThumbLength: 96_000,
+  pictureFileLength: 200,
 } as const;
 
 const taskIdSchema = z.string().min(1).max(PLAN_TASK_LIMITS.idLength);
@@ -641,16 +651,56 @@ export const planTaskSchema = z.object({
   createdBy: accountIdSchema.optional(),
   createdAt: stampSchema.optional(),
   doneAt: stampSchema.optional(),
+  /** No priority is Medium; the game writes none for Medium. */
+  priority: z.enum(["high", "medium", "low"]).optional(),
+  /** When it last changed column; a task without one counts from `createdAt`. */
+  movedAt: stampSchema.optional(),
+  /** Tasks of the same board it waits on, by id. */
+  blockedBy: z.array(taskIdSchema).max(PLAN_TASK_LIMITS.blockedBy).optional(),
 });
 
+/** A spot in a game world: a block, its dimension, the world it belongs to, an optional label. */
+export const planPlaceSchema = z.object({
+  x: z.number().int(),
+  y: z.number().int(),
+  z: z.number().int(),
+  dim: z.number().int(),
+  dimName: z.string().max(PLAN_TASK_LIMITS.placeNameLength),
+  world: z.string().max(PLAN_TASK_LIMITS.placeNameLength),
+  label: z.string().max(PLAN_TASK_LIMITS.placeLabelLength).optional(),
+});
+
+/**
+ * A screenshot taken in the game: its thumbnail as an image data URL (only a data URL, so drawing it never reaches
+ * another site), the full shot's size, when, and the full shot's file in the screenshots folder of the game that
+ * took it.
+ */
+export const planPictureSchema = z.object({
+  thumb: z
+    .string()
+    .max(PLAN_TASK_LIMITS.pictureThumbLength)
+    .regex(/^data:image\/(?:jpeg|png|webp);base64,[A-Za-z0-9+/]+={0,2}$/),
+  w: z.number().int().min(0),
+  h: z.number().int().min(0),
+  takenAt: stampSchema,
+  file: z.string().max(PLAN_TASK_LIMITS.pictureFileLength).optional(),
+});
+
+/**
+ * One thing on a task, each with its own checkbox: a machine (a card on a plan, `link`), a location (`place`) or a
+ * screenshot (`picture`). An older checklist line has no kind. `text` is always the thing in words.
+ */
 export const planTaskItemSchema = z.object({
   id: taskIdSchema,
   taskId: taskIdSchema,
+  kind: z.enum(["machine", "location", "picture"]).optional(),
   text: z.string().min(1).max(PLAN_TASK_LIMITS.itemTextLength),
   done: z.boolean(),
   order: orderKeySchema,
   link: planTaskLinkSchema.optional(),
   nodeId: taskIdSchema.optional(),
+  place: planPlaceSchema.optional(),
+  picture: planPictureSchema.optional(),
 });
 
 export const planTaskCommentSchema = z.object({

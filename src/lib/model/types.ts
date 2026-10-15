@@ -119,7 +119,18 @@ export interface PlanTask {
   createdBy?: string;
   createdAt?: string;
   doneAt?: string;
+  /** How pressing it is; none is Medium (the game writes none for Medium). */
+  priority?: PlanTaskPriority;
+  /** When it last moved to another column (a move within a column leaves it); without one it counts from `createdAt`. */
+  movedAt?: string;
+  /**
+   * Tasks of the same board it waits on, by id: each once, never itself, never a loop (the adding side refuses one).
+   * An id naming no task on the board is ignored.
+   */
+  blockedBy?: string[];
 }
+
+export type PlanTaskPriority = "high" | "medium" | "low";
 
 /**
  * A card on a plan. `plan` is the plan's id as the library knows it: `<ownerId>:<designId>` for a plan in the
@@ -130,17 +141,53 @@ export interface PlanTaskLink {
   node: string;
 }
 
-/** One checklist line of a task: its own thing, so two people can tick two lines at once. */
+/** What a task's thing is: a card on a plan, a spot in a game world, a screenshot. Older checklist lines have none. */
+export type PlanTaskItemKind = "machine" | "location" | "picture";
+
+/**
+ * A spot in a game world: the block `x y z` in dimension `dim` (named `dimName` as the game names it: "Overworld"),
+ * in the world `world` (as placed machines key worlds: `server:<16 hex>` or `world:<uuid>`), with an optional label.
+ */
+export interface PlanPlace {
+  x: number;
+  y: number;
+  z: number;
+  dim: number;
+  dimName: string;
+  world: string;
+  label?: string;
+}
+
+/**
+ * A screenshot taken in the game: `thumb` a small JPEG as a data URL (all that syncs), the full shot `w` by `h`,
+ * when it was taken, and the full shot's file name in the screenshots folder of the game that took it.
+ */
+export interface PlanPicture {
+  thumb: string;
+  w: number;
+  h: number;
+  takenAt: string;
+  file?: string;
+}
+
+/**
+ * One thing on a task, its own thing so two people can tick two at once: a machine (`link`), a location (`place`)
+ * or a screenshot (`picture`). An item with no `kind` is an older checklist line: a machine when it has a link, else
+ * words. `text` is always written, the thing in words, so a reader that knows only lines shows something true.
+ */
 export interface PlanTaskItem {
   id: string;
   taskId: string;
+  kind?: PlanTaskItemKind;
   text: string;
   done: boolean;
   order: string;
-  /** The card this line is about. */
+  /** The card this thing is about. */
   link?: PlanTaskLink;
   /** Older spelling of `link`: a card of the plan that holds the task. Read, no longer written. */
   nodeId?: string;
+  place?: PlanPlace;
+  picture?: PlanPicture;
 }
 
 /** A comment on a task. `at` is stamped by the server. */

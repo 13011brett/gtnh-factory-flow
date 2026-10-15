@@ -5746,6 +5746,8 @@ export function FactoryFlow() {
           origin: frame ? { x: frame.x, y: frame.y } : { x: 0, y: 0 },
           frames: openFrames,
           excluded,
+          // Until a drag frame aims elsewhere, the card stays in the group it is in.
+          target: owner,
         };
       }
       // Held cards whose board is held too: the frame carries them, so
@@ -5785,6 +5787,17 @@ export function FactoryFlow() {
       const frameById = new Map(frames.map((frame) => [frame.id, frame]));
       const pockets = project.pockets ?? [];
       const pocketIdSet = new Set(pockets.map((pocket) => pocket.id));
+      // A press let go where it began is a click (a key on a card, a chip): nothing moves, nothing changes group, and
+      // a place off this board's grid (the game's 10 px one) stays as it is.
+      const storedAt = (id: string) =>
+        (project.nodes.find((entry) => entry.id === id) ??
+          project.storages?.find((entry) => entry.id === id) ??
+          project.annotations?.find((entry) => entry.id === id) ??
+          pockets.find((entry) => entry.id === id))?.position;
+      const unmoved = dropped.every((entry) => {
+        const at = storedAt(entry.id);
+        return at !== undefined && at.x === entry.position.x && at.y === entry.position.y;
+      });
       // A dragged board cannot land inside itself or its own descendants.
       const excluded = new Set<string>();
       for (const entry of dropped) {
@@ -5930,7 +5943,9 @@ export function FactoryFlow() {
 
       // A board's walls never move to swallow a drop that would not fit. A group's do (plan boards): it grows to hold
       // what joined it, and the drop says in or out by its sound.
-      if (project.planMode === true) {
+      if (unmoved) {
+        // A click: nothing to write.
+      } else if (project.planMode === true) {
         const joined = moves.filter((move) => "owner" in move && move.owner?.pocketId !== undefined).length;
         const left = moves.filter((move) => "owner" in move && move.owner?.pocketId === undefined).length;
         moveBoardItems(moves, boardSizeOf);

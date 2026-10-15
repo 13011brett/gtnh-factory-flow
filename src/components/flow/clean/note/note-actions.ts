@@ -9,13 +9,13 @@ export function addStickyNoteAt(at: { x: number; y: number }): void {
   if (added) requestNoteEdit(added.id);
 }
 
-/** The board menu's "Add a box": 240 by 160, azure, the default solid border and tint, selected afterwards by the caller. */
+/** The board menu's "Add a box": 200 by 140 (the mod's `BoardSession.addDrawing`), azure, the default solid border and tint, selected afterwards by the caller. */
 export function addBoxAt(at: { x: number; y: number }): void {
   useFactoryStore.getState().addAnnotation({
     kind: "box",
     colorTag: "azure",
     position: { x: at.x, y: at.y },
-    size: { width: 240, height: 160 },
+    size: { width: 200, height: 140 },
   });
 }
 

@@ -53,6 +53,8 @@ interface TabGrab {
   startX: number;
   startScroll: number;
   pointerX: number;
+  /** Screen pixels per CSS pixel of the strip (the page may be zoomed). */
+  scale: number;
   boxes: TabBox[];
   held: boolean;
   slot: number;
@@ -163,6 +165,7 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
       startX: event.clientX,
       startScroll: strip.scrollLeft,
       pointerX: event.clientX,
+      scale: strip.offsetWidth > 0 && strip.getBoundingClientRect().width > 0 ? strip.getBoundingClientRect().width / strip.offsetWidth : 1,
       boxes,
       held: false,
       slot: me,
@@ -176,7 +179,7 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
       if (!mine) return;
       const first = grab.boxes[0];
       const last = grab.boxes[grab.boxes.length - 1];
-      const raw = grab.pointerX - grab.startX + (strip.scrollLeft - grab.startScroll);
+      const raw = (grab.pointerX - grab.startX) / grab.scale + (strip.scrollLeft - grab.startScroll);
       const dx = Math.max(first.left - mine.left, Math.min(last.left + last.width - mine.left - mine.width, raw));
       const slot = slotAt(grab.boxes, id, mine.left + mine.width / 2 + dx);
       if (slot !== grab.slot) {
@@ -205,7 +208,7 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
     const onMove = (move: PointerEvent) => {
       grab.pointerX = move.clientX;
       if (!grab.held) {
-        if (Math.abs(move.clientX - grab.startX) <= TAB_DRAG_SLOP) return;
+        if (Math.abs(move.clientX - grab.startX) / grab.scale <= TAB_DRAG_SLOP) return;
         grab.held = true;
         suppressClick.current = true;
         setMenu(undefined);

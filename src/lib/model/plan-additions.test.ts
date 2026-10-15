@@ -25,6 +25,7 @@ function expectAdditions(plan: FactoryProject, source: FactoryProject) {
   expect(plan.storages?.[0]?.gtnhplanner).toEqual(game("storage"));
   expect(plan.edges[0]!.gtnhplanner).toEqual(game("edge"));
   expect(plan.annotations?.[0]?.gtnhplanner).toEqual(game("note"));
+  expect(plan.pockets?.[0]?.gtnhplanner).toEqual(game("pocket"));
   expect(plan.tasks).toEqual(source.tasks);
   expect(plan.taskItems).toEqual(source.taskItems);
   expect(plan.taskComments).toEqual(source.taskComments);

@@ -539,6 +539,7 @@ export const factoryPocketSchema = z.object({
   theme: z.string().max(32).optional(),
   // A canvas pattern id; unknown ids fall back to the default ruling.
   pattern: z.string().max(16).optional(),
+  gtnhplanner: gtnhplannerDataSchema.optional(),
 });
 
 export const factoryEdgeSchema = z.object({

@@ -32,6 +32,16 @@ export function planWithAdditions(): FactoryProject {
         gtnhplanner: game("note"),
       },
     ],
+    pockets: [
+      {
+        id: "pocket-1",
+        name: "Group 1",
+        position: { x: 0, y: 0 },
+        expanded: true,
+        size: { width: 400, height: 200 },
+        gtnhplanner: game("pocket"),
+      },
+    ],
     tasks: [
       {
         id: "t1",

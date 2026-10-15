@@ -674,6 +674,8 @@ export interface FactoryPocket {
    * "cross", "ruled", "graph", "none"). Absent = dots, the canvas default.
    */
   pattern?: string;
+  /** The in-game planner's data for this group; see GtnhPlannerData. */
+  gtnhplanner?: GtnhPlannerData;
 }
 
 export interface FactoryEdge {

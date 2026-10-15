@@ -68,12 +68,57 @@ Every save goes through `persistCanvas` in design-store.ts:
 `browseResource`, `browseBack` / `browseForward`, `recipeBrowserMachinePin`,
 `beginRecipeRefactor` live in factory-store; the rules are in `src/components/CLAUDE.md`.
 
-## Cloud plans and live editing (not wired into the editor yet)
+## Live plans (live-session.ts)
 
-The server side is in place (`docs/live.md`): shared plans in `GET /api/library` (`shared`, each design's
-`members`), `?owner=` on every design route, and the live service. When the editor is wired:
-- A plan open live is edited through `src/lib/live/client-state.ts` (confirmed + pending, undo by inverse), never by
-  the account sync's whole-plan PUT: that PUT answers 409 `{ live: true }` while the plan is held live, and the sync
-  must treat it as "not mine to push", not as an error.
-- Strip the same derived fields before every diff as the game does (solve results, runtime tables).
-- The socket address is `liveSocketUrl(process.env.NEXT_PUBLIC_LIVE_URL, location)`; unset, no live features.
+All of it is off unless `NEXT_PUBLIC_LIVE_URL` is set (`isLiveConfigured`, read by its literal name so Next.js
+inlines it) and someone is signed in: no socket, no Share, no Shared with me, no task board, no presence. Merging it
+changes nothing until then. Architecture and protocol: `docs/live.md`.
+
+- Which designs are live: the one on the canvas, when it is ours and the account has it (`remoteUpdatedAt`; its doc
+  is `<my id>:<design id>`, my id from the service's `welcome`, cached per username for offline starts) or a copy of
+  a plan shared with us (`DesignSummary.cloud`, local id `shared-<owner>-<design>`). A new design goes live once the
+  account sync has pushed it, and its snapshot undo history ends there.
+- THE FUNNEL. Every project change not made `quietly` (`live-edit-gate.ts`) is a person's edit: the plan before and
+  after are shaped (`src/lib/live/live-shape.ts`) and diffed into a batch in the client engine (confirmed +
+  pending). Shaping leaves out what is not a person's doing: `metadata` (stamps, the owner's post link), `name` (the
+  account row's), `view` (each person's dressing), `poolCellRatios` (fetched) and GregTech `runtimeCalculation`
+  tables. Landing a plan, the recipe refresh, fetched data, a community link and applied remote ops are quiet. A
+  new store action that writes derived data into the project must be quiet too, or every client sends it.
+- ARRIVING. Someone else's batch, a refusal, a fresh snapshot, an undo: the engine's view before and after is diffed
+  and only that lands, through `applyLiveOps` (same objects for untouched things, re-solved like any edit). It is the
+  same design changing, never an arriving plan: the "every arriving plan opens as a NEW design" rule is untouched
+  (opening a shared plan the first time is the arrival, `openSharedDesign`).
+- UNDO on a live plan applies the recorded inverses of this person's own edits (`LiveClientState.undo`), sent as a
+  new batch. `withProjectHistory` keeps no snapshots while a live handler is set, and entering or leaving live empties
+  the snapshot history: a snapshot restored over a live plan would wipe everyone else's edits. Undo buttons read
+  `liveUndo` when it is set.
+- OFFLINE. Edits wait in pending, kept in IndexedDB (`live-pending-store.ts`, its own database) per plan and tab, and
+  go when the connection is back (backoff, `online`, the tab coming back); a closed tab's leftovers are adopted by the
+  next tab to open that plan (Web Locks tell which tabs are gone). Batches are paced under the service's rate and
+  split under its size limit.
+- TABS: each tab joins for itself (one account may be in a room more than once). No tab depends on another staying
+  open, and each has its own pending edits and undo; the cost is a socket per tab (the service allows 16 an
+  account). Presence from your own account (another tab, the game) is not drawn.
+- THE LOCAL COPY. A design open live is the service's plan; its record here is this device's copy, for opening
+  offline. Autosave writes it unguarded (`persistLiveCopy`: no version check, no conflict copy, sync stamps kept),
+  and the tab sync never reloads it from storage.
+- ACCOUNT SYNC never sends the body of a plan open live, here or in another tab (`isDesignOpenLive`, a localStorage
+  mark refreshed while open), and a pull of one moves only its metadata. A push answered 409 `{ live: true }` goes
+  again without the plan: not an error, not a conflict copy. Copies of shared plans are never pushed as ours; the
+  account lists them under `shared` (`cloud-library.ts`), and a copy no longer listed is removed.
+- Removed from a plan, or the plan deleted: the copy goes and a notice says so (`useLiveSession.notice`).
+- Tests: `live-session.test.ts` (a fake service speaking the protocol with the real engine),
+  `src/lib/library/library-sync-live.test.ts`. In the real app: `scratch/probes/live-*.mjs` on `npm run dev:local`
+  (development builds expose the stores as `window.__gtnhLive`, with `drop()` to cut the socket).
+
+## Task boards (src/lib/tasks)
+
+- Tasks, checklist lines and comments are things of their own (`tasks`, `taskItems`, `taskComments`), so two
+  people ticking two lines or moving two cards never write the same field. Order is a fractional key
+  (`order-key.ts`): a move writes one key between its new neighbours, nothing else.
+- Every task edit goes through `editTasks` with a pure edit from `task-board.ts`: one undo step and one live batch.
+  Tasks never feed the solve.
+- A comment's `by`, `byName` and `at` are the live service's to write on a live plan; on a plan of this device
+  alone they are yours (`local` / "You" when signed out). A closed design with tasks is never thrown away as blank.
+- Which face is up (board or tasks) is per tab and never saved (`task-view.ts`); a design lands on its
+  `primaryView`.

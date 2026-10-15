@@ -18,6 +18,7 @@ this file is the website's side of it.
 | Live service | `src/live/` | the WebSocket server: rooms, journal, flushes, leases |
 | Local database | `src/lib/server/local-db/`, `tools/local-db/serve.ts` | Postgres in-process (PGlite) behind a PostgREST stand-in |
 | Test client | `tools/live/test-client.mjs` | a headless client for all of the above |
+| The editor | `src/store/live-session.ts`, `src/lib/live/live-*.ts`, `src/components/live/`, `src/components/tasks/` | the open design live: edits, undo, offline, presence, sharing, task boards (below) |
 
 A cloud plan is a `library_designs` row, addressed everywhere as `<ownerId>:<designId>` (the doc key). The schema
 additions are `supabase/migrations/2026-10-14-cloud-live.sql`: `seq` (edit batches applied), `live_lease_until`, and
@@ -81,6 +82,32 @@ accounts connected from the same game server, the `game.server` hash in `hello`)
 everything and exit), each with `Authorization: Bearer $LIVE_INTERNAL_TOKEN`. Caddy routes only `/live` and `/live/*`
 to the service, so `/internal` is never reachable from outside.
 
+## The editor
+
+The website joins the room of the design on the canvas when it is a cloud plan: one of ours the account holds
+(`<my id>:<design id>`), or this device's copy of a plan shared with us. One socket per browser tab
+(`src/store/live-session.ts`); the rules the stores keep are in `src/store/CLAUDE.md` (Live plans).
+
+- Every edit the store makes outside a quiet change is shaped (`live-shape.ts`: `metadata`, `name`, `view`,
+  `poolCellRatios` and GregTech runtime tables left out), diffed, and sent as one batch; others' batches land as the
+  difference they make to the view, so untouched cards keep their identity. Undo applies recorded inverses of your
+  own edits only.
+- Pending batches are kept in IndexedDB per plan and tab and sent again after a reconnect; a closed tab's are adopted
+  by the next tab to open the plan. Each tab joins for itself rather than one tab holding the connection for all:
+  no tab depends on another staying open, at the cost of a socket a tab.
+- Presence: the pointer on the board at most 10 a second, the selection when it changes, drawn for others by
+  `LivePresenceLayer`; faces of who is here on the plan bar.
+- Sharing: the plan bar's Share (members, search, remove, leave) and the Library's Shared with me. Publish (the
+  community post) is separate and never shares the live plan.
+- Task boards: `src/lib/tasks/` (pure edits, fractional order keys) and `src/components/tasks/`; any plan has a Tasks
+  face, a plan with `primaryView: "tasks"` opens on it, and New task board makes one. They work on plans of this
+  device alone too.
+- The account sync never sends the body of a plan open live and treats 409 `{ live: true }` as nothing to send.
+- Deviations from the contract: a member's rename of a shared plan stays on their device (the row's name is the
+  owner's); board dressing (`view`) is per person, not shared live; presence from your own account (another tab, the
+  game) is not drawn; an own design goes live only once the account sync has created its row, and its earlier
+  snapshot undo steps end there.
+
 ## REST
 
 All signed in by the session cookie. A design id is unique per owner only, so every design route takes
@@ -139,6 +166,16 @@ needs `LIVE_INTERNAL_URL` and `LIVE_INTERNAL_TOKEN` at run time and `NEXT_PUBLIC
 no live features). The rollout, staging first, is `docs/live-rollout.md`.
 
 ## Tests
+
+- `src/store/live-session.test.ts`: the stores against a fake service speaking the protocol with the real engine
+  (what an edit sends, remote batches, undo of own edits, offline and resend, a closed tab's edits, refusals,
+  removal, nothing without the variable). `src/lib/library/library-sync-live.test.ts`: the sync beside live plans.
+  `src/lib/tasks/*.test.ts`: order keys and task edits.
+- In the real app, on `npm run dev:local`: `scratch/probes/live-share.mjs`, `live-tasks.mjs` and `live-extra.mjs`
+  (two headless accounts: share, edits both ways, cursors, selections, undo, removal, the task board on both,
+  offline edits, linked cards, a signed-out board). Development builds expose the stores as `window.__gtnhLive`
+  (and `drop()`, which cuts the socket as a lost network would). Sign-ins are rate limited: the probes keep their
+  sessions in `scratch/probes/.session-*.json`.
 
 - `src/lib/live/ops.test.ts` (the vectors), `validate.test.ts`.
 - `src/lib/server/local-db/postgrest.test.ts`: every query shape against real Postgres.

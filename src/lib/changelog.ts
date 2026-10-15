@@ -40,6 +40,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "3.12.0",
+    date: "2026-10-15",
+    headline: "Plan together, live",
+    notes: [
+      "Share a plan with other players from the Share button. You see their cursors and edits as they make them.",
+      "Plans shared with you show up under Shared with me. Undo only takes back your own changes.",
+      "Every plan can have a task board: To do, Doing, Blocked and Done, with checklists, comments and people.",
+    ],
+  },
+  {
     version: "3.11.1",
     date: "2026-10-12",
     headline: "Reports from the mod are checked",

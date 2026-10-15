@@ -94,7 +94,8 @@ export function Callout({
       if (now - avoidAt > 250) {
         avoidAt = now;
         cards = [];
-        for (const el of document.querySelectorAll(".react-flow__node")) {
+        // Open menus too: a step may leave one open, and the note must not sit under it.
+        for (const el of document.querySelectorAll(".react-flow__node, [role=\"menu\"]")) {
           const r = rectOf(el);
           if (r.w > 0 && r.h > 0) cards.push(r);
         }

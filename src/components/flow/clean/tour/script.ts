@@ -10,6 +10,7 @@ import {
   addRecipe,
   barKey,
   around,
+  beside,
   leftOf,
   rightOf,
   underCard,
@@ -266,7 +267,7 @@ const cloneStep: Step = {
 const drawerFromPort: Step = {
   id: "drawer-port",
   actions: [
-    A.drag(portHandle(0, "Output", "Iron Plate"), rightOf(card(0), 130), { label: "the plates" }),
+    A.drag(portHandle(0, "Output", "Iron Plate"), beside(card(0), 140, 170), { label: "the plates" }),
     A.until(() => storageCount() >= 1, "the drawer"),
     A.wait(300),
   ],
@@ -487,6 +488,9 @@ const trashStep: Step = {
     A.drag(portHandle(0, "Output", "Iron Plate"), rightOf(card(0), 130), { label: "the plates" }),
     A.until(() => drawerOf("Iron Plate")() !== null, "the plates drawer"),
     A.wait(300),
+    // The new drawer can land against the card at the board's edge: Arrange gives it room.
+    A.click(topKey(/^Arrange/), { label: "Arrange" }),
+    A.wait(1500),
     fit,
     A.wait(400),
     A.click(drawerPart("Iron Plate", "rule"), { label: "the drawer's rule key" }),

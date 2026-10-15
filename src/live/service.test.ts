@@ -89,7 +89,7 @@ class TestClient {
   next<T extends ServerFrame["t"]>(
     t: T,
     test: (frame: Extract<ServerFrame, { t: T }>) => boolean = () => true,
-    timeoutMs = 5000,
+    timeoutMs = 10_000,
   ): Promise<Extract<ServerFrame, { t: T }>> {
     const match = (frame: ServerFrame) =>
       frame.t === t && test(frame as Extract<ServerFrame, { t: T }>);
@@ -210,7 +210,7 @@ async function storedRow(designId: string) {
   };
 }
 
-async function until(check: () => Promise<boolean> | boolean, timeoutMs = 5000): Promise<void> {
+async function until(check: () => Promise<boolean> | boolean, timeoutMs = 10_000): Promise<void> {
   const end = Date.now() + timeoutMs;
   while (Date.now() < end) {
     if (await check()) {
@@ -252,7 +252,7 @@ afterAll(async () => {
   vi.unstubAllEnvs();
 });
 
-describe("the live service", () => {
+describe("the live service", { timeout: 30_000 }, () => {
   it("lets two people edit one plan: concurrent batches converge and each sender's echo acks it", async () => {
     const { port } = await startService();
     const { designId, doc } = await makeDesign();

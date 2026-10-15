@@ -34,6 +34,8 @@ export interface RoomPeer {
   readonly username: string;
   readonly client: "game" | "web";
   send(frame: ServerFrame): void;
+  /** A frame already serialized (a broadcast serializes once for everyone). */
+  sendText(text: string): void;
   /** The peer is out of this room (kicked): it forgets the room. */
   forget(doc: string): void;
 }
@@ -80,6 +82,8 @@ export class Room {
   closed = false;
 
   private flushedSeq = 0;
+  /** The plan's JSON for snapshots, made once per version of the plan. */
+  private planJson: { plan: LivePlan; text: string } | undefined;
   private size = 0;
   /** This room's last applied batch ids and their seqs, oldest first. */
   private readonly recent = new Map<string, number>();
@@ -191,11 +195,35 @@ export class Room {
   }
 
   broadcast(frame: ServerFrame, except?: RoomPeer): void {
+    if (this.peers.size === 0 || (this.peers.size === 1 && this.peers.has(except!))) {
+      return;
+    }
+    const text = JSON.stringify(frame);
     for (const peer of this.peers) {
       if (peer !== except) {
-        peer.send(frame);
+        peer.sendText(text);
       }
     }
+  }
+
+  /**
+   * The snapshot frame for someone joining. The plan's JSON is made once per
+   * version of the plan, however many join or join again: a snapshot is the
+   * room's biggest frame by far.
+   */
+  snapshotText(role: "owner" | "editor"): string {
+    const plan = this.content.toPlan();
+    if (this.planJson?.plan !== plan) {
+      this.planJson = { plan, text: JSON.stringify(plan) };
+    }
+    const head = JSON.stringify({ t: "snapshot", doc: this.doc, seq: this.seq });
+    const tail = JSON.stringify({
+      role,
+      members: this.members,
+      present: this.present,
+      owner: { id: this.ownerId, username: this.ownerName },
+    });
+    return `${head.slice(0, -1)},"plan":${this.planJson.text},${tail.slice(1)}`;
   }
 
   /**

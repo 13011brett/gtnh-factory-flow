@@ -2,6 +2,7 @@ import { mkdtempSync, rmSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
+import type { Socket } from "node:net";
 import { WebSocket } from "ws";
 import { LiveClientState } from "@/lib/live/client-state";
 import type { LiveOp, LivePlan } from "@/lib/live/ops";
@@ -167,7 +168,9 @@ async function makeUser(username: string) {
 let designCount = 0;
 
 /** A fresh design owned by ann, shared with bob. */
-async function makeDesign(): Promise<{ designId: string; doc: string; plan: LivePlan }> {
+async function makeDesign(
+  extra: Partial<LivePlan> = {},
+): Promise<{ designId: string; doc: string; plan: LivePlan }> {
   designCount += 1;
   const designId = `design-live-${designCount}`;
   const plan: LivePlan = {
@@ -180,6 +183,7 @@ async function makeDesign(): Promise<{ designId: string; doc: string; plan: Live
     edges: [],
     fuelProfiles: [],
     tasks: [{ id: "t1", title: "First", status: "todo", order: "a0" }],
+    ...extra,
   };
   const db = getCommunityDb();
   const { error } = await db.from("library_designs").insert({
@@ -739,6 +743,63 @@ describe("the live service", { timeout: 30_000 }, () => {
       body: "{}",
     });
     expect(internal.status).toBe(401);
+  });
+
+  it("sends a snapshot again only to a client that missed batches, and sizes frames before reading them", async () => {
+    const { port } = await startService({ limits: { resnapshotMs: 0 } });
+    const { doc } = await makeDesign();
+    const ann = await TestClient.open(port, { who: "ann" });
+    await ann.hello();
+    await ann.join(doc);
+    // Joining a plan it is in, with nothing new: nothing at all.
+    ann.send({ t: "join", doc });
+    await new Promise((resolve) => setTimeout(resolve, 200));
+    expect(ann.frames.filter((frame) => frame.t === "snapshot")).toEqual([]);
+    ann.send({ t: "ops", doc, base: 0, cid: "s1", ops: [taskPatch("t1", { title: "Moved on" })] });
+    await ann.next("ops", (frame) => frame.cid === "s1");
+    ann.send({ t: "join", doc });
+    expect((await ann.next("snapshot")).seq).toBe(1);
+
+    // Too big to read: refused by the cid at its head, never parsed (it is
+    // not even JSON).
+    ann.ws.send(`{"t":"ops","doc":"${doc}","base":1,"cid":"blob","ops":[${"x".repeat(300 * 1024)}`);
+    expect(await ann.next("error", (frame) => frame.cid === "blob")).toMatchObject({
+      code: "too_big",
+      doc,
+    });
+    // Only a batch may be big.
+    const sel = Array.from({ length: 2000 }, (_, at) => `selected-thing-${at}`);
+    ann.send({ t: "presence", doc, cursor: { x: 1, y: 1 }, sel });
+    expect(await ann.next("error", (frame) => frame.code === "too_big")).toMatchObject({ doc });
+    // Past twice the limit the socket goes before the frame is ever whole.
+    ann.ws.send("x".repeat(600 * 1024));
+    await until(() => ann.closed);
+    // 1009 when the close frame lands before the socket is cut.
+    expect([1006, 1009]).toContain(ann.closeCode);
+  });
+
+  it("drops a connection that does not read what it is sent", async () => {
+    const { port, service } = await startService({
+      limits: { resnapshotMs: 0, bufferedBytes: 64 * 1024 },
+    });
+    const { doc } = await makeDesign({ notes: "n".repeat(1024 * 1024) });
+    const ann = await TestClient.open(port, { who: "ann" });
+    const bob = await TestClient.open(port, { who: "bob" });
+    await ann.hello();
+    await bob.hello();
+    await ann.join(doc);
+    await bob.join(doc);
+    const raw = (ann.ws as unknown as { _socket: Socket })._socket;
+    raw.pause();
+    for (let i = 0; i < 40 && service.stats.connections > 1; i += 1) {
+      bob.send({ t: "ops", doc, base: i, cid: `b${i}`, ops: [taskPatch("t1", { title: `T${i}` })] });
+      await bob.next("ops", (frame) => frame.cid === `b${i}`);
+      ann.send({ t: "join", doc });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    }
+    await until(() => service.stats.connections === 1);
+    raw.resume();
+    await until(() => ann.closed);
   });
 
   it("stores only what the plan schema keeps, and refuses names that reach a prototype", async () => {

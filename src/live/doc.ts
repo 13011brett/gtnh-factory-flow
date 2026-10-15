@@ -141,8 +141,7 @@ export class LiveDoc {
     if (!this.cached) {
       const plan: LivePlan = { ...this.top };
       for (const [c, shelf] of this.shelves) {
-        plan[c] =
-          shelf.holes === 0 ? shelf.things.slice() : shelf.things.filter((t) => t !== HOLE);
+        plan[c] = shelf.holes === 0 ? shelf.things.slice() : shelf.things.filter((t) => t !== HOLE);
       }
       this.cached = plan;
     }
@@ -196,7 +195,14 @@ export class LiveDoc {
           let staged = things.get(key);
           if (!staged) {
             const before = this.find(op.c, op.id);
-            staged = { c: op.c, id: op.id, before, after: before, replaced: true, fields: new Set() };
+            staged = {
+              c: op.c,
+              id: op.id,
+              before,
+              after: before,
+              replaced: true,
+              fields: new Set(),
+            };
             things.set(key, staged);
           }
           // Shares the op's values: nothing staged is ever written to.
@@ -307,7 +313,10 @@ export class LiveDoc {
       }
     }
     for (const shelf of this.shelves.values()) {
-      if (reindexNeeded?.has(shelf) || (shelf.holes > 64 && shelf.holes * 2 > shelf.things.length)) {
+      if (
+        reindexNeeded?.has(shelf) ||
+        (shelf.holes > 64 && shelf.holes * 2 > shelf.things.length)
+      ) {
         shelf.things = shelf.things.filter((thing) => thing !== HOLE);
         shelf.holes = 0;
         reindex(shelf);

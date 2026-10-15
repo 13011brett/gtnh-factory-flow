@@ -46,6 +46,10 @@ export const SERVICE_LIMITS = {
    */
   editMsPerSecond: 250,
   editMsBurst: 1000,
+  /** A socket with more than this waiting to be sent is reading too slowly: dropped. */
+  bufferedBytes: 8 * 1024 * 1024,
+  /** A connection already in a plan gets its snapshot again at most this often (and only when it moved on). */
+  resnapshotMs: 1000,
 };
 
 export interface LiveServiceOptions {
@@ -129,6 +133,8 @@ interface Connection extends RoomPeer {
   presenceAt: number;
   presencePending: Map<string, ServerFrame>;
   presenceTimer?: ReturnType<typeof setTimeout>;
+  /** The last snapshot sent per plan: its seq and when. */
+  snapshots: Map<string, { seq: number; at: number }>;
 }
 
 function isFiniteNumber(value: unknown): value is number {
@@ -182,9 +188,12 @@ export class LiveService {
           res.end(JSON.stringify({ error: "Live service error." }));
         });
     });
+    // A frame up to twice the batch limit is read and refused by name (its
+    // cid, so the client drops that batch); a bigger one closes the socket
+    // before it is ever buffered whole.
     this.wss = new WebSocketServer({
       noServer: true,
-      maxPayload: Math.max(this.limits.batchBytes * 2, 1024 * 1024),
+      maxPayload: this.limits.batchBytes * 2,
       perMessageDeflate: false,
     });
     this.server.on("upgrade", (req, socket, head) => void this.handleUpgrade(req, socket, head));
@@ -411,13 +420,22 @@ export class LiveService {
       joins: new RateWindow(JOINS_PER_SECOND),
       presenceAt: 0,
       presencePending: new Map(),
+      snapshots: new Map(),
       forget: (doc) => {
         conn.rooms.delete(doc);
         conn.presencePending.delete(doc);
+        conn.snapshots.delete(doc);
       },
-      send: (frame) => {
-        if (ws.readyState === WebSocket.OPEN) {
-          ws.send(JSON.stringify(frame));
+      send: (frame) => conn.sendText(JSON.stringify(frame)),
+      sendText: (text) => {
+        if (ws.readyState !== WebSocket.OPEN) {
+          return;
+        }
+        ws.send(text);
+        if (ws.bufferedAmount > this.limits.bufferedBytes) {
+          // Not reading what it is sent: everything waiting would sit in memory.
+          this.log(`connection ${conn.connId}: over ${this.limits.bufferedBytes} bytes unsent, dropped`);
+          ws.terminate();
         }
       },
     };
@@ -470,7 +488,26 @@ export class LiveService {
       this.error(conn, "bad_op", "Frames are JSON text.");
       return;
     }
-    const text = Array.isArray(data) ? Buffer.concat(data).toString("utf8") : data.toString("utf8");
+    const bytes = Array.isArray(data)
+      ? data.reduce((sum, chunk) => sum + chunk.byteLength, 0)
+      : data.byteLength;
+    const text = Array.isArray(data)
+      ? Buffer.concat(data).toString("utf8")
+      : Buffer.from(data as ArrayBuffer).toString("utf8");
+    // Sized before it is parsed: only a batch may be big, and a big frame
+    // counts as a batch for the rate before any work is done on it.
+    const big = bytes > this.limits.frameBytes;
+    if (big) {
+      const named = peekNames(text);
+      if (bytes > this.limits.batchBytes) {
+        this.error(conn, "too_big", "That frame is too big.", named);
+        return;
+      }
+      if (!conn.batches.take()) {
+        this.error(conn, "rate", "Too many edits a second.", named);
+        return;
+      }
+    }
     let frame: Record<string, unknown>;
     try {
       frame = JSON.parse(text) as Record<string, unknown>;
@@ -484,11 +521,7 @@ export class LiveService {
     }
     const doc = typeof frame.doc === "string" ? frame.doc : undefined;
     const cid = typeof frame.cid === "string" ? frame.cid.slice(0, 100) : undefined;
-    if (
-      frame.t === "ops"
-        ? text.length > this.limits.batchBytes
-        : text.length > this.limits.frameBytes
-    ) {
+    if (big && frame.t !== "ops") {
       this.error(conn, "too_big", "That frame is too big.", { doc, cid });
       return;
     }
@@ -505,7 +538,7 @@ export class LiveService {
       case "leave":
         return this.onLeave(conn, doc);
       case "ops":
-        return this.onOps(conn, frame, doc, cid);
+        return this.onOps(conn, frame, doc, cid, big);
       case "presence":
         return this.onPresence(conn, frame, doc);
       case "ping":
@@ -587,7 +620,27 @@ export class LiveService {
       this.error(conn, "rate", "Too many joins a second.", { doc });
       return;
     }
-    if (!conn.rooms.has(doc) && conn.rooms.size >= this.limits.roomsPerConnection) {
+    const current = conn.rooms.get(doc);
+    if (current) {
+      // Already in it: a client that missed batches asks again. A snapshot
+      // only when the plan moved on since the last one, at most once a
+      // `resnapshotMs`; otherwise nothing, as it already has everything.
+      await current.enqueue(() => {
+        const last = conn.snapshots.get(doc);
+        if (
+          !current.closed &&
+          current.peers.has(conn) &&
+          (!last ||
+            (last.seq !== current.seq && Date.now() - last.at >= this.limits.resnapshotMs))
+        ) {
+          const role = conn.userId === current.ownerId ? "owner" : "editor";
+          conn.snapshots.set(doc, { seq: current.seq, at: Date.now() });
+          conn.sendText(current.snapshotText(role));
+        }
+      });
+      return;
+    }
+    if (conn.rooms.size >= this.limits.roomsPerConnection) {
       this.error(conn, "rate", "Too many plans open at once.", { doc });
       return;
     }
@@ -620,16 +673,8 @@ export class LiveService {
         }
         room.peers.add(conn);
         conn.rooms.set(doc, room);
-        conn.send({
-          t: "snapshot",
-          doc,
-          seq: room.seq,
-          plan: room.plan,
-          role,
-          members: room.members,
-          present: room.present,
-          owner: { id: room.ownerId, username: room.ownerName },
-        });
+        conn.snapshots.set(doc, { seq: room.seq, at: Date.now() });
+        conn.sendText(room.snapshotText(role));
         room.broadcast({ t: "present", doc, present: room.present }, conn);
         return true;
       });
@@ -649,6 +694,7 @@ export class LiveService {
     }
     conn.rooms.delete(doc);
     conn.presencePending.delete(doc);
+    conn.snapshots.delete(doc);
     await room.enqueue(() => room.leave(conn));
   }
 
@@ -657,6 +703,7 @@ export class LiveService {
     frame: Record<string, unknown>,
     rawDoc: string | undefined,
     cid: string | undefined,
+    rated: boolean,
   ): Promise<void> {
     const key = parseDocKey(rawDoc);
     const doc = key ? docKey(key.ownerId, key.designId) : rawDoc;
@@ -669,7 +716,7 @@ export class LiveService {
       this.error(conn, "bad_op", "A batch needs a cid.", { doc });
       return;
     }
-    if (!conn.batches.take()) {
+    if (!rated && !conn.batches.take()) {
       this.error(conn, "rate", "Too many edits a second.", { doc, cid });
       return;
     }
@@ -793,6 +840,39 @@ export class LiveService {
       this.flushPresence(conn);
     }
   }
+}
+
+/**
+ * The doc and cid of a frame too big to parse, read off its first and last
+ * kilobyte (clients put them before or after the ops), so the refusal still
+ * names the batch and its sender can drop it.
+ */
+function peekNames(text: string): { doc?: string; cid?: string } {
+  const ends = [text.slice(0, 1024), text.slice(-1024)];
+  const find = (name: string): string | undefined => {
+    const pattern = new RegExp(String.raw`"${name}"\s*:\s*"((?:[^"\\]|\\.){1,200})"`);
+    for (const part of ends) {
+      const match = pattern.exec(part);
+      if (match) {
+        try {
+          return (JSON.parse(`"${match[1]}"`) as string).slice(0, 100);
+        } catch {
+          return undefined;
+        }
+      }
+    }
+    return undefined;
+  };
+  const named: { doc?: string; cid?: string } = {};
+  const doc = find("doc");
+  const cid = find("cid");
+  if (doc) {
+    named.doc = doc;
+  }
+  if (cid) {
+    named.cid = cid;
+  }
+  return named;
 }
 
 async function readJson(req: IncomingMessage, maxBytes = 256 * 1024): Promise<unknown> {

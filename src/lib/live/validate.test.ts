@@ -57,7 +57,9 @@ describe("live batch checks", () => {
       /^tasks t1: title/,
     );
     expect(
-      check([{ o: "put", c: "tasks", id: "t9", v: { id: "t9", title: "T", status: "x", order: "a" } }]),
+      check([
+        { o: "put", c: "tasks", id: "t9", v: { id: "t9", title: "T", status: "x", order: "a" } },
+      ]),
     ).toMatch(/^tasks t9: status/);
   });
 
@@ -120,9 +122,9 @@ describe("live batch checks", () => {
   });
 
   it("check a thing whose schema checks it whole as a whole", () => {
-    expect(
-      check([{ o: "patch", c: "fuelProfiles", id: "f1", f: {}, d: ["euPerLiter"] }]),
-    ).toMatch(/^fuelProfiles f1: euPerLiter/);
+    expect(check([{ o: "patch", c: "fuelProfiles", id: "f1", f: {}, d: ["euPerLiter"] }])).toMatch(
+      /^fuelProfiles f1: euPerLiter/,
+    );
   });
 
   it("measure what the batch changes, as the plan's JSON grows", () => {
@@ -131,7 +133,14 @@ describe("live batch checks", () => {
       [{ o: "patch", c: "tasks", id: "t1", f: { text: "a longer text" } }],
       [{ o: "patch", c: "tasks", id: "t1", f: { title: "T" } }],
       [{ o: "del", c: "tasks", id: "t1" }],
-      [{ o: "put", c: "taskItems", id: "i1", v: { id: "i1", taskId: "t1", text: "Do", done: false, order: "a0" } }],
+      [
+        {
+          o: "put",
+          c: "taskItems",
+          id: "i1",
+          v: { id: "i1", taskId: "t1", text: "Do", done: false, order: "a0" },
+        },
+      ],
       [{ o: "meta", f: { notes: "hello" } }],
     ];
     for (const ops of batches) {

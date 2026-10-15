@@ -81,13 +81,19 @@ vi.mock("@/lib/live/live-pending-store", () => ({
 
 import { createEmptyProject } from "@/examples";
 import { applyOps, type LiveOp, type LivePlan, type LiveThing } from "@/lib/live/ops";
-import type { ServerFrame } from "@/lib/live/protocol";
+import { LIVE_LIMITS, type ServerFrame } from "@/lib/live/protocol";
 import type { FactoryAnnotation, FactoryProject } from "@/lib/model/types";
 import { useCommunityAuthStore } from "./community-auth-store";
 import { useDesignStore } from "./design-store";
 import { useFactoryStore } from "./factory-store";
 import { liveUndoHandler } from "./live-edit-gate";
-import { startLiveSessions, useLiveSession, type LiveSocketLike } from "./live-session";
+import {
+  chunkOps,
+  startLiveSessions,
+  useLiveSession,
+  utf8Length,
+  type LiveSocketLike,
+} from "./live-session";
 
 const ANN = "11111111-1111-4111-8111-111111111111";
 const BOB = "22222222-2222-4222-8222-222222222222";
@@ -437,6 +443,26 @@ describe("live editing in the store", () => {
     expect(annotations()[0]!.text).toBe("one");
     expect(useLiveSession.getState().pending).toBe(0);
     expect(useLiveSession.getState().notice?.text).toBe("An edit was not saved: No.");
+  });
+
+  it("keeps an edit too big to send off the wire, and sizes batches in bytes", async () => {
+    await openLiveDesign(planWith(annotation("n1", "one")));
+    // Over the service's batch limit in UTF-8 bytes, though not in characters.
+    const huge = "é".repeat(Math.ceil(LIVE_LIMITS.batchBytes / 2) + 10);
+    expect(huge.length).toBeLessThan(LIVE_LIMITS.batchBytes);
+
+    useFactoryStore.getState().updateAnnotation("n1", { text: huge });
+    await settle();
+
+    expect(service.sent("ops")).toHaveLength(0);
+    expect(annotations()[0]!.text).toBe("one");
+    expect(useLiveSession.getState().notice?.text).toBe(
+      "An edit was not saved: it is too big to send.",
+    );
+    const op = (text: string): LiveOp => ({ o: "meta", f: { notes: text } });
+    expect(utf8Length("aé€😀")).toBe(1 + 2 + 3 + 4);
+    expect(chunkOps([op("€".repeat(40)), op("€".repeat(40))], 200)).toHaveLength(2);
+    expect(chunkOps([op("e".repeat(40)), op("e".repeat(40))], 200)).toHaveLength(1);
   });
 
   it("closes a shared plan's copy when its owner stops sharing it", async () => {

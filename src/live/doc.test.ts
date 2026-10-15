@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { applyOps, jsonEqual, readOps, type LiveCollection, type LiveOp, type LivePlan } from "@/lib/live/ops";
+import {
+  applyOps,
+  jsonEqual,
+  readOps,
+  type LiveCollection,
+  type LiveOp,
+  type LivePlan,
+} from "@/lib/live/ops";
 import { LIVE_LIMITS } from "@/lib/live/protocol";
 import { PROJECT_SCHEMA_VERSION } from "@/lib/model/types";
 import { prepareBatch } from "./batch";
@@ -43,12 +50,18 @@ function randomOps(next: () => number, count: number): LiveOp[] {
       ops.push({ o: "put", c, id, v: { ...fields(), id } });
     } else if (roll < 0.65) {
       const d = FIELDS.filter(() => next() < 0.2);
-      ops.push(d.length > 0 ? { o: "patch", c, id, f: fields(), d } : { o: "patch", c, id, f: fields() });
+      ops.push(
+        d.length > 0 ? { o: "patch", c, id, f: fields(), d } : { o: "patch", c, id, f: fields() },
+      );
     } else if (roll < 0.85) {
       ops.push({ o: "del", c, id });
     } else {
       const d = ["notes", "extra"].filter(() => next() < 0.3);
-      ops.push({ o: "meta", f: next() < 0.5 ? { notes: `n${i}` } : { extra: i }, ...(d.length ? { d } : {}) });
+      ops.push({
+        o: "meta",
+        f: next() < 0.5 ? { notes: `n${i}` } : { extra: i },
+        ...(d.length ? { d } : {}),
+      });
     }
   }
   return ops;
@@ -72,7 +85,9 @@ describe("the room's plan", () => {
         const staged = doc.stage(ops);
         const after = applyOps(expected, ops);
         for (const thing of staged.things) {
-          const list = Array.isArray(after[thing.c]) ? (after[thing.c] as Array<{ id?: unknown }>) : [];
+          const list = Array.isArray(after[thing.c])
+            ? (after[thing.c] as Array<{ id?: unknown }>)
+            : [];
           const holders = list.filter((item) => item?.id === thing.id);
           if (thing.after) {
             expect(holders.some((item) => jsonEqual(item, thing.after))).toBe(true);

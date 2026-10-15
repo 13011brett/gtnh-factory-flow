@@ -75,6 +75,7 @@ const peer: RoomPeer = {
   username: "ann",
   client: "web",
   send: (frame: ServerFrame) => void frame,
+  sendText: (text: string) => void text,
   forget: () => undefined,
 };
 

@@ -121,9 +121,29 @@ export interface LiveSessionOptions {
 const OPEN = 1;
 /** Batches sent a second: under the service's 30, so a burst waits rather than being refused. */
 const BATCHES_PER_SECOND = 25;
-/** A batch's ops as JSON, kept well under the service's 256 KB frame. */
-const BATCH_CHARS = 200_000;
+/** A batch's ops as JSON in UTF-8 bytes, kept well under the service's 256 KB frame. */
+const BATCH_BYTES = 200_000;
 const BATCH_OPS = Math.min(4000, LIVE_LIMITS.opsPerBatch);
+
+/** A string's length in UTF-8 bytes, as the service counts a frame. */
+export function utf8Length(text: string): number {
+  let bytes = 0;
+  for (let i = 0; i < text.length; i += 1) {
+    const code = text.charCodeAt(i);
+    if (code < 0x80) {
+      bytes += 1;
+    } else if (code < 0x800) {
+      bytes += 2;
+    } else if (code >= 0xd800 && code <= 0xdbff && i + 1 < text.length) {
+      // A surrogate pair: one four-byte character.
+      bytes += 4;
+      i += 1;
+    } else {
+      bytes += 3;
+    }
+  }
+  return bytes;
+}
 /** Presence a second while the pointer moves on the board. */
 const PRESENCE_INTERVAL_MS = 100;
 const OPEN_MARK_MS = 15_000;
@@ -174,13 +194,13 @@ function writeCachedMe(me: { id: string; username: string; color: string }): voi
 }
 
 /** Ops in batches the service takes: each under the size and count limits. */
-export function chunkOps(ops: LiveOp[], maxChars = BATCH_CHARS, maxOps = BATCH_OPS): LiveOp[][] {
+export function chunkOps(ops: LiveOp[], maxBytes = BATCH_BYTES, maxOps = BATCH_OPS): LiveOp[][] {
   const chunks: LiveOp[][] = [];
   let current: LiveOp[] = [];
   let size = 0;
   for (const op of ops) {
-    const opSize = JSON.stringify(op).length + 1;
-    if (current.length > 0 && (size + opSize > maxChars || current.length >= maxOps)) {
+    const opSize = utf8Length(JSON.stringify(op)) + 1;
+    if (current.length > 0 && (size + opSize > maxBytes || current.length >= maxOps)) {
       chunks.push(current);
       current = [];
       size = 0;
@@ -825,7 +845,22 @@ export class LiveSession {
       // It waits in pending; the next snapshot sends it.
       return;
     }
-    this.outbox.push(JSON.stringify(room.engine.frame(room.doc, batch)));
+    const text = JSON.stringify(room.engine.frame(room.doc, batch));
+    if (utf8Length(text) > LIVE_LIMITS.batchBytes) {
+      // One op alone over the limit: the service would refuse it (or drop the
+      // socket, and it would go again on every reconnect). It never happened.
+      const before = room.engine.view;
+      if (room.engine.refuse(batch.cid)) {
+        this.land(before, room.engine.view);
+        this.schedulePersist();
+        useLiveSession.setState({
+          notice: noticeOf("An edit was not saved: it is too big to send."),
+        });
+        this.publish();
+      }
+      return;
+    }
+    this.outbox.push(text);
     this.pump();
   }
 

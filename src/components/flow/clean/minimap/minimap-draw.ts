@@ -181,3 +181,27 @@ export function fitZoomIndex(
   });
   return best;
 }
+
+/** Room left round a fitted plan, map px. */
+export const FIT_MARGIN = 6;
+
+/**
+ * The whole plan fitted in the map: its middle at the map's middle, as large as it fits with a small margin
+ * (inside the circle for a round map), never closer than the finest step. Undefined for an empty plan.
+ */
+export function fitView(
+  bounds: { x0: number; y0: number; x1: number; y1: number } | undefined,
+  size: number,
+  circle: boolean,
+  maxZoom = 1,
+): { cx: number; cy: number; zoom: number } | undefined {
+  if (!bounds) return undefined;
+  const room = (circle ? size / Math.SQRT2 : size) - FIT_MARGIN * 2;
+  const w = Math.max(bounds.x1 - bounds.x0, 1);
+  const h = Math.max(bounds.y1 - bounds.y0, 1);
+  return {
+    cx: (bounds.x0 + bounds.x1) / 2,
+    cy: (bounds.y0 + bounds.y1) / 2,
+    zoom: Math.min(maxZoom, Math.max(1e-4, Math.min(room / w, room / h))),
+  };
+}

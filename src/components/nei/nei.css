@@ -41,46 +41,42 @@
   white-space: nowrap;
 }
 
-/* A vanilla button: black outline, light top-left edge, shaded bottom-right, the stone-grey face. */
+/*
+ * The column's keys (show and sort, the page keys) wear the overview's key, as the fold key beside them does
+ * (rail.css .rail-key-fold): a 20 px dark face, a 1 px #111317 outline, a light top-left and dark bottom-right inner
+ * edge, the glyph in the rail's ink.
+ */
 .nei-btn {
   display: inline-flex;
   align-items: center;
   justify-content: center;
   flex: none;
-  width: var(--nei-key);
-  height: var(--nei-key);
+  box-sizing: border-box;
+  width: 20px;
+  height: 20px;
   padding: 0;
-  background: #6f6f6f;
-  border: 2px solid #000000;
+  background: #26282d;
+  border: 1px solid #111317;
+  border-radius: 0;
   box-shadow:
-    inset 2px 2px 0 #aaaaaa,
-    inset -2px -4px 0 #555455;
-  color: #e0e0e0;
-  text-shadow: 2px 2px 0 #383838;
+    inset 1px 1px 0 #4a4c54,
+    inset -1px -1px 0 #17191d;
+  color: #e8e9ee;
   font-family: var(--font-minecraft), monospace;
-  font-size: 14px;
+  font-size: 10px;
   line-height: 14px;
   cursor: pointer;
   user-select: none;
 }
 .nei-btn:hover:not(:disabled) {
-  /* The hovered button texture: a blue-lavender face, its label yellow. */
-  background: #7e88bf;
-  box-shadow:
-    inset 2px 2px 0 #bcc7ff,
-    inset -2px -4px 0 #5e6799;
-  color: #ffffa0;
+  background: #2d2f35;
 }
 .nei-btn:disabled {
-  /* The disabled texture: flat dark face, grey label, no edges. */
-  background: #2c2c2c;
-  box-shadow: none;
-  color: #a0a0a0;
-  text-shadow: none;
+  color: #8a8d96;
   cursor: default;
 }
 .nei-btn[data-on] {
-  color: #ffff55;
+  color: #ffd257;
 }
 .nei-btn svg {
   display: block;
@@ -89,7 +85,9 @@
 /* The slot grid: the item art alone, no names, no frames, centred in the column as NEI centres its grid. */
 .nei-grid {
   display: grid;
-  grid-auto-rows: var(--nei-slot);
+  /* --nei-cell: the slot widened to fill the column evenly (ResourceIndexPane neiGridFit), 6 px in from each side. */
+  grid-auto-rows: var(--nei-cell, var(--nei-slot));
+  padding: 0 6px;
   justify-content: center;
   align-content: start;
   min-height: 0;
@@ -100,8 +98,8 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: var(--nei-slot);
-  height: var(--nei-slot);
+  width: var(--nei-cell, var(--nei-slot));
+  height: var(--nei-cell, var(--nei-slot));
   padding: 0;
   margin: 0;
   background: transparent;
@@ -131,7 +129,7 @@
 .nei-skel {
   width: var(--nei-art);
   height: var(--nei-art);
-  margin: 2px;
+  place-self: center;
   background: rgba(255, 255, 255, 0.04);
 }
 .nei-empty {
@@ -218,6 +216,9 @@
   z-index: 45;
   display: flex;
   justify-content: center;
+  /* Set by the minimap in a bottom corner: the field moves aside rather than cover it. */
+  padding-left: var(--nei-dock-pad-left, 0px);
+  padding-right: var(--nei-dock-pad-right, 0px);
   pointer-events: none;
 }
 .nei-dock > * {

@@ -1,8 +1,8 @@
 import type { useStoreApi } from "@xyflow/react";
 import { useFactoryStore } from "@/store/factory-store";
-import { drawMinimap, type MapView } from "./minimap-draw";
+import { drawMinimap, fitView, type MapView } from "./minimap-draw";
 import { readMinimapRoutes } from "./minimap-feed";
-import { getMinimap, MINIMAP_SIZES, MINIMAP_ZOOMS } from "./minimap-settings";
+import { getMinimap, MINIMAP_SIZES, MINIMAP_ZOOMS, noteFittedZoom } from "./minimap-settings";
 import { buildScene, type DrawerKind, type Scene, type SceneNode, type TileExtras } from "./minimap-scene";
 import { publishMinimapScene } from "./scene-store";
 
@@ -54,14 +54,60 @@ export function readExtras(root: Element | null, id: string, type: string | unde
   return undefined;
 }
 
+type Point = { x: number; y: number };
+
+/**
+ * Where the map looks and how far out. It never follows the board's camera: fitted (the default) it shows the whole
+ * plan and only the view frame moves; zoomed by hand it holds its centre (the plan's middle at first) and moves only
+ * when the board's view goes off the map, to bring it back. "Centre on the card you select" and a press carrying the
+ * board come first.
+ */
+export function mapCamera(input: {
+  fit: boolean;
+  /** The hand zoom. */
+  zoom: number;
+  side: number;
+  circle: boolean;
+  bounds: { x0: number; y0: number; x1: number; y1: number } | undefined;
+  viewRect: { x: number; y: number; w: number; h: number };
+  anchor: Point | undefined;
+  frozen: Point | undefined;
+  selected: Point | undefined;
+}): { cx: number; cy: number; zoom: number; anchor: Point | undefined; fitted: boolean } {
+  const view = { x: input.viewRect.x + input.viewRect.w / 2, y: input.viewRect.y + input.viewRect.h / 2 };
+  const fitted = input.fit ? fitView(input.bounds, input.side, input.circle) : undefined;
+  if (fitted) {
+    const at = input.selected ?? { x: fitted.cx, y: fitted.cy };
+    return { cx: at.x, cy: at.y, zoom: fitted.zoom, anchor: undefined, fitted: true };
+  }
+  const zoom = input.zoom;
+  if (input.frozen) return { cx: input.frozen.x, cy: input.frozen.y, zoom, anchor: input.anchor, fitted: false };
+  if (input.selected) return { cx: input.selected.x, cy: input.selected.y, zoom, anchor: input.anchor, fitted: false };
+  const b = input.bounds;
+  let anchor = input.anchor ?? (b ? { x: (b.x0 + b.x1) / 2, y: (b.y0 + b.y1) / 2 } : view);
+  const reach = (input.side / 2 - 4) / zoom;
+  if (Math.abs(view.x - anchor.x) > reach || Math.abs(view.y - anchor.y) > reach) anchor = view;
+  return { cx: anchor.x, cy: anchor.y, zoom, anchor, fitted: false };
+}
+
 /** Last frame costs, for checking the map stays cheap (window.__minimapStats in development). */
-export const minimapStats = { rebuildMs: 0, drawMs: 0, tiles: 0, rebuilds: 0, draws: 0 };
+export const minimapStats: {
+  rebuildMs: number;
+  drawMs: number;
+  tiles: number;
+  rebuilds: number;
+  draws: number;
+  /** Where the map last looked (board px at its middle, map px per board px). */
+  view?: { cx: number; cy: number; zoom: number };
+} = { rebuildMs: 0, drawMs: 0, tiles: 0, rebuilds: 0, draws: 0 };
 
 export class MinimapEngine {
   scene: Scene | undefined;
   view: MapView | undefined;
-  /** While a press carries the board, the map holds still on this point instead of following the board. */
+  /** While a press carries the board, the map holds still on this point. */
   frozen: { x: number; y: number } | undefined;
+  /** Where a hand-zoomed map is centred; it moves only when the board's view leaves the map. */
+  private anchor: { x: number; y: number } | undefined;
   private raf = 0;
   private dirty = { scene: true, draw: true };
   private extras = new Map<string, { data: unknown; extras: TileExtras | undefined }>();
@@ -181,21 +227,25 @@ export class MinimapEngine {
     const viewW = state.width / tz;
     const viewH = state.height / tz;
     const viewRect = { x: -tx / tz, y: -ty / tz, w: viewW, h: viewH };
-    let cx = viewRect.x + viewW / 2;
-    let cy = viewRect.y + viewH / 2;
     const cfg = getMinimap();
-    if (this.frozen) {
-      cx = this.frozen.x;
-      cy = this.frozen.y;
-    } else if (cfg.follow) {
-      const sel = this.scene?.tiles.find((t) => t.selected);
-      if (sel) {
-        cx = sel.x + sel.w / 2;
-        cy = sel.y + sel.h / 2;
-      }
-    }
-    const dpr = window.devicePixelRatio || 1;
     const side = MINIMAP_SIZES[cfg.size];
+    const circle = cfg.shape === "circle";
+    const sel = cfg.follow ? this.scene?.tiles.find((t) => t.selected) : undefined;
+    const camera = mapCamera({
+      fit: cfg.fit,
+      zoom: MINIMAP_ZOOMS[cfg.zoom] ?? MINIMAP_ZOOMS[2],
+      side,
+      circle,
+      bounds: this.scene?.bounds,
+      viewRect,
+      anchor: this.anchor,
+      frozen: this.frozen,
+      selected: sel ? { x: sel.x + sel.w / 2, y: sel.y + sel.h / 2 } : undefined,
+    });
+    this.anchor = camera.anchor;
+    if (cfg.fit && camera.fitted) noteFittedZoom(camera.zoom);
+    const { cx, cy } = camera;
+    const dpr = window.devicePixelRatio || 1;
     const px = Math.round(side * dpr);
     if (canvas.width !== px) {
       canvas.width = px;
@@ -207,9 +257,9 @@ export class MinimapEngine {
     const view: MapView = {
       cx,
       cy,
-      zoom: MINIMAP_ZOOMS[cfg.zoom] ?? MINIMAP_ZOOMS[2],
+      zoom: camera.zoom,
       size: side,
-      circle: cfg.shape === "circle",
+      circle,
     };
     drawMinimap(ctx, this.scene, view, {
       font: (this.font ??= getComputedStyle(canvas).fontFamily || "monospace"),
@@ -231,6 +281,7 @@ export class MinimapEngine {
       },
     });
     this.view = view;
+    minimapStats.view = { cx: view.cx, cy: view.cy, zoom: view.zoom };
     minimapStats.drawMs = performance.now() - drawStart;
     minimapStats.draws++;
   }

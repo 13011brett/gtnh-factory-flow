@@ -1,13 +1,18 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from "vitest";
-import { fitZoomIndex, toBoard, toMap, tileVisible, drawMinimap } from "./minimap-draw";
+import { fitView, fitZoomIndex, toBoard, toMap, tileVisible, drawMinimap } from "./minimap-draw";
+import { mapCamera } from "./minimap-engine";
+import { dockPadding } from "./dock-clearance";
 import {
   DEFAULT_MINIMAP,
   MINIMAP_KEY,
   MINIMAP_SIZES,
   MINIMAP_ZOOMS,
   getMinimap,
+  nearestZoomIndex,
   normalizeMinimap,
+  noteFittedZoom,
+  upgradeMinimap,
   setMinimap,
   stepMinimapZoom,
 } from "./minimap-settings";
@@ -25,8 +30,34 @@ describe("minimap settings", () => {
     expect(normalizeMinimap({ size: "gigantic", shape: 3, corner: "middle", zoom: 99, fade: 1000 })).toEqual({
       ...DEFAULT_MINIMAP,
       zoom: MINIMAP_ZOOMS.length - 1,
-      fade: 80,
     });
+  });
+
+  it("opens small and fitted to the whole plan, with no see-through of its own", () => {
+    expect(DEFAULT_MINIMAP.size).toBe("small");
+    expect(DEFAULT_MINIMAP.fit).toBe(true);
+    expect("fade" in DEFAULT_MINIMAP).toBe(false);
+  });
+
+  it("puts settings saved before the fitted map back to small and fitted, keeping the rest", () => {
+    const old = { show: true, size: "medium", shape: "circle", corner: "top-left", zoom: 5, follow: true, fade: 30 };
+    expect(normalizeMinimap(upgradeMinimap(old))).toEqual({
+      ...DEFAULT_MINIMAP,
+      shape: "circle",
+      corner: "top-left",
+      follow: true,
+    });
+    // Once saved with fit, a chosen size and zoom stay.
+    const chosen = { ...DEFAULT_MINIMAP, size: "large", fit: false, zoom: 6 };
+    expect(normalizeMinimap(upgradeMinimap(chosen))).toEqual(chosen);
+  });
+
+  it("steps a hand zoom on from the fitted zoom on screen, leaving Fit", () => {
+    setMinimap({ fit: true, zoom: 0 });
+    noteFittedZoom(0.2);
+    stepMinimapZoom(1);
+    expect(getMinimap()).toMatchObject({ fit: false, zoom: nearestZoomIndex(0.2) + 1 });
+    expect(MINIMAP_ZOOMS[nearestZoomIndex(0.2)]).toBe(0.18);
   });
 
   it("keeps the mod's sizes and ten zoom steps", () => {
@@ -36,9 +67,9 @@ describe("minimap settings", () => {
   });
 
   it("writes to the browser and steps the zoom within its ends", () => {
-    setMinimap({ shape: "circle", fade: 33 });
-    expect(JSON.parse(window.localStorage.getItem(MINIMAP_KEY)!)).toMatchObject({ shape: "circle", fade: 30 });
-    setMinimap({ zoom: 0 });
+    setMinimap({ shape: "circle" });
+    expect(JSON.parse(window.localStorage.getItem(MINIMAP_KEY)!)).toMatchObject({ shape: "circle", fit: true });
+    setMinimap({ zoom: 0, fit: false });
     stepMinimapZoom(-1);
     expect(getMinimap().zoom).toBe(0);
     setMinimap({ zoom: 9 });
@@ -159,5 +190,59 @@ describe("minimap drawing", () => {
     expect(calls.indexOf("stroke")).toBeLessThan(calls.indexOf("fillRect"));
     // One visible card: its two tile rects and its count pill's backing, nothing for the card far away.
     expect(calls.filter((c) => c === "fillRect")).toHaveLength(3);
+  });
+});
+
+describe("minimap camera", () => {
+  const bounds = { x0: 0, y0: 0, x1: 2000, y1: 1000 };
+  const base = { fit: true, zoom: 0.09, side: 130, circle: false, bounds, anchor: undefined, frozen: undefined, selected: undefined };
+
+  it("fits the whole plan, centred, and holds still however the board pans or zooms", () => {
+    const a = mapCamera({ ...base, viewRect: { x: 0, y: 0, w: 800, h: 600 } });
+    const b = mapCamera({ ...base, viewRect: { x: 5000, y: -3000, w: 200, h: 150 } });
+    expect(a).toEqual(b);
+    expect(a.cx).toBe(1000);
+    expect(a.cy).toBe(500);
+    expect(a.zoom).toBeCloseTo((130 - 12) / 2000);
+    // Every corner of the plan lands inside the map.
+    const view = { cx: a.cx, cy: a.cy, zoom: a.zoom, size: 130, circle: false };
+    for (const [x, y] of [[0, 0], [2000, 1000]]) {
+      const m = toMap(view, x, y);
+      expect(m.x).toBeGreaterThanOrEqual(0);
+      expect(m.x).toBeLessThanOrEqual(130);
+      expect(m.y).toBeGreaterThanOrEqual(0);
+      expect(m.y).toBeLessThanOrEqual(130);
+    }
+  });
+
+  it("fits a round map inside its circle and never zooms past the finest step", () => {
+    expect(fitView(bounds, 130, true)!.zoom).toBeCloseTo((130 / Math.SQRT2 - 12) / 2000);
+    expect(fitView({ x0: 0, y0: 0, x1: 10, y1: 10 }, 130, false)!.zoom).toBe(1);
+    expect(fitView(undefined, 130, false)).toBeUndefined();
+  });
+
+  it("zoomed by hand, holds its centre while the view stays on the map and recentres when it leaves", () => {
+    const hand = { ...base, fit: false, zoom: 0.25 };
+    const first = mapCamera({ ...hand, viewRect: { x: 900, y: 400, w: 200, h: 200 } });
+    expect([first.cx, first.cy]).toEqual([1000, 500]);
+    const near = mapCamera({ ...hand, anchor: first.anchor, viewRect: { x: 1000, y: 500, w: 200, h: 200 } });
+    expect([near.cx, near.cy]).toEqual([1000, 500]);
+    const far = mapCamera({ ...hand, anchor: near.anchor, viewRect: { x: 4000, y: 500, w: 200, h: 200 } });
+    expect([far.cx, far.cy]).toEqual([4100, 600]);
+  });
+});
+
+describe("search field beside the map", () => {
+  it("stays centred while it clears the map, and steps aside just enough when it would not", () => {
+    // A 1920 window, field 360 wide (780..1140), map in the bottom right at 1450..1605: clear already.
+    expect(dockPadding({ windowWidth: 1920, fieldWidth: 360, map: { left: 1450, right: 1605 }, corner: "bottom-right" })).toEqual({ left: 0, right: 0 });
+    // A 1100 window: the centred field (370..730) would meet a map at 700.
+    const pad = dockPadding({ windowWidth: 1100, fieldWidth: 360, map: { left: 700, right: 855 }, corner: "bottom-right" });
+    const right = (1100 - pad.right) / 2 + 180;
+    expect(right).toBeLessThanOrEqual(700 - 10 + 0.5);
+    expect(right).toBeGreaterThan(700 - 12);
+    const padL = dockPadding({ windowWidth: 1100, fieldWidth: 360, map: { left: 300, right: 455 }, corner: "bottom-left" });
+    expect((1100 + padL.left) / 2 - 180).toBeGreaterThanOrEqual(455 + 10 - 0.5);
+    expect(dockPadding({ windowWidth: 1100, fieldWidth: 360, map: { left: 700, right: 855 }, corner: "top-right" })).toEqual({ left: 0, right: 0 });
   });
 });

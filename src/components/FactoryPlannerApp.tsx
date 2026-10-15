@@ -47,6 +47,7 @@ import { InspectorPanel } from "./InspectorPanel";
 import { PanelDrawer } from "./PanelDrawer";
 import { usePlanLayout } from "./use-plan-layout";
 import { PlanOverview, usePlanOverviewWidth } from "./PlanOverviewMount";
+import { ColumnStrip } from "./flow/clean/rail/OverviewRail";
 import { INSPECTOR_WIDTH, ITEMS_WIDTH, PANEL_RAIL_WIDTH, workspaceColumns } from "@/lib/workspace-columns";
 import { RecipeBrowser } from "./RecipeBrowser";
 
@@ -568,6 +569,8 @@ function PanelRail({ side, label }: { side: "left" | "right"; label: "Items" | "
   // The flag follows what the column holds, not which side it sits on.
   const open = () =>
     writeWorkspaceView(label === "Items" ? { leftPanelOpen: true } : { rightPanelOpen: true });
+  // The items column folds to the overview's own strip (the owner: both folded columns look and work the same).
+  if (label === "Items") return <ColumnStrip label="ITEMS" open="Open the items" side={side} onOpen={open} />;
 
   // One button, the whole rail: a bare chevron at the top and the name
   // running down it. No box, no tooltip; the rail is the thing you click.

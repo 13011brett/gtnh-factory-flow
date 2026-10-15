@@ -177,17 +177,48 @@ export function OverviewRail({ forceOpen = false }: { forceOpen?: boolean } = {}
 
 function FoldedStrip() {
   return (
+    <ColumnStrip
+      label="OVERVIEW"
+      open="Open the overview"
+      side="left"
+      helpAnchor="overview-rail"
+      onOpen={() => writeRailView({ open: true })}
+    />
+  );
+}
+
+/**
+ * A folded column: the whole strip one key, the arrow at its top pointing the way the column opens, the name running
+ * down it. The overview's and the items column's are this one strip, so they cannot differ.
+ */
+export function ColumnStrip({
+  label,
+  open,
+  side,
+  helpAnchor,
+  onOpen,
+}: {
+  label: string;
+  /** What a click does, for the tooltip and screen readers. */
+  open: string;
+  /** The side of the board the column folds to. */
+  side: "left" | "right";
+  helpAnchor?: string;
+  onOpen: () => void;
+}) {
+  return (
     <div
       className="rail-strip"
       role="button"
       tabIndex={0}
-      aria-label="Open the overview"
-      data-help-anchor="overview-rail"
-      onClick={() => writeRailView({ open: true })}
+      aria-label={open}
+      data-side={side}
+      data-help-anchor={helpAnchor}
+      onClick={onOpen}
       onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") writeRailView({ open: true });
+        if (event.key === "Enter" || event.key === " ") onOpen();
       }}
-      {...tipProps("rail|open", () => ({ title: "Open the overview" }))}
+      {...tipProps(`rail|open|${label}`, () => ({ title: open }))}
     >
       <svg
         viewBox="0 0 16 16"
@@ -200,9 +231,9 @@ function FoldedStrip() {
         strokeLinejoin="round"
         aria-hidden
       >
-        <path d="M6 3l5 5-5 5" />
+        <path d={side === "left" ? "M6 3l5 5-5 5" : "M10 3l-5 5 5 5"} />
       </svg>
-      <span className="rail-strip-label">OVERVIEW</span>
+      <span className="rail-strip-label">{label}</span>
     </div>
   );
 }

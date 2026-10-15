@@ -383,6 +383,20 @@ const RESOURCE_DEFAULT_PAGE_SIZE = 6;
  */
 const NEI_SLOT = 32;
 const NEI_ART = 28;
+/**
+ * The grid fills the column: as many columns as fit at no less than 30 px a slot (the art, 28, and a pixel either
+ * side), each slot then widened to share the column out evenly, inside the pager's 6 px side margins. So the left and
+ * right margins match and no gutter is left nearly a column wide.
+ */
+const NEI_SLOT_MIN = 30;
+const NEI_GRID_PAD = 6;
+
+/** Columns and slot size (css px) for a column `width` wide. Pure, for the tests. */
+export function neiGridFit(width: number): { columns: number; slot: number } {
+  const room = Math.max(0, width - NEI_GRID_PAD * 2);
+  const columns = Math.max(1, Math.floor(room / NEI_SLOT_MIN));
+  return { columns, slot: Math.max(NEI_SLOT_MIN, room / columns) };
+}
 /** One mouse notch is 100 on most platforms, so one notch is one page. */
 const RESOURCE_WHEEL_PAGE_DELTA = 80;
 
@@ -495,8 +509,9 @@ function useResourcePageSize(
 
     // As many whole slots as fit each way, as NEI fills its column.
     const updatePageSize = () => {
-      const nextColumns = Math.max(1, Math.floor(container.clientWidth / NEI_SLOT));
-      const rows = Math.max(1, Math.floor(container.clientHeight / NEI_SLOT));
+      const { columns: nextColumns, slot } = neiGridFit(container.clientWidth);
+      const rows = Math.max(1, Math.floor(container.clientHeight / slot));
+      container.style.setProperty("--nei-cell", `${slot}px`);
       const nextPageSize = nextColumns * rows;
 
       setPageSize((current) => (current === nextPageSize ? current : nextPageSize));
@@ -847,7 +862,7 @@ function ResourceResultSkeleton({
   return (
     <div
       className="nei-grid"
-      style={{ gridTemplateColumns: `repeat(${gridColumns}, ${NEI_SLOT}px)` }}
+      style={{ gridTemplateColumns: `repeat(${gridColumns}, var(--nei-cell, ${NEI_SLOT}px))` }}
       aria-label="Loading resources"
     >
       {Array.from({ length: count }, (_, index) => (
@@ -1064,7 +1079,7 @@ function ResourceResultPage({
     <div
       className="nei-grid"
       style={{
-        gridTemplateColumns: `repeat(${gridColumns}, ${NEI_SLOT}px)`,
+        gridTemplateColumns: `repeat(${gridColumns}, var(--nei-cell, ${NEI_SLOT}px))`,
         opacity: isRefreshing ? 0.6 : undefined,
       }}
       aria-label="Resource results"

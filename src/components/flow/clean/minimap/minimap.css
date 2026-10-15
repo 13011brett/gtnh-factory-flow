@@ -1,6 +1,6 @@
 /*
  * The minimap and its settings. The mod's frame: a backing of #141414 at 69%, a 1 px ring #3C3E45 and an inner
- * ring #1D1F23 (both at 69%) drawn OUTSIDE the backing, side by side, so the see-through stays even.
+ * ring #1D1F23 (both at 69%) drawn OUTSIDE the backing, side by side. No title and no fade of its own.
  * Controls are div role=button (globals.css forces `font: inherit` on buttons); state on data attributes.
  */
 
@@ -33,12 +33,13 @@
   top: 64px;
   right: 14px;
 }
+/* The board's very corner: NEI's search field steps aside for it (dock-clearance.ts), never the map for the field. */
 .mmap[data-corner="bottom-left"] {
-  bottom: 64px;
+  bottom: 14px;
   left: 14px;
 }
 .mmap[data-corner="bottom-right"] {
-  bottom: 64px;
+  bottom: 14px;
   right: 14px;
 }
 
@@ -48,28 +49,6 @@
 }
 .mmap-canvas:active {
   cursor: grabbing;
-}
-
-/* The plan's name, on a 69% black strip: top left of the square, under the circle. */
-.mmap-title {
-  position: absolute;
-  left: 2px;
-  top: 2px;
-  max-width: calc(100% - 28px);
-  padding: 1px 4px;
-  background: rgba(0, 0, 0, 0.69);
-  font-size: 11px;
-  line-height: 14px;
-  color: var(--mm-ink);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  pointer-events: none;
-}
-.mmap-title[data-circle] {
-  top: calc(100% + 4px);
-  left: 50%;
-  transform: translateX(-50%);
 }
 
 .mmap-gear {
@@ -234,4 +213,15 @@
 .mmap-slider {
   width: 130px;
   accent-color: #cfd0d6;
+}
+
+/* Zoom: Fit (the whole plan) or a hand zoom on the slider, which reads faint while Fit is on. */
+.mmap-fit {
+  padding: 2px 7px;
+}
+.mmap-slider-zoom {
+  width: 96px;
+}
+.mmap-slider-zoom[data-fit] {
+  opacity: 0.45;
 }

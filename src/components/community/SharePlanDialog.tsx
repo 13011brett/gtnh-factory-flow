@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, Link2, LoaderCircle, Share2, X } from "lucide-react";
+import { isLiveConfigured } from "@/lib/live/live-config";
 import { useEffect, useMemo, useState } from "react";
 import { normalizeBlueprintTags } from "@/lib/blueprints/types";
 import {
@@ -180,7 +181,8 @@ export function SharePlanDialog({ onClose }: { onClose: () => void }) {
       <div className="flex max-h-[calc(90*var(--ui-vh))] w-full max-w-3xl flex-col overflow-y-auto rounded border border-line-strong bg-surface p-4 shadow-xl">
         <div className="mb-3 flex items-center justify-between">
           <h2 className="flex items-center gap-2 text-base font-semibold">
-            <Share2 className="h-4 w-4" /> Share your setup
+            <Share2 className="h-4 w-4" />{" "}
+            {isLiveConfigured() ? "Publish to the library" : "Share your setup"}
           </h2>
           <button
             type="button"

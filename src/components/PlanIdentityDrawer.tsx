@@ -8,6 +8,7 @@ import {
   LoaderCircle,
   Share2,
   Unlink,
+  Users,
 } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { getCommunityPlan, voteCommunityPlan } from "@/lib/community/client";
@@ -22,6 +23,9 @@ import { ScreenshotButton } from "@/components/export/ScreenshotButton";
 import { CopyPlanButton } from "@/components/export/CopyPlanButton";
 import { EntryIconSlot, IconPicker, iconSuggestionsFromStats } from "@/components/IconPicker";
 import { formatRelativeDate } from "@/components/shelf-cards";
+import { LiveFaces, LiveStatusChip } from "@/components/live/LiveFaces";
+import { PlanShareDialog } from "@/components/live/PlanShareDialog";
+import { isLiveConfigured } from "@/lib/live/live-config";
 
 /**
  * The plan bar: a slim row above the board with the plan's icon, name and
@@ -102,6 +106,11 @@ export function PlanIdentityDrawer() {
   // The unlinked plan's way onto the network, right where its face is. Once
   // linked, the strip carries its own Share in the same rightmost spot.
   const [isSharing, setSharing] = useState(false);
+  // With live plans, Share is inviting people into this plan and posting a
+  // copy to the library is Publish: two keys, never one.
+  const live = isLiveConfigured();
+  const signedIn = useCommunityAuthStore((state) => Boolean(state.user));
+  const [isInviting, setInviting] = useState(false);
 
   return (
     // min-w-0 matters: the board column's grid sizes its one track to its
@@ -131,6 +140,24 @@ export function PlanIdentityDrawer() {
             {(descriptionDraft ?? project.description)?.trim() || "Add description…"}
           </span>
         </button>
+        {live ? (
+          <>
+            <LiveStatusChip />
+            <LiveFaces />
+            <button
+              type="button"
+              data-plan-share
+              onClick={() => setInviting(true)}
+              disabled={!signedIn}
+              title={signedIn ? "Share this plan with people to edit it together" : "Sign in to share"}
+              aria-label="Share this plan"
+              className="plan-summary-action inline-flex h-6 shrink-0 items-center justify-center gap-1.5 rounded border border-line-strong px-2 text-fg hover:bg-surface-raised disabled:opacity-40"
+            >
+              <Users className="h-3 w-3" />
+              <span>Share</span>
+            </button>
+          </>
+        ) : null}
         {linkedPlanId ? (
           <LinkedPostStrip key={linkedPlanId} planId={linkedPlanId} />
         ) : (
@@ -138,18 +165,25 @@ export function PlanIdentityDrawer() {
             type="button"
             onClick={() => setSharing(true)}
             disabled={project.nodes.length === 0}
-            title={project.nodes.length === 0 ? "Share: build something first" : "Share"}
-            aria-label="Share this setup"
+            title={
+              project.nodes.length === 0
+                ? `${live ? "Publish" : "Share"}: build something first`
+                : live
+                  ? "Publish a copy to the library"
+                  : "Share"
+            }
+            aria-label={live ? "Publish to the library" : "Share this setup"}
             className="plan-summary-action inline-flex h-6 shrink-0 items-center justify-center gap-1.5 rounded border border-line-strong px-2 text-fg hover:bg-surface-raised disabled:opacity-40"
           >
             <Share2 className="h-3 w-3" />
-            <span>Share</span>
+            <span>{live ? "Publish" : "Share"}</span>
           </button>
         )}
         <ScreenshotButton />
         <CopyPlanButton />
       </div>
       {isSharing ? <SharePlanDialog onClose={() => setSharing(false)} /> : null}
+      {isInviting ? <PlanShareDialog onClose={() => setInviting(false)} /> : null}
 
       {isOpen ? (
         <div className="plan-summary-details grid gap-2 border-t border-line p-3">
@@ -413,8 +447,8 @@ function LinkedPostStrip({ planId }: { planId: string }) {
       <button
         type="button"
         onClick={() => setSharingAsOwn(true)}
-        title="Share"
-        aria-label="Share this setup"
+        title={isLiveConfigured() ? "Published: the post and its link" : "Share"}
+        aria-label={isLiveConfigured() ? "Publish to the library" : "Share this setup"}
         className={BAR_BUTTON}
       >
         <Share2 className="h-3.5 w-3.5" />

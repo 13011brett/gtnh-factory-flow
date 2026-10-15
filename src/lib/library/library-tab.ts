@@ -20,7 +20,9 @@ export type LibraryView =
   | { kind: "favorites" }
   | { kind: "folder"; folderId: string }
   | { kind: "public"; search?: string }
-  | { kind: "saved" };
+  | { kind: "saved" }
+  /** Plans other accounts shared with this one (live plans only). */
+  | { kind: "shared" };
 
 export interface LibraryTabState {
   /** It is the thing being shown, covering the board. */
@@ -44,7 +46,13 @@ function isLibraryView(value: unknown): value is LibraryView {
   if (kind === "folder") {
     return typeof (value as { folderId?: unknown }).folderId === "string";
   }
-  return kind === "all" || kind === "favorites" || kind === "public" || kind === "saved";
+  return (
+    kind === "all" ||
+    kind === "favorites" ||
+    kind === "public" ||
+    kind === "saved" ||
+    kind === "shared"
+  );
 }
 
 function readStored(): LibraryTabState {

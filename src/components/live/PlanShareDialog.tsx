@@ -1,7 +1,9 @@
 "use client";
 
-import { LoaderCircle, UserPlus, Users, X } from "lucide-react";
+import "../chrome/mod-panel.css";
+import { LoaderCircle, UserPlus } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useDialogA11y } from "@/lib/hooks/use-dialog-a11y";
 import {
   addPlanMember,
   fetchPlanMembers,
@@ -22,9 +24,12 @@ import { Face } from "./LiveFaces";
  * Who the open plan is shared with. The owner adds people by name and
  * removes them; someone it is shared with sees who else is in it and can
  * leave. Everyone in it edits it live together. Publishing to the library is
- * a separate thing (the Publish key): it posts a copy, never this plan.
+ * a separate thing (the Share menu's Publish to library): it posts a copy,
+ * never this plan. In the mod's panel skin, as the other boxes of its bar.
  */
 export function PlanShareDialog({ onClose }: { onClose: () => void }) {
+  const dialogRef = useRef<HTMLDivElement>(null);
+  useDialogA11y(dialogRef, { onClose, initialFocus: "#plan-share-search" });
   const user = useCommunityAuthStore((state) => state.user);
   const design = useDesignStore((state) =>
     state.designs.find((entry) => entry.id === state.activeDesignId),
@@ -139,7 +144,7 @@ export function PlanShareDialog({ onClose }: { onClose: () => void }) {
 
   return (
     <div
-      className="fixed inset-0 z-[100] grid place-items-center bg-neutral-950/50 p-4"
+      className="pn-backdrop"
       onMouseDown={(event) => {
         if (event.target === event.currentTarget) {
           onClose();
@@ -147,101 +152,97 @@ export function PlanShareDialog({ onClose }: { onClose: () => void }) {
       }}
     >
       <div
+        ref={dialogRef}
         role="dialog"
-        aria-label="Share this plan"
+        aria-modal="true"
+        aria-label="Share with people"
         data-plan-share-dialog
-        className="flex max-h-[calc(85*var(--ui-vh))] w-full max-w-md flex-col overflow-y-auto rounded border border-line-strong bg-surface p-4 shadow-xl"
+        className="pn pn-skin"
       >
-        <div className="mb-3 flex items-center justify-between">
-          <h2 className="flex items-center gap-2 text-base font-semibold">
-            <Users className="h-4 w-4" /> Share this plan
-          </h2>
-          <button
-            type="button"
-            onClick={onClose}
-            aria-label="Close"
-            className="rounded p-1 text-fg-subtle hover:bg-surface-raised"
-          >
-            <X className="h-4 w-4" />
-          </button>
+        <div className="pn-title">
+          <span>Share with people</span>
+          <button type="button" onClick={onClose} aria-label="Close" className="pn-x" />
         </div>
-
-        {!user ? (
-          <p className="text-sm text-fg-muted">Sign in to share.</p>
-        ) : !synced ? (
-          <p className="flex items-center gap-2 text-sm text-fg-muted">
-            <LoaderCircle className="h-4 w-4 animate-spin" /> Saving the plan to your account first.
-          </p>
-        ) : loadError ? (
-          <p className="text-sm text-red-400">{loadError}</p>
-        ) : !info ? (
-          <p className="flex items-center gap-2 text-sm text-fg-muted">
-            <LoaderCircle className="h-4 w-4 animate-spin" /> Loading.
-          </p>
-        ) : (
-          <div className="space-y-3">
-            <p className="text-xs text-fg-muted">
-              Everyone here can edit the plan with you, live. Publishing to the library is separate.
+        <div className="pn-body">
+          {!user ? (
+            <p className="text-sm text-fg-muted">Sign in to share.</p>
+          ) : !synced ? (
+            <p className="flex items-center gap-2 text-sm text-fg-muted">
+              <LoaderCircle className="h-4 w-4 animate-spin" /> Saving the plan to your account
+              first.
             </p>
-            <ul className="space-y-1" data-plan-members>
-              <li className="flex items-center gap-2 text-sm">
-                <Face username={info.ownerName || "?"} color={colorFor(info.ownerId)} />
-                <span className="min-w-0 flex-1 truncate">
-                  {isOwner ? "You" : info.ownerName}
-                  <span className="ml-1 text-xs text-fg-muted">owner</span>
-                </span>
-              </li>
-              {members.map((member) => {
-                const isMe = member.id === me?.id;
-                return (
-                  <li
-                    key={member.id}
-                    className="flex items-center gap-2 text-sm"
-                    data-member={member.username}
-                  >
-                    <Face username={member.username} color={colorFor(member.id)} />
-                    <span className="min-w-0 flex-1 truncate">
-                      {isMe ? "You" : member.username}
-                    </span>
-                    {isOwner ? (
-                      <button
-                        type="button"
-                        disabled={busy !== undefined}
-                        onClick={() => void remove(member)}
-                        className="rounded border border-line px-2 py-0.5 text-xs text-fg-subtle hover:border-line-strong hover:text-fg disabled:opacity-50"
-                      >
-                        {busy === member.id ? "Removing" : "Remove"}
-                      </button>
-                    ) : null}
-                  </li>
-                );
-              })}
-            </ul>
-            {isOwner ? (
-              full ? (
-                <p className="text-xs text-fg-muted">
-                  A plan can be shared with {LIBRARY_MAX_MEMBERS} people at most.
-                </p>
+          ) : loadError ? (
+            <p className="text-sm text-red-400">{loadError}</p>
+          ) : !info ? (
+            <p className="flex items-center gap-2 text-sm text-fg-muted">
+              <LoaderCircle className="h-4 w-4 animate-spin" /> Loading.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              <p className="text-xs text-fg-muted">
+                Everyone here can edit the plan with you, live. Publishing to the library is
+                separate.
+              </p>
+              <ul className="space-y-1" data-plan-members>
+                <li className="flex items-center gap-2 text-sm">
+                  <Face username={info.ownerName || "?"} color={colorFor(info.ownerId)} />
+                  <span className="min-w-0 flex-1 truncate">
+                    {isOwner ? "You" : info.ownerName}
+                    <span className="ml-1 text-xs text-fg-muted">owner</span>
+                  </span>
+                </li>
+                {members.map((member) => {
+                  const isMe = member.id === me?.id;
+                  return (
+                    <li
+                      key={member.id}
+                      className="flex items-center gap-2 text-sm"
+                      data-member={member.username}
+                    >
+                      <Face username={member.username} color={colorFor(member.id)} />
+                      <span className="min-w-0 flex-1 truncate">
+                        {isMe ? "You" : member.username}
+                      </span>
+                      {isOwner ? (
+                        <button
+                          type="button"
+                          disabled={busy !== undefined}
+                          onClick={() => void remove(member)}
+                          className="rounded border border-line px-2 py-0.5 text-xs text-fg-subtle hover:border-line-strong hover:text-fg disabled:opacity-50"
+                        >
+                          {busy === member.id ? "Removing" : "Remove"}
+                        </button>
+                      ) : null}
+                    </li>
+                  );
+                })}
+              </ul>
+              {isOwner ? (
+                full ? (
+                  <p className="text-xs text-fg-muted">
+                    A plan can be shared with {LIBRARY_MAX_MEMBERS} people at most.
+                  </p>
+                ) : (
+                  <AccountSearch
+                    exclude={new Set([info.ownerId, ...members.map((member) => member.id)])}
+                    busyId={busy}
+                    onPick={(account) => void add(account)}
+                  />
+                )
               ) : (
-                <AccountSearch
-                  exclude={new Set([info.ownerId, ...members.map((member) => member.id)])}
-                  busyId={busy}
-                  onPick={(account) => void add(account)}
-                />
-              )
-            ) : (
-              <button
-                type="button"
-                disabled={busy !== undefined || !me}
-                onClick={() => void leave()}
-                className="rounded border border-red-800 px-3 py-1 text-sm text-red-300 hover:bg-red-950/50 disabled:opacity-50"
-              >
-                {busy === "leave" ? "Leaving" : "Leave this plan"}
-              </button>
-            )}
-            {actionError ? <p className="text-sm text-red-400">{actionError}</p> : null}
-          </div>
-        )}
+                <button
+                  type="button"
+                  disabled={busy !== undefined || !me}
+                  onClick={() => void leave()}
+                  className="rounded border border-red-800 px-3 py-1 text-sm text-red-300 hover:bg-red-950/50 disabled:opacity-50"
+                >
+                  {busy === "leave" ? "Leaving" : "Leave this plan"}
+                </button>
+              )}
+              {actionError ? <p className="text-sm text-red-400">{actionError}</p> : null}
+            </div>
+          )}
+        </div>
       </div>
     </div>
   );

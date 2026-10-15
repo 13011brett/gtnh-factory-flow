@@ -91,24 +91,28 @@ The board has its own notes in `flow/CLAUDE.md`, the Pool worksheet in `pool/CLA
 Everything here renders only with `isLiveConfigured()`; without it the app looks exactly as before. Store rules are
 in `src/store/CLAUDE.md` (Live plans, Task boards).
 
-- The plan bar carries the plan's two faces (Board, Tasks), the live status (`LiveStatusChip`: Live, Connecting,
-  Offline with edits waiting), the faces of who else is here (`LiveFaces`, one per account, initials in their colour)
-  and two separate keys: Share (`PlanShareDialog`: people who edit this plan with you) and Publish (the community
-  post flow, `SharePlanDialog`, a public copy). Never fold one into the other; signed out, Share is greyed with
-  "Sign in to share". Without live plans the post flow keeps its old Share label.
+- The mod's top bar (`chrome/ModBar.tsx`) carries it, as the game's does: a Tasks key before Library swaps the board
+  for the plan's task board and back (`Plan` while the tasks show); after the tabs, the live state as a dot and the
+  faces of who else is here (`LivePresence`: one square per account, initials in their colour; a tip says Live,
+  Connecting or Offline with edits waiting). The Share menu's first row is Share with people... (`PlanShareDialog`:
+  people who edit this plan with you; greyed signed out, "Sign in to share"); the library rows say Publish to
+  library... for a plan not posted yet (`chrome/library-rows.ts`, the dialog's title too). Never fold one into the
+  other. Without live plans every row and label is as before. The + tab menu has New task board.
+  `PlanIdentityDrawer`, `DesignTabs` and `BoardActions` keep their live keys but are not on the desktop board.
 - Share dialog: the owner is listed first; the owner adds people by name (search asks once typing pauses, 250 ms,
   and drops the answer to an older query) and removes them; someone it is shared with sees everyone and can leave.
   A plan not in the account yet is pushed first. Changes arrive through the live room too (`members`).
-- The Library's Shared with me lists plans others shared with you (from the account sync), with the owner and
-  everyone's faces; opening one makes or reuses this device's copy and it opens live. Copies never show among My
-  designs.
+- The Library's Shared with me (a third shelf of `chrome/ModLibrary.tsx` when signed in; a rail entry of the
+  compact `LibraryPage`) lists plans others shared with you (from the account sync), with the owner and everyone's
+  faces; opening one makes or reuses this device's copy and it opens live. Copies never show among My plans.
 - Presence is `flow/LivePresenceLayer.tsx`, a layer of its own inside the viewport: others' pointers (arrow and name
   tag in their colour) and outlines round what they have selected, in the plan's coordinates, sized by
-  `1 / --board-zoom` to stay one size on screen. It reads `live-presence.ts` (outside every board store), so a
+  `1 / --board-zoom` to stay one size on screen (each layer registers for the variable, `virtual/zoom-var.ts`, as the
+  board no longer carries it). It reads `live-presence.ts` (outside every board store), so a
   pointer moving re-renders that layer only; this tab's pointer is a native listener feeding the session, which sends
   at most 10 a second.
 - The task board covers the board like the Library (the board stays mounted). Cards drag with pointer events (a
   4 px slop, then the drop line shows where it lands) so mouse, pen and probes behave alike. The global
   `button, input, select, textarea { font: inherit }` beats Tailwind's text sizes, so the board and the panel set
   their size on the container.
-- Notices from the live plan (an edit refused, removed from a plan) show under the plan bar (`LiveNotice`).
+- Notices from the live plan (an edit refused, removed from a plan) show above the board (`LiveNotice`).

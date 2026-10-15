@@ -124,6 +124,47 @@
   color: var(--mc-red);
 }
 
+/* A live plan: its state as a dot, then the faces of everyone else in it (initials in their colour), square and flat
+   as the mod draws them. Only with live plans configured (ModBar's LivePresence). */
+.mb-live {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  height: 16px;
+  padding: 0 2px;
+}
+.mb-live-dot {
+  width: 4px;
+  height: 4px;
+  background: var(--mc-off);
+}
+.mb-live-dot[data-status="live"] {
+  background: #34d399;
+}
+.mb-live-dot[data-status="connecting"] {
+  background: #fbbf24;
+}
+.mb-faces {
+  display: inline-flex;
+  gap: 1px;
+}
+.mb-face {
+  box-sizing: border-box;
+  min-width: 14px;
+  height: 14px;
+  padding: 0 1px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 14px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.35);
+}
+.mb-face-more {
+  background: var(--mc-key);
+  color: var(--mc-muted);
+}
+
 /* ---- The plan tabs ------------------------------------------------------- */
 
 .mt {

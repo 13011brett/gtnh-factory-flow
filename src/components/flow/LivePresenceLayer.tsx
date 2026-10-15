@@ -1,7 +1,8 @@
 "use client";
 
 import { useStore, useReactFlow, ViewportPortal, type ReactFlowState } from "@xyflow/react";
-import { memo, useEffect, useMemo } from "react";
+import { memo, useEffect, useMemo, useState } from "react";
+import { registerZoomConsumer } from "./virtual/zoom-var";
 import { useRemoteCursors, useRemoteSelections, type RemoteCursor } from "@/lib/live/live-presence";
 import { inkOn } from "@/components/live/LiveFaces";
 import { reportLiveCursor, useLiveSession } from "@/store/live-session";
@@ -12,7 +13,9 @@ import { reportLiveCursor, useLiveSession } from "@/store/live-session";
  * outline in that colour around whatever they have selected. Positions are
  * the plan's own coordinates, inside the viewport, so the camera carries
  * them like cards; tags and lines are divided by `--board-zoom` to stay one
- * size on screen.
+ * size on screen. The board no longer carries that variable (zoom-var.ts
+ * writes it only where something reads it), so each layer's root registers
+ * for it, as a sticky note does.
  *
  * Board performance: nothing here touches the cards or the board's stores.
  * A cursor moving re-renders the cursor layer alone (live-presence.ts), a
@@ -58,14 +61,23 @@ export const LivePresenceLayer = memo(function LivePresenceLayer({
   );
 });
 
+/** A ref that keeps `--board-zoom` written on the element it lands on (zoom-var.ts). */
+function useZoomVariable(): (element: HTMLDivElement | null) => void {
+  const [element, setElement] = useState<HTMLDivElement | null>(null);
+  useEffect(() => registerZoomConsumer(element), [element]);
+  return setElement;
+}
+
 const RemoteCursorLayer = memo(function RemoteCursorLayer() {
   const cursors = useRemoteCursors();
+  const zoomRef = useZoomVariable();
   if (cursors.length === 0) {
     return null;
   }
   return (
     <ViewportPortal>
       <div
+        ref={zoomRef}
         aria-hidden
         data-live-cursors
         className="pointer-events-none absolute left-0 top-0"
@@ -135,6 +147,7 @@ function sameRects(left: OutlineRect[], right: OutlineRect[]): boolean {
 
 const RemoteSelectionOutlines = memo(function RemoteSelectionOutlines() {
   const selections = useRemoteSelections();
+  const zoomRef = useZoomVariable();
   const ids = useMemo(
     () => [...new Set(selections.flatMap((selection) => selection.ids))],
     [selections],
@@ -174,6 +187,7 @@ const RemoteSelectionOutlines = memo(function RemoteSelectionOutlines() {
   return (
     <ViewportPortal>
       <div
+        ref={zoomRef}
         aria-hidden
         data-live-selections
         className="pointer-events-none absolute left-0 top-0"

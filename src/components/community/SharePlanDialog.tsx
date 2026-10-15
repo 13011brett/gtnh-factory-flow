@@ -4,6 +4,7 @@ import "../chrome/mod-panel.css";
 import { Check, Link2, LoaderCircle } from "lucide-react";
 import { useEffect, useMemo, useRef, useState } from "react";
 import { useDialogA11y } from "@/lib/hooks/use-dialog-a11y";
+import { isLiveConfigured } from "@/lib/live/live-config";
 import { normalizeBlueprintTags } from "@/lib/blueprints/types";
 import {
   listCommunityPlans,
@@ -237,7 +238,9 @@ export function SharePlanDialog({
     ? "Update in library"
     : mode === "new"
       ? "Save as new post"
-      : "Save to library";
+      : isLiveConfigured()
+        ? "Publish to library"
+        : "Save to library";
 
   return (
     <div className="pn-backdrop">

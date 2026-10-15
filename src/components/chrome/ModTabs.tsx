@@ -31,6 +31,7 @@ import { ChromeMenu, chromeAnchorOf, MENU_ANCHOR_ATTR, type ChromeAnchor, type M
 import { libraryRows } from "./library-rows";
 import { copyPlanCode } from "./share-actions";
 import type { ShareMode } from "@/components/community/SharePlanDialog";
+import { isLiveConfigured } from "@/lib/live/live-config";
 
 /** What the tab strip asks of the bar: the dialogs it does not own. */
 export interface ModTabsActions {
@@ -76,6 +77,7 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
   const activeDesignId = useDesignStore((state) => state.activeDesignId);
   const switchToDesign = useDesignStore((state) => state.switchToDesign);
   const addDesign = useDesignStore((state) => state.addDesign);
+  const addTaskBoard = useDesignStore((state) => state.addTaskBoard);
   const renameDesign = useDesignStore((state) => state.renameDesign);
   const closeDesigns = useDesignStore((state) => state.closeDesigns);
   const removeDesign = useDesignStore((state) => state.removeDesign);
@@ -323,6 +325,21 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
             void addDesign();
           },
         },
+        // Task boards come with live plans (the mod's + list has the same row).
+        ...(isLiveConfigured()
+          ? [
+              {
+                label: "New task board",
+                detail: "a plan of tasks",
+                onSelect: () => {
+                  playSfx("ui.page");
+                  leaveWelcomeTab();
+                  leaveLibrary();
+                  void addTaskBoard();
+                },
+              },
+            ]
+          : []),
         { label: "Open a plan...", detail: "My plans", onSelect: () => openLibrary({ kind: "all" }) },
         { label: "Open plan file...", detail: ".json", onSelect: () => document.querySelector<HTMLInputElement>("[data-plan-file-input]")?.click() },
         { label: "Paste plan", detail: "a plan link, code or file", onSelect: onPaste },

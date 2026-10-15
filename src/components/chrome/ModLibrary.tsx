@@ -26,6 +26,12 @@ import { useCommunityUser } from "@/components/community/auth";
 import { useDropdownDismiss } from "@/lib/hooks/use-dropdown-dismiss";
 import { getUiScale } from "@/lib/ui-scale";
 import { ChromeMenu, chromeAnchorOf, MENU_ANCHOR_ATTR, type ChromeAnchor, type MenuEntry } from "./ChromeMenu";
+import { SharedWithMe } from "@/components/live/SharedWithMe";
+import { isLiveConfigured } from "@/lib/live/live-config";
+import { useCloudLibraryStore } from "@/lib/library/cloud-library";
+
+/** Plans shared with you come with live plans: none of it shows without NEXT_PUBLIC_LIVE_URL. */
+const LIVE = isLiveConfigured();
 
 /**
  * The Library (the mod's LibraryView): a header with the two shelves, My plans (every plan kept, the most recently
@@ -34,15 +40,23 @@ import { ChromeMenu, chromeAnchorOf, MENU_ANCHOR_ATTR, type ChromeAnchor, type M
  */
 export function ModLibrary() {
   const library = useLibraryTab();
-  const designs = useDesignStore((state) => state.designs);
-  const shelf: "mine" | "public" =
-    library.view.kind === "public" || library.view.kind === "saved" ? "public" : "mine";
+  const everyDesign = useDesignStore((state) => state.designs);
+  // Copies of plans shared with us are listed under Shared with me, never among ours.
+  const designs = useMemo(() => everyDesign.filter((design) => !design.cloud), [everyDesign]);
+  const sharedCount = useCloudLibraryStore((state) => state.shared?.length);
   const filters = useSetupFilters("top");
   const [publicTotal, setPublicTotal] = useState<number>();
   const [mineQuery, setMineQuery] = useState("");
   const [menu, setMenu] = useState<{ kind: "sort" | "tier" | "account"; anchor: ChromeAnchor }>();
   const [signingIn, setSigningIn] = useState<ChromeAnchor>();
   const { user, isLoading, signOut } = useCommunityUser();
+  const showShared = LIVE && Boolean(user);
+  const shelf: "mine" | "public" | "shared" =
+    library.view.kind === "public" || library.view.kind === "saved"
+      ? "public"
+      : library.view.kind === "shared" && showShared
+        ? "shared"
+        : "mine";
   const closeMenu = useCallback(() => setMenu(undefined), []);
   const onTotal = useCallback((total: number) => setPublicTotal(total), []);
 
@@ -97,7 +111,15 @@ export function ModLibrary() {
           on={shelf === "public"}
           onClick={() => setLibraryView({ kind: "public" })}
         />
-        {shelf === "mine" ? (
+        {showShared ? (
+          <ShelfTab
+            label="SHARED WITH ME"
+            count={sharedCount === undefined ? "..." : String(sharedCount)}
+            on={shelf === "shared"}
+            onClick={() => setLibraryView({ kind: "shared" })}
+          />
+        ) : null}
+        {shelf === "shared" ? null : shelf === "mine" ? (
           <input
             className="ml-search"
             style={{ width: 240 }}
@@ -178,6 +200,10 @@ export function ModLibrary() {
       <div className="ml-body">
         {shelf === "mine" ? (
           <MyPlans query={mineQuery} />
+        ) : shelf === "shared" ? (
+          <div className="ml-public ml-shared" data-shared-shelf="">
+            <SharedWithMe />
+          </div>
         ) : (
           <div className="ml-public">
             <SetupsGrid scope="network" presetQuery={library.view.kind === "public" ? library.view.search : undefined} filters={filters} bare onTotal={onTotal} />
@@ -239,7 +265,8 @@ function DropKey({ label, open, tip, onOpen }: { label: string; open: boolean; t
 // ---- My plans --------------------------------------------------------------
 
 function MyPlans({ query }: { query: string }) {
-  const allDesigns = useDesignStore((state) => state.designs);
+  const everyDesign = useDesignStore((state) => state.designs);
+  const allDesigns = useMemo(() => everyDesign.filter((design) => !design.cloud), [everyDesign]);
   const activeDesignId = useDesignStore((state) => state.activeDesignId);
   const addDesign = useDesignStore((state) => state.addDesign);
   const switchToDesign = useDesignStore((state) => state.switchToDesign);

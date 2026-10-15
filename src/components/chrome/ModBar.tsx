@@ -29,6 +29,15 @@ import type { ShareMode } from "@/components/community/SharePlanDialog";
 import { PixelBolt, PixelIcon } from "./pixel-icons";
 import { ControlsList } from "./ControlsList";
 import { HelpLinks } from "./help-links";
+import { isLiveConfigured } from "@/lib/live/live-config";
+import { setPlanFace, usePlanFace } from "@/lib/tasks/task-view";
+import { useCommunityAuthStore } from "@/store/community-auth-store";
+import { useLiveSession } from "@/store/live-session";
+import { PlanShareDialog } from "@/components/live/PlanShareDialog";
+import { initialsOf, inkOn } from "@/components/live/LiveFaces";
+
+/** Live plans (sharing, presence, task boards): none of it shows without NEXT_PUBLIC_LIVE_URL. */
+const LIVE = isLiveConfigured();
 
 /** The rate unit key's four clocks, in the mod's order. */
 const RATE_ORDER: RateUnit[] = ["tick", "second", "minute", "hour"];
@@ -169,8 +178,9 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
   useEffect(() => {
     if (activeDesignId) stampOpened(activeDesignId);
   }, [activeDesignId]);
-  const canUndo = useFactoryStore((state) => state.undoHistory.length > 0);
-  const canRedo = useFactoryStore((state) => state.redoHistory.length > 0);
+  // A live plan's undo is its own (recorded inverses of this person's edits): the keys read it when it is set.
+  const canUndo = useFactoryStore((state) => (state.liveUndo ? state.liveUndo.canUndo : state.undoHistory.length > 0));
+  const canRedo = useFactoryStore((state) => (state.liveUndo ? state.liveUndo.canRedo : state.redoHistory.length > 0));
   const undo = useFactoryStore((state) => state.undo);
   const redo = useFactoryStore((state) => state.redo);
   const rateUnit = useFactoryStore((state) => state.rateUnit);
@@ -193,6 +203,10 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
   const [menu, setMenu] = useState<{ kind: "share" | "help"; anchor: ChromeAnchor }>();
   const [pasting, setPasting] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
+  const [inviting, setInviting] = useState(false);
+  const signedIn = useCommunityAuthStore((state) => Boolean(state.user));
+  const face = usePlanFace();
+  const showsTasks = LIVE && face === "tasks" && !library.active;
   const closeMenu = useCallback(() => setMenu(undefined), []);
 
   // The power unit comes back from storage (the old toolbar restored it; it is gone from plan boards).
@@ -240,8 +254,23 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
   // Whether a game with the mod is listening, asked each time the menu opens.
   const modReach = useModReach(menu?.kind === "share");
 
-  // The mod's Share menu has the same rows, in the same words. Labels only.
+  // The mod's Share menu has the same rows, in the same words. Labels only. With live plans the first row invites
+  // people into this plan (greyed signed out); posting a copy to the library is the next row, Publish.
   const shareEntries: MenuEntry[] = [
+    ...(LIVE
+      ? [
+          signedIn
+            ? { label: "Share with people...", onSelect: () => setInviting(true) }
+            : {
+                // Greyed with the mod's words for why.
+                label: "Share with people",
+                detail: "Sign in to share",
+                disabled: true,
+                tip: "Sign in to share",
+                onSelect: () => undefined,
+              },
+        ]
+      : []),
     ...libraryRows(Boolean(linkedPost), onShare, { disabled: isReadOnly }).map(({ detail, ...row }) => {
       void detail;
       return row;
@@ -262,6 +291,7 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
     <>
       <header className="mb" data-mod-bar="" data-help-anchor="plan-actions">
       <ModTabs onPaste={() => setPasting(true)} onShare={onShare} />
+      {LIVE ? <LivePresence /> : null}
       {compact ? (
         <>
           <BarKey
@@ -365,9 +395,24 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
         onContext={togglePeak}
         onWheel={togglePeak}
       />
+      {LIVE ? (
+        <BarKey
+          id="tasks"
+          gap
+          label={showsTasks ? "Plan" : "Tasks"}
+          width={42}
+          tip="Switch between the plan and its task board"
+          onClick={() => {
+            // The task board takes the board's place, as the library does; from the library it shows the tasks.
+            const tasks = library.active || face !== "tasks";
+            leaveLibrary();
+            setPlanFace(tasks ? "tasks" : "plan");
+          }}
+        />
+      ) : null}
       <BarKey
         id="library"
-        gap
+        gap={!LIVE}
         label={library.active ? "Board" : "Library"}
         width={50}
         tip="Library: your plans, and plans other players shared"
@@ -435,7 +480,56 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
       </header>
       {/* Outside the bar: its stacking context (z 30) would put the box under the side columns and drawers. */}
       {pasting ? <PastePlanDialog onClose={() => setPasting(false)} /> : null}
+      {inviting ? <PlanShareDialog onClose={() => setInviting(false)} /> : null}
     </>
+  );
+}
+
+const LIVE_STATUS_TIP: Record<"live" | "connecting" | "offline", string> = {
+  live: "Live: every edit is saved as you make it",
+  connecting: "Connecting to the live plan",
+  offline: "Offline: your edits are kept here and go when the connection is back",
+};
+
+/**
+ * Whether the open plan is live, and the faces of everyone else in it (one per account, initials in their colour),
+ * at the end of the tab strip as the mod draws them. Nothing while the plan is not live.
+ */
+function LivePresence() {
+  const status = useLiveSession((state) => state.status);
+  const present = useLiveSession((state) => state.present);
+  const pending = useLiveSession((state) => state.pending);
+  if (status === "off") return null;
+  const shown = present.slice(0, 5);
+  const more = present.length - shown.length;
+  const waiting = status !== "live" && pending > 0 ? ` (${pending} waiting)` : "";
+  return (
+    <div
+      className="mb-live"
+      data-live-status={status}
+      {...tipAttrs({
+        id: "bar|live",
+        title: `${LIVE_STATUS_TIP[status]}${waiting}`,
+        sub: present.length > 0 ? `Here now: ${present.map((person) => person.username).join(", ")}` : undefined,
+      })}
+    >
+      <span className="mb-live-dot" data-status={status} aria-hidden />
+      {shown.length > 0 ? (
+        <span className="mb-faces" data-live-faces="">
+          {shown.map((person) => (
+            <span
+              key={person.id}
+              className="mb-face"
+              aria-label={person.client === "game" ? `${person.username} (in game)` : person.username}
+              style={{ background: person.color, color: inkOn(person.color) }}
+            >
+              {initialsOf(person.username)}
+            </span>
+          ))}
+          {more > 0 ? <span className="mb-face mb-face-more">+{more}</span> : null}
+        </span>
+      ) : null}
+    </div>
   );
 }
 

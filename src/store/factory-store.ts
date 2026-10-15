@@ -127,6 +127,13 @@ import {
 } from "@/lib/solver/plan/hygiene";
 import { collectPocketMembers, expandPocketSelection } from "@/lib/model/pocket-connections";
 import { paperForBoardId, pickBoardPaper } from "@/lib/model/board-paper";
+import {
+  addToGroup,
+  fitGroups,
+  groupItems,
+  removeFromGroup,
+  type SizeOf,
+} from "@/components/flow/clean/group/group-model";
 import type { BoardCamera } from "@/lib/designs/design-camera";
 
 export const LOCAL_STORAGE_KEY = "gtnh-factory-flow.project.v2";
@@ -582,6 +589,8 @@ interface FactoryStore {
        */
       owner?: { pocketId?: string };
     }>,
+    /** Plan boards: grow the groups the move touched to hold their members (docs/groups.md), in the same step. */
+    fit?: SizeOf,
   ) => void;
   /**
    * Land an auto-arrange as ONE undo entry: every card's new position; a
@@ -634,6 +643,15 @@ interface FactoryStore {
    * belongs to a board or IS one (nothing may sit in two boards at once).
    */
   wrapSelectionInBoard: (ids: string[], name?: string) => string | undefined;
+  /**
+   * GROUPS (plan boards, docs/groups.md): a group round the selection where it stands, nesting by the doc's rule;
+   * it takes the selection. Returns its id, or undefined when nothing could be grouped.
+   */
+  groupSelection: (ids: string[], sizeOf?: SizeOf) => string | undefined;
+  /** Put things in an open group: they sit just under its members and the frame grows. One undo step. */
+  addToGroup: (ids: string[], groupId: string, sizeOf?: SizeOf) => void;
+  /** Take a thing out of its group: a cell clear of the frame's right side, in the group the frame sat in. */
+  removeFromGroup: (id: string, sizeOf?: SizeOf) => void;
   /**
    * SHARED MACHINES: fold several cards that one machine could run into ONE
    * card. The first keeps its place and settings; the others' recipes join
@@ -3183,7 +3201,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
       return withProjectHistory(state, { project });
     });
   },
-  moveBoardItems: (moves) => {
+  moveBoardItems: (moves, fit) => {
     set((state) => {
       const moveById = new Map(moves.map((move) => [move.id, move] as const));
       const currentPockets = state.project.pockets ?? [];
@@ -3261,7 +3279,23 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
         return state;
       }
 
-      const project = touchProject({ ...state.project, nodes, storages, annotations, pockets });
+      let next: FactoryProject = { ...state.project, nodes, storages, annotations, pockets };
+      if (fit) {
+        // The groups the move touched: where each thing was, and where it went.
+        const ownerIn = (from: FactoryProject, id: string): string | undefined =>
+          from.nodes.find((entry) => entry.id === id)?.pocketId ??
+          from.storages?.find((entry) => entry.id === id)?.pocketId ??
+          from.annotations?.find((entry) => entry.id === id)?.pocketId ??
+          from.pockets?.find((entry) => entry.id === id)?.parentPocketId;
+        const touched = new Set<string>();
+        for (const move of moves) {
+          for (const owner of [ownerIn(state.project, move.id), ownerIn(next, move.id)]) {
+            if (owner !== undefined) touched.add(owner);
+          }
+        }
+        next = fitGroups(next, fit, touched);
+      }
+      const project = touchProject(next);
       return withProjectHistory(state, { project });
     });
   },
@@ -3860,6 +3894,33 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
       return withProjectHistory(state, { project });
     });
     return createdBoardId;
+  },
+  groupSelection: (ids, sizeOf) => {
+    let created: string | undefined;
+    set((state) => {
+      const made = groupItems(state.project, ids, sizeOf ?? (() => undefined), createId("pocket"));
+      if (!made) {
+        return state;
+      }
+      created = made.groupId;
+      return withProjectHistory(state, {
+        project: touchProject(made.project),
+        pendingBoardSelectionIds: [made.groupId],
+      });
+    });
+    return created;
+  },
+  addToGroup: (ids, groupId, sizeOf) => {
+    set((state) => {
+      const next = addToGroup(state.project, ids, groupId, sizeOf ?? (() => undefined));
+      return next === state.project ? state : withProjectHistory(state, { project: touchProject(next) });
+    });
+  },
+  removeFromGroup: (id, sizeOf) => {
+    set((state) => {
+      const next = removeFromGroup(state.project, id, sizeOf ?? (() => undefined));
+      return next === state.project ? state : withProjectHistory(state, { project: touchProject(next) });
+    });
   },
   dissolvePocket: (pocketId) => {
     set((state) => {

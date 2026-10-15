@@ -1,0 +1,242 @@
+/*
+ * Groups on a plan board (docs/groups.md; the mod's GroupPaint draws the same): the clean card's flat, square look
+ * with 1 px chrome. Sizes are the mod's board px times 380/320 (group-model.ts GROUP), colours come in as custom
+ * properties computed with mixHex. The body is painted by the floor layer under the wires (BoardFloors); the frame
+ * node draws the border, the title strip and the grips, and lets clicks through everywhere else.
+ */
+.cg-frame {
+  position: relative;
+  box-sizing: border-box;
+  pointer-events: none;
+  font-family: var(--cc-font);
+  -webkit-font-smoothing: none;
+  user-select: none;
+  color: var(--cc-ink);
+}
+.cg-frame::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--cg-border);
+  pointer-events: none;
+}
+.cg-frame[data-selected]::before,
+.cg-sum[data-selected]::before {
+  border-color: var(--cc-select);
+}
+
+/* The title strip: the group's handle (drag moves it all), its name and the collapse key. */
+.cg-strip {
+  position: absolute;
+  left: 1px;
+  right: 1px;
+  top: 1px;
+  height: var(--cg-strip-h);
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 var(--cg-key-inset) 0 var(--cg-text-inset);
+  background: var(--cg-strip);
+  border-bottom: 1px solid var(--cg-border);
+  pointer-events: all;
+  cursor: grab;
+}
+.cg-name {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-size: 10px;
+  line-height: 12px;
+  color: var(--cc-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: text;
+}
+.cg-muted {
+  flex: 0 1 auto;
+  min-width: 0;
+  font-size: 9px;
+  line-height: 12px;
+  color: var(--cc-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cg-rename {
+  flex: 1 1 auto;
+  min-width: 0;
+  height: calc(var(--cg-strip-h) - 6px);
+  box-sizing: border-box;
+  padding: 0 3px;
+  border: 1px solid var(--cc-select);
+  background: var(--cc-key-lo);
+  color: var(--cc-ink);
+  font-family: var(--cc-font);
+  font-size: 10px;
+  outline: none;
+}
+/* The collapse key: the card's key tokens, a minus (open) or a plus (collapsed) drawn as bars. */
+.cg-key {
+  position: relative;
+  flex: none;
+  margin-left: auto;
+  width: var(--cg-key);
+  height: var(--cg-key);
+  box-sizing: border-box;
+  border: 1px solid var(--cc-key-edge);
+  background: var(--cc-key);
+  cursor: pointer;
+}
+.cg-key:hover {
+  background: var(--cc-key-hover);
+}
+.cg-key::before,
+.cg-key[data-plus]::after {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 7px;
+  height: 1px;
+  background: var(--cc-ink);
+  transform: translate(-50%, -50%);
+}
+.cg-key[data-plus]::after {
+  width: 1px;
+  height: 7px;
+}
+
+/* Resize bands: either side of the border. */
+.cg-grip {
+  position: absolute;
+  pointer-events: all;
+}
+.cg-grip[data-side="n"],
+.cg-grip[data-side="s"] {
+  left: var(--cg-grip);
+  right: var(--cg-grip);
+  height: calc(var(--cg-grip) * 2);
+  cursor: ns-resize;
+}
+.cg-grip[data-side="n"] {
+  top: calc(var(--cg-grip) * -1);
+}
+.cg-grip[data-side="s"] {
+  bottom: calc(var(--cg-grip) * -1);
+}
+.cg-grip[data-side="e"],
+.cg-grip[data-side="w"] {
+  top: var(--cg-grip);
+  bottom: var(--cg-grip);
+  width: calc(var(--cg-grip) * 2);
+  cursor: ew-resize;
+}
+.cg-grip[data-side="e"] {
+  right: calc(var(--cg-grip) * -1);
+}
+.cg-grip[data-side="w"] {
+  left: calc(var(--cg-grip) * -1);
+}
+.cg-grip[data-side="nw"],
+.cg-grip[data-side="ne"],
+.cg-grip[data-side="sw"],
+.cg-grip[data-side="se"] {
+  width: calc(var(--cg-grip) * 3);
+  height: calc(var(--cg-grip) * 3);
+}
+.cg-grip[data-side="nw"] {
+  left: calc(var(--cg-grip) * -1);
+  top: calc(var(--cg-grip) * -1);
+  cursor: nwse-resize;
+}
+.cg-grip[data-side="se"] {
+  right: calc(var(--cg-grip) * -1);
+  bottom: calc(var(--cg-grip) * -1);
+  cursor: nwse-resize;
+}
+.cg-grip[data-side="ne"] {
+  right: calc(var(--cg-grip) * -1);
+  top: calc(var(--cg-grip) * -1);
+  cursor: nesw-resize;
+}
+.cg-grip[data-side="sw"] {
+  left: calc(var(--cg-grip) * -1);
+  bottom: calc(var(--cg-grip) * -1);
+  cursor: nesw-resize;
+}
+
+/* The collapsed group: a summary card a card wide. */
+.cg-sum {
+  position: relative;
+  box-sizing: border-box;
+  background: var(--cc-surface);
+  font-family: var(--cc-font);
+  -webkit-font-smoothing: none;
+  user-select: none;
+  color: var(--cc-ink);
+  cursor: grab;
+}
+.cg-sum::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  border: 1px solid var(--cg-border);
+  pointer-events: none;
+  z-index: 1;
+}
+.cg-sum .cg-strip {
+  position: relative;
+  left: 0;
+  right: 0;
+  top: 0;
+}
+.cg-line {
+  height: var(--cg-line-h);
+  line-height: var(--cg-line-h);
+  padding: 0 var(--cg-text-inset);
+  font-size: 9px;
+  color: var(--cc-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cg-rows {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-auto-rows: var(--cg-row-h);
+  padding-bottom: var(--cg-pad);
+}
+.cg-cell {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  min-width: 0;
+  padding-left: var(--cg-text-inset);
+  font-size: 9px;
+  color: var(--cc-ink);
+  white-space: nowrap;
+}
+.cg-cell > span:last-child {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.cg-in {
+  grid-column: 1;
+}
+.cg-out {
+  grid-column: 2;
+}
+.cg-empty {
+  grid-column: 1 / span 2;
+  color: var(--cc-muted);
+}
+.cg-cell .rail-icon {
+  width: var(--cg-icon);
+  height: var(--cg-icon);
+}
+.cg-cell .rail-icon-art {
+  width: calc(var(--cg-icon) + 4px) !important;
+  height: calc(var(--cg-icon) + 4px) !important;
+}

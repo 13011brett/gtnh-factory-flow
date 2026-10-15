@@ -55,7 +55,7 @@ export const BOARD_EDGE = 4;
  */
 export const SELECTION_RING = "var(--selection)";
 
-type ResizeSide = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
+export type ResizeSide = "n" | "s" | "e" | "w" | "ne" | "nw" | "se" | "sw";
 
 /**
  * How much room each grip answers to. Generous on purpose, and straddling
@@ -213,39 +213,17 @@ export function boardChrome(
   };
 }
 
-function BoardNodeComponent({
-  data,
-  width,
-  height,
-  selected,
-}: NodeProps<BoardWindowFlowNode>) {
-  const { pocket, memberCount } = data;
-  const minimizePocket = useFactoryStore((state) => state.minimizePocket);
-  const renamePocket = useFactoryStore((state) => state.renamePocket);
+/**
+ * Dragging a frame's edge or corner: follows the pointer live (a draft), never cuts into the frame's own members
+ * (a cell of padding kept, the title strip too), never crosses anything outside, and lands once on release.
+ */
+export function useBoardResize(
+  pocket: FactoryPocket,
+  frameWidth: number,
+  frameHeight: number,
+): (side: ResizeSide, event: ReactPointerEvent<HTMLElement>) => void {
   const setPocketFrame = useFactoryStore((state) => state.setPocketFrame);
-  const setPocketTheme = useFactoryStore((state) => state.setPocketTheme);
-  const setPocketPattern = useFactoryStore((state) => state.setPocketPattern);
-  const deleteBoardSelection = useFactoryStore((state) => state.deleteBoardSelection);
-  const dissolvePocket = useFactoryStore((state) => state.dissolvePocket);
-  const { calmMode } = useBoardView();
   const { getZoom, getNodes, getInternalNode } = useReactFlow();
-  const [draftName, setDraftName] = useState<string | undefined>(undefined);
-  const [isPaletteOpen, setPaletteOpen] = useState(false);
-  // The palette follows the shared dropdown rule (use-dropdown-dismiss.ts);
-  // its own key counts as "inside".
-  const paletteRef = useRef<HTMLDivElement>(null);
-  useDropdownDismiss(isPaletteOpen, {
-    refs: [paletteRef],
-    onClose: () => setPaletteOpen(false),
-    insideSelector: "[data-board-palette-toggle]",
-    fade: true,
-  });
-  const isRenaming = draftName !== undefined && !calmMode;
-  const chrome = boardChrome(pocket.id, pocket.theme, pocket.colorTag);
-  // What clearing the paper hands the board back to: a colour of its own,
-  // picked from its id. There is no house colour under a board.
-  const ownPaper = getCanvasTheme(paperForBoardId(pocket.id));
-
   // A resize follows the pointer live and lands in the store once, on
   // release. The DRAFT carries a whole frame, not just a size: dragging the
   // top or left wall moves the origin too, and the board applies both halves
@@ -254,33 +232,7 @@ function BoardNodeComponent({
     undefined,
   );
 
-  const storedSize = boardWindowSize(pocket);
-  const frameWidth = width ?? storedSize.width;
-  const frameHeight = height ?? storedSize.height;
-
-  const commitRename = () => {
-    if (draftName !== undefined) {
-      renamePocket(pocket.id, draftName);
-    }
-    setDraftName(undefined);
-  };
-
-  // Clone the whole board — the frame, every member, every internal wire —
-  // through the same capture/paste path Ctrl+C/Ctrl+V uses, so the copy
-  // lands beside the original.
-  const duplicateBoard = () => {
-    const state = useFactoryStore.getState();
-    const payload = captureBoardSelection(state.project, [pocket.id]);
-    if (!payload) {
-      return;
-    }
-    const pastedIds = state.pasteBoardItems(payload, { x: frameWidth + 40, y: 0 });
-    if (pastedIds.length > 0) {
-      state.setPendingBoardSelection(pastedIds);
-    }
-  };
-
-  const beginResize = (side: ResizeSide, event: ReactPointerEvent<HTMLDivElement>) => {
+  const beginResize = (side: ResizeSide, event: ReactPointerEvent<HTMLElement>) => {
     if (event.button !== 0) {
       return;
     }
@@ -436,6 +388,70 @@ function BoardNodeComponent({
     window.addEventListener("pointermove", handleMove);
     window.addEventListener("pointerup", handleUp);
   };
+
+  return beginResize;
+}
+
+function BoardNodeComponent({
+  data,
+  width,
+  height,
+  selected,
+}: NodeProps<BoardWindowFlowNode>) {
+  const { pocket, memberCount } = data;
+  const minimizePocket = useFactoryStore((state) => state.minimizePocket);
+  const renamePocket = useFactoryStore((state) => state.renamePocket);
+  const setPocketFrame = useFactoryStore((state) => state.setPocketFrame);
+  const setPocketTheme = useFactoryStore((state) => state.setPocketTheme);
+  const setPocketPattern = useFactoryStore((state) => state.setPocketPattern);
+  const deleteBoardSelection = useFactoryStore((state) => state.deleteBoardSelection);
+  const dissolvePocket = useFactoryStore((state) => state.dissolvePocket);
+  const { calmMode } = useBoardView();
+  const { getZoom, getNodes, getInternalNode } = useReactFlow();
+  const [draftName, setDraftName] = useState<string | undefined>(undefined);
+  const [isPaletteOpen, setPaletteOpen] = useState(false);
+  // The palette follows the shared dropdown rule (use-dropdown-dismiss.ts);
+  // its own key counts as "inside".
+  const paletteRef = useRef<HTMLDivElement>(null);
+  useDropdownDismiss(isPaletteOpen, {
+    refs: [paletteRef],
+    onClose: () => setPaletteOpen(false),
+    insideSelector: "[data-board-palette-toggle]",
+    fade: true,
+  });
+  const isRenaming = draftName !== undefined && !calmMode;
+  const chrome = boardChrome(pocket.id, pocket.theme, pocket.colorTag);
+  // What clearing the paper hands the board back to: a colour of its own,
+  // picked from its id. There is no house colour under a board.
+  const ownPaper = getCanvasTheme(paperForBoardId(pocket.id));
+
+  const storedSize = boardWindowSize(pocket);
+  const frameWidth = width ?? storedSize.width;
+  const frameHeight = height ?? storedSize.height;
+
+  const commitRename = () => {
+    if (draftName !== undefined) {
+      renamePocket(pocket.id, draftName);
+    }
+    setDraftName(undefined);
+  };
+
+  // Clone the whole board — the frame, every member, every internal wire —
+  // through the same capture/paste path Ctrl+C/Ctrl+V uses, so the copy
+  // lands beside the original.
+  const duplicateBoard = () => {
+    const state = useFactoryStore.getState();
+    const payload = captureBoardSelection(state.project, [pocket.id]);
+    if (!payload) {
+      return;
+    }
+    const pastedIds = state.pasteBoardItems(payload, { x: frameWidth + 40, y: 0 });
+    if (pastedIds.length > 0) {
+      state.setPendingBoardSelection(pastedIds);
+    }
+  };
+
+  const beginResize = useBoardResize(pocket, frameWidth, frameHeight);
 
   const buttonStyle = {
     borderColor: chrome.barBorder,

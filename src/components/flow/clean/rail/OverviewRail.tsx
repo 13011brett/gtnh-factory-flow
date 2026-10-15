@@ -127,7 +127,7 @@ function powerIcon(sourceId: string) {
   return powerIcons.get(sourceId) as Parameters<typeof ResourceIcon>[0]["resource"];
 }
 
-function ResourceGlyph({ line }: { line: Pick<RailLine, "resource" | "energy"> }) {
+export function ResourceGlyph({ line }: { line: Pick<RailLine, "resource" | "energy"> }) {
   if (line.energy) {
     return (
       <span className="rail-icon" style={{ background: "#7a5a12" }}>

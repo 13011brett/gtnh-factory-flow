@@ -1,8 +1,39 @@
 # Rollout: cloud plans and live editing
 
+## Go (the state on 2026-10-15)
+
+Done: the migration (step 1) is in production; staging (step 2) runs `live-backport` (the mod backport with live
+editing merged in, 4.0.0) at `new.gtnhplanner.com` from `/opt/releases/live-backport-1792066008`; the mod's
+`0.2.0-beta.2` is a draft release on GitHub. When the owner says go, in this order:
+
+1. Give staging room to serve everyone (it restarts, nobody but testers is on it):
+   `sed -i 's/^MemoryMax=900M/MemoryMax=1400M/; s/max-old-space-size=600/max-old-space-size=1000/' /etc/systemd/system/gtnh-flow-next.service && systemctl daemon-reload && systemctl restart gtnh-flow-next`,
+   then `curl -s http://127.0.0.1:3002/api/version` says 4.0.0.
+2. The switch, without downtime: in `/etc/caddy/Caddyfile` (back it up first) the `gtnhplanner.com` block keeps
+   `handle_path /umami/*` and its log, and its `reverse_proxy 127.0.0.1:3000 { header_up X-Client-Ip {client_ip} }`
+   becomes the three handles the `new.gtnhplanner.com` block already has (`@live` to 3001, `/api/datasets/*` to 3000,
+   the rest to 3002). Do the same in the `http://<ip>` block. `caddy validate`, `systemctl reload caddy`.
+   `gtnh-flow` on 3000 keeps running: it serves the warm recipe data. Check `https://gtnhplanner.com/api/version`
+   says 4.0.0, `/live/health` answers, a page loads.
+3. Rollback, if needed: copy the backed-up Caddyfile back and reload (one step, instant). The old site ignores the
+   new columns; plans it saves lose their task boards.
+4. GitHub: website `git push origin live-backport:main` (a fast-forward: live-backport contains main); mod
+   `git push origin mod-live-backport:main` (also a fast-forward), then publish the draft release
+   (`gh release edit 0.2.0-beta.2 --repo jackwrichards/gtnh-planner-mod --draft=false`), which tags the draft's
+   target commit. Publish after the switch: a beta.2 game asks `gtnhplanner.com/live/health` before it turns on
+   cloud plans.
+5. Later, at a quiet moment, back to one site process (a normal deploy, the usual 5 to 10 seconds of restart): add
+   `NEXT_PUBLIC_LIVE_URL=/live` to `/opt/shared/env.local`, add `npm run build:live` after `npm run build` in
+   `/opt/deploy.sh`, add `EnvironmentFile=/opt/shared/live.env` to the `gtnh-flow` unit (a drop-in), run the deploy,
+   point `gtnh-live`'s `WorkingDirectory` at `/opt/gtnh-flow` and restart it, set the `gtnhplanner.com` block back to
+   3000 for everything but `@live`, stop and disable `gtnh-flow-next`, and remove or repoint `new.gtnhplanner.com`.
+
+The rest of this file is the plan as written before staging, with what was actually deployed in section 2.7.
+
+## The plan
+
 The production runbook for the `cloud-live` branch: the database migration, staging at `new.gtnhplanner.com`, the
-switch, the rollback, and the merge into `main`. Written to be followed with the owner, step by step; nothing here has
-been run. Architecture and protocol: `docs/live.md`.
+switch, the rollback, and the merge into `main`. Architecture and protocol: `docs/live.md`.
 
 Every step can be undone on its own:
 

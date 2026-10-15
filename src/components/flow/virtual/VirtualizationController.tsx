@@ -234,6 +234,14 @@ export const VirtualizationController = memo(function VirtualizationController({
       if (state.transform !== previous.transform || state.width !== previous.width || state.height !== previous.height) {
         feedView();
       }
+      if (state.paneDragging && !previous.paneDragging && downPointer !== undefined) {
+        const pane = board.querySelector(".react-flow__pane") ?? board;
+        try {
+          pane.setPointerCapture(downPointer);
+        } catch {
+          // The pointer is already gone.
+        }
+      }
       if (state.transform !== previous.transform) cameraMoved(state);
       else if (movingTimer !== undefined && (state.connection.inProgress || state.userSelectionActive)) {
         clearTimeout(movingTimer);
@@ -289,6 +297,19 @@ export const VirtualizationController = memo(function VirtualizationController({
     const onFocusOut = (event: FocusEvent) => {
       if (!idOf(event.relatedTarget)) setFocused(undefined);
     };
+    // A press React Flow takes as a camera pan keeps the pointer on the pane (captured as the pan starts): without
+    // it the browser hit-tests every move of the pan against everything on screen to find what is under it (1.1 s
+    // of a 5 s pan with a thousand cards in view); captured, every move goes straight to the pane.
+    let downPointer: number | undefined;
+    const onPaneDown = (event: PointerEvent) => {
+      downPointer = event.pointerId;
+    };
+    const onPaneUp = () => {
+      downPointer = undefined;
+    };
+    board.addEventListener("pointerdown", onPaneDown, true);
+    window.addEventListener("pointerup", onPaneUp, true);
+    window.addEventListener("pointercancel", onPaneUp, true);
     board.addEventListener("pointerover", onOver);
     board.addEventListener("pointerleave", onLeave);
     board.addEventListener("focusin", onFocusIn);
@@ -328,6 +349,9 @@ export const VirtualizationController = memo(function VirtualizationController({
       release?.();
       setHovered(undefined);
       setFocused(undefined);
+      board.removeEventListener("pointerdown", onPaneDown, true);
+      window.removeEventListener("pointerup", onPaneUp, true);
+      window.removeEventListener("pointercancel", onPaneUp, true);
       board.removeEventListener("pointerover", onOver);
       board.removeEventListener("pointerleave", onLeave);
       board.removeEventListener("focusin", onFocusIn);

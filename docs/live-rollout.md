@@ -302,6 +302,33 @@ Also check:
 Undo staging: `sudo systemctl disable --now gtnh-flow-next gtnh-live` (the live service stores its plans as it
 stops), remove the Caddy block and reload, delete the DNS record.
 
+### 2.7 What was actually deployed (2026-10-15)
+
+Staging went up as above, with these differences, forced by the droplet: 3.9 GB of memory, of which the live site
+holds about 2 GB (its prewarmed recipe data) and swap already held 0.6 GB. A second copy with its own prewarm does not
+fit.
+
+- Staging never loads recipe data: the `new.gtnhplanner.com` block sends `/api/datasets/*` to the live site on 3000,
+  which has it warm (the branch never changed those routes). Staging runs with no prewarm, a 600 MB heap
+  (`NODE_OPTIONS=--max-old-space-size=600`) and a hard cap (`MemoryMax=900M`, `OOMScoreAdjust=800`); the live service
+  has `MemoryMax=400M`, `OOMScoreAdjust=500`. Both run as root like `gtnh-flow`, with `/usr/bin/node` (v22).
+- The release is `/opt/releases/cloud-live-1792055998` (built by `/opt/build-cloud-live.sh`, the deploy script's
+  steps on the branch plus `NEXT_PUBLIC_LIVE_URL=/live` in the release's `.env.local` and `npm run build:live`); its
+  path is in `/opt/shared/cloud-live-release`. `deploy.sh` prunes only `r*` releases, so it never removes this one.
+  `/opt/shared/live.env` holds the live settings (mode 600).
+- Caddy runs as `caddy`, which cannot create files in `/var/lib/caddy`: the staging block's log,
+  `/var/lib/caddy/access-new.log`, was created and given to `caddy` first (the first reload failed on it and Caddy
+  kept its old config). The Caddyfile from before is `/etc/caddy/Caddyfile.before-cloud-live`. Caddy got its own
+  certificate for the name; Cloudflare's SSL mode is strict and WebSockets are on.
+- DNS: `new` is a proxied CNAME to `gtnhplanner.com`.
+- Measured: the live site's slowest `/api/version` during the build was 0.9 s (0.1 s normally); after, 0.1 s.
+  Staging uses about 230 MB, the live service about 40 MB.
+
+For the switch on this droplet the same trick makes the Caddy change free of downtime: `gtnhplanner.com` goes to 3002
+except `/api/datasets/*`, which stays on 3000 (keep `gtnh-flow` running), and `/live*` goes to 3001. Raise staging's
+caps first (`MemoryMax=1400M`, heap 1000 MB): it then serves every page and save. The merge into `main` (section 4)
+later brings it back to one instance with its own prewarm.
+
 ## 3. The switch
 
 When the owner is happy with staging, `gtnhplanner.com` moves to the staging release: one change to its Caddy block.

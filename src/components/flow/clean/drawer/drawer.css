@@ -556,13 +556,13 @@
   }
 }
 
-/* ---- The rule menu (a portal on the body) ----------------------------------------------------------------------- */
+/* ---- The rule menu (a portal on the body), at the mod's size on screen (the game font's 16 px: 14 here) ----------------------------------------------------------------------- */
 
 .cd-menu {
   position: fixed;
   z-index: 9999;
   box-sizing: border-box;
-  width: 156px;
+  width: 182px;
   padding: 2px 0;
   background: #2b2d33;
   box-shadow:
@@ -570,8 +570,8 @@
     4px 4px 0 rgba(0, 0, 0, 0.35);
   color: var(--cc-ink);
   font-family: var(--cc-font);
-  font-size: 9px;
-  line-height: 12px;
+  font-size: 14px;
+  line-height: 17px;
   -webkit-font-smoothing: none;
 }
 .cd-menu-row {
@@ -579,8 +579,8 @@
   align-items: center;
   gap: 6px;
   box-sizing: border-box;
-  height: 24px;
-  padding: 0 10px;
+  height: 34px;
+  padding: 0 12px;
   cursor: pointer;
   white-space: nowrap;
 }
@@ -595,7 +595,7 @@
 }
 .cd-menu-row b {
   display: inline-block;
-  width: 10px;
+  width: 14px;
   font-weight: 600;
   text-align: center;
   color: var(--cc-muted);

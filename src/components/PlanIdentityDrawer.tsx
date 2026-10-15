@@ -31,8 +31,8 @@ import { formatRelativeDate } from "@/components/shelf-cards";
  * Everything edits YOUR copy in place: the icon is a button, the name is an
  * inline field (it is the tab's name, which every save stamps over the plan,
  * so this IS a tab rename), and the blurb sits behind the chevron. Post
- * actions (vote, link, share) sit at the right end. No save-to-post: a
- * posted design IS its post, and every save reaches it (post-follow.ts).
+ * actions (vote, link, share) sit at the right end. A posted design's post is
+ * a copy: Share's Update in library brings it up to date.
  */
 
 const OPEN_STORAGE_KEY = "gtnh-factory-flow.plan-card-open.v1";

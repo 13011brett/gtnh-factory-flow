@@ -28,9 +28,9 @@ export interface DesignSummary {
   folderId?: string;
   /**
    * The community post this design IS, when it is posted: copied out of the
-   * plan's metadata so the library can mark it without loading the plan. The
-   * post follows the design (post-follow.ts); a copy of someone else's post
-   * carries no link.
+   * plan's metadata so the library can mark it without loading the plan.
+   * Share's Update in library updates that post; a copy of someone else's
+   * post carries no link.
    */
   communityPlanId?: string;
   /**

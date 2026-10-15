@@ -17,13 +17,11 @@ import {
   initRecipeDatasetVersion,
 } from "@/lib/datasets/browser-loader";
 import { loadResourceHistory, useFactoryStore } from "@/store/factory-store";
-import { useCommunityAuthStore } from "@/store/community-auth-store";
 import { useDesignStore } from "@/store/design-store";
 import { recordResourceTrend, resetResourceTrends } from "@/lib/resource-trends";
 import { useWorkspaceView, writeWorkspaceView } from "@/lib/workspace-view";
 import { openCommunityPost } from "@/lib/community/open-post";
 import { openPlanCodeFromAddress } from "@/lib/open-plan-code";
-import { retryPendingPostFollows } from "@/lib/community/post-follow";
 import { forgetSharedPlanId, readSharedPlanId, syncSharedPlanAddress } from "@/lib/community/shared-link";
 import { useIsCompactViewport } from "@/lib/compact-view";
 import { startLibrarySync } from "@/lib/library/library-sync";
@@ -152,7 +150,7 @@ export function FactoryPlannerApp() {
       void hydrateDesigns()
         .then(async () => {
           try {
-            // Own posts open for editing; everyone else's opens for viewing.
+            // Own posts open as your design; everyone else's opens as a copy.
             const sharedPlanId = readSharedPlanId();
             if (sharedPlanId) {
               try {
@@ -283,13 +281,6 @@ export function FactoryPlannerApp() {
     };
   }, [activeDesignId, project, saveActiveProject]);
 
-  // Posts edited while signed out catch up the moment an account is back.
-  const communityUser = useCommunityAuthStore((state) => state.user);
-  useEffect(() => {
-    if (communityUser) {
-      retryPendingPostFollows();
-    }
-  }, [communityUser]);
 
   return (
     // Height in --ui-dvh (see ui-scale.ts: the shell is CSS-zoomed and viewport

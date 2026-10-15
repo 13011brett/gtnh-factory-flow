@@ -321,12 +321,13 @@ export function SetupsGrid({
     }
   };
 
-  // Viewing and copying are separate choices; owners can still resume their design.
+  // Opening someone else's setup makes a copy; owners resume their design, or
+  // take a fresh copy of it with Open a copy.
   const open = async (plan: CommunityPlanSummary, asCopy = false) => {
     if (busyId) return;
     setBusyId(plan.id);
     try {
-      let outcome: "opened" | "viewed" | "copied";
+      let outcome: "opened" | "copied";
       if (asCopy) {
         await copyCommunityPost(plan);
         outcome = "copied";
@@ -338,7 +339,7 @@ export function SetupsGrid({
           authorName: plan.authorName,
         });
       }
-      if (outcome === "viewed" || outcome === "copied") {
+      if (outcome === "copied") {
         patchPlan(plan.id, (entry) => ({ ...entry, downloads: entry.downloads + 1 }));
       }
       setError(undefined);
@@ -478,15 +479,17 @@ export function SetupsGrid({
             editTags: true,
             onPickIcon: detailPlan.isMine ? () => setIconEditId(detailPlan.id) : undefined,
             primary: {
-              label: detailPlan.isMine ? "Open" : "View",
+              label: "Open",
               onClick: () => {
                 void open(detailPlan);
               },
             },
-            secondary: {
-              label: "Open a copy",
-              onClick: () => void open(detailPlan, true),
-            },
+            secondary: detailPlan.isMine
+              ? {
+                  label: "Open a copy",
+                  onClick: () => void open(detailPlan, true),
+                }
+              : undefined,
             actionBusy: busyId === detailPlan.id,
             keys: [
               {
@@ -645,7 +648,7 @@ export function SetupsGrid({
           onClose={closeMenu}
         >
           <MenuItem
-            label={menuPlan.isMine ? "Open" : "View setup"}
+            label="Open"
             onClick={() => {
               closeMenu();
               void open(menuPlan);

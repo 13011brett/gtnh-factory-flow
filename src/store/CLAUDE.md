@@ -99,7 +99,10 @@ changes nothing until then. Architecture and protocol: `docs/live.md`.
   pending). Shaping leaves out what is not a person's doing: `metadata` (stamps, the owner's post link), `name` (the
   account row's), `view` (each person's dressing), `poolCellRatios` (fetched) and GregTech `runtimeCalculation`
   tables. Landing a plan, the recipe refresh, fetched data, a community link and applied remote ops are quiet. A
-  new store action that writes derived data into the project must be quiet too, or every client sends it.
+  new store action that writes derived data into the project must be quiet too, or every client sends it. The recipe
+  refresh re-keys a game card's recipe (`gtnhplanner:<card>`) to the dataset's on this screen only, so an edit
+  naming a recipe the shared plan lacks carries a put of it (`withRecipesTheyName`). A copy or paste drops
+  `gtnhplanner` (the game's data is the original's: its placed machines, its own settings).
 - ARRIVING. Someone else's batch, a refusal, a fresh snapshot, an undo: the engine's view before and after is diffed
   and only that lands, through `applyLiveOps` (same objects for untouched things, re-solved like any edit). It is the
   same design changing, never an arriving plan: the "every arriving plan opens as a NEW design" rule is untouched

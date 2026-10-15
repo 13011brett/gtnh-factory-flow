@@ -1129,6 +1129,33 @@ describe("factory resource links", () => {
     expect(after.recipes.find((recipe) => recipe.id === rekeyed.id)?.machineHandlers?.[0]?.maximumTier).toBe("HV");
   });
 
+  it("keeps the machine a game recipe names when the dataset's body lacks it", () => {
+    const before = useFactoryStore.getState().project;
+    const original = before.recipes.find((recipe) => recipe.id === "item-recipe") ?? before.recipes[0]!;
+    const node = before.nodes.find((entry) => entry.recipeId === original.id)!;
+    // The game writes its card's recipe under its own id with the housing it runs in first (the plain Apiary).
+    const apiary = { id: "apiary", label: "Apiary", machineType: "Apiary", minimumTier: "LV", maximumTier: "LV" };
+    const magic = { id: "magic-apiary", label: "Magic Apiary", machineType: "Magic Apiary", minimumTier: "LV", maximumTier: "LV" };
+    const game = { ...original, id: `gtnhplanner:${node.id}`, machineHandlers: [apiary] };
+    useFactoryStore.getState().setProject({
+      ...before,
+      recipes: [...before.recipes.filter((recipe) => recipe.id !== original.id), game],
+      nodes: before.nodes.map((entry) =>
+        entry.id === node.id ? { ...entry, recipeId: game.id, machineHandlerId: "apiary" } : entry,
+      ),
+    });
+    const dataset = { ...original, id: "dataset-bee", machineHandlers: [magic] };
+    useFactoryStore.getState().refreshProjectRecipes([dataset], { [game.id]: dataset.id });
+    const after = useFactoryStore.getState().project;
+    const card = after.nodes.find((entry) => entry.id === node.id)!;
+    expect(card.recipeId).toBe("dataset-bee");
+    expect(card.machineHandlerId).toBe("apiary");
+    expect(after.recipes.find((recipe) => recipe.id === "dataset-bee")?.machineHandlers?.map((h) => h.id)).toEqual([
+      "apiary",
+      "magic-apiary",
+    ]);
+  });
+
   it("undoes and redoes structural project edits", () => {
     useFactoryStore.getState().connectNodes("item-source", "item-target", {
       kind: "item",
@@ -4402,6 +4429,25 @@ describe("boards (pockets standing open)", () => {
     const reopened = useFactoryStore.getState().project;
     expect(reopened.nodes.find((node) => node.id === "alpha")?.position).toEqual(openedAlpha);
     expect(reopened.pockets?.find((pocket) => pocket.id === pocketId)?.size).toEqual(openedSize);
+  });
+
+  it("opens a collapsed group with a frame as it closed: members stay where they were", () => {
+    const base = createSelectionEditingProject();
+    base.nodes = base.nodes.map((node) =>
+      node.id === "alpha" ? { ...node, pocketId: "game-group", position: { x: 40, y: 100 } } : node,
+    );
+    base.pockets = [
+      { id: "game-group", name: "Group 1", position: { x: 120, y: 60 }, size: { width: 500, height: 400 } },
+    ];
+    useFactoryStore.getState().setProject(base);
+    useFactoryStore.getState().expandPocket("game-group");
+
+    const project = useFactoryStore.getState().project;
+    const group = project.pockets?.find((pocket) => pocket.id === "game-group");
+    expect(group?.expanded).toBe(true);
+    expect(group?.position).toEqual({ x: 120, y: 60 });
+    expect(group?.size).toEqual({ width: 500, height: 400 });
+    expect(project.nodes.find((node) => node.id === "alpha")?.position).toEqual({ x: 40, y: 100 });
   });
 
   it("re-homes a dropped card through moveBoardItems and never resizes the board", () => {

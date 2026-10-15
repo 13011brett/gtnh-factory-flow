@@ -1352,11 +1352,12 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
         ...state.project,
         recipes: state.project.recipes.map((recipe) => {
           const refreshedRecipe = refreshedFor(recipe.id);
-          return refreshedRecipe ? mergeRefreshedRecipe(refreshedRecipe) : recipe;
+          return refreshedRecipe ? mergeRefreshedRecipe(refreshedRecipe, recipe) : recipe;
         }),
         nodes: state.project.nodes.map((node) => {
           const recipe = state.project.recipes.find((entry) => entry.id === node.recipeId);
-          const refreshedRecipe = recipe ? refreshedFor(recipe.id) : undefined;
+          const fetched = recipe ? refreshedFor(recipe.id) : undefined;
+          const refreshedRecipe = fetched && recipe ? mergeRefreshedRecipe(fetched, recipe) : fetched;
           if (!recipe || !refreshedRecipe) {
             return node;
           }
@@ -3080,6 +3081,8 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
       }
       const clone = structuredClone(node);
       clone.id = createId("node");
+      // The game's data is the original's (its placed machines, its own settings): a copy is a new card.
+      delete clone.gtnhplanner;
       // Two cells down and across: far enough to see, still on the grid.
       clone.position = snapPositionToGrid({
         x: node.position.x + CLONE_OFFSET,
@@ -3116,6 +3119,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
       }
       const clone = structuredClone(storage);
       clone.id = createId("storage");
+      delete clone.gtnhplanner;
       clone.position = snapPositionToGrid({
         x: storage.position.x + CLONE_OFFSET,
         y: storage.position.y + CLONE_OFFSET,
@@ -3623,6 +3627,8 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
       const pockets = pastePockets.map((pocket) => {
         const clone = structuredClone(pocket);
         clone.id = idMap.get(pocket.id) as string;
+        // A pasted thing is new: the game's data on what was copied is the original's.
+        delete clone.gtnhplanner;
         clone.parentPocketId = rehome(pocket.parentPocketId);
         clone.position = placeAt(pocket.position, clone.parentPocketId);
         return clone;
@@ -3639,6 +3645,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
         }
         const clone = structuredClone(node);
         clone.id = createId("node");
+        delete clone.gtnhplanner;
         idMap.set(node.id, clone.id);
         clone.pocketId = rehome(node.pocketId);
         clone.productionGroupId = node.productionGroupId ? groupMap.get(node.productionGroupId) : undefined;
@@ -3660,6 +3667,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
       const storages = payload.storages.map((storage) => {
         const clone = structuredClone(storage);
         clone.id = createId("storage");
+        delete clone.gtnhplanner;
         idMap.set(storage.id, clone.id);
         clone.pocketId = rehome(storage.pocketId);
         clone.productionGroupId = storage.productionGroupId ? groupMap.get(storage.productionGroupId) : undefined;
@@ -3669,6 +3677,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
       const annotations = payload.annotations.map((annotation) => {
         const clone = structuredClone(annotation);
         clone.id = createId("annotation");
+        delete clone.gtnhplanner;
         idMap.set(annotation.id, clone.id);
         clone.pocketId = rehome(annotation.pocketId);
         clone.position = placeAt(annotation.position, clone.pocketId);
@@ -3692,6 +3701,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
         }
         const clone = structuredClone(edge);
         clone.id = createId("edge");
+        delete clone.gtnhplanner;
         clone.source = source;
         clone.target = target;
         clone.waypoints =
@@ -4240,6 +4250,19 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
       if (!pocket || pocket.expanded) {
         return state;
       }
+      // A group with a frame opens as it closed, its members where they were (the mod's groups do the same, so a
+      // group collapsed in the game and opened here keeps its picture). Only a legacy pocket (no size) has its
+      // members rebased into a new frame below.
+      if (pocket.size) {
+        return withProjectHistory(state, {
+          project: touchProject({
+            ...state.project,
+            pockets: (state.project.pockets ?? []).map((entry) =>
+              entry.id === pocketId ? { ...entry, expanded: true } : entry,
+            ),
+          }),
+        });
+      }
 
       const memberNodes = state.project.nodes.filter((node) => node.pocketId === pocketId);
       const memberStorages = (state.project.storages ?? []).filter(
@@ -4280,10 +4303,9 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
 
       // Members are rebased into the frame: a legacy pocket's coordinates
       // are its own space, which nothing outside references. The
-      // frame fits itself around them; a hand-picked size survives while
-      // everything still fits inside it.
+      // frame fits itself around them.
       let shiftBy = { x: 0, y: 0 };
-      let frame = pocket.size;
+      let frame: { width: number; height: number } | undefined;
       if (footprints.length > 0) {
         const minX = Math.min(...footprints.map((rect) => rect.x));
         const minY = Math.min(...footprints.map((rect) => rect.y));
@@ -4299,8 +4321,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
             maxY - minY + BOARD_WINDOW_TITLE_HEIGHT + BOARD_WINDOW_FIT_PAD * 2,
           ),
         };
-        frame =
-          frame && frame.width >= fitted.width && frame.height >= fitted.height ? frame : fitted;
+        frame = fitted;
       }
       const sized = frame ?? BOARD_WINDOW_DEFAULT_SIZE;
       const clamped = {
@@ -5654,11 +5675,24 @@ function mergeRecipe(existing: Recipe, incoming: Recipe): Recipe {
   };
 }
 
-function mergeRefreshedRecipe(incoming: Recipe): Recipe {
-  return {
-    ...incoming,
-  };
+/**
+ * The dataset's body for a stored recipe. A recipe the game wrote (`gtnhplanner:<card>`) keeps the machines it names
+ * that the dataset does not list, ahead of the dataset's (the plain Apiary a bee card runs in, which the dataset has no
+ * handler for), so its card keeps the machine the game chose.
+ */
+function mergeRefreshedRecipe(incoming: Recipe, stored?: Recipe): Recipe {
+  if (!stored?.id.startsWith(GAME_RECIPE_PREFIX) || !stored.machineHandlers?.length) {
+    return { ...incoming };
+  }
+  const listed = new Set((incoming.machineHandlers ?? []).map((handler) => handler.id));
+  const gameOnly = stored.machineHandlers.filter((handler) => !listed.has(handler.id));
+  return gameOnly.length > 0
+    ? { ...incoming, machineHandlers: [...gameOnly, ...(incoming.machineHandlers ?? [])] }
+    : { ...incoming };
 }
+
+/** The id prefix of a recipe the game wrote for one of its cards (its `FfPlan.GAME_RECIPE_PREFIX`). */
+const GAME_RECIPE_PREFIX = "gtnhplanner:";
 
 function buildRecipeInputOverridesFromContextualRecipeInputs(
   existingRecipe: Recipe,

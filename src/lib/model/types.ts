@@ -83,6 +83,57 @@ export type FactoryNodeColorTag =
   | "steel"
   | "onyx";
 
+/**
+ * The in-game planner's own data for one thing (or the whole plan), opaque to
+ * the website and carried through every edit unchanged. At most
+ * GTNHPLANNER_DATA_MAX_BYTES serialized (schemas.ts).
+ */
+export type GtnhPlannerData = Record<string, unknown>;
+
+/** Which view a plan opens on: the board, or its task board. */
+export type PlanPrimaryView = "plan" | "tasks";
+
+export type PlanTaskStatus = "todo" | "doing" | "blocked" | "done";
+
+/**
+ * A task on the plan's task board. `order` is a fractional index: tasks sort
+ * by it inside a column, and a move writes one new key between two others.
+ */
+export interface PlanTask {
+  id: string;
+  title: string;
+  text?: string;
+  status: PlanTaskStatus;
+  order: string;
+  /** Account ids of the plan's members working on it. */
+  assignees?: string[];
+  /** Cards the task is about. */
+  nodeIds?: string[];
+  createdBy?: string;
+  createdAt?: string;
+  doneAt?: string;
+}
+
+/** One checklist line of a task: its own thing, so two people can tick two lines at once. */
+export interface PlanTaskItem {
+  id: string;
+  taskId: string;
+  text: string;
+  done: boolean;
+  order: string;
+  nodeId?: string;
+}
+
+/** A comment on a task. `at` is stamped by the server. */
+export interface PlanTaskComment {
+  id: string;
+  taskId: string;
+  by: string;
+  byName: string;
+  at: string;
+  text: string;
+}
+
 export interface ResourceAmount {
   kind: ResourceKind;
   id: ResourceId;
@@ -403,6 +454,8 @@ export interface FactoryNode {
     x: number;
     y: number;
   };
+  /** The in-game planner's data for this thing; see GtnhPlannerData. */
+  gtnhplanner?: GtnhPlannerData;
 }
 
 /**
@@ -473,6 +526,8 @@ export interface FactoryStorage {
     x: number;
     y: number;
   };
+  /** The in-game planner's data for this thing; see GtnhPlannerData. */
+  gtnhplanner?: GtnhPlannerData;
 }
 
 export type FactoryAnnotationKind = "box" | "arrow" | "text" | "zone" | "image";
@@ -554,6 +609,8 @@ export interface FactoryAnnotation {
   style?: FactoryAnnotationStyle;
   /** The board (pocket) this ink lives in; absent = the root board. */
   pocketId?: string;
+  /** The in-game planner's data for this thing; see GtnhPlannerData. */
+  gtnhplanner?: GtnhPlannerData;
 }
 
 /**
@@ -639,6 +696,8 @@ export interface FactoryEdge {
     x: number;
     y: number;
   }>;
+  /** The in-game planner's data for this thing; see GtnhPlannerData. */
+  gtnhplanner?: GtnhPlannerData;
 }
 
 export interface FuelProfile {
@@ -769,6 +828,14 @@ export interface FactoryProject {
   fuelProfiles: FuelProfile[];
   selectedFuelProfileId?: string;
   notes?: string;
+  /** The in-game planner's data for the whole plan; see GtnhPlannerData. */
+  gtnhplanner?: GtnhPlannerData;
+  /** Which view the plan opens on; absent = the board. A task board is a plan with "tasks". */
+  primaryView?: PlanPrimaryView;
+  /** The task board: tasks, their checklist lines and their comments. */
+  tasks?: PlanTask[];
+  taskItems?: PlanTaskItem[];
+  taskComments?: PlanTaskComment[];
   metadata?: {
     isDemo?: boolean;
     source?: string;

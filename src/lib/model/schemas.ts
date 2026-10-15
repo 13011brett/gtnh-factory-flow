@@ -28,6 +28,27 @@ export const entryIconSchema = z.object({
   dominantColor: z.string().max(32).optional(),
 });
 
+/** The in-game planner's data on one thing, serialized: what one card may carry. */
+export const GTNHPLANNER_DATA_MAX_BYTES = 64 * 1024;
+
+const utf8 = new TextEncoder();
+
+/** A value's size as JSON in UTF-8 bytes. */
+export function jsonByteLength(value: unknown): number {
+  return utf8.encode(JSON.stringify(value) ?? "").length;
+}
+
+/**
+ * The in-game planner's own data for a thing or the whole plan: opaque here
+ * and kept exactly as written, so a website edit never loses what the game
+ * stored. Bounded so one card cannot carry megabytes.
+ */
+export const gtnhplannerDataSchema = z
+  .record(z.string(), z.unknown())
+  .refine((value) => jsonByteLength(value) <= GTNHPLANNER_DATA_MAX_BYTES, {
+    message: `The game's data on one thing is limited to ${GTNHPLANNER_DATA_MAX_BYTES / 1024} KB`,
+  });
+
 export const dominantColorSchema = z
   .string()
   .regex(/^#[0-9a-fA-F]{6}$/)
@@ -378,6 +399,7 @@ export const factoryNodeSchema = z.object({
     x: z.number(),
     y: z.number(),
   }),
+  gtnhplanner: gtnhplannerDataSchema.optional(),
 });
 
 export const factoryStorageSchema = z.object({
@@ -407,6 +429,7 @@ export const factoryStorageSchema = z.object({
     x: z.number(),
     y: z.number(),
   }),
+  gtnhplanner: gtnhplannerDataSchema.optional(),
 });
 
 export const factoryAnnotationSchema = z.object({
@@ -449,6 +472,7 @@ export const factoryAnnotationSchema = z.object({
     })
     .optional(),
   pocketId: z.string().min(1).optional(),
+  gtnhplanner: gtnhplannerDataSchema.optional(),
 });
 
 export const factoryPocketSchema = z.object({
@@ -489,6 +513,7 @@ export const factoryEdgeSchema = z.object({
   waypoints: z.array(z.object({ x: z.number(), y: z.number() })).optional(),
   // A loose cell wire's Canner ratio; see FactoryEdge.crossForm.
   crossForm: z.object({ litresPerCell: z.number().positive() }).optional(),
+  gtnhplanner: gtnhplannerDataSchema.optional(),
 });
 
 export const fuelProfileSchema = z
@@ -533,11 +558,67 @@ export const planViewStateSchema = z.object({
   favouriteResourceKeys: z.array(z.string()).optional(),
 });
 
+/** The task board's bounds: what one task, checklist line or comment may hold. */
+export const PLAN_TASK_LIMITS = {
+  idLength: 200,
+  titleLength: 120,
+  textLength: 4000,
+  itemTextLength: 200,
+  commentTextLength: 2000,
+  orderLength: 128,
+  accountIdLength: 64,
+  accountNameLength: 64,
+  assignees: 50,
+  nodeIds: 500,
+  stampLength: 40,
+} as const;
+
+const taskIdSchema = z.string().min(1).max(PLAN_TASK_LIMITS.idLength);
+const accountIdSchema = z.string().min(1).max(PLAN_TASK_LIMITS.accountIdLength);
+const stampSchema = z.string().max(PLAN_TASK_LIMITS.stampLength);
+// A fractional index: sorts as a string, and a move writes a key between two others.
+const orderKeySchema = z.string().min(1).max(PLAN_TASK_LIMITS.orderLength);
+
+export const planTaskSchema = z.object({
+  id: taskIdSchema,
+  title: z.string().min(1).max(PLAN_TASK_LIMITS.titleLength),
+  text: z.string().max(PLAN_TASK_LIMITS.textLength).optional(),
+  status: z.enum(["todo", "doing", "blocked", "done"]),
+  order: orderKeySchema,
+  assignees: z.array(accountIdSchema).max(PLAN_TASK_LIMITS.assignees).optional(),
+  nodeIds: z.array(taskIdSchema).max(PLAN_TASK_LIMITS.nodeIds).optional(),
+  createdBy: accountIdSchema.optional(),
+  createdAt: stampSchema.optional(),
+  doneAt: stampSchema.optional(),
+});
+
+export const planTaskItemSchema = z.object({
+  id: taskIdSchema,
+  taskId: taskIdSchema,
+  text: z.string().min(1).max(PLAN_TASK_LIMITS.itemTextLength),
+  done: z.boolean(),
+  order: orderKeySchema,
+  nodeId: taskIdSchema.optional(),
+});
+
+export const planTaskCommentSchema = z.object({
+  id: taskIdSchema,
+  taskId: taskIdSchema,
+  by: accountIdSchema,
+  byName: z.string().max(PLAN_TASK_LIMITS.accountNameLength),
+  at: stampSchema,
+  text: z.string().min(1).max(PLAN_TASK_LIMITS.commentTextLength),
+});
+
+export const productionGroupSchema = z.object({
+  id: z.string().min(1),
+  name: z.string().min(1),
+  parentId: z.string().min(1).optional(),
+  resourceRules: z.record(z.string(), z.enum(["share", "import"])).optional(),
+});
+
 export const factoryProjectSchema = z.object({
-  productionGroups: z.array(z.object({
-    id: z.string().min(1), name: z.string().min(1), parentId: z.string().min(1).optional(),
-    resourceRules: z.record(z.string(), z.enum(["share", "import"])).optional(),
-  })).optional(),
+  productionGroups: z.array(productionGroupSchema).optional(),
   poolResourceRules: z.record(z.string(), z.enum(["share", "import"])).optional(),
   checklist: z.object({ cards: z.array(z.string()), edges: z.array(z.string()) }).optional(),
   schemaVersion: z.literal(PROJECT_SCHEMA_VERSION),
@@ -574,6 +655,13 @@ export const factoryProjectSchema = z.object({
   fuelProfiles: z.array(fuelProfileSchema),
   selectedFuelProfileId: z.string().optional(),
   notes: z.string().optional(),
+  // The in-game planner's data for the whole plan, kept as written.
+  gtnhplanner: gtnhplannerDataSchema.optional(),
+  // Which view the plan opens on; a task board is a plan with "tasks".
+  primaryView: z.enum(["plan", "tasks"]).optional(),
+  tasks: z.array(planTaskSchema).optional(),
+  taskItems: z.array(planTaskItemSchema).optional(),
+  taskComments: z.array(planTaskCommentSchema).optional(),
   metadata: z
     .object({
       isDemo: z.boolean().optional(),

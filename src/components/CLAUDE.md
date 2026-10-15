@@ -106,8 +106,9 @@ in `src/store/CLAUDE.md` (Live plans, Task boards).
   not while the Library or Welcome covers it). Left group: Non-recipe, undo, redo. Right group: Arrange, Fit, the rate
   unit, EU/t, Avg; same order and words as the game's (`chrome/bar-parts.tsx` has the key and the fit hook both bars
   share). Too narrow for one row, the right group drops to a second row, still right. The strip takes no presses
-  (`pointer-events: none`), only the keys do. A task board shows its own header the same way (title and count left,
-  New task right; `TaskBoard` leaves room at its top). The Non-recipe picker opens below the keys (`header[data-board-toolbar]`).
+  (`pointer-events: none`), only the keys do. A task board shows its own header the same way (title and count as plain
+  words left; Board / Chain and New task right; `TaskBoard` leaves room at its top). The Non-recipe picker opens below the
+  keys (`header[data-board-toolbar]`). Arrange is its label's width, 90 only while it shows progress.
 - Both bars degrade by their own width (`useBarFit`, bar px, `data-fit`, the widths in `BAR_FIT_TOP` and the toolbar's
   `STRIP_FIT`, which only tightens): tight tightens the keys (Non-recipe shows its bolt alone, Arrange takes its label's width, the faces are
   two and a +N), wrapped puts the keys on a second row (the top bar's tabs always keep room for the active tab and the +).
@@ -128,16 +129,28 @@ in `src/store/CLAUDE.md` (Live plans, Task boards).
   pointer moving re-renders that layer only; this tab's pointer is a native listener feeding the session, which sends
   at most 10 a second.
 - A task board is a plan of its own kind (`primaryView: "tasks"`): its tasks cover the board like the Library (the board
-  stays mounted), a plan that is not one never shows tasks, and nothing switches between the two. + > New task board
-  makes one. Right-click cards on a plan and Make a task (`lib/tasks/make-task.ts`; the menu lists the task boards on this
-  device, then New task board) opens that board with a new task selected: titled "Build A", "Build A and B" or "Build A
-  and N more", a checklist line per card ("4x Electric Blast Furnace (HV)", with the multiplication sign), a link per card. A link is
-  `{ plan, node }` (`lib/tasks/task-links.ts`): `plan` is `<ownerId>:<designId>` for a plan in the account, the local design
-  id for one on this device only; a click opens the plan and centres the card (`lib/tasks/open-link.ts`) or says "That plan
-  is gone". A card wears the dot of its most pressing task (blocked, then doing, to do, done; `lib/tasks/task-link-index.ts`,
-  from the task boards on this device, `DesignSummary.taskBoard` says which designs are). Older `nodeIds`/`nodeId` still read.
-- The task board covers the board like the Library (the board stays mounted). Cards drag with pointer events (a
-  4 px slop, then the drop line shows where it lands) so mouse, pen and probes behave alike. The global
-  `button, input, select, textarea { font: inherit }` beats Tailwind's text sizes, so the board and the panel set
-  their size on the container.
+  stays mounted) and the overview's room too (no overview on a task board, the game's), a plan that is not one never
+  shows tasks, and nothing switches between the two. + > New task board makes one. Its tab and Library tile wear a faint
+  violet (#A78BFA at 9%) and the 7x8 checklist icon (`pixel-icons.tsx` `ChecklistIcon`, the game's runs); the tile says
+  "N tasks" (`DesignStats.tasks`).
+- `src/components/tasks/` is the game's ui/task drawn in its GUI pixels (8 px font, the views zoomed 2 / 1.17 like the top
+  bar: `tasks.css`, `task-box.css`). The game's screenshots are the reference, side by side at GUI scale 2.
+  - `TaskBoard`: four columns (Blocked, To do, Doing, Done) with a dot, count and + (makes a task there and opens it);
+    cards with the column's colour down the left, the first screenshot on top, title, priority arrow (`task-look.tsx`),
+    faces (the game's initials: one letter for one word), a dot a day in the column (amber 7, red 14, none in Done),
+    things done of all and comments. A press carries a card past 6 GUI px (pointer events, so mouse, pen and probes
+    behave alike); a dashed gap shows where it lands. Right-click: Open, Move to, Delete task.
+  - `TaskBox`: the task in a box over the board (a body portal), laid out as Jira's issue view; below 400 GUI px the
+    side column goes under the title. Things: machine (icon, its words, "On <plan>", a key that shows it on its plan),
+    location (block, dimension, a Copy key for x y z), screenshot (thumbnail, big on a click), older words (click to
+    rewrite); drag to reorder, right-click for more. The website adds no locations or screenshots: the hint says
+    "Add machines from a card's menu." Waiting on's Add refuses a loop with "That task already waits on this one."
+  - `TaskChainView`: the list (folds below 560 GUI px) and the map (pans, zooms by steps about the mouse, Fit), from
+    `lib/tasks/task-chain.ts`.
+  - `AddToTask`: the two menus of Add to a task (`openAddToTask`), opened from a right click on cards, a card's actions
+    key and a right click on an overview machine line. `make-task.ts` makes the edit on the board and brings the plan
+    back, then a notice (`showLiveNotice`) says "Added X to 'task'" with Open.
+  - A link opens the plan and centres the card (`lib/tasks/open-link.ts`) or says "That plan is gone". A card wears the
+    dot of its most pressing task (blocked, then doing, to do, done; `lib/tasks/task-link-index.ts`, from the task
+    boards on this device, counting machine things and older task links).
 - Notices from the live plan (an edit refused, removed from a plan) show above the board (`LiveNotice`).

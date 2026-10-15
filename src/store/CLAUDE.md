@@ -154,5 +154,14 @@ changes nothing until then. Architecture and protocol: `docs/live.md`.
 - A comment's `by`, `byName` and `at` are the live service's to write on a live plan; on a plan of this device
   alone they are yours (`local` / "You" when signed out). A closed design with tasks is never thrown away as blank.
 - A task board is a design whose plan has `primaryView: "tasks"` (copied to `DesignSummary.taskBoard`); it always shows its
-  tasks and no other plan does. The open task's panel and New task are `task-board-ui.ts`. Task and checklist links are
-  `{ plan, node }` (`task-links.ts`); the older same-plan `nodeIds`/`nodeId` read as links to the plan holding the task.
+  tasks and no other plan does. The open task's box, New task and each board's view (Board or Chain, remembered per board
+  in this browser) are `task-board-ui.ts`. Thing and task links are `{ plan, node }` (`task-links.ts`); the older
+  same-plan `nodeIds`/`nodeId` read as links to the plan holding the task.
+- The game is the reference (its `TaskEdits`, `TaskChain`, `Tasks`): columns run Blocked, To do, Doing, Done; a move
+  to another column stamps `movedAt`; Medium is written as no `priority`; `addBlocker` refuses itself, a repeat and a
+  loop down the chain, and deleting a task takes its id out of every `blockedBy`; `removeThing` takes an older task's
+  link to the same card with it; an older task's links that no thing names count as things not done (`looseLinks`,
+  `taskProgress`). `task-chain.ts` lays the chain view out exactly as the game's TaskChain (its test is the game's).
+- Add to a task (`make-task.ts`) edits the board itself (opened, edited through `editTasks`, then the plan comes back once
+  the live service has the batch), so a live board sends it as anyone's edit; never write a board's stored record
+  behind its live room.

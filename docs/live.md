@@ -178,11 +178,15 @@ The website joins the room of the design on the canvas when it is a cloud plan: 
   deleted, refused) is not asked for again while its design is still here; once that design is gone, a design for the
   same plan (shared again and opened from Shared with me) joins. Leaving a plan yourself shows no "removed" notice
   (`noteLeavingPlan`).
-- Task boards: `src/lib/tasks/` (pure edits, fractional order keys) and `src/components/tasks/`; a task board is a plan of
-  its own kind (`primaryView: "tasks"`, made by New task board) that always shows its tasks, and no other plan shows
-  tasks. A task's `links` and a checklist line's `link` are `{ plan, node }` pointing at cards of other plans (`plan` is
-  `<ownerId>:<designId>` for a plan in the account, the local design id otherwise); Make a task on cards puts one in a
-  board. They work on plans of this device alone too.
+- Task boards: `src/lib/tasks/` (pure edits as the game's TaskEdits and TaskChain, fractional order keys) and
+  `src/components/tasks/`; a task board is a plan of its own kind (`primaryView: "tasks"`, made by New task board) that
+  always shows its tasks, and no other plan shows tasks. A task carries `priority` (none is Medium), `movedAt` (stamped
+  by a move to another column) and `blockedBy` (ids on the board, never a loop: the adding side refuses one); a thing
+  (`taskItems`) is a machine (`link`), a location (`place`) or a screenshot (`picture`, an image data URL), each with
+  its checkbox, or an older line of words. The website never adds locations or screenshots, it keeps and shows the
+  game's. A `link` is `{ plan, node }` pointing at a card of another plan (`plan` is `<ownerId>:<designId>` for a plan in
+  the account, the local design id otherwise); Add to a task on cards puts a machine thing per card in a task, linked on
+  the thing (an older task's own `links` still read, as loose machines). They work on plans of this device alone too.
 - The account sync never sends the body of a plan open live and treats 409 `{ live: true }` as nothing to send.
 - Deviations from the contract: a member's rename of a shared plan stays on their device (the row's name is the
   owner's); board dressing (`view`) is per person, not shared live; presence from your own account (another tab, the

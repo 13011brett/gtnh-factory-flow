@@ -172,14 +172,17 @@ The website joins the room of the design on the canvas when it is a cloud plan: 
   no tab depends on another staying open, at the cost of a socket a tab.
 - Presence: the pointer on the board at most 10 a second, the selection when it changes, drawn for others by
   `LivePresenceLayer`; faces of who is here on the plan bar.
-- Sharing: the plan bar's Share (members, search, remove, leave) and the Library's Shared with me. Publish (the
+- Sharing: the top bar's Share (members, search, remove, leave) and the Library's Shared with me, which the live
+  service's `shared` and `unshared` frames keep current, with a notice and an Open key. Publish (the
   community post) is separate and never shares the live plan. A plan the service dropped this tab from (unshared,
   deleted, refused) is not asked for again while its design is still here; once that design is gone, a design for the
   same plan (shared again and opened from Shared with me) joins. Leaving a plan yourself shows no "removed" notice
   (`noteLeavingPlan`).
-- Task boards: `src/lib/tasks/` (pure edits, fractional order keys) and `src/components/tasks/`; any plan has a Tasks
-  face, a plan with `primaryView: "tasks"` opens on it, and New task board makes one. They work on plans of this
-  device alone too.
+- Task boards: `src/lib/tasks/` (pure edits, fractional order keys) and `src/components/tasks/`; a task board is a plan of
+  its own kind (`primaryView: "tasks"`, made by New task board) that always shows its tasks, and no other plan shows
+  tasks. A task's `links` and a checklist line's `link` are `{ plan, node }` pointing at cards of other plans (`plan` is
+  `<ownerId>:<designId>` for a plan in the account, the local design id otherwise); Make a task on cards puts one in a
+  board. They work on plans of this device alone too.
 - The account sync never sends the body of a plan open live and treats 409 `{ live: true }` as nothing to send.
 - Deviations from the contract: a member's rename of a shared plan stays on their device (the row's name is the
   owner's); board dressing (`view`) is per person, not shared live; presence from your own account (another tab, the
@@ -253,7 +256,7 @@ no live features). The rollout, staging first, is `docs/live-rollout.md`.
   (what an edit sends, remote batches, undo of own edits, offline and resend, a closed tab's edits, refusals,
   removal, nothing without the variable). `src/lib/library/library-sync-live.test.ts`: the sync beside live plans.
   `src/lib/tasks/*.test.ts`: order keys and task edits.
-- In the real app, on `npm run dev:local`: `scratch/probes/live-share.mjs`, `live-tasks.mjs` and `live-extra.mjs`
+- In the real app, on `npm run dev:local`: `scratch/probes/live-share.mjs`, `live-shared-notice.mjs`, `live-tasks.mjs` and `live-extra.mjs`
   (two headless accounts: share, edits both ways, cursors, selections, undo, removal, the task board on both,
   offline edits, linked cards, a signed-out board). Development builds expose the stores as `window.__gtnhLive`
   (and `drop()`, which cuts the socket as a lost network would). Sign-ins are rate limited: the probes keep their

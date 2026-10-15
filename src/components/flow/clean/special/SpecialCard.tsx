@@ -3,6 +3,8 @@
 import "../clean.css";
 import { useDeviceSettings } from "@/lib/device-settings";
 import "./special.css";
+import { useCardTaskStatus } from "@/lib/tasks/task-link-index";
+import { TASK_STATUS_COLOR } from "@/lib/tasks/task-links";
 
 import { Handle, Position } from "@xyflow/react";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent } from "react";
@@ -354,6 +356,8 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
   const { view, actions, context } = model;
   const { wasClick, onPointerDownCapture } = useClickSlop();
   const glanceNames = useDeviceSettings().zoomedOutNames;
+  // A task board somewhere on this device is about this card: a dot before the name, as on the plain card.
+  const taskStatus = useCardTaskStatus(view.nodeId);
   const rootRef = useRef<HTMLDivElement>(null);
   useEffect(() => ensureInteractionHost(), []);
   useEffect(() => {
@@ -532,7 +536,13 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
           role={view.hasPicker ? "button" : undefined}
           tabIndex={view.hasPicker ? 0 : undefined}
           className={view.hasPicker ? "cc-name nowheel" : "cc-name"}
-          style={{ "--cc-name-size": `${view.nameSize}px` } as CSSProperties}
+          style={
+            {
+              "--cc-name-size": `${view.nameSize}px`,
+              ...(taskStatus ? { "--cc-task": TASK_STATUS_COLOR[taskStatus] } : {}),
+            } as CSSProperties
+          }
+          data-task={taskStatus}
           data-tone={view.nameTone === "ink" ? undefined : view.nameTone}
           data-picker={view.hasPicker ? "" : undefined}
           data-open={listOpen ? "" : undefined}

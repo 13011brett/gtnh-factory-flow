@@ -98,7 +98,7 @@ export function BarKey({
  */
 export type BarFit = "roomy" | "tight" | "wrapped";
 /** The top bar's widths; the board toolbar has fewer keys and its own (BoardToolbar). */
-export const BAR_FIT_TOP = { tightBelow: 740, wrappedBelow: 600 } as const;
+export const BAR_FIT_TOP = { tightBelow: 520, wrappedBelow: 400 } as const;
 
 export function useBarFit(
   ref: { current: HTMLElement | null },

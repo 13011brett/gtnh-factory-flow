@@ -91,29 +91,49 @@ The board has its own notes in `flow/CLAUDE.md`, the Pool worksheet in `pool/CLA
 Everything here renders only with `isLiveConfigured()`; without it the app looks exactly as before. Store rules are
 in `src/store/CLAUDE.md` (Live plans, Task boards).
 
-- The mod's top bar (`chrome/ModBar.tsx`) carries it, as the game's does: a Tasks key before Library swaps the board
-  for the plan's task board and back (`Plan` while the tasks show); after the tabs, the live state as a dot and the
-  faces of who else is here (`LivePresence`: one square per account, initials in their colour; a tip says Live,
-  Connecting or Offline with edits waiting). The Share menu's first row is Share with people... (`PlanShareDialog`:
-  people who edit this plan with you; greyed signed out, "Sign in to share"); the library rows say Publish to
-  library... for a plan not posted yet (`chrome/library-rows.ts`, the dialog's title too). Never fold one into the
-  other. Without live plans every row and label is as before. The + tab menu has New task board.
+- The mod's top bar (`chrome/ModBar.tsx`) holds the ACCOUNT's things only, in this order: the plan tabs and +, the live
+  state as a dot and the faces of who else is here (`LivePresence`: one square per account, initials in their colour; a
+  tip says Live, Connecting or Offline with edits waiting), Library, Share, the account key, feedback, settings, help.
+  The account key (`chrome/AccountKey.tsx`) reads "Sign in" signed out (it opens `SignInPanel`, the form that used to
+  hang in the Library) and is the account's face (initials in its colour) signed in, with a menu of the username and
+  Sign out. The Library has no sign-in key, only a line "Signed in as X". The Share menu's first row is Share with
+  people... (`PlanShareDialog`: people who edit this plan with you; greyed signed out, "Sign in to share"); the library
+  rows say Publish to library... for a plan not posted yet (`chrome/library-rows.ts`, the dialog's title too). Never fold
+  one into the other. Without live plans every row and label is as before. The + tab menu has New task board.
   `PlanIdentityDrawer`, `DesignTabs` and `BoardActions` keep their live keys but are not on the desktop board.
-- The bar degrades by its own width (`useBarFit` in `ModBar.tsx`, bar px, `data-fit`): below 740 the keys tighten, Non-recipe
-  shows its bolt alone, Arrange takes its label's width and the faces are two and a +N; below 600 the keys wrap to a
-  second row under the tabs (the strip always keeps room for the active tab and the +). Nothing changes above 740.
+- What edits or views the board is the BOARD TOOLBAR (`chrome/BoardToolbar.tsx`), a strip along the top of the board in
+  the middle column (above the notices; not while the Library or Welcome covers it): Non-recipe, undo, redo, Arrange,
+  Fit, the rate unit, EU/t, Avg, same order and words as the game's (`chrome/bar-parts.tsx` has the key and the fit
+  hook both bars share). A task board shows its own header there instead (title, count, New task: `requestNewTask`).
+  The Non-recipe picker opens below this strip (`[data-board-toolbar]`).
+- Both bars degrade by their own width (`useBarFit`, bar px, `data-fit`, the widths in `BAR_FIT_TOP` and the toolbar's
+  `STRIP_FIT`): tight tightens the keys (Non-recipe shows its bolt alone, Arrange takes its label's width, the faces are
+  two and a +N), wrapped puts the keys on a second row (the top bar's tabs always keep room for the active tab and the +).
 - Share dialog: the owner is listed first; the owner adds people by name (search asks once typing pauses, 250 ms,
   and drops the answer to an older query) and removes them; someone it is shared with sees everyone and can leave.
-  A plan not in the account yet is pushed first. Changes arrive through the live room too (`members`).
-- The Library's Shared with me (a third shelf of `chrome/ModLibrary.tsx` when signed in; a rail entry of the
-  compact `LibraryPage`) lists plans others shared with you (from the account sync), with the owner and everyone's
-  faces; opening one makes or reuses this device's copy and it opens live. Copies never show among My plans.
+  Plans are in the account from the moment they exist (`src/store/CLAUDE.md`), so it never waits on a save. Changes arrive
+  through the live room too (`members`).
+- The Library's Shared with me (a third shelf of `chrome/ModLibrary.tsx`, always there when signed in, "Nothing shared
+  with you yet" when empty; a rail entry of the compact `LibraryPage`) lists plans others shared with you (from the
+  account sync, refreshed at once by the live service's `shared` and `unshared` frames), each tile naming its owner,
+  with everyone's faces; opening one makes or reuses this device's copy and it opens live (`lib/library/open-shared.ts`).
+  Copies never show among My plans. The same frame shows the notice "<owner> shared <plan> with you" with an Open key
+  (`LiveNotice`, above the board and the Library alike).
 - Presence is `flow/LivePresenceLayer.tsx`, a layer of its own inside the viewport: others' pointers (arrow and name
   tag in their colour) and outlines round what they have selected, in the plan's coordinates, sized by
   `1 / --board-zoom` to stay one size on screen (each layer registers for the variable, `virtual/zoom-var.ts`, as the
   board no longer carries it). It reads `live-presence.ts` (outside every board store), so a
   pointer moving re-renders that layer only; this tab's pointer is a native listener feeding the session, which sends
   at most 10 a second.
+- A task board is a plan of its own kind (`primaryView: "tasks"`): its tasks cover the board like the Library (the board
+  stays mounted), a plan that is not one never shows tasks, and nothing switches between the two. + > New task board
+  makes one. Right-click cards on a plan and Make a task (`lib/tasks/make-task.ts`; the menu lists the task boards on this
+  device, then New task board) opens that board with a new task selected: titled "Build A", "Build A and B" or "Build A
+  and N more", a checklist line per card ("4x Electric Blast Furnace (HV)", with the multiplication sign), a link per card. A link is
+  `{ plan, node }` (`lib/tasks/task-links.ts`): `plan` is `<ownerId>:<designId>` for a plan in the account, the local design
+  id for one on this device only; a click opens the plan and centres the card (`lib/tasks/open-link.ts`) or says "That plan
+  is gone". A card wears the dot of its most pressing task (blocked, then doing, to do, done; `lib/tasks/task-link-index.ts`,
+  from the task boards on this device, `DesignSummary.taskBoard` says which designs are). Older `nodeIds`/`nodeId` still read.
 - The task board covers the board like the Library (the board stays mounted). Cards drag with pointer events (a
   4 px slop, then the drop line shows where it lands) so mouse, pen and probes behave alike. The global
   `button, input, select, textarea { font: inherit }` beats Tailwind's text sizes, so the board and the panel set

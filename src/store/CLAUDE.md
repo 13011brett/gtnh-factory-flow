@@ -127,6 +127,14 @@ changes nothing until then. Architecture and protocol: `docs/live.md`.
 - THE LOCAL COPY. A design open live is the service's plan; its record here is this device's copy, for opening
   offline. Autosave writes it unguarded (`persistLiveCopy`: no version check, no conflict copy, sync stamps kept),
   and the tab sync never reloads it from storage.
+- IN THE ACCOUNT FROM THE START. Signed in with live configured, a design that appears (new, task board, import, paste,
+  link, library copy) is created in the account at once (`library-sync.ts`: a new unsynced design runs a sync with no
+  quiet period, `markDesignFresh`), and it joins its live room as soon as the row exists. A plan made moments ago takes the
+  canvas over the account's first snapshot once (`Room.fresh`/`seed`): the account read the saved record, which can be
+  behind the canvas; nothing else ever lets the canvas overrule a snapshot. No timer pushes a plan open live.
+- SHARING NOTICES. The service's `shared` frame (to every socket of an added account, in the room or not) shows the notice
+  with Open and refreshes the account list; `unshared` refreshes it (the sync drops copies no longer listed). Each plan is
+  announced once a session (the service may repeat one); an `unshared` lets the next share be announced.
 - ACCOUNT SYNC never sends the body of a plan open live, here or in another tab (`isDesignOpenLive`, a localStorage
   mark refreshed while open), and a pull of one moves only its metadata. A push answered 409 `{ live: true }` goes
   again without the plan: not an error, not a conflict copy. Copies of shared plans are never pushed as ours; the
@@ -145,5 +153,6 @@ changes nothing until then. Architecture and protocol: `docs/live.md`.
   Tasks never feed the solve.
 - A comment's `by`, `byName` and `at` are the live service's to write on a live plan; on a plan of this device
   alone they are yours (`local` / "You" when signed out). A closed design with tasks is never thrown away as blank.
-- Which face is up (board or tasks) is per tab and never saved (`task-view.ts`); a design lands on its
-  `primaryView`.
+- A task board is a design whose plan has `primaryView: "tasks"` (copied to `DesignSummary.taskBoard`); it always shows its
+  tasks and no other plan does. The open task's panel and New task are `task-board-ui.ts`. Task and checklist links are
+  `{ plan, node }` (`task-links.ts`); the older same-plan `nodeIds`/`nodeId` read as links to the plan holding the task.

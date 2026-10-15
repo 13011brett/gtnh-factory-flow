@@ -9,7 +9,7 @@ import { loginCommunityUser, registerCommunityUser } from "@/lib/community/clien
 import { useCommunityUser } from "@/components/community/auth";
 import { useDropdownDismiss } from "@/lib/hooks/use-dropdown-dismiss";
 import { getUiScale } from "@/lib/ui-scale";
-import type { ChromeAnchor } from "./ChromeMenu";
+import { CHROME_SCREEN_K, type ChromeAnchor } from "./ChromeMenu";
 
 /** The sign-in form, hung from the account key: sign in, or make an account (a name and a password, no email). */
 export function SignInPanel({ anchor, onClose }: { anchor: ChromeAnchor; onClose: () => void }) {
@@ -21,7 +21,8 @@ export function SignInPanel({ anchor, onClose }: { anchor: ChromeAnchor; onClose
   const [error, setError] = useState<string>();
   const [busy, setBusy] = useState(false);
   useDropdownDismiss(true, { refs: [ref], onClose, insideSelector: "[data-menu-anchor]" });
-  const scale = getUiScale();
+  // The panel wears the bar's extra zoom (chrome.css .mm, CHROME_SCREEN_K): its box is in those pixels.
+  const scale = getUiScale() * CHROME_SCREEN_K;
   const vw = window.innerWidth / scale;
 
   const submit = async () => {

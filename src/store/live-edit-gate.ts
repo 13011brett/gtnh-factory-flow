@@ -92,3 +92,23 @@ export function isDesignOpenLive(designId: string): boolean {
     return false;
   }
 }
+
+/*
+ * Designs just made in this tab, whose account row the sync created a moment ago: the first live snapshot of one is
+ * the plan as that push read it, which can be behind the canvas (autosave lags, and edits made while the row was being
+ * created). The canvas wins there, and only there: nobody else can have edited a plan this young.
+ */
+
+const FRESH_MS = 20_000;
+const freshDesigns = new Map<string, number>();
+
+export function markDesignFresh(designId: string): void {
+  freshDesigns.set(designId, Date.now());
+}
+
+/** Whether `designId` was made here moments ago (once: asking uses it up). */
+export function takeDesignFresh(designId: string): boolean {
+  const at = freshDesigns.get(designId);
+  freshDesigns.delete(designId);
+  return at !== undefined && Date.now() - at < FRESH_MS;
+}

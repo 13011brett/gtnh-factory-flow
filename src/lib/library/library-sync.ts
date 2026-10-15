@@ -17,7 +17,7 @@ import { parseFactoryProjectJson } from "@/lib/import-export";
 import { withoutRuntimeTables } from "@/lib/import-export/plan-code";
 import { useCommunityAuthStore } from "@/store/community-auth-store";
 import { useDesignStore } from "@/store/design-store";
-import { isDesignOpenLive } from "@/store/live-edit-gate";
+import { isDesignOpenLive, markDesignFresh } from "@/store/live-edit-gate";
 import { isLiveConfigured } from "@/lib/live/live-config";
 import { forgetRemoteLibrary, noteRemoteLibrary } from "./cloud-library";
 import {
@@ -679,7 +679,10 @@ export function startLibrarySync(): () => void {
             )
           : [];
       if (fresh.length > 0) {
-        fresh.forEach((design) => creating.add(design.id));
+        fresh.forEach((design) => {
+          creating.add(design.id);
+          markDesignFresh(design.id);
+        });
         scheduleSync(0);
       } else {
         scheduleSync();

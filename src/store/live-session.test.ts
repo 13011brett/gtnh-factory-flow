@@ -86,7 +86,7 @@ import type { FactoryAnnotation, FactoryProject } from "@/lib/model/types";
 import { useCommunityAuthStore } from "./community-auth-store";
 import { useDesignStore } from "./design-store";
 import { useFactoryStore } from "./factory-store";
-import { liveUndoHandler } from "./live-edit-gate";
+import { liveUndoHandler, markDesignFresh } from "./live-edit-gate";
 import {
   chunkOps,
   noteLeavingPlan,
@@ -312,6 +312,24 @@ describe("live editing in the store", () => {
     expect(liveUndoHandler()).toBeDefined();
     // Bob is here (the game); ann's own connection is not a face.
     expect(useLiveSession.getState().present.map((person) => person.username)).toEqual(["bob"]);
+  });
+
+  it("keeps what a plan made moments ago held on the canvas beyond the account's first copy, and sends it first", async () => {
+    // The row was created from the saved record; the canvas already had a second note.
+    markDesignFresh(DESIGN);
+    await openLiveDesign(planWith(annotation("n1", "one"), annotation("n2", "two", 300)), planWith(annotation("n1", "one")));
+    expect(annotations().map((note) => note.id)).toEqual(["n1", "n2"]);
+    expect((service.plan.annotations as Array<{ id: string }> | undefined)?.map((note) => note.id)).toEqual(["n1", "n2"]);
+    expect(useLiveSession.getState().pending).toBe(0);
+
+    // A design not made moments ago takes the account's plan: the canvas never overrules it.
+    stop?.();
+    stop = undefined;
+    useDesignStore.setState({ designs: [], activeDesignId: undefined });
+    await settle();
+    service = new FakeService();
+    await openLiveDesign(planWith(annotation("n1", "one"), annotation("n2", "two", 300)), planWith(annotation("n1", "one")));
+    expect(annotations().map((note) => note.id)).toEqual(["n1"]);
   });
 
   it("says who shared a plan with the player, with a key to open it, once however often it is sent", async () => {

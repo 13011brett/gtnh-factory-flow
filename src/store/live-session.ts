@@ -40,6 +40,7 @@ import {
   markDesignOpenLive,
   setLiveDesignId,
   setLiveUndoHandler,
+  takeDesignFresh,
 } from "./live-edit-gate";
 
 /**
@@ -169,6 +170,12 @@ interface Room {
   owner?: LiveMember;
   members: LiveMember[];
   present: LivePerson[];
+  /**
+   * A plan just made here, its row created a moment ago: its first snapshot is what the account read, which may be
+   * behind the canvas (`seed`, the canvas when the room was made). The canvas wins, once.
+   */
+  fresh: boolean;
+  seed: LivePlan;
 }
 
 let noticeCount = 0;
@@ -594,6 +601,21 @@ export class LiveSession {
       return;
     }
     const before = room.engine.view;
+    if (room.fresh) {
+      // The first snapshot of a plan made here moments ago: what the canvas held beyond it is this person's edit,
+      // sent first, ahead of anything done since the room was made.
+      room.fresh = false;
+      const snapshotPlan = liveShape(frame.plan);
+      const ops = withRecipesTheyName(diffPlans(snapshotPlan, room.seed), snapshotPlan, room.seed);
+      if (ops.length > 0) {
+        const later = room.engine.pending.slice();
+        room.engine = new LiveClientState({ seq: frame.seq, plan: snapshotPlan });
+        for (const chunk of chunkOps(ops)) {
+          room.engine.localOps(chunk, { undoable: false, keepRedo: true });
+        }
+        room.engine.adopt(later);
+      }
+    }
     const resend = room.engine.resync({ seq: frame.seq, plan: liveShape(frame.plan) });
     room.joined = true;
     room.role = frame.role;
@@ -825,6 +847,8 @@ export class LiveSession {
       joinSent: false,
       members: [],
       present: [],
+      fresh: takeDesignFresh(designId),
+      seed: liveShape(project),
     };
     this.room = room;
     setLiveDesignId(designId);

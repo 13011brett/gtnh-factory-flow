@@ -15,7 +15,7 @@ await page.waitForTimeout(800);
 for (const t of steps.split("|").filter(Boolean)) {
   if (t.startsWith("plan=")) {
     const raw = JSON.parse(readFileSync(t.slice(5), "utf8"));
-    const proj = raw.project ?? raw;
+    const proj = raw.project ?? raw.plan ?? raw;
     await page.evaluate((p) => { const S = window.__ccStore; S.getState().setProject({ ...p, planMode: true, solveMode: true }); }, proj);
     await page.waitForTimeout(1500);
     await page.evaluate(() => window.__ccStore.getState().frameBoardNodes?.());

@@ -416,6 +416,12 @@ import {
   type AnnotationFlowNode,
 } from "./AnnotationNode";
 import { AnnotationSwitch } from "./clean/note/AnnotationSwitch";
+import { BoardNodeSwitch, PocketNodeSwitch } from "./clean/group/GroupSwitch";
+import { GroupFloor } from "./clean/group/CleanGroupFrame";
+import { setBoardSizeSource, boardSizeOf } from "./clean/group/group-sizes";
+import { clearGroupDrop, groupDropSound, groupUnder, showGroupDrop } from "./clean/group/group-drop";
+import { computeGroupSummaries } from "./clean/group/group-summary";
+import { useWorkspaceView } from "@/lib/workspace-view";
 import { visibleAnnotations } from "./clean/note/note-model";
 import { settleZonePoints } from "@/lib/model/zone-points";
 import { BOARD_PAPER_IDS } from "@/lib/model/board-paper";
@@ -432,8 +438,8 @@ const nodeTypes = {
   storageNode: StorageNodeSwitch,
   trashNode: TrashNode,
   annotationNode: AnnotationSwitch,
-  pocketNode: PocketNode,
-  boardNode: BoardNode,
+  pocketNode: PocketNodeSwitch,
+  boardNode: BoardNodeSwitch,
 } satisfies NodeTypes;
 
 type BoardFlowNode =
@@ -1752,6 +1758,8 @@ let publishedBoardGeometryById = new Map<
   string,
   { x: number; y: number; width: number; height: number }
 >();
+// The group edits (clean/group) measure things by what the board last published.
+setBoardSizeSource((id) => publishedBoardGeometryById.get(id));
 
 /**
  * While a wire is being dragged: for every card on the board, the port a drop
@@ -2062,6 +2070,20 @@ export function FactoryFlow() {
     () => computePocketSummaries(project, pocketView.visiblePockets, result),
     [project, result, pocketView.visiblePockets],
   );
+  // Plan boards: every group's summary (docs/groups.md, "What the summary says"), the open frames' machine counts too.
+  const averageMachineDraw = useWorkspaceView().averageMachineDraw;
+  const groupSummaries = useMemo(
+    () =>
+      project.planMode === true
+        ? computeGroupSummaries(
+            project,
+            result,
+            (project.pockets ?? []).map((pocket) => pocket.id),
+            !averageMachineDraw,
+          )
+        : undefined,
+    [project, result, averageMachineDraw],
+  );
 
   const nodesFromProject = useMemo<BoardFlowNode[]>(() => {
     // An item inside an open board is a React Flow CHILD of the frame: its
@@ -2118,6 +2140,7 @@ export function FactoryFlow() {
             data: reuseObjectIdentity(boardNodeDataCache, pocket.id, {
               pocket,
               memberCount: memberCounts.get(pocket.id) ?? 0,
+              ...(groupSummaries ? { machines: groupSummaries.get(pocket.id)?.machines ?? 0 } : {}),
             }),
           }) satisfies BoardWindowFlowNode,
       ),
@@ -2230,6 +2253,7 @@ export function FactoryFlow() {
             data: reuseObjectIdentity(pocketNodeDataCache, pocket.id, {
               pocket,
               summary: pocketSummaries.get(pocket.id),
+              ...(groupSummaries ? { groupSummary: groupSummaries.get(pocket.id) } : {}),
             }),
           }) satisfies PocketFlowNode,
       ),
@@ -2238,6 +2262,7 @@ export function FactoryFlow() {
     activeFlowResourceKey,
     activeNodeBottlenecks,
     hoveredUsageNodeId,
+    groupSummaries,
     pocketSummaries,
     pocketView,
     project.annotations,
@@ -2934,6 +2959,22 @@ export function FactoryFlow() {
             x: free.x - constraint.origin.x,
             y: free.y - constraint.origin.y,
           };
+        }
+      }
+      const drop = groupDropRef.current;
+      if (drop) {
+        const change = changes.find(
+          (entry) => entry.type === "position" && entry.dragging && entry.position && entry.id === drop.primary,
+        );
+        const geometry = publishedBoardGeometryById.get(drop.primary);
+        if (change && change.type === "position" && change.position && geometry) {
+          const box = {
+            x: change.position.x + drop.origin.x,
+            y: change.position.y + drop.origin.y,
+            width: geometry.width,
+            height: geometry.height,
+          };
+          showGroupDrop(groupUnder(drop.frames, box, BOARD_WINDOW_TITLE_HEIGHT, drop.excluded), drop.from);
         }
       }
       setFlowNodes((currentNodes) => {
@@ -5249,6 +5290,15 @@ export function FactoryFlow() {
         }
         return;
       }
+      if (
+        (node.type === "boardNode" || node.type === "pocketNode") &&
+        useFactoryStore.getState().project.planMode === true
+      ) {
+        // A group, open (its title strip or border) or collapsed: its own menu (docs/groups.md).
+        event.preventDefault();
+        setBoardMenu({ kind: "group", id: node.id, ...menuPoint(event) });
+        return;
+      }
       if (node.type !== "recipeNode" && node.type !== "storageNode") {
         return;
       }
@@ -5511,6 +5561,22 @@ export function FactoryFlow() {
    */
   const dragPassengersRef = useRef<Set<string>>(new Set());
 
+  /**
+   * Plan boards (groups, docs/groups.md): the open frames a carried card could join, worked out at drag start, so each
+   * drag frame lights the one under the carried card's centre (group-drop.ts). Undefined on classic boards and when
+   * only groups are carried.
+   */
+  const groupDropRef = useRef<
+    | {
+        primary: string;
+        from: string | undefined;
+        origin: { x: number; y: number };
+        frames: ReturnType<typeof computeOpenBoardRects>;
+        excluded: Set<string>;
+      }
+    | undefined
+  >(undefined);
+
   const handleNodeDragStart = useCallback((_: unknown, node: Node, draggedNodes: Node[]) => {
     // A drag is about to move geometry; the map under it would be a distraction
     // and the pointer never leaves the node, so nothing else would clear it.
@@ -5618,7 +5684,9 @@ export function FactoryFlow() {
         // A frame is not asked to be in or out of anything: it is blocked
         // outright by its neighbours. Only cards click in and out of rooms,
         // and never into a room they are travelling with.
-        const regions: PlacementRegion[] = heldIsOpenFrame
+        // Plan boards: a group's frame is no wall. A card joins the group its centre is let go over, and the frame
+        // grows to hold it (docs/groups.md), so nothing clicks in or out on the way.
+        const regions: PlacementRegion[] = heldIsOpenFrame || project.planMode === true
           ? []
           : openFrames
               .filter((rect) => !carried.has(rect.id))
@@ -5638,6 +5706,22 @@ export function FactoryFlow() {
         });
       }
       dragConstraintsRef.current = constraints;
+      // Plan boards: the group under the carried card lights up (group-drop.ts). Only when a card, drawer or note is
+      // what the pointer carries; a carried group keeps its own parent.
+      groupDropRef.current = undefined;
+      if (project.planMode === true && !boardIds.has(node.id) && !ridesAlong(node.id)) {
+        const excluded = new Set<string>();
+        for (const id of carried) if (boardIds.has(id)) excluded.add(id);
+        const owner = ownerOf(node.id) ?? project.annotations?.find((entry) => entry.id === node.id)?.pocketId;
+        const frame = owner ? openFrames.find((rect) => rect.id === owner) : undefined;
+        groupDropRef.current = {
+          primary: node.id,
+          from: owner,
+          origin: frame ? { x: frame.x, y: frame.y } : { x: 0, y: 0 },
+          frames: openFrames,
+          excluded,
+        };
+      }
       // Held cards whose board is held too: the frame carries them, so
       // their own drag deltas are dropped for the length of the drag.
       const passengers = new Set<string>();
@@ -5766,13 +5850,23 @@ export function FactoryFlow() {
         const width = internal?.measured?.width ?? 0;
         const height = internal?.measured?.height ?? 0;
         const currentOwner = ownerOf(entry.id);
+        const planBoard = project.planMode === true;
+        // Plan boards (groups, docs/groups.md): a card joins the group its centre is let go over, the frame grows to
+        // hold it; a carried group keeps its parent; what rides in a carried group stays in it.
+        if (planBoard && ridesAlong(entry.id)) {
+          return { id: entry.id, position: entry.position };
+        }
         // A card belongs to the room it is WHOLLY inside; the magnet never
         // leaves it across a wall. Clear of every frame, it leaves its board.
-        const landing = pickBoardOwnerFor(
-          frames,
-          { x: absolute.x, y: absolute.y, width, height },
-          excluded,
-        );
+        const landing = planBoard
+          ? pocketIdSet.has(entry.id)
+            ? currentOwner
+            : groupUnder(frames, { x: absolute.x, y: absolute.y, width, height }, BOARD_WINDOW_TITLE_HEIGHT, excluded)
+          : pickBoardOwnerFor(
+              frames,
+              { x: absolute.x, y: absolute.y, width, height },
+              excluded,
+            );
         const origin = landing !== undefined ? frameById.get(landing) : undefined;
 
         // The magnet, in flow space: slide off anything solid, then convert
@@ -5803,8 +5897,18 @@ export function FactoryFlow() {
           : { id: entry.id, position, owner: { pocketId: landing } };
       });
 
-      // A board's walls never move to swallow a drop that would not fit.
-      moveBoardItems(moves);
+      // A board's walls never move to swallow a drop that would not fit. A group's do (plan boards): it grows to hold
+      // what joined it, and the drop says in or out by its sound.
+      if (project.planMode === true) {
+        const joined = moves.filter((move) => "owner" in move && move.owner?.pocketId !== undefined).length;
+        const left = moves.filter((move) => "owner" in move && move.owner?.pocketId === undefined).length;
+        moveBoardItems(moves, boardSizeOf);
+        groupDropSound(joined, left);
+      } else {
+        moveBoardItems(moves);
+      }
+      clearGroupDrop();
+      groupDropRef.current = undefined;
 
       activelyDraggedNodeIds.clear();
       draggedNodeSetEpoch += 1;
@@ -6761,6 +6865,7 @@ const ClogLockNotice = memo(function ClogLockNotice({
 const EMPTY_BOARD_FLOORS: Array<{ pocket: FactoryPocket; width: number; height: number }> = [];
 
 const BoardFloors = memo(function BoardFloors() {
+  const planMode = useFactoryStore((state) => state.project.planMode === true);
   const floors = useStore(
     (state) => {
       // This selector runs on EVERY store notification, every pan and drag
@@ -6817,14 +6922,18 @@ const BoardFloors = memo(function BoardFloors() {
     <ViewportPortal>
       {/* Under the wires (10) and above the backdrop ink (-5). */}
       <div className="pointer-events-none absolute left-0 top-0" style={{ zIndex: -4 }}>
-        {floors.map((floor) => (
+        {floors.map((floor) =>
+          planMode ? (
+            <GroupFloor key={floor.pocket.id} pocket={floor.pocket} width={floor.width} height={floor.height} />
+          ) : (
           <BoardFloor
             key={floor.pocket.id}
             pocket={floor.pocket}
             width={floor.width}
             height={floor.height}
           />
-        ))}
+          ),
+        )}
       </div>
     </ViewportPortal>
   );

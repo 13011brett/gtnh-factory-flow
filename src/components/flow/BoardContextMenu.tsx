@@ -3,7 +3,6 @@
 import { useCallback, useMemo, useState } from "react";
 import { createPortal } from "react-dom";
 import { ItemPickerPopover } from "@/components/ItemPickerPopover";
-import { LibraryMenu, MenuItem, MenuRule } from "@/components/library/library-menu";
 import { queryRecipeDatasetResources } from "@/lib/datasets/browser-loader";
 import { DEFAULT_DATASET_MANIFEST_URL } from "@/lib/datasets/remote";
 import type { DatasetResourceIndexEntry } from "@/lib/datasets/types";
@@ -11,6 +10,10 @@ import type { ResourceAmount } from "@/lib/model/types";
 import { getUiScale } from "@/lib/ui-scale";
 import { useFactoryStore } from "@/store/factory-store";
 import { AnnotationMenu } from "./clean/note/AnnotationMenu";
+import { BoardMenu, MenuLine, MenuRow } from "./clean/menus/BoardMenu";
+import { CardRows } from "./clean/menus/CardActionsMenu";
+import { GroupMenu } from "./clean/group/GroupMenu";
+import { cloneWithSound } from "@/lib/sound/sfx";
 import { addArrowAt, addBoxAt, addStickyNoteAt } from "./clean/note/note-actions";
 
 /**
@@ -40,6 +43,7 @@ export type BoardMenuTarget = {
   | { kind: "node"; id: string }
   | { kind: "storage"; id: string }
   | { kind: "annotation"; id: string }
+  | { kind: "group"; id: string }
   | { kind: "edge"; ids: string[]; resource: ResourceAmount | undefined }
 );
 
@@ -53,6 +57,9 @@ export function BoardContextMenu({
   const [picking, setPicking] = useState(false);
   const annotation = useFactoryStore((state) =>
     target.kind === "annotation" ? state.project.annotations?.find((entry) => entry.id === target.id) : undefined,
+  );
+  const group = useFactoryStore((state) =>
+    target.kind === "group" ? state.project.pockets?.find((entry) => entry.id === target.id) : undefined,
   );
   const planMode = useFactoryStore((state) => state.project.planMode === true);
   const datasetManifestUrl = useFactoryStore((state) => state.datasetManifestUrl);
@@ -122,6 +129,9 @@ export function BoardContextMenu({
     );
   }
 
+  if (target.kind === "group") {
+    return group ? <GroupMenu pocket={group} x={target.x} y={target.y} onClose={onClose} /> : null;
+  }
   if (target.kind === "annotation") {
     return annotation ? (
       <AnnotationMenu annotation={annotation} x={target.x} y={target.y} onClose={onClose} />
@@ -135,35 +145,33 @@ export function BoardContextMenu({
   };
 
   return (
-    <LibraryMenu left={target.x} top={target.y} label="Board menu" onClose={onClose}>
+    <BoardMenu x={target.x} y={target.y} label="Board menu" onClose={onClose}>
       {target.kind === "pane" && planMode ? (
         <>
-          <MenuItem label="Add sticky note" onClick={run(() => addStickyNoteAt(target.flow))} />
-          <MenuItem label="Add box" onClick={run(() => addBoxAt(target.flow))} />
-          <MenuItem label="Add arrow" onClick={run(() => addArrowAt(target.flow))} />
-          <MenuRule />
+          <MenuRow label="Add sticky note" onClick={run(() => addStickyNoteAt(target.flow))} />
+          <MenuRow label="Add box" onClick={run(() => addBoxAt(target.flow))} />
+          <MenuRow label="Add arrow" onClick={run(() => addArrowAt(target.flow))} />
+          <MenuLine />
         </>
       ) : null}
-      {target.kind === "pane" ? (
-        <MenuItem label="New product drawer" onClick={() => setPicking(true)} />
-      ) : null}
+      {target.kind === "pane" ? <MenuRow label="New product drawer" onClick={() => setPicking(true)} /> : null}
       {target.kind === "node" ? (
-        <>
-          <MenuItem label="Clone" onClick={run(() => store().duplicateNode(target.id))} />
-          <MenuRule />
-          <MenuItem label="Delete" tone="danger" onClick={run(() => store().deleteNode(target.id))} />
-        </>
+        <CardRows
+          onClone={() => cloneWithSound(store().duplicateNode, target.id)}
+          onDelete={() => store().deleteNode(target.id)}
+          close={onClose}
+        />
       ) : null}
       {target.kind === "storage" ? (
         <>
-          <MenuItem label="Clone" onClick={run(() => store().duplicateStorage(target.id))} />
-          <MenuRule />
-          <MenuItem label="Delete" tone="danger" onClick={run(() => store().deleteStorage(target.id))} />
+          <MenuRow label="Clone drawer" onClick={run(() => store().duplicateStorage(target.id))} />
+          <MenuLine />
+          <MenuRow label="Delete drawer" danger onClick={run(() => store().deleteStorage(target.id))} />
         </>
       ) : null}
       {target.kind === "edge" ? (
         <>
-          <MenuItem
+          <MenuRow
             label="Add a drawer here"
             disabled={!target.resource}
             onClick={run(() => {
@@ -172,14 +180,14 @@ export function BoardContextMenu({
               }
             })}
           />
-          <MenuRule />
-          <MenuItem
+          <MenuLine />
+          <MenuRow
             label={target.ids.length > 1 ? "Delete wires" : "Delete wire"}
-            tone="danger"
+            danger
             onClick={run(() => store().deleteEdge(target.ids))}
           />
         </>
       ) : null}
-    </LibraryMenu>
+    </BoardMenu>
   );
 }

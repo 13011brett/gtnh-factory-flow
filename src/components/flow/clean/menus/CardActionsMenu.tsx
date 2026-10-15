@@ -1,11 +1,37 @@
 "use client";
 
-import { MenuPortal, type MenuAnchor } from "./MenuPortal";
+import { BoardMenu, MenuLine, MenuRow } from "./BoardMenu";
+import type { MenuAnchor } from "./MenuPortal";
 
 /**
- * The card's actions key menu, as the mod's (RecipeCard.openActions): "Clone node" and, in red, "Delete node", no
- * icons. The mod's world rows (Show in the world, Remove from the world) have no website equivalent.
+ * A card's rows, as the mod's (RecipeCard.openActions): "Clone node" and, in red, "Delete node". The same rows open
+ * from the card's actions key and from a right click on the card (BoardContextMenu). The mod's world rows (Show in
+ * the world, Remove from the world) have no website equivalent.
  */
+export function CardRows({ onClone, onDelete, close }: { onClone: () => void; onDelete: () => void; close: () => void }) {
+  return (
+    <>
+      <MenuRow
+        label="Clone node"
+        onClick={() => {
+          close();
+          onClone();
+        }}
+      />
+      <MenuLine />
+      <MenuRow
+        label="Delete node"
+        danger
+        onClick={() => {
+          close();
+          onDelete();
+        }}
+      />
+    </>
+  );
+}
+
+/** The card's actions key menu: the card's rows under the key. */
 export function CardActionsMenu({
   anchor,
   onClose,
@@ -17,32 +43,9 @@ export function CardActionsMenu({
   onClone: () => void;
   onDelete: () => void;
 }) {
-  const row = (label: string, run: () => void, danger = false) => (
-    <div
-      role="menuitem"
-      tabIndex={0}
-      className="cm-row"
-      data-danger={danger ? "" : undefined}
-      onClick={() => {
-        onClose();
-        run();
-      }}
-      onKeyDown={(event) => {
-        if (event.key === "Enter" || event.key === " ") {
-          event.preventDefault();
-          onClose();
-          run();
-        }
-      }}
-    >
-      <span className="cm-name">{label}</span>
-    </div>
-  );
-  // The mod's list is 150 board px wide: 254 here at the menus' size on screen.
   return (
-    <MenuPortal anchor={anchor} width={254} maxHeight={200} label="Card actions" onClose={onClose} className="cm-actions">
-      {row("Clone node", onClone)}
-      {row("Delete node", onDelete, true)}
-    </MenuPortal>
+    <BoardMenu x={anchor.left} y={anchor.bottom + 2} label="Card actions" onClose={onClose}>
+      <CardRows onClone={onClone} onDelete={onDelete} close={onClose} />
+    </BoardMenu>
   );
 }

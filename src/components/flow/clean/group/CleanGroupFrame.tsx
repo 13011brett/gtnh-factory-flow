@@ -2,14 +2,16 @@
 
 import "../clean.css";
 import "./group.css";
-import { memo, useState, type CSSProperties } from "react";
+import { memo, useEffect, useState, type CSSProperties } from "react";
 import type { NodeProps } from "@xyflow/react";
 import { boardWindowSize } from "@/lib/model/board-windows";
+import type { FactoryPocket } from "@/lib/model/types";
 import { useFactoryStore } from "@/store/factory-store";
 import { BOARD_DRAG_HANDLE_CLASS, useBoardResize, type BoardWindowFlowNode, type ResizeSide } from "../../BoardNode";
 import { useClickSlop } from "../interaction/click-slop";
 import { tipAttrs } from "../interaction/tip-spec";
 import { GROUP, groupColorTag, groupColors, machinesText } from "./group-model";
+import { onGroupRename } from "./group-rename";
 
 const SIDES: ResizeSide[] = ["n", "s", "e", "w", "nw", "ne", "sw", "se"];
 
@@ -42,6 +44,8 @@ export function GroupName({
 }) {
   const [draft, setDraft] = useState<string | undefined>(undefined);
   const renamePocket = useFactoryStore((state) => state.renamePocket);
+  // The group menu's Rename opens the field here.
+  useEffect(() => onGroupRename((id) => id === pocketId && setDraft(name)), [pocketId, name]);
   if (draft !== undefined) {
     const commit = () => {
       if (draft.trim()) renamePocket(pocketId, draft);
@@ -83,7 +87,7 @@ export function GroupName({
 /** An OPEN group on a plan board (docs/groups.md): border, title strip with name, machines and the collapse key. */
 function CleanGroupFrameComponent({ data, width, height, selected }: NodeProps<BoardWindowFlowNode>) {
   const { pocket } = data;
-  const machines = data.machines ?? 0;
+  const machines = typeof data.machines === "number" ? data.machines : 0;
   const minimizePocket = useFactoryStore((state) => state.minimizePocket);
   const stored = boardWindowSize(pocket);
   const frameWidth = width ?? stored.width;
@@ -150,3 +154,28 @@ export const CleanGroupFrame = memo(
     previous.height === next.height &&
     previous.selected === next.selected,
 );
+
+/**
+ * An open group's body, painted under the wires (FactoryFlow's BoardFloors): the group colour at 8%. It lights up
+ * while a carried card would join the group (`data-drop`, group-drop.ts) and dims while one is carried out of it
+ * (`data-leaving`).
+ */
+export function GroupFloor({ pocket, width, height }: { pocket: FactoryPocket; width: number; height: number }) {
+  const colors = groupColors(groupColorTag(pocket));
+  return (
+    <div
+      aria-hidden
+      data-board-floor={pocket.id}
+      className="cg-floor"
+      style={
+        {
+          transform: `translate(${pocket.position.x}px, ${pocket.position.y}px)`,
+          width,
+          height,
+          "--cg-body": colors.body,
+          "--cg-c": colors.c,
+        } as CSSProperties
+      }
+    />
+  );
+}

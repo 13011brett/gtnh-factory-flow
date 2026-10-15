@@ -14,15 +14,12 @@ import {
   type MouseEvent,
   type PointerEvent,
 } from "react";
-import { createPortal } from "react-dom";
 import { makeResourceKey } from "@/lib/model";
-import type { FactoryStorage, ResourceAmount } from "@/lib/model/types";
+import type { FactoryStorage } from "@/lib/model/types";
 import type { StorageRole } from "@/lib/model/storage-role";
 import { rateMultiplierForKind } from "@/lib/model/rate-unit";
 import { resourceLabel } from "@/lib/model/resources";
 import { getCategoryPresentation } from "@/lib/model/category-presentation";
-import { useDropdownDismiss } from "@/lib/hooks/use-dropdown-dismiss";
-import { getUiScale } from "@/lib/ui-scale";
 import { playBoardSound, suppressBoardSound } from "@/lib/board-sounds";
 import { useFactoryStore } from "@/store/factory-store";
 import type { BrowseMode as PortBrowseMode } from "@/components/browse-menu";
@@ -36,6 +33,7 @@ import type { StorageNodeData } from "../../StorageNode";
 import { checklistLocked } from "../../RecipeNode";
 import { TO_PRODUCT, TO_TRASH, bufferThroughput, buildDrawerView } from "./drawer-model";
 import { DrawerIcon } from "./DrawerIcon";
+import { BoardMenu, MenuLine, MenuRow } from "../menus/BoardMenu";
 import { ensureInteractionHost, tipAttrs } from "../interaction";
 import { startPromptClock } from "../../virtual/prompt-phase";
 import type { TargetMode } from "@/lib/model/storage-target";
@@ -75,51 +73,6 @@ function useNativeWheel(element: HTMLElement | null, onWheel: (event: WheelEvent
     element.addEventListener("wheel", listener, { passive: false });
     return () => element.removeEventListener("wheel", listener);
   }, [element]);
-}
-
-/** The rule menu: the four rules and, under them, the row that turns a product into trash and trash back. */
-function RuleMenu({
-  anchor,
-  rows,
-  onClose,
-}: {
-  anchor: DOMRect;
-  rows: Array<{ mark: string; label: string; on: boolean; muted: boolean; run: () => void }>;
-  onClose: () => void;
-}) {
-  const ref = useRef<HTMLDivElement>(null);
-  useDropdownDismiss(true, { refs: [ref], onClose, insideSelector: "[data-cd-key]", fade: true });
-  const scale = getUiScale();
-  return createPortal(
-    <div
-      ref={ref}
-      role="menu"
-      aria-label="Rule"
-      className="cd-menu ui-zoom nodrag nowheel"
-      style={{ left: anchor.left / scale, top: (anchor.bottom + 2) / scale }}
-      onPointerDown={(event) => event.stopPropagation()}
-      onClick={(event) => event.stopPropagation()}
-    >
-      {rows.map((row) => (
-        <div
-          key={row.label}
-          role="menuitem"
-          className="cd-menu-row"
-          data-on={row.on ? "" : undefined}
-          data-muted={row.muted ? "" : undefined}
-          onClick={(event) => {
-            event.stopPropagation();
-            onClose();
-            row.run();
-          }}
-        >
-          {row.mark ? <b>{row.mark}</b> : <b />}
-          {row.label}
-        </div>
-      ))}
-    </div>,
-    document.body,
-  );
 }
 
 export function CleanDrawer({
@@ -234,6 +187,7 @@ export function CleanDrawer({
   };
 
   const [menu, setMenu] = useState<DOMRect>();
+  const [context, setContext] = useState<{ x: number; y: number }>();
   const keyRef = useRef<HTMLDivElement>(null);
   const [box, setBox] = useState<HTMLDivElement | null>(null);
   const [keyEl, setKeyEl] = useState<HTMLDivElement | null>(null);
@@ -354,9 +308,31 @@ export function CleanDrawer({
     if (had) promote();
   };
 
+  // The drawer's menu (docs/groups.md, "Menus"): a right click anywhere on it opens its rule rows, Clone drawer and
+  // Delete drawer, the rule key's rows plus the drawer's own, as the mod's DrawerCard does.
+  const ruleRows = (close: () => void) =>
+    menuRows.map((row) => (
+      <MenuRow
+        key={row.label}
+        label={row.label}
+        detail={row.mark || undefined}
+        checked={row.on}
+        onClick={() => {
+          close();
+          row.run();
+        }}
+      />
+    ));
+
   return (
     <div
       className="cd-wrap"
+      onContextMenu={(event) => {
+        if (event.defaultPrevented || locked) return;
+        event.preventDefault();
+        event.stopPropagation();
+        setContext({ x: event.clientX, y: event.clientY });
+      }}
       data-storage-node-id={storage.id}
       data-storage-kind={storage.kind}
       data-storage-resource-id={storage.resourceId}
@@ -470,6 +446,7 @@ export function CleanDrawer({
               tabIndex={0}
               className="cd-key nodrag nowheel"
               data-cd-key=""
+              data-menu-anchor=""
               data-mark={view.ruleMark}
               data-any={view.rule === "ignore" || view.kind === "trash" ? "" : undefined}
               data-open={rule.open ? "" : undefined}
@@ -538,7 +515,33 @@ export function CleanDrawer({
         </div>
         {rowBrowse.menu}
       </div>
-      {menu ? <RuleMenu anchor={menu} rows={menuRows} onClose={() => rule.setOpen(false)} /> : null}
+      {menu ? (
+        <BoardMenu x={menu.left} y={menu.bottom + 2} label="Rule" width={210} onClose={() => rule.setOpen(false)}>
+          {ruleRows(() => rule.setOpen(false))}
+        </BoardMenu>
+      ) : null}
+      {context ? (
+        <BoardMenu x={context.x} y={context.y} label="Drawer" onClose={() => setContext(undefined)}>
+          {ruleRows(() => setContext(undefined))}
+          {menuRows.length > 0 ? <MenuLine /> : null}
+          <MenuRow
+            label="Clone drawer"
+            onClick={() => {
+              setContext(undefined);
+              useFactoryStore.getState().duplicateStorage(storage.id);
+            }}
+          />
+          <MenuLine />
+          <MenuRow
+            label="Delete drawer"
+            danger
+            onClick={() => {
+              setContext(undefined);
+              deleteStorage(storage.id);
+            }}
+          />
+        </BoardMenu>
+      ) : null}
     </div>
   );
 }

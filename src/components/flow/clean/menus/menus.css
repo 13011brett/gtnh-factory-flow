@@ -429,3 +429,29 @@
 .cm-row[data-danger] {
   color: #e05252;
 }
+
+/* ---- The board's one menu (BoardMenu.tsx): rows, ticks, swatches, rules --------------------------------------- */
+.cm-board .cm-row[data-disabled] {
+  color: #6f737c;
+  cursor: default;
+}
+.cm-board .cm-row[data-disabled]:hover {
+  background: transparent;
+}
+.cm-swatch {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.45);
+}
+.cm-tick {
+  flex: none;
+  width: 8px;
+  height: 8px;
+  background: var(--cc-gold, #ffd257);
+}
+.cm-line {
+  height: 1px;
+  margin: 3px 0;
+  background: #3a3c42;
+}

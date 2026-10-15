@@ -7,6 +7,12 @@ import { createPortal } from "react-dom";
 import { useDropdownDismiss } from "@/lib/hooks/use-dropdown-dismiss";
 import { activateOnKey } from "@/lib/hooks/button-keys";
 import { getUiScale } from "@/lib/ui-scale";
+
+/**
+ * The mod draws its bar, tabs and menus in GUI pixels at GUI scale 2: two screen pixels each. This file's sizes are
+ * GUI pixels in css px under the interface's 1.17, so the bar and its menus wear 2 / 1.17 more (chrome.css).
+ */
+export const CHROME_SCREEN_K = 2 / 1.17;
 import { playBoardSound } from "@/lib/board-sounds";
 
 /** Where a menu hangs from, in real (unzoomed) screen pixels. */
@@ -83,7 +89,8 @@ export function ChromeMenu({
       }
     };
   }, []);
-  const scale = getUiScale();
+  // The menu wears the bar's extra zoom (chrome.css .mm, CHROME_SCREEN_K): its box is in those pixels.
+  const scale = getUiScale() * CHROME_SCREEN_K;
   const shell = (px: number) => px / scale;
   const vw = shell(window.innerWidth);
   const spaceBelow = shell(window.innerHeight - anchor.bottom) - 8;

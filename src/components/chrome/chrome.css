@@ -531,3 +531,44 @@
 :root[data-compact] .mb-key.mb-gap {
   margin-left: 4px;
 }
+
+/* ---- A narrow bar (data-fit, set by ModBar's useBarFit) ------------------- */
+/* The tab strip always keeps room for its active tab and the +; the rest gives way. Tight: keys sit closer (Non-recipe
+   is its bolt, Arrange its label's width, the faces two and a +N: ModBar). Wrapped: the keys take a second row under the
+   tabs, as on a phone. */
+.mt {
+  min-width: 68px;
+}
+.mb-break {
+  display: none;
+}
+.mb[data-fit="tight"],
+.mb[data-fit="wrapped"] {
+  gap: 2px;
+}
+.mb[data-fit="tight"] .mb-key:not([data-icon]),
+.mb[data-fit="wrapped"] .mb-key:not([data-icon]) {
+  padding: 0 4px;
+}
+.mb[data-fit="tight"] .mb-key.mb-gap,
+.mb[data-fit="wrapped"] .mb-key.mb-gap {
+  margin-left: 3px;
+}
+.mb[data-fit="tight"] .mb-key[data-glyph="bolt"],
+.mb[data-fit="wrapped"] .mb-key[data-glyph="bolt"] {
+  padding: 0 6px;
+}
+.mb[data-fit="wrapped"] {
+  height: auto;
+  flex-wrap: wrap;
+  row-gap: 1px;
+  padding: 2px 4px 3px;
+}
+.mb[data-fit="wrapped"] .mb-break {
+  display: block;
+  flex: 0 0 100%;
+  height: 0;
+}
+:root[data-compact] .mb-break {
+  display: none !important;
+}

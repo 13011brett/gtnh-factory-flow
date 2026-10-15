@@ -2,7 +2,7 @@
 
 import "./chrome.css";
 
-import { useCallback, useEffect, useState, type MouseEvent, type ReactNode } from "react";
+import { useCallback, useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { activateOnKey } from "@/lib/hooks/button-keys";
 import { useIsCompactViewport } from "@/lib/compact-view";
 import { usePlanLayout } from "@/components/use-plan-layout";
@@ -150,6 +150,33 @@ function BarKey({
   );
 }
 
+/**
+ * How much room the bar has, in its own pixels. Roomy is the full bar; tight drops what can go without a new picture
+ * (Non-recipe to its bolt, Arrange to its label's width, the faces to two and a +N, tighter keys); wrapped puts the
+ * keys on a second row under the tabs, as a phone does. The widths are what the keys need beside a tab and the dot.
+ */
+export type BarFit = "roomy" | "tight" | "wrapped";
+const TIGHT_BELOW = 740;
+const WRAPPED_BELOW = 600;
+
+function useBarFit(ref: { current: HTMLElement | null }): BarFit {
+  const [fit, setFit] = useState<BarFit>("roomy");
+  useEffect(() => {
+    const bar = ref.current;
+    if (!bar) return;
+    const read = () => {
+      // clientWidth is the bar's own px (the shell's zoom and the bar's are outside it).
+      const width = bar.clientWidth;
+      setFit(width === 0 ? "roomy" : width < WRAPPED_BELOW ? "wrapped" : width < TIGHT_BELOW ? "tight" : "roomy");
+    };
+    read();
+    const observer = new ResizeObserver(read);
+    observer.observe(bar);
+    return () => observer.disconnect();
+  }, [ref]);
+  return fit;
+}
+
 export interface ModBarProps {
   /** Opens the library dialog: a new post, an update of the plan's own post, or another post of it. */
   onShare: (mode?: ShareMode) => void;
@@ -173,6 +200,9 @@ export interface ModBarProps {
 export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMenu, unreadNotes }: ModBarProps) {
   useHistoryShortcuts();
   useEffect(() => ensureInteractionHost(), []);
+  const barRef = useRef<HTMLElement | null>(null);
+  const fit = useBarFit(barRef);
+  const tight = fit !== "roomy";
   // The library's "last open" and its most-recent-first order.
   const activeDesignId = useDesignStore((state) => state.activeDesignId);
   useEffect(() => {
@@ -289,9 +319,10 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
 
   return (
     <>
-      <header className="mb" data-mod-bar="" data-help-anchor="plan-actions">
+      <header ref={barRef} className="mb" data-mod-bar="" data-fit={fit} data-help-anchor="plan-actions">
       <ModTabs onPaste={() => setPasting(true)} onShare={onShare} />
-      {LIVE ? <LivePresence /> : null}
+      {LIVE ? <LivePresence tight={tight} /> : null}
+      <span className="mb-break" aria-hidden />
       {compact ? (
         <>
           <BarKey
@@ -318,7 +349,7 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
         id="nonrecipe"
         gap
         glyph="bolt"
-        width={78}
+        width={tight ? undefined : 78}
         ariaLabel="Non-recipe machines"
         tip="Non-recipe machines: generators, turbines, boilers, reactors"
         open={powerMenuOpen}
@@ -334,7 +365,7 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
         menuAnchor
       >
         <PixelBolt className="mb-bolt" />
-        Non-recipe
+        {tight ? null : "Non-recipe"}
       </BarKey>
       <BarKey
         id="undo"
@@ -361,7 +392,7 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
         id="arrange"
         gap
         label={arrangeLabel(arrange)}
-        width={90}
+        width={tight && !arrange.running ? undefined : 90}
         tip="Auto-arrange the plan (press again to stop)"
         off={isReadOnly}
         onClick={() => pressArrange()}
@@ -495,12 +526,13 @@ const LIVE_STATUS_TIP: Record<"live" | "connecting" | "offline", string> = {
  * Whether the open plan is live, and the faces of everyone else in it (one per account, initials in their colour),
  * at the end of the tab strip as the mod draws them. Nothing while the plan is not live.
  */
-function LivePresence() {
+function LivePresence({ tight }: { tight: boolean }) {
   const status = useLiveSession((state) => state.status);
   const present = useLiveSession((state) => state.present);
   const pending = useLiveSession((state) => state.pending);
   if (status === "off") return null;
-  const shown = present.slice(0, 5);
+  // A narrow bar keeps the first two faces and counts the rest.
+  const shown = present.slice(0, tight ? 2 : 5);
   const more = present.length - shown.length;
   const waiting = status !== "live" && pending > 0 ? ` (${pending} waiting)` : "";
   return (

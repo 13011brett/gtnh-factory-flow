@@ -99,6 +99,9 @@ in `src/store/CLAUDE.md` (Live plans, Task boards).
   library... for a plan not posted yet (`chrome/library-rows.ts`, the dialog's title too). Never fold one into the
   other. Without live plans every row and label is as before. The + tab menu has New task board.
   `PlanIdentityDrawer`, `DesignTabs` and `BoardActions` keep their live keys but are not on the desktop board.
+- The bar degrades by its own width (`useBarFit` in `ModBar.tsx`, bar px, `data-fit`): below 740 the keys tighten, Non-recipe
+  shows its bolt alone, Arrange takes its label's width and the faces are two and a +N; below 600 the keys wrap to a
+  second row under the tabs (the strip always keeps room for the active tab and the +). Nothing changes above 740.
 - Share dialog: the owner is listed first; the owner adds people by name (search asks once typing pauses, 250 ms,
   and drops the answer to an older query) and removes them; someone it is shared with sees everyone and can leave.
   A plan not in the account yet is pushed first. Changes arrive through the live room too (`members`).

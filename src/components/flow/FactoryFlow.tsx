@@ -7,6 +7,8 @@ import { emitBoardCameraMove } from "@/lib/board-camera-signal";
 import { useDropdownDismiss } from "@/lib/hooks/use-dropdown-dismiss";
 import { useViewerLock } from "./use-viewer-lock";
 import { StorageRatioEditor } from "./StorageRatioEditor";
+import { LivePresenceLayer } from "./LivePresenceLayer";
+import { isLiveConfigured } from "@/lib/live/live-config";
 import { PoolWorksheet } from "../pool/PoolWorksheet";
 import { capturePoolWorksheet } from "../export/capture-pool-worksheet";
 import { formatRatioShare, getProjectRatioBranches } from "@/lib/model/storage-ratios";
@@ -6347,6 +6349,9 @@ export function FactoryFlow() {
           />
         )}
         <BoardFloors />
+        {/* Other people in a live plan: pointers and selections, a layer of
+            their own (LivePresenceLayer). Never mounted without live plans. */}
+        {isLiveConfigured() ? <LivePresenceLayer boardRef={boardRef} /> : null}
         <VoidDropGhost />
         {annotationDraft && annotationTool ? (
           <AnnotationDraftPreview

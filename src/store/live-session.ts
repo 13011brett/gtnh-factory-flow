@@ -955,6 +955,14 @@ export function startLiveSessions(options?: LiveSessionOptions): () => void {
   const started = new LiveSession(options);
   session = started;
   const stop = started.start();
+  if (process.env.NODE_ENV !== "production" && typeof window !== "undefined") {
+    // Development only: the two-browser probes read and drive the stores here.
+    (window as unknown as { __gtnhLive?: unknown }).__gtnhLive = {
+      session: useLiveSession,
+      factory: useFactoryStore,
+      design: useDesignStore,
+    };
+  }
   return () => {
     stop();
     if (session === started) {

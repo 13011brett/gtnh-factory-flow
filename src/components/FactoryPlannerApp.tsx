@@ -39,6 +39,7 @@ import { SharedAddressSync } from "./SharedAddressSync";
 import { PublicViewBar } from "./community/PublicViewBar";
 import { ViewOnlyNotice } from "./community/ViewOnlyNotice";
 import { TabConflictNotice } from "./TabConflictNotice";
+import { LiveNotice } from "./live/LiveNotice";
 import { BlueprintSaveDialog } from "./BlueprintSaveDialog";
 import { PowerSourceOverlay } from "./PowerSourceOverlay";
 import { FactoryFlow } from "./flow/FactoryFlow";
@@ -376,6 +377,7 @@ function BoardColumn() {
       <div className="min-w-0">
         {covering ? null : publicView ? <PublicViewBar key={publicView.id} /> : <PlanIdentityDrawer />}
         {covering ? null : <TabConflictNotice />}
+        {covering ? null : <LiveNotice />}
       </div>
       {/*
         Welcome COVERS the board rather than replacing it: unmounting the board

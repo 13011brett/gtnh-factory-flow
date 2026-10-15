@@ -8,7 +8,7 @@ import {
   type ServerFrame,
 } from "@/lib/live/protocol";
 import { checkBatch } from "@/lib/live/validate";
-import type { Journal } from "./journal";
+import type { AppliedCid, Journal } from "./journal";
 import type { PlanStore } from "./store";
 
 /**
@@ -56,6 +56,8 @@ export type BatchResult =
   | { kind: "refused"; code: "bad_op" | "too_big"; msg: string };
 
 const RECENT_CIDS = 5000;
+/** Batch ids a room keeps on disk past a flush (journal.ts), so a late resend is still known. */
+export const ROOM_RECENT_CIDS = 1000;
 
 function sizeOf(value: unknown): number {
   return value === undefined ? 0 : JSON.stringify(value).length;
@@ -87,6 +89,8 @@ export class Room {
 
   private flushedSeq = 0;
   private size = 0;
+  /** This room's last applied batch ids and their seqs, oldest first. */
+  private readonly recent = new Map<string, number>();
   private queue: Promise<unknown> = Promise.resolve();
   private flushTimer: ReturnType<typeof setTimeout> | undefined;
   private renewTimer: ReturnType<typeof setInterval> | undefined;
@@ -118,16 +122,24 @@ export class Room {
     room.seq = loaded.seq;
     room.flushedSeq = loaded.seq;
     room.lastFlushAt = Date.now();
+    // Batch ids from before the last flush, then the journal's own: a resend
+    // of any of them is acknowledged, never applied again.
+    for (const [cid, seq] of await deps.journal.readCids(doc)) {
+      room.remember(cid, seq);
+    }
     const journalled = await deps.journal.read(doc);
     const replay = journalled.filter((entry) => entry.seq > room.seq);
     if (journalled.length > replay.length) {
       // Flushed before a crash but never trimmed.
-      await deps.journal.trim(doc, room.seq);
+      await deps.journal.trim(doc, room.seq, room.recentCids());
     }
     for (const entry of replay) {
-      room.plan = applyOps(room.plan, entry.ops);
+      // The same batch journalled twice is applied once; its seq still counts.
+      if (!room.recent.has(entry.cid)) {
+        room.plan = applyOps(room.plan, entry.ops);
+        room.remember(entry.cid, entry.seq);
+      }
       room.seq = entry.seq;
-      room.remember(entry.cid, entry.seq);
     }
     if (replay.length > 0) {
       deps.log(`${doc}: replayed ${replay.length} journalled batches up to seq ${room.seq}`);
@@ -187,7 +199,7 @@ export class Room {
     if (this.closed) {
       return { kind: "refused", code: "bad_op", msg: "The plan is closed." };
     }
-    const seen = this.deps.cids.get(this.cidKey(cid));
+    const seen = this.recent.get(cid) ?? this.deps.cids.get(this.cidKey(cid));
     if (seen !== undefined) {
       return { kind: "duplicate", seq: seen };
     }
@@ -311,6 +323,15 @@ export class Room {
   }
 
   private remember(cid: string, seq: number): void {
+    this.recent.delete(cid);
+    this.recent.set(cid, seq);
+    while (this.recent.size > ROOM_RECENT_CIDS) {
+      const oldest = this.recent.keys().next().value;
+      if (oldest === undefined) {
+        break;
+      }
+      this.recent.delete(oldest);
+    }
     const cids = this.deps.cids;
     cids.set(this.cidKey(cid), seq);
     while (cids.size > RECENT_CIDS) {
@@ -320,6 +341,10 @@ export class Room {
       }
       cids.delete(oldest);
     }
+  }
+
+  private recentCids(): AppliedCid[] {
+    return [...this.recent];
   }
 
   private leaseUntil(): Date {
@@ -380,7 +405,7 @@ export class Room {
         }
         this.flushedSeq = Math.max(this.flushedSeq, seq);
         this.size = sizeOf(this.plan);
-        await this.deps.journal.trim(this.doc, seq);
+        await this.deps.journal.trim(this.doc, seq, this.recentCids());
         return true;
       } catch (error) {
         this.deps.log(`${this.doc}: flush failed, kept in the journal: ${String(error)}`);

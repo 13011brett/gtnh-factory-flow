@@ -53,9 +53,9 @@ The frames are the contract's (version 1). What the service adds or decides:
 
 - **Resent batches.** A batch whose `cid` the room already applied (resent after a reconnect, its echo lost) is
   acknowledged to its sender alone as `{ t: "ops", seq: <its original seq>, cid, ops: [] }`: nothing to apply, and
-  the client drops it from `pending`. Recent cids are remembered across the room closing and opening, and replayed
-  journal entries bring theirs back; a resend from before a restart with the journal already flushed would apply
-  again (the same values written twice).
+  the client drops it from `pending`. Each room keeps its last 1,000 cids, in memory and on disk beside its journal
+  (`<ownerId>.<designId>.cids.json`, written by every flush before the journal is trimmed), so a resend after a
+  restart is known even when its journal was already flushed. A journal replay applies a cid it holds twice once.
 - **Refusals name the batch.** An `error` about a batch carries its `cid`, so the client can drop it
   (`LiveClientState.refuse`). Codes: `bad_op` (shape or schema), `too_big` (a frame over 256 KB, more than 5,000 ops,
   or a plan over the 3 MB upload limit), `rate` (over 30 batches a second), `forbidden` (not shared with you, or not

@@ -11,6 +11,8 @@ the game is `docs/design/cloud-live.md` in the game's repository: frames and ops
   lease), and when it flushes (at most every 8 s while edited, and when the last person leaves). The instance is small.
 - A batch is journalled and synced to disk (`journal.ts`) before it is broadcast; a flush trims the journal. Start-up
   replays every journal. Never broadcast before the journal write returns.
+- A room's last 1,000 batch ids go to disk beside its journal at every flush, before the trim, and come back when it
+  opens: a batch resent after a restart is acknowledged, never applied twice.
 - Every thing a batch puts or patches must pass its collection's schema afterwards (`src/lib/live/validate.ts`), plan
   fields their field's rule. A batch is refused whole, with its `cid` in the error.
 - Flushes, renewals and lease takes only touch designs that are not tombstoned: a deleted plan is never written back.

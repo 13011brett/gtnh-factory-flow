@@ -1,4 +1,4 @@
-import { mkdir, open, readdir, readFile, rm, writeFile } from "node:fs/promises";
+import { mkdir, open, readdir, readFile, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import type { LiveOp } from "@/lib/live/ops";
 import { docKey, parseDocKey } from "@/lib/live/protocol";
@@ -12,7 +12,15 @@ import { docKey, parseDocKey } from "@/lib/live/protocol";
  *
  * Files are named `<ownerId>.<designId>.jsonl` (a doc key's colon is not a
  * legal file name character everywhere).
+ *
+ * Beside each journal, `<ownerId>.<designId>.cids.json` keeps the room's most
+ * recently applied batch ids with their seqs, written by every trim before
+ * the entries go. A batch resent after a restart whose journal was already
+ * flushed is then still known, and is acknowledged rather than applied twice.
  */
+
+/** A batch id and the seq it was applied as. */
+export type AppliedCid = [cid: string, seq: number];
 
 export interface JournalEntry {
   seq: number;
@@ -34,6 +42,10 @@ export class Journal {
       throw new Error(`Not a doc key: ${doc}`);
     }
     return path.join(this.dir, `${key.ownerId}.${key.designId}.jsonl`);
+  }
+
+  cidsFileFor(doc: string): string {
+    return this.fileFor(doc).replace(/\.jsonl$/, ".cids.json");
   }
 
   /** Every doc with a journal on disk. */
@@ -93,9 +105,42 @@ export class Journal {
     });
   }
 
-  /** Keeps only the entries after `seq` (a flush reached it): usually removes the file. */
-  trim(doc: string, seq: number): Promise<void> {
+  /** The batch ids the last trim kept for a doc, oldest first. A damaged file reads as none. */
+  async readCids(doc: string): Promise<AppliedCid[]> {
+    let text: string;
+    try {
+      text = await readFile(this.cidsFileFor(doc), "utf8");
+    } catch {
+      return [];
+    }
+    try {
+      const parsed = JSON.parse(text) as unknown;
+      if (!Array.isArray(parsed)) {
+        return [];
+      }
+      return parsed.filter(
+        (entry): entry is AppliedCid =>
+          Array.isArray(entry) && typeof entry[0] === "string" && Number.isInteger(entry[1]),
+      );
+    } catch {
+      return [];
+    }
+  }
+
+  /**
+   * Keeps only the entries after `seq` (a flush reached it): usually removes
+   * the file. `cids`, the room's recently applied batch ids, are written first
+   * (whole, through a rename), so at no moment are they in neither file.
+   */
+  trim(doc: string, seq: number, cids?: AppliedCid[]): Promise<void> {
     return this.serial(doc, async () => {
+      if (cids) {
+        await mkdir(this.dir, { recursive: true });
+        const file = this.cidsFileFor(doc);
+        const temp = `${file}.tmp`;
+        await writeFile(temp, JSON.stringify(cids));
+        await rename(temp, file);
+      }
       const rest = (await this.read(doc)).filter((entry) => entry.seq > seq);
       if (rest.length === 0) {
         await rm(this.fileFor(doc), { force: true });
@@ -108,9 +153,12 @@ export class Journal {
     });
   }
 
-  /** Forgets a doc's journal (the plan was deleted). */
+  /** Forgets a doc's journal and its batch ids (the plan was deleted). */
   remove(doc: string): Promise<void> {
-    return this.serial(doc, () => rm(this.fileFor(doc), { force: true }));
+    return this.serial(doc, async () => {
+      await rm(this.fileFor(doc), { force: true });
+      await rm(this.cidsFileFor(doc), { force: true });
+    });
   }
 
   private serial<T>(doc: string, work: () => Promise<T>): Promise<T> {

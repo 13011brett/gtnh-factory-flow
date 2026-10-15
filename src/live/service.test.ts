@@ -13,6 +13,7 @@ import { openLocalDatabase, type LocalDatabase } from "@/lib/server/local-db/dat
 import { getCommunityDb, makeSessionToken } from "@/lib/server/community";
 import * as designRoute from "@/app/api/library/designs/[designId]/route";
 import * as memberRoute from "@/app/api/library/designs/[designId]/members/[userId]/route";
+import { Journal } from "./journal";
 import { LiveService, type LiveServiceOptions } from "./service";
 import { supabasePlanStore } from "./store";
 
@@ -396,6 +397,66 @@ describe("the live service", () => {
       ops: [taskPatch("t1", { title: "Edit 2" })],
     });
     expect(await again.next("ops")).toMatchObject({ cid: "crash-2", seq: 2, ops: [] });
+  });
+
+  it("knows a batch resent after a restart whose journal was already flushed, and applies it once", async () => {
+    const first = await startService();
+    const { designId, doc } = await makeDesign();
+    const ann = await TestClient.open(first.port, { who: "ann" });
+    await ann.hello();
+    await ann.join(doc);
+    const bob = await TestClient.open(first.port, { who: "bob" });
+    await bob.hello();
+    await bob.join(doc);
+    ann.send({ t: "ops", doc, base: 0, cid: "late-1", ops: [taskPatch("t1", { title: "Ann" })] });
+    await ann.next("ops", (frame) => frame.cid === "late-1");
+    bob.send({ t: "ops", doc, base: 1, cid: "late-2", ops: [taskPatch("t1", { title: "Bob" })] });
+    await bob.next("ops", (frame) => frame.cid === "late-2");
+    // Flushed: the journal is trimmed to nothing, the batch ids stay beside it.
+    await until(async () => Number((await storedRow(designId)).seq) === 2, 3000);
+    const journal = new Journal(first.journalDir);
+    await until(async () => (await journal.read(doc)).length === 0);
+    expect((await journal.readCids(doc)).map(([cid]) => cid)).toEqual(["late-1", "late-2"]);
+    await ann.close();
+    await bob.close();
+    await first.service.stop();
+    services.splice(services.indexOf(first.service), 1);
+
+    // Ann never heard her echo and sends the batch again to the restarted service.
+    const second = await startService({ journalDir: first.journalDir });
+    const again = await TestClient.open(second.port, { who: "ann" });
+    await again.hello();
+    expect((await again.join(doc)).seq).toBe(2);
+    again.send({ t: "ops", doc, base: 0, cid: "late-1", ops: [taskPatch("t1", { title: "Ann" })] });
+    expect(await again.next("ops", (frame) => frame.cid === "late-1")).toMatchObject({
+      seq: 1,
+      ops: [],
+    });
+    const fresh = await TestClient.open(second.port, { who: "bob" });
+    await fresh.hello();
+    const snapshot = await fresh.join(doc);
+    expect(snapshot.seq).toBe(2);
+    expect((snapshot.plan.tasks as Array<{ title: string }>)[0]!.title).toBe("Bob");
+  });
+
+  it("applies a batch journalled twice only once when it replays", async () => {
+    const { designId, doc } = await makeDesign();
+    const journalDir = mkdtempSync(path.join(tmpdir(), "gtnh-live-"));
+    const journal = new Journal(journalDir);
+    const entry = (seq: number, cid: string, title: string) => ({
+      seq,
+      cid,
+      by: users.ann!.id,
+      at: new Date().toISOString(),
+      ops: [taskPatch("t1", { title })],
+    });
+    await journal.append(doc, entry(1, "twice-1", "One"));
+    await journal.append(doc, entry(2, "twice-2", "Two"));
+    await journal.append(doc, entry(3, "twice-1", "One"));
+    await startService({ journalDir });
+    await until(async () => Number((await storedRow(designId)).seq) === 3);
+    const row = await storedRow(designId);
+    expect((row.plan.tasks as Array<{ title: string }>)[0]!.title).toBe("Two");
   });
 
   it("refuses anyone the plan is not shared with, and anyone not signed in", async () => {

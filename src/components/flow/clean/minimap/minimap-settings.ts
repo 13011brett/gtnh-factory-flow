@@ -45,7 +45,7 @@ export const MINIMAP_CORNER_LABELS: Record<MinimapCorner, string> = {
 /** Map pixels per board pixel, the mod's ten steps. */
 export const MINIMAP_ZOOMS = [0.04, 0.06, 0.09, 0.13, 0.18, 0.25, 0.35, 0.5, 0.71, 1] as const;
 export const DEFAULT_MINIMAP: MinimapSettings = {
-  show: true,
+  show: false,
   size: "small",
   shape: "square",
   corner: "bottom-right",

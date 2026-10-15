@@ -43,6 +43,7 @@ describe("minimap settings", () => {
     const old = { show: true, size: "medium", shape: "circle", corner: "top-left", zoom: 5, follow: true, fade: 30 };
     expect(normalizeMinimap(upgradeMinimap(old))).toEqual({
       ...DEFAULT_MINIMAP,
+      show: true,
       shape: "circle",
       corner: "top-left",
       follow: true,

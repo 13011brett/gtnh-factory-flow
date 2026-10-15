@@ -88,6 +88,12 @@ export class Room {
   private renewTimer: ReturnType<typeof setInterval> | undefined;
   private lastFlushAt = 0;
   private flushing: Promise<boolean> | undefined;
+  /**
+   * The room's last flush (or the lease's release) is under way: no timed
+   * flush may start after it, or it would write the lease back once the room
+   * has let it go.
+   */
+  private ending = false;
 
   private constructor(
     doc: string,
@@ -357,7 +363,7 @@ export class Room {
     while (this.flushing) {
       await this.flushing;
     }
-    if (this.closed) {
+    if (this.closed || (this.ending && !final)) {
       return false;
     }
     const run = (async () => {
@@ -429,6 +435,7 @@ export class Room {
       if (this.peers.size > 0 || this.closed) {
         return;
       }
+      this.ending = true;
       const stored = this.dirty
         ? await this.flush(true)
         : await this.deps.store.release(this.ownerId, this.designId).then(
@@ -442,6 +449,7 @@ export class Room {
         return;
       }
       if (!stored) {
+        this.ending = false;
         this.scheduleFlush();
         return;
       }
@@ -455,6 +463,7 @@ export class Room {
       if (this.closed) {
         return;
       }
+      this.ending = true;
       if (this.dirty) {
         await this.flush(true);
       } else {

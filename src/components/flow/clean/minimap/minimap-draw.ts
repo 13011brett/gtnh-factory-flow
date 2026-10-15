@@ -141,9 +141,18 @@ export function drawMinimap(
       continue;
     }
     if (tile.kind === "board") {
-      ctx.strokeStyle = "rgba(138,147,166,0.6)";
+      // An open group (docs/groups.md): its colour at 25% and a 1 px border in it.
+      ctx.fillStyle = withAlpha(tile.tint, 0.25);
+      ctx.fillRect(x, y, w, h);
+      ctx.strokeStyle = tile.tint;
       ctx.lineWidth = 1;
       ctx.strokeRect(x + 0.5, y + 0.5, w - 1, h - 1);
+      continue;
+    }
+    if (tile.kind === "group") {
+      // A collapsed group: the summary card's box, mix(C, surface, 0.3).
+      ctx.fillStyle = mix(tile.tint, "#23252A", 0.3);
+      ctx.fillRect(x, y, w, h);
       continue;
     }
     // The mod's tile: edge mixed 55% to #262B34, inner 26% to #07090C.
@@ -229,4 +238,12 @@ export function fitView(
     cy: (bounds.y0 + bounds.y1) / 2,
     zoom: Math.min(maxZoom, Math.max(1e-4, Math.min(room / w, room / h))),
   };
+}
+
+/** A `#rrggbb` colour at an alpha (a group's open fill). */
+function withAlpha(color: string, alpha: number): string {
+  const hex = Math.round(Math.max(0, Math.min(1, alpha)) * 255)
+    .toString(16)
+    .padStart(2, "0");
+  return /^#[0-9a-f]{6}$/i.test(color) ? `${color}${hex}` : color;
 }

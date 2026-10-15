@@ -5437,7 +5437,9 @@ export function FactoryFlow() {
     // Unless Keep boards is on, every board is dissolved first (members
     // surface where the frame stood) and the arrange lays out one flat set
     // of cards. With Keep boards on, each board is sealed and only placed.
-    const dumpBoards = !options.keepBoards && (state.project.pockets?.length ?? 0) > 0;
+    // Plan boards always keep their groups: each is one block, its insides untouched (docs/groups.md, Arrange).
+    const dumpBoards =
+      !options.keepBoards && state.project.planMode !== true && (state.project.pockets?.length ?? 0) > 0;
     const project = dumpBoards ? flattenBoards(state.project) : state.project;
     let computed: Awaited<ReturnType<typeof computeAutoArrangement>>;
     try {

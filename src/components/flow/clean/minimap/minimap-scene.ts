@@ -1,5 +1,7 @@
 import { GT_NODE_COLORS } from "../../node-colors";
 import type { MinimapRoute } from "./minimap-feed";
+import type { FactoryPocket } from "@/lib/model/types";
+import { groupColorTag, groupColors } from "../group/group-model";
 
 /**
  * What the minimap draws, as plain data: the tiles (cards, drawers, notes, boards), the routed wires, the
@@ -7,7 +9,7 @@ import type { MinimapRoute } from "./minimap-feed";
  * from the DOM per frame. Drawing is `minimap-draw.ts`.
  */
 
-export type TileKind = "card" | "drawer" | "note" | "board";
+export type TileKind = "card" | "drawer" | "note" | "board" | "group";
 export type DrawerKind = "source" | "product" | "trash" | "buffer";
 
 export interface Tile {
@@ -173,7 +175,15 @@ export function buildScene(input: SceneInput): Scene {
         label: "",
       };
     } else if (node.type === "boardNode") {
-      tile = { id: node.id, kind: "board", x: node.x, y: node.y, w: node.w, h: node.h, tint: NEUTRAL_TINT, label: "" };
+      // An open group (docs/groups.md): its frame in its colour.
+      const pocket = data.pocket as FactoryPocket | undefined;
+      const tint = pocket ? groupColors(groupColorTag(pocket)).c : NEUTRAL_TINT;
+      tile = { id: node.id, kind: "board", x: node.x, y: node.y, w: node.w, h: node.h, tint, label: "" };
+    } else if (node.type === "pocketNode") {
+      // A collapsed group: its summary card's box.
+      const pocket = data.pocket as FactoryPocket | undefined;
+      const tint = pocket ? groupColors(groupColorTag(pocket)).c : NEUTRAL_TINT;
+      tile = { id: node.id, kind: "group", x: node.x, y: node.y, w: node.w, h: node.h, tint, label: "" };
     }
     if (!tile) continue;
     tile.selected = node.selected === true;

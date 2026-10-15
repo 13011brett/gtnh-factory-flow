@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo } from "react";
+import { useDeferredValue, useMemo } from "react";
 import type { FactoryProject, ThroughputResult } from "@/lib/model/types";
 import { useFactoryStore } from "@/store/factory-store";
 import { buildRailModel, type RailModel } from "./rail-model";
@@ -29,7 +29,11 @@ export function railData(project: FactoryProject, result: ThroughputResult | und
 }
 
 export function useRailData(): RailData {
-  const project = useFactoryStore((state) => state.project);
-  const result = useFactoryStore((state) => state.lastResult);
+  // Deferred: an edit paints on the board first and the rail follows in a render of its own (its model is about
+  // 100 ms of a 1,000-card edit, which kept the click's first paint waiting).
+  const liveProject = useFactoryStore((state) => state.project);
+  const liveResult = useFactoryStore((state) => state.lastResult);
+  const project = useDeferredValue(liveProject);
+  const result = useDeferredValue(liveResult);
   return useMemo(() => railData(project, result), [project, result]);
 }

@@ -15,9 +15,9 @@ import {
   type CSSProperties,
   type MouseEvent,
 } from "react";
-import { createPortal } from "react-dom";
 import { machineArtPixels } from "../../MachinePicker";
 import { FoldGlyph } from "../fold/FoldKey";
+import { BoardMenu, MenuRow } from "../menus/BoardMenu";
 import { useMachineHandlerIcons } from "../../machine-icons";
 import { getFallbackFluidColor, ResourceIcon } from "@/components/nei/ResourceIcon";
 import { formatCompact } from "@/lib/model/resources";
@@ -144,7 +144,10 @@ export function ResourceGlyph({ line }: { line: Pick<RailLine, "resource" | "ene
   if (line.resource.kind === "fluid") {
     // The mod's square of the fluid's texture, as on the cards and drawers.
     const resource = line.resource;
-    const color = resource.dominantColor ?? resource.iconAtlas?.dominantColor ?? getFallbackFluidColor(resource.id);
+    const color =
+      resource.dominantColor ??
+      resource.iconAtlas?.dominantColor ??
+      getFallbackFluidColor(resource.id);
     return (
       <span
         className="rail-icon rail-swatch"
@@ -901,46 +904,22 @@ function RuleMenu({
   y: number;
   onClose: () => void;
 }) {
-  const ref = useRef<HTMLDivElement>(null);
-  useEffect(() => {
-    const onDown = (event: PointerEvent) => {
-      if (ref.current && event.target instanceof Node && ref.current.contains(event.target)) return;
-      onClose();
-    };
-    const onKey = (event: KeyboardEvent) => {
-      if (event.key === "Escape") onClose();
-    };
-    document.addEventListener("pointerdown", onDown, true);
-    document.addEventListener("keydown", onKey);
-    return () => {
-      document.removeEventListener("pointerdown", onDown, true);
-      document.removeEventListener("keydown", onKey);
-    };
-  }, [onClose]);
-  return createPortal(
-    <div
-      ref={ref}
-      className="rail-menu"
-      style={{ left: Math.min(x, window.innerWidth - 140), top: y }}
-    >
+  // The board's own menu, so it follows the interface zoom as every other menu does.
+  return (
+    <BoardMenu x={x} y={y} label="Rule" width={210} onClose={onClose}>
       {RULE_STEPS.map((rule) => (
-        <div
+        <MenuRow
           key={rule}
-          role="menuitem"
-          tabIndex={0}
-          className="rail-menu-item"
-          data-on={rule === drawer.rule ? "" : undefined}
+          label={RULE_NAME[rule]}
+          detail={RULE_MARK[rule]}
+          checked={rule === drawer.rule}
           onClick={() => {
             onClose();
             setDrawerRule(drawer, rule);
           }}
-        >
-          <b>{RULE_MARK[rule]}</b>
-          <span>{RULE_NAME[rule]}</span>
-        </div>
+        />
       ))}
-    </div>,
-    document.body,
+    </BoardMenu>
   );
 }
 

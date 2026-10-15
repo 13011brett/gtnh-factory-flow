@@ -4,9 +4,22 @@ import "./clean.css";
 import { fluidSwatchStyle } from "./fluid-swatch";
 
 import { Handle, Position } from "@xyflow/react";
-import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type WheelEvent } from "react";
+import {
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+  type CSSProperties,
+  type MouseEvent,
+  type WheelEvent,
+} from "react";
 import type { FactoryNode, Recipe } from "@/lib/model/types";
-import { fluidArtPixels, getFallbackFluidColor, isSwatchFluid, ResourceIcon } from "@/components/nei/ResourceIcon";
+import {
+  fluidArtPixels,
+  getFallbackFluidColor,
+  isSwatchFluid,
+  ResourceIcon,
+} from "@/components/nei/ResourceIcon";
 import { type BrowseMode as PortBrowseMode } from "@/components/browse-menu";
 import { useFactoryStore } from "@/store/factory-store";
 import { useCardTaskStatus } from "@/lib/tasks/task-link-index";
@@ -24,7 +37,13 @@ const TASKS_ENABLED = isLiveConfigured();
 import { checklistLocked } from "../RecipeNode";
 import { MobPickerMenu } from "../MobPickerMenu";
 import { isControllerSlotInput } from "@/lib/model/free-input";
-import type { CleanCardActions, CleanCardContext, CleanCardView, CleanChipView, CleanPortView } from "./clean-model";
+import type {
+  CleanCardActions,
+  CleanCardContext,
+  CleanCardView,
+  CleanChipView,
+  CleanPortView,
+} from "./clean-model";
 import { tierChipColors } from "./tokens";
 import { syncPromptPhase } from "../virtual/prompt-phase";
 import { ensureInteractionHost, useClickSlop, tipAttrs, type TipSpec } from "./interaction";
@@ -40,8 +59,21 @@ import { SettingsSheet } from "./menus/SettingsSheet";
 import { useDeviceSettings } from "@/lib/device-settings";
 import { anchorOf, type MenuAnchor } from "./menus/MenuPortal";
 import { cloneWithSound } from "@/lib/sound/sfx";
-import { countRowsTip, machineNameTip, powerRowTip, stripTip, tierChipTip, useCardTipFacts } from "./menus/card-tips";
-import { recipeHeatNeed, settingControls, settingPatch, steppedOption, type SettingControl } from "./menus/settings-model";
+import {
+  countRowsTip,
+  machineNameTip,
+  powerRowTip,
+  stripTip,
+  tierChipTip,
+  useCardTipFacts,
+} from "./menus/card-tips";
+import {
+  recipeHeatNeed,
+  settingControls,
+  settingPatch,
+  steppedOption,
+  type SettingControl,
+} from "./menus/settings-model";
 
 export function glyph(event: { stopPropagation: () => void }) {
   event.stopPropagation();
@@ -60,7 +92,9 @@ export function CleanPortRow({
   const browseResource = useFactoryStore((state) => state.browseResource);
   const setHoveredFlowScope = useFactoryStore((state) => state.setHoveredFlowScope);
   const readOnly = useFactoryStore((state) => state.isReadOnly);
-  const scopeLit = useFactoryStore((state) => Boolean(state.hoveredFlowScope?.ports[`${p.nodeId}|${p.handleId}`]));
+  const scopeLit = useFactoryStore((state) =>
+    Boolean(state.hoveredFlowScope?.ports[`${p.nodeId}|${p.handleId}`]),
+  );
   const resourceLit = useFactoryStore(
     (state) => (state.hoveredFlowResourceKey ?? state.selectedFlowResourceKey) === p.resourceKey,
   );
@@ -120,7 +154,9 @@ export function CleanPortRow({
                 id: `${p.nodeId}|controller|${p.handleId}`,
                 title: p.name,
                 sub: "Controller slot",
-                notes: [{ text: "Goes in the machine's controller slot. Never used up.", tone: "muted" }],
+                notes: [
+                  { text: "Goes in the machine's controller slot. Never used up.", tone: "muted" },
+                ],
                 actions: [{ input: "left", label: "Put in another mob" }],
               }),
               onClick: (event: MouseEvent) => {
@@ -134,10 +170,16 @@ export function CleanPortRow({
         <span className="cc-num" data-small="" data-unit="">
           {controller ? "in controller" : "free"}
         </span>
-        <span className="cc-pname" data-small={p.nameSmall || undefined} data-clip={p.nameClipped || undefined}>
+        <span
+          className="cc-pname"
+          data-small={p.nameSmall || undefined}
+          data-clip={p.nameClipped || undefined}
+        >
           {p.name}
         </span>
-        {controller && mobOpen ? <MobPickerMenu nodeId={p.nodeId} onClose={() => setMobOpen(false)} /> : null}
+        {controller && mobOpen ? (
+          <MobPickerMenu nodeId={p.nodeId} onClose={() => setMobOpen(false)} />
+        ) : null}
       </div>
     );
   }
@@ -159,7 +201,9 @@ export function CleanPortRow({
       onPointerEnter={() => {
         rowBrowse.handlers.onPointerEnter();
         if (!isWiringConnection() && !checklistLocked()) {
-          setHoveredFlowScope(buildPortFlowScope(useFactoryStore.getState().project, p.nodeId, port));
+          setHoveredFlowScope(
+            buildPortFlowScope(useFactoryStore.getState().project, p.nodeId, port),
+          );
         }
       }}
       onPointerLeave={() => {
@@ -173,12 +217,18 @@ export function CleanPortRow({
       onClick={(event) => {
         if (!wasClick(event)) return;
         // The port's handle covers the whole row, the Forced strip too, so a click there arrives here: it is the strip's.
-        const strip = p.forced ? event.currentTarget.querySelector(".cc-forced")?.getBoundingClientRect() : undefined;
+        const strip = p.forced
+          ? event.currentTarget.querySelector(".cc-forced")?.getBoundingClientRect()
+          : undefined;
         if (
           strip &&
           event.clientY >= strip.top &&
           event.clientY <= strip.bottom &&
-          openSparePopupForPort(makePortKey(p.nodeId, isInput ? "i" : "o", p.handleId), event.clientX, event.clientY)
+          openSparePopupForPort(
+            makePortKey(p.nodeId, isInput ? "i" : "o", p.handleId),
+            event.clientX,
+            event.clientY,
+          )
         ) {
           event.stopPropagation();
           return;
@@ -201,7 +251,14 @@ export function CleanPortRow({
           {...tipAttrs(forcedTip(p))}
           onClick={(event) => {
             // A leftover with somewhere else to go opens its split (rail/SparePopup.tsx).
-            if (wasClick(event) && openSparePopupForPort(makePortKey(p.nodeId, isInput ? "i" : "o", p.handleId), event.clientX, event.clientY)) {
+            if (
+              wasClick(event) &&
+              openSparePopupForPort(
+                makePortKey(p.nodeId, isInput ? "i" : "o", p.handleId),
+                event.clientX,
+                event.clientY,
+              )
+            ) {
               event.stopPropagation();
             }
           }}
@@ -213,7 +270,9 @@ export function CleanPortRow({
           <span className="cc-pname">Forced</span>
         </div>
       ) : null}
-      {!p.wired && !p.forced && port.kind !== "power" ? <PortRateControls p={p} unset={unset} wasClick={wasClick} /> : null}
+      {!p.wired && !p.forced && port.kind !== "power" ? (
+        <PortRateControls p={p} unset={unset} wasClick={wasClick} />
+      ) : null}
       <Handle
         id={p.handleId}
         type={isInput ? "target" : "source"}
@@ -237,12 +296,34 @@ export function CleanPortRow({
  * A port's picture: an item's sprite, or for a fluid the mod's flat square in the fluid's own colour
  * (one span, no art, no bevel).
  */
-function PortIcon({ resource, iconProps }: { resource: NonNullable<CleanPortView["port"]["resource"]>; iconProps: Record<string, unknown> }) {
+function PortIcon({
+  resource,
+  iconProps,
+}: {
+  resource: NonNullable<CleanPortView["port"]["resource"]>;
+  iconProps: Record<string, unknown>;
+}) {
   if (resource.kind === "fluid") {
-    const color = resource.dominantColor ?? resource.iconAtlas?.dominantColor ?? getFallbackFluidColor(resource.id);
-    return <span className="cc-icon cc-swatch" role="img" aria-label={resource.displayName} style={fluidSwatchStyle({ ...resource, dominantColor: color })} />;
+    const color =
+      resource.dominantColor ??
+      resource.iconAtlas?.dominantColor ??
+      getFallbackFluidColor(resource.id);
+    return (
+      <span
+        className="cc-icon cc-swatch"
+        role="img"
+        aria-label={resource.displayName}
+        style={fluidSwatchStyle({ ...resource, dominantColor: color })}
+      />
+    );
   }
-  return <ResourceIcon {...(iconProps as object)} resource={{ ...resource, amount: 1, chance: undefined }} className="cc-icon" />;
+  return (
+    <ResourceIcon
+      {...(iconProps as object)}
+      resource={{ ...resource, amount: 1, chance: undefined }}
+      className="cc-icon"
+    />
+  );
 }
 
 /** Icon, figure, name: the three things a row says. */
@@ -264,7 +345,11 @@ function Words({ p, iconProps }: { p: CleanPortView; iconProps: Record<string, u
       >
         {p.number}
       </span>
-      <span className="cc-pname" data-small={p.nameSmall || undefined} data-clip={p.nameClipped || undefined}>
+      <span
+        className="cc-pname"
+        data-small={p.nameSmall || undefined}
+        data-clip={p.nameClipped || undefined}
+      >
         {p.name}
       </span>
     </>
@@ -318,6 +403,15 @@ export function CountBox({
         const base = view.pinned ? view.value : Math.max(1, Math.ceil(view.value));
         const next = Math.round(base) + (event.deltaY < 0 ? 1 : -1);
         onSet(next >= 1 ? next : undefined);
+      }}
+      // The middle button unpins: the plan decides the count again.
+      onMouseDown={(event) => {
+        if (event.button === 1) event.preventDefault();
+      }}
+      onAuxClick={(event) => {
+        if (event.button !== 1 || editing || !view.pinned) return;
+        event.stopPropagation();
+        onSet(undefined);
       }}
     >
       {editing ? (
@@ -589,9 +683,19 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
     }
     const gear = anchorOf(event.currentTarget);
     const head = event.currentTarget.closest(".cc-head");
-    setSheetAnchor({ left: gear.left, top: gear.top, bottom: head ? head.getBoundingClientRect().bottom : gear.bottom });
+    setSheetAnchor({
+      left: gear.left,
+      top: gear.top,
+      bottom: head ? head.getBoundingClientRect().bottom : gear.bottom,
+    });
   };
-  const [menu, setMenu] = useState<{ kind: "actions" | "settings"; x: number; top: number; bottom: number; hangsFrom?: Element }>();
+  const [menu, setMenu] = useState<{
+    kind: "actions" | "settings";
+    x: number;
+    top: number;
+    bottom: number;
+    hangsFrom?: Element;
+  }>();
 
   const openMenu = (kind: "actions" | "settings") => (event: MouseEvent<HTMLElement>) => {
     event.stopPropagation();
@@ -599,9 +703,12 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
     const card = event.currentTarget.closest("[data-node-glance-root]") ?? undefined;
     // The menu hangs under the key, as the mod's (RecipeCard.openActions).
     const r = event.currentTarget.getBoundingClientRect();
-    setMenu(menu?.kind === kind ? undefined : { kind, x: r.left, top: r.top, bottom: r.bottom, hangsFrom: card });
+    setMenu(
+      menu?.kind === kind
+        ? undefined
+        : { kind, x: r.left, top: r.top, bottom: r.bottom, hangsFrom: card },
+    );
   };
-
 
   return (
     <div
@@ -637,7 +744,12 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
           aria-haspopup="menu"
           data-menu-anchor=""
           aria-expanded={sheetAnchor !== undefined}
-          {...tipAttrs(gearTip(view.nodeId, controls.some((entry) => entry.warn)))}
+          {...tipAttrs(
+            gearTip(
+              view.nodeId,
+              controls.some((entry) => entry.warn),
+            ),
+          )}
           onClick={openSheet}
         />
         <div
@@ -664,7 +776,11 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
                   if (!wasClick(event)) return;
                   const name = anchorOf(event.currentTarget);
                   const head = event.currentTarget.closest(".cc-head");
-                  setListAnchor({ left: name.left, top: name.top, bottom: head ? head.getBoundingClientRect().bottom : name.bottom });
+                  setListAnchor({
+                    left: name.left,
+                    top: name.top,
+                    bottom: head ? head.getBoundingClientRect().bottom : name.bottom,
+                  });
                   setListOpen((open) => !open);
                 }
               : undefined
@@ -771,7 +887,12 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
             />
           ) : null
         ) : null}
-        <CountBox view={view.count} tip={countRowsTip(view, tipFacts.shared)} onSet={actions.setCount} wasClick={wasClick} />
+        <CountBox
+          view={view.count}
+          tip={countRowsTip(view, tipFacts.shared)}
+          onSet={actions.setCount}
+          wasClick={wasClick}
+        />
       </div>
 
       <div className="cc-rail" data-side="output">
@@ -806,7 +927,13 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
         style={view.glanceArt ? { backgroundImage: `url(${view.glanceArt})` } : undefined}
       />
 
-      {sheetAnchor ? <SettingsSheet nodeId={node.id} anchor={sheetAnchor} onClose={() => setSheetAnchor(undefined)} /> : null}
+      {sheetAnchor ? (
+        <SettingsSheet
+          nodeId={node.id}
+          anchor={sheetAnchor}
+          onClose={() => setSheetAnchor(undefined)}
+        />
+      ) : null}
       {chipList && controls.find((entry) => entry.id === chipList.id) ? (
         <OptionListMenu
           anchor={chipList.anchor}
@@ -826,7 +953,12 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
           onDelete={() => deleteNode(node.id)}
           onAddToTask={
             TASKS_ENABLED
-              ? () => void openAddToTask(cardsForTask(node.id), { left: menu.x, top: menu.top, bottom: menu.bottom })
+              ? () =>
+                  void openAddToTask(cardsForTask(node.id), {
+                    left: menu.x,
+                    top: menu.top,
+                    bottom: menu.bottom,
+                  })
               : undefined
           }
         />

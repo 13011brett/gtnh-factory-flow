@@ -376,12 +376,12 @@ it("steps a drawer's rule with a right click and picks one from its menu", () =>
     useFactoryStore.getState().project.storages!.find((s) => s.id === "iron")!.targetMode,
   ).toBe("exact");
   fireEvent.click(iron.querySelector(".rail-rule")!);
-  const items = document.querySelectorAll(".rail-menu-item");
+  const items = document.querySelectorAll(".cm-row");
   expect([...items].map((i) => i.textContent)).toEqual([
-    "~Any",
-    "≥At least",
-    "=Exactly",
-    "≤At most",
+    "Any~",
+    "At least≥",
+    "Exactly=",
+    "At most≤",
   ]);
   fireEvent.click(items[1]!);
   expect(

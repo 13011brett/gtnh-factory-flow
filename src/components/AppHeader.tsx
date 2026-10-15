@@ -7,7 +7,7 @@ import { OPEN_SHARE_DIALOG_EVENT } from "@/lib/setups-tab";
 import { markNotesReadAndNotify, subscribeToNotesRead, unseenEntries } from "@/lib/whats-new";
 import { ChangelogDialog } from "./ChangelogDialog";
 import { ModAnnouncement } from "./ModAnnouncement";
-import { SharePlanDialog } from "./community/SharePlanDialog";
+import { SharePlanDialog, type ShareMode } from "./community/SharePlanDialog";
 import { ModScreenshot } from "./chrome/ModScreenshot";
 import { DevMenu } from "./DevMenu";
 import { ModSettings } from "./chrome/ModSettings";
@@ -47,12 +47,16 @@ export function AppHeader(_props: AppHeaderProps) {
   // The share dialog lives up here rather than in BoardActions so the compact
   // menu can close behind it without unmounting it. The export dialog for the
   // same reason.
-  const [isShareOpen, setShareOpen] = useState(false);
+  // Open with the mode the Share menu asked for (Save, Update, Save as new post); `false` when closed.
+  const [shareMode, setShareMode] = useState<ShareMode | undefined | false>(false);
   const [isExportOpen, setExportOpen] = useState(false);
   // The shelf asks for the share dialog by event after putting a design on
   // the canvas ("Update post"): same dialog, same board, no second copy.
   useEffect(() => {
-    const open = () => setShareOpen(true);
+    const open = (event: Event) => {
+      const mode = (event as CustomEvent<unknown>).detail;
+      setShareMode(mode === "save" || mode === "update" || mode === "new" ? mode : undefined);
+    };
     window.addEventListener(OPEN_SHARE_DIALOG_EVENT, open);
     return () => window.removeEventListener(OPEN_SHARE_DIALOG_EVENT, open);
   }, []);
@@ -69,7 +73,7 @@ export function AppHeader(_props: AppHeaderProps) {
       {/* The one popup that opens by itself, once per browser. */}
       <ModAnnouncement />
       {isDevMenuOpen ? <DevMenu onClose={() => setDevMenuOpen(false)} /> : null}
-      {isShareOpen ? <SharePlanDialog onClose={() => setShareOpen(false)} /> : null}
+      {shareMode !== false ? <SharePlanDialog mode={shareMode} onClose={() => setShareMode(false)} /> : null}
       {isExportOpen ? <ModScreenshot onClose={() => setExportOpen(false)} /> : null}
       {isSettingsOpen ? (
         <ModSettings
@@ -85,7 +89,7 @@ export function AppHeader(_props: AppHeaderProps) {
   return (
     <>
       <ModBar
-        onShare={() => setShareOpen(true)}
+        onShare={(mode) => setShareMode(mode)}
         onScreenshot={() => setExportOpen(true)}
         onSettings={() => setSettingsOpen(true)}
         onChangelog={() => {

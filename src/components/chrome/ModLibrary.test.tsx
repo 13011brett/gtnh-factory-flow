@@ -112,7 +112,7 @@ describe("the library", () => {
     expect(readLibraryTabState().active).toBe(false);
   });
 
-  it("right-click opens the tile's menu: Open, Rename, Copy plan code, Share to library, Delete plan", () => {
+  it("right-click opens the tile's menu: Open, Rename, Copy plan code, Save to library, Delete plan", () => {
     render(<ModLibrary />);
     fireEvent.contextMenu(screen.getByText("Benzene"));
     const rows = [...document.querySelectorAll('[role="menu"] [role="menuitem"]')].map((element) => element.textContent);
@@ -120,7 +120,7 @@ describe("the library", () => {
       "Open",
       "Rename",
       "Copy plan codeto paste or share",
-      "Share to library...for other players",
+      "Save to library...for other players",
       "Delete plan",
     ]);
     fireEvent.click(screen.getByText("Delete plan"));

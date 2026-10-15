@@ -9,6 +9,19 @@ import { ModBar } from "./ModBar";
 import { registerBoardCommands } from "./board-commands";
 
 vi.mock("@/lib/compact-view", () => ({ isCompactViewport: () => false, useIsCompactViewport: () => false }));
+const modLink = vi.hoisted(() => ({
+  findModGame: vi.fn(),
+  localNetworkPermission: vi.fn(),
+  sendPlanToMod: vi.fn(),
+}));
+vi.mock("@/lib/mod-link/mod-link", () => modLink);
+const clipboard = vi.hoisted(() => ({ copyToClipboard: vi.fn() }));
+vi.mock("@/lib/clipboard", () => clipboard);
+// jsdom has no CompressionStream; the code itself is plan-code.test.ts's.
+vi.mock("@/lib/import-export/plan-code", async (original) => ({
+  ...(await original<typeof import("@/lib/import-export/plan-code")>()),
+  encodePlanCode: vi.fn(async () => "gtnh1.TEST"),
+}));
 
 beforeAll(() => {
   (globalThis as unknown as { IS_REACT_ACT_ENVIRONMENT: boolean }).IS_REACT_ACT_ENVIRONMENT = true;
@@ -28,6 +41,11 @@ function renderBar(overrides: Partial<Parameters<typeof ModBar>[0]> = {}) {
 const key = (id: string) => document.querySelector<HTMLElement>(`[data-mb="${id}"]`)!;
 
 beforeEach(() => {
+  vi.clearAllMocks();
+  modLink.localNetworkPermission.mockResolvedValue("unknown");
+  modLink.findModGame.mockResolvedValue(undefined);
+  modLink.sendPlanToMod.mockResolvedValue(false);
+  clipboard.copyToClipboard.mockResolvedValue(true);
   window.localStorage.clear();
   useFactoryStore.setState({ rateUnit: "second", powerDisplayUnit: "eu", undoHistory: [], redoHistory: [], isReadOnly: false });
   useDesignStore.setState({ designs: [], publicViews: [], activeDesignId: undefined });
@@ -117,11 +135,103 @@ describe("the mod's top bar", () => {
     expect(key("undo").hasAttribute("data-off")).toBe(false);
   });
 
-  it("the Share key opens its menu: Share to library, Copy plan code, Screenshot", () => {
+  const shareRows = () =>
+    [...document.querySelectorAll('[role="menu"] [role="menuitem"] .mm-label')].map((element) => element.textContent);
+  const shareRow = (label: string) =>
+    [...document.querySelectorAll<HTMLElement>('[role="menu"] [role="menuitem"]')].find(
+      (row) => row.querySelector(".mm-label")?.textContent === label,
+    )!;
+  const openShare = async () => {
+    await act(async () => {
+      fireEvent.click(key("share"));
+    });
+  };
+
+  it("the Share key opens its menu in the mod's words: Save to library, the link, the code, the file, the game, a picture", async () => {
     renderBar();
-    fireEvent.click(key("share"));
-    const rows = [...document.querySelectorAll('[role="menu"] [role="menuitem"] .mm-label')].map((element) => element.textContent);
-    expect(rows).toEqual(["Share to library...", "Copy plan code", "Export plan file (.json)", "Screenshot..."]);
+    await openShare();
+    expect(shareRows()).toEqual([
+      "Save to library...",
+      "Copy plan link",
+      "Copy plan code",
+      "Export plan file",
+      "Open in the mod",
+      "Screenshot...",
+    ]);
+  });
+
+  it("a plan already posted offers Update in library and Save as new post, each opening the dialog for it", async () => {
+    const onShare = vi.fn();
+    useFactoryStore.setState({
+      project: { ...useFactoryStore.getState().project, metadata: { communityPlanId: "post-1" } },
+    });
+    renderBar({ onShare });
+    await openShare();
+    expect(shareRows().slice(0, 2)).toEqual(["Update in library...", "Save as new post..."]);
+    fireEvent.click(shareRow("Save as new post..."));
+    expect(onShare).toHaveBeenCalledWith("new");
+  });
+
+  it("Open in the mod is greyed with a tip while no game answers", async () => {
+    renderBar();
+    await openShare();
+    const row = shareRow("Open in the mod");
+    expect(row.getAttribute("aria-disabled")).toBe("true");
+    expect(row.getAttribute("data-tip")).toContain("Start the game with GTNH Planner installed");
+    fireEvent.click(row);
+    expect(modLink.sendPlanToMod).not.toHaveBeenCalled();
+  });
+
+  it("Open in the mod sends the plan to the game that answered", async () => {
+    modLink.findModGame.mockResolvedValue({ port: 25641, version: "0.2.0" });
+    modLink.sendPlanToMod.mockResolvedValue(true);
+    renderBar();
+    await openShare();
+    const row = shareRow("Open in the mod");
+    expect(row.getAttribute("aria-disabled")).toBeNull();
+    await act(async () => {
+      fireEvent.click(row);
+    });
+    await vi.waitFor(() => expect(modLink.sendPlanToMod).toHaveBeenCalled());
+    const [code, , game] = modLink.sendPlanToMod.mock.calls[0];
+    expect(code).toMatch(/^gtnh1\./);
+    expect(game).toEqual({ port: 25641, version: "0.2.0" });
+    expect(clipboard.copyToClipboard).not.toHaveBeenCalled();
+  });
+
+  it("Open in the mod falls back to copying the plan code when the game cannot be reached", async () => {
+    modLink.findModGame.mockResolvedValue({ port: 25640, version: "0.2.0" });
+    renderBar();
+    await openShare();
+    await act(async () => {
+      fireEvent.click(shareRow("Open in the mod"));
+    });
+    await vi.waitFor(() => expect(clipboard.copyToClipboard).toHaveBeenCalled());
+    expect(clipboard.copyToClipboard.mock.calls[0][0]).toMatch(/^gtnh1\./);
+  });
+
+  it("a browser that asks before reaching this computer is not probed until the row is picked", async () => {
+    modLink.localNetworkPermission.mockResolvedValue("prompt");
+    renderBar();
+    await openShare();
+    expect(modLink.findModGame).not.toHaveBeenCalled();
+    expect(shareRow("Open in the mod").getAttribute("aria-disabled")).toBeNull();
+  });
+
+  it("Copy plan link copies this site's link with the plan after #p=, Copy plan code the code alone", async () => {
+    renderBar();
+    await openShare();
+    await act(async () => {
+      fireEvent.click(shareRow("Copy plan link"));
+    });
+    await vi.waitFor(() => expect(clipboard.copyToClipboard).toHaveBeenCalledTimes(1));
+    expect(clipboard.copyToClipboard.mock.calls[0][0].startsWith(`${window.location.origin}/#p=gtnh1.`)).toBe(true);
+    await openShare();
+    await act(async () => {
+      fireEvent.click(shareRow("Copy plan code"));
+    });
+    await vi.waitFor(() => expect(clipboard.copyToClipboard).toHaveBeenCalledTimes(2));
+    expect(clipboard.copyToClipboard.mock.calls[1][0]).toMatch(/^gtnh1\./);
   });
 
   it("the Help key opens the tour, the controls list and the website's own links", () => {

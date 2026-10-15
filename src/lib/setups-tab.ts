@@ -21,8 +21,9 @@ export function notifySetupsChanged(): void {
  */
 export const OPEN_SHARE_DIALOG_EVENT = "gtnh:open-share-dialog";
 
-export function requestShareDialog(): void {
-  window.dispatchEvent(new Event(OPEN_SHARE_DIALOG_EVENT));
+/** `mode` is what the menu row asked for: Save to library, Update in library, Save as new post. */
+export function requestShareDialog(mode?: "save" | "update" | "new"): void {
+  window.dispatchEvent(new CustomEvent(OPEN_SHARE_DIALOG_EVENT, { detail: mode }));
 }
 
 /** NETWORK is everyone's public posts; MINE is the account's own. */

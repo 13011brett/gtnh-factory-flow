@@ -28,9 +28,14 @@ function urlOf(css: string): string | undefined {
 }
 
 /** What a card's or drawer's own DOM carries that its node data does not: the picture, the drawer's role and rate. */
-export function readExtras(root: Element | null, id: string, type: string | undefined): TileExtras | undefined {
+export function readExtras(
+  root: Element | null,
+  id: string,
+  type: string | undefined,
+  wrapperOf?: (id: string) => Element | null | undefined,
+): TileExtras | undefined {
   if (!root) return undefined;
-  const el = root.querySelector(`[data-id="${CSS.escape(id)}"]`);
+  const el = wrapperOf ? wrapperOf(id) : root.querySelector(`[data-id="${CSS.escape(id)}"]`);
   if (!el) return undefined;
   if (type === "recipeNode") {
     const glance = el.querySelector<HTMLElement>(".cc-glance");
@@ -134,12 +139,24 @@ export class MinimapEngine {
       });
     }
     const cache = this.extras;
+    // Every node's wrapper by id, read once in one pass when the first is wanted: a selector query per card was a
+    // walk of the whole board each, 240 ms of a rebuild after a solve at 1,000 cards.
+    let wrappers: Map<string, Element> | undefined;
+    const wrapperOf = (id: string) => {
+      if (!wrappers) {
+        wrappers = new Map();
+        for (const element of root?.querySelectorAll(".react-flow__node[data-id]") ?? []) {
+          wrappers.set(element.getAttribute("data-id")!, element);
+        }
+      }
+      return wrappers.get(id);
+    };
     const extras = (id: string) => {
       const node = state.nodeLookup.get(id);
       if (!node) return undefined;
       const hit = cache.get(id);
       if (hit && hit.data === node.data) return hit.extras;
-      const fresh = readExtras(root, id, node.type);
+      const fresh = readExtras(root, id, node.type, wrapperOf);
       cache.set(id, { data: node.data, extras: fresh });
       return fresh;
     };

@@ -80,6 +80,7 @@ import {
   useCallback,
   useEffect,
   useLayoutEffect,
+  useDeferredValue,
   useMemo,
   useRef,
   useState,
@@ -2946,7 +2947,13 @@ export function FactoryFlow() {
     [isCompact],
   );
 
+  // The wires follow an edit in a render of their own (deferred): rebuilding every wire is about 100 ms of a
+  // 1,000-card edit, and the board's first paint after a click no longer waits for it. They catch up at once.
+  const edgeProject = useDeferredValue(project);
+  const edgeResult = useDeferredValue(result);
   const edges = useMemo<ResourceFlowEdge[]>(() => {
+    const project = edgeProject;
+    const result = edgeResult;
     // A producer starved of its own inputs cannot offer its nameplate, so
     // every capacity the labels see is scaled by the producer's real ceiling.
     // A machine merely idle for lack of demand keeps a ceiling of 1 - hooking
@@ -3379,9 +3386,9 @@ export function FactoryFlow() {
     layoutVersion,
     pocketSummaries,
     pocketView,
-    project,
+    edgeProject,
     recipeSearch,
-    result,
+    edgeResult,
     storagesById,
   ]);
 

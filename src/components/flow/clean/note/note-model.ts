@@ -218,12 +218,13 @@ export function isStickyNote(annotation: Pick<FactoryAnnotation, "kind">): boole
   return annotation.kind === "text";
 }
 
-/** The annotations a plan board shows: the notes. Other boards show all. */
+/** The annotations a board shows: all of them (a plan board draws the drawn kinds in the clean look). */
 export function visibleAnnotations<T extends Pick<FactoryAnnotation, "kind">>(
   annotations: readonly T[],
   planMode: boolean,
 ): T[] {
-  return planMode ? annotations.filter(isStickyNote) : [...annotations];
+  void planMode;
+  return [...annotations];
 }
 
 /** A new note as the mod makes one: yellow, 180 by 120, at a board point, empty. */

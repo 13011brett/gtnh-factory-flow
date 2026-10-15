@@ -20,3 +20,11 @@ text annotation (`kind: "text"`, `colorTag`, `fontSize`), so import, export and 
   note, tips as `NoteCard.tip`; a new note is 220 by 140, the mod's 180 by 120 beside its 320 card taken to the 380 card
   and the 20 px grid.
 - Selection outline only when several nodes are selected. Stacked over wires, under cards (`STICKY_NOTE_Z_INDEX`).
+
+## Drawn annotations (box, zone, arrow, image)
+
+Designed once for both planners: `docs/annotations.md` (the mod has the same file). `AnnotationSwitch` sends them to
+`CleanDrawing` on a plan board (they used to be hidden): flat, square, 2 mod px line, Monocraft caption, sizes the mod's
+times `K` = 380/320 (`drawing-look.ts`, tested). Boxes and zones are backdrops under the cards and click-through inside;
+arrows sit with the notes. On a plan board they can be moved, resized, recoloured (paint tool) and deleted, not
+restyled; the data (style, fillTheme, points) is kept untouched. The mod imports and exports every kind.

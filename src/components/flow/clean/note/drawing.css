@@ -1,0 +1,105 @@
+/*
+ * Box, zone, arrow and image annotations on a plan board (docs/annotations.md; the mod's DrawingPaint draws the same):
+ * flat, square, a thin line, the card font. Interiors let clicks through; only the elements with the drag-handle
+ * class (the border strips, the line, the picture panel) take the pointer.
+ */
+.dw {
+  position: relative;
+  pointer-events: none;
+  font-family: var(--cc-font);
+  -webkit-font-smoothing: none;
+  user-select: none;
+}
+.dw[data-selected="true"]::after {
+  content: "";
+  position: absolute;
+  inset: -2px;
+  outline: 1px solid #22d3ee;
+  pointer-events: none;
+}
+.dw-box {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  pointer-events: none;
+}
+.dw-strip {
+  position: absolute;
+  pointer-events: all;
+  cursor: grab;
+}
+.dw-top {
+  top: -12px;
+  left: 16px;
+  right: 16px;
+  height: 24px;
+}
+.dw-bottom {
+  bottom: -12px;
+  left: 16px;
+  right: 16px;
+  height: 24px;
+}
+.dw-left {
+  left: -12px;
+  top: 16px;
+  bottom: 16px;
+  width: 24px;
+}
+.dw-right {
+  right: -12px;
+  top: 16px;
+  bottom: 16px;
+  width: 24px;
+}
+.dw-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+.dw-hit {
+  pointer-events: stroke;
+  cursor: grab;
+}
+.dw-image {
+  position: absolute;
+  inset: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  background: #26282c;
+  pointer-events: all;
+  cursor: grab;
+  overflow: hidden;
+}
+.dw-picture {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.dw-picture img {
+  width: 100%;
+  height: 100%;
+  object-fit: contain;
+  user-select: none;
+}
+.dw-missing {
+  position: absolute;
+  font-size: 12px;
+  color: #9a9ca4;
+}
+.dw-caption {
+  flex: none;
+  line-height: 1.6;
+  color: #9a9ca4;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}

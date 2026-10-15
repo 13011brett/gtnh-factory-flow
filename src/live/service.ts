@@ -57,6 +57,9 @@ export interface LiveServiceOptions {
 const DEFAULT_TIMING: RoomTiming = { flushMs: 8000, renewMs: 30_000, leaseMs: 90_000 };
 const HELLO_WAIT_MS = 10_000;
 const FRAMES_PER_SECOND = 200;
+const JOINS_PER_SECOND = 10;
+/** Sockets one account may hold at once (a game and a few browser tabs). */
+const CONNECTIONS_PER_ACCOUNT = 16;
 
 class RateWindow {
   private stamps: number[] = [];
@@ -85,6 +88,7 @@ interface Connection extends RoomPeer {
   lastSeen: number;
   frames: RateWindow;
   batches: RateWindow;
+  joins: RateWindow;
   presenceAt: number;
   presencePending: Map<string, ServerFrame>;
   presenceTimer?: ReturnType<typeof setTimeout>;
@@ -343,6 +347,12 @@ export class LiveService {
         ws.close(4001, "auth");
         return;
       }
+      const held = [...this.connections].filter((conn) => conn.userId === user!.id).length;
+      if (held >= CONNECTIONS_PER_ACCOUNT) {
+        ws.send(JSON.stringify({ t: "error", code: "rate", msg: "Too many live connections." }));
+        ws.close(4029, "rate");
+        return;
+      }
       this.accept(ws, user);
     });
   }
@@ -359,8 +369,13 @@ export class LiveService {
       lastSeen: Date.now(),
       frames: new RateWindow(FRAMES_PER_SECOND),
       batches: new RateWindow(this.limits.batchesPerSecond),
+      joins: new RateWindow(JOINS_PER_SECOND),
       presenceAt: 0,
       presencePending: new Map(),
+      forget: (doc) => {
+        conn.rooms.delete(doc);
+        conn.presencePending.delete(doc);
+      },
       send: (frame) => {
         if (ws.readyState === WebSocket.OPEN) {
           ws.send(JSON.stringify(frame));
@@ -526,6 +541,10 @@ export class LiveService {
       return;
     }
     const doc = docKey(key.ownerId, key.designId);
+    if (!conn.joins.take()) {
+      this.error(conn, "rate", "Too many joins a second.", { doc });
+      return;
+    }
     if (!conn.rooms.has(doc) && conn.rooms.size >= this.limits.roomsPerConnection) {
       this.error(conn, "rate", "Too many plans open at once.", { doc });
       return;
@@ -650,7 +669,7 @@ export class LiveService {
     const key = parseDocKey(rawDoc);
     const doc = key ? docKey(key.ownerId, key.designId) : undefined;
     const room = doc ? conn.rooms.get(doc) : undefined;
-    if (!room || !doc) {
+    if (!room || !doc || !room.peers.has(conn)) {
       return;
     }
     const cursor = frame.cursor as { x?: unknown; y?: unknown } | null | undefined;

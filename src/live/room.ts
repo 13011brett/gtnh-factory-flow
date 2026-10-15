@@ -33,6 +33,8 @@ export interface RoomPeer {
   readonly username: string;
   readonly client: "game" | "web";
   send(frame: ServerFrame): void;
+  /** The peer is out of this room (kicked): it forgets the room. */
+  forget(doc: string): void;
 }
 
 export interface RoomDeps {
@@ -471,6 +473,7 @@ export class Room {
     for (const peer of removed) {
       peer.send({ t: "kicked", doc: this.doc, reason: "unshared" });
       this.peers.delete(peer);
+      peer.forget(this.doc);
     }
     if (removed.length > 0) {
       this.broadcast({ t: "present", doc: this.doc, present: this.present });
@@ -486,6 +489,7 @@ export class Room {
       return;
     }
     this.broadcast({ t: "kicked", doc: this.doc, reason });
+    this.peers.forEach((peer) => peer.forget(this.doc));
     this.peers.clear();
     await this.deps.journal.remove(this.doc).catch(() => undefined);
     this.finish();

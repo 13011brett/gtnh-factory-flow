@@ -58,7 +58,8 @@
   line-height: 10px;
   font-weight: 400;
   letter-spacing: 0;
-  text-shadow: none;
+  /* The game's text shadow (Hyb.text draws every word with it): a quarter of the colour, a pixel down and right. */
+  text-shadow: 1px 1px 0 color-mix(in srgb, currentColor 25%, #000);
   -webkit-font-smoothing: none;
   /* The frame is an inset shadow, never a border: a border would push rows off the grid. */
   box-shadow:
@@ -391,11 +392,17 @@
   background-clip: content-box;
 }
 
-/* Line 13: the name's glyphs start 14 px under the number's, as the mod's (12 px figures, 2 px gap). */
+/*
+ * Monocraft is shorter and wider than the game's font: at 14 px its capitals are the mod's x1.5 figures' 10.5 px, and a
+ * letter spacing of -0.8 px keeps each figure as wide as at 13 px (what the fit checks measure). The same holds below:
+ * names at 9 px (-0.6 px) stand as tall as the game's 8 px. Line 13: the name's glyphs start 14 px under the number's,
+ * as the mod's (12 px figures, 2 px gap).
+ */
 .cc-num {
   display: block;
   max-width: 70px;
-  font-size: 13px;
+  font-size: 14px;
+  letter-spacing: -0.8px;
   font-weight: 400;
   line-height: 13px;
   color: var(--cc-ink);
@@ -405,7 +412,8 @@
 .cc-num::after {
   content: attr(data-unit);
   margin-left: 6px;
-  font-size: 8px;
+  font-size: 9px;
+  letter-spacing: -0.6px;
   font-weight: 400;
   color: var(--cc-muted);
   position: relative;
@@ -418,7 +426,8 @@
   color: var(--cc-gold);
 }
 .cc-num[data-small] {
-  font-size: 8px;
+  font-size: 9px;
+  letter-spacing: -0.6px;
   line-height: 13px;
 }
 .cc-num[data-small]::after {
@@ -431,7 +440,8 @@
   display: block;
   width: 70px;
   max-width: 70px;
-  font-size: 8px;
+  font-size: 9px;
+  letter-spacing: -0.6px;
   font-weight: 400;
   line-height: 10px;
   color: var(--cc-muted);
@@ -439,7 +449,8 @@
   overflow: hidden;
 }
 .cc-pname[data-small] {
-  font-size: 6px;
+  font-size: 7px;
+  letter-spacing: -0.45px;
 }
 .cc-pname[data-clip] {
   -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 10px), transparent);
@@ -787,4 +798,14 @@
   box-shadow:
     0 0 0 min(max(3px, calc(6px / var(--board-zoom, 1))), 24px) var(--cc-select),
     0 0 0 min(max(5px, calc(8px / var(--board-zoom, 1))), 32px) var(--cc-red);
+}
+
+/* A selection outline shows only when several things are selected (the mod's BoardSession.showsSelected): with one
+   selected (no selected node followed by another), the card wears no ring; "cannot run" keeps its red. */
+.react-flow__nodes:not(:has(> .react-flow__node.selected ~ .react-flow__node.selected)) .cc-card[data-selected]::before {
+  box-shadow: none;
+}
+.react-flow__nodes:not(:has(> .react-flow__node.selected ~ .react-flow__node.selected))
+  .cc-card[data-selected][data-cannot-run]::before {
+  box-shadow: 0 0 0 2px var(--cc-red);
 }

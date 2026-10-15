@@ -1,6 +1,7 @@
 "use client";
 
 import "./clean.css";
+import { fluidSwatchStyle } from "./fluid-swatch";
 
 import { Handle, Position } from "@xyflow/react";
 import { useEffect, useMemo, useRef, useState, type CSSProperties, type MouseEvent, type WheelEvent } from "react";
@@ -230,7 +231,7 @@ export function CleanPortRow({
 function PortIcon({ resource, iconProps }: { resource: NonNullable<CleanPortView["port"]["resource"]>; iconProps: Record<string, unknown> }) {
   if (resource.kind === "fluid") {
     const color = resource.dominantColor ?? resource.iconAtlas?.dominantColor ?? getFallbackFluidColor(resource.id);
-    return <span className="cc-icon cc-swatch" role="img" aria-label={resource.displayName} style={{ backgroundColor: color }} />;
+    return <span className="cc-icon cc-swatch" role="img" aria-label={resource.displayName} style={fluidSwatchStyle({ ...resource, dominantColor: color })} />;
   }
   return <ResourceIcon {...(iconProps as object)} resource={{ ...resource, amount: 1, chance: undefined }} className="cc-icon" />;
 }

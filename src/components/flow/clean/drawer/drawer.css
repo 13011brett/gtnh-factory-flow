@@ -1,30 +1,31 @@
 /*
- * The clean drawer: the mod's drawer (DrawerPaint, a card's port row lifted off the card) on the website's
- * 120 x 60 footprint, the 20 px grid's nearest to the mod's 116 x 48 beside a 320 card. A bar 10 px along the top (the
- * mod's 8 of 48: move, select, tooltip), a body 50 px with the row and its controls laid out as the mod's: the icon
- * 5 px in from the side, the words 41 px in, the rule key and rate box under them, the content centred in the body. Plain unlayered CSS like clean.css; state hangs on data attributes (React rewrites className on the
+ * The clean drawer: the mod's drawer exactly (DrawerPaint, DrawerCard: a card's port row lifted off the card), 116 x 48:
+ * a bar 7 px along the top with its hairline (the mod's BAR 8, its last row the box's first), the row's box under it
+ * with the icon 5 px in from the side and 12 down, the words 41 px in, the rule key 10 and rate box 59 under them
+ * (35 down). Plain unlayered CSS like clean.css; state hangs on data attributes (React rewrites className on the
  * board). Colours are the mod's: blue source, orange product and byproduct, steel trash. The per-kind values are
  * the mixes of tokens.ts `drawerMixes`, pinned by drawer.test.ts.
  */
 
 .cd-wrap {
   position: relative;
-  width: 120px;
-  height: 60px;
+  width: 116px;
+  height: 48px;
 }
 
 .cd {
   position: relative;
   box-sizing: border-box;
-  width: 120px;
-  height: 60px;
+  width: 116px;
+  height: 48px;
   color: var(--cc-ink);
   font-family: var(--cc-font);
   font-size: 8px;
   line-height: 10px;
   font-weight: 400;
   letter-spacing: 0;
-  text-shadow: none;
+  /* The game's text shadow (Hyb.text draws every word with it): a quarter of the colour, a pixel down and right. */
+  text-shadow: 1px 1px 0 color-mix(in srgb, currentColor 25%, #000);
   -webkit-font-smoothing: none;
   --cd-radius: 6px;
 }
@@ -139,7 +140,7 @@
   left: 0;
   right: 0;
   top: 0;
-  height: 10px;
+  height: 7px;
   box-sizing: border-box;
   background: var(--cd-bar);
   border-bottom: 1px solid var(--cd-frame);
@@ -177,7 +178,8 @@
   width: 10px;
   height: 10px;
   box-sizing: border-box;
-  z-index: 3;
+  /* Over the wiring handle that blankets the body (z 30), so the whole key takes the click. */
+  z-index: 41;
   background: var(--cc-key);
   cursor: pointer;
   visibility: hidden;
@@ -202,13 +204,19 @@
 .cd-del:hover {
   background: #9c3543;
 }
+/* A few pixels of slack round the key, so it is easy to hit. */
+.cd-del::before {
+  content: "";
+  position: absolute;
+  inset: -3px;
+}
 /* ---- The body: the row and its controls --------------------------------------------------------------------- */
 
 .cd-body {
   position: absolute;
   left: 0;
   right: 0;
-  top: 10px;
+  top: 7px;
   bottom: 0;
   /* The port row: lights, scopes and starts a wire; the Handle blankets it. */
 }
@@ -221,7 +229,7 @@
 .cd-icon {
   position: absolute !important;
   z-index: 1;
-  top: 19px;
+  top: 5px;
   width: 32px !important;
   height: 32px !important;
   pointer-events: none;
@@ -244,9 +252,11 @@
    here), the name 2 px under the number, both 41 px in from the icon's side and 75 wide. */
 .cd-num {
   position: absolute;
-  top: 7px;
-  width: 75px;
-  font-size: 13px;
+  top: 3px;
+  width: 71px;
+  /* As the card's: Monocraft at 14 px, -0.8 px apart, stands as tall as the mod's figures (clean.css .cc-num). */
+  font-size: 14px;
+  letter-spacing: -0.8px;
   font-weight: 400;
   line-height: 13px;
   color: var(--cd-number);
@@ -257,7 +267,8 @@
 .cd-num::after {
   content: attr(data-unit);
   margin-left: 6px;
-  font-size: 8px;
+  font-size: 9px;
+  letter-spacing: -0.6px;
   font-weight: 400;
   color: var(--cc-muted);
   position: relative;
@@ -267,7 +278,8 @@
   color: var(--cc-idle);
 }
 .cd-num[data-small] {
-  font-size: 8px;
+  font-size: 9px;
+  letter-spacing: -0.6px;
 }
 .cd-num[data-small]::after {
   top: 0;
@@ -276,9 +288,10 @@
 }
 .cd-name {
   position: absolute;
-  top: 21px;
-  width: 75px;
-  font-size: 8px;
+  top: 16px;
+  width: 71px;
+  font-size: 9px;
+  letter-spacing: -0.6px;
   font-weight: 400;
   line-height: 10px;
   color: var(--cd-name);
@@ -287,7 +300,8 @@
   pointer-events: none;
 }
 .cd-name[data-small] {
-  font-size: 6px;
+  font-size: 7px;
+  letter-spacing: -0.45px;
 }
 .cd-name[data-clip] {
   -webkit-mask-image: linear-gradient(90deg, #000 calc(100% - 10px), transparent);
@@ -308,7 +322,7 @@
 .cd-key,
 .cd-box {
   position: absolute;
-  top: 32px;
+  top: 28px;
   height: 10px;
   box-sizing: border-box;
   z-index: 40;
@@ -338,7 +352,7 @@
   content: attr(data-mark);
 }
 .cd-box {
-  width: 63px;
+  width: 59px;
   background: #0f1114;
   color: var(--cc-gold);
   font-size: 8px;
@@ -524,9 +538,9 @@
 .factory-flow-board[data-detail-level="glance"] .cd .cd-icon {
   left: 8px !important;
   right: auto !important;
-  top: 7px;
-  width: 46px !important;
-  height: 46px !important;
+  top: 6px;
+  width: 34px !important;
+  height: 34px !important;
 }
 .factory-flow-board[data-detail-level="glance"] .cd[data-kind="trash"] .cd-icon {
   left: 10px !important;
@@ -588,4 +602,20 @@
 }
 .cd-menu-row[data-on] b {
   color: var(--cc-gold);
+}
+
+/* One thing selected: no ring (the mod's showsSelected); the lit and accepting rings stay. */
+.react-flow__nodes:not(:has(> .react-flow__node.selected ~ .react-flow__node.selected)) .cd[data-selected]:not([data-lit]):not([data-accepts]) .cd-edge {
+  box-shadow: 6px 8px 7px rgba(0, 0, 0, 0.36);
+}
+.react-flow__nodes:not(:has(> .react-flow__node.selected ~ .react-flow__node.selected)) .cd[data-selected][data-lit] .cd-edge {
+  box-shadow:
+    0 0 0 1px rgba(255, 210, 87, 0.086),
+    0 0 0 2px rgba(255, 210, 87, 0.086),
+    0 0 0 3px rgba(255, 210, 87, 0.086),
+    6px 8px 7px rgba(0, 0, 0, 0.36);
+}
+.react-flow__nodes:not(:has(> .react-flow__node.selected ~ .react-flow__node.selected)) .cd[data-kind="trash"][data-selected]:not([data-lit]),
+.react-flow__nodes:not(:has(> .react-flow__node.selected ~ .react-flow__node.selected)) .cd[data-kind="buffer"][data-selected]:not([data-lit]) {
+  filter: drop-shadow(6px 8px 7px rgba(0, 0, 0, 0.36));
 }

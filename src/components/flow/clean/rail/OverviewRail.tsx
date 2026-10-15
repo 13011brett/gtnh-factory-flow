@@ -1,6 +1,7 @@
 "use client";
 
 import "./rail.css";
+import { fluidSwatchStyle } from "../fluid-swatch";
 
 import { Zap } from "lucide-react";
 import {
@@ -135,7 +136,7 @@ function ResourceGlyph({ line }: { line: Pick<RailLine, "resource" | "energy"> }
     );
   }
   if (line.resource.kind === "fluid") {
-    // The mod's flat square in the fluid's own colour, as on the cards and drawers.
+    // The mod's square of the fluid's texture, as on the cards and drawers.
     const resource = line.resource;
     const color = resource.dominantColor ?? resource.iconAtlas?.dominantColor ?? getFallbackFluidColor(resource.id);
     return (
@@ -143,7 +144,7 @@ function ResourceGlyph({ line }: { line: Pick<RailLine, "resource" | "energy"> }
         className="rail-icon rail-swatch"
         role="img"
         aria-label={resource.displayName}
-        style={{ backgroundColor: color }}
+        style={fluidSwatchStyle({ ...resource, dominantColor: color })}
       />
     );
   }

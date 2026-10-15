@@ -50,7 +50,7 @@ import { orderMachineHandlers } from "../MachinePicker";
 import type { RecipeNodeData } from "../RecipeNode";
 import { CC_GEOMETRY } from "./tokens";
 import { isPinned, pinMachineKey, settingControls } from "./menus/settings-model";
-import { measureClean } from "./text-measure";
+import { mcTextWidth, measureClean } from "./text-measure";
 
 type VoltageTier = Parameters<typeof getVoltageTierIndex>[0];
 
@@ -290,8 +290,10 @@ export function buildPortView(
     gold: node.portRates?.[port.handleId] !== undefined,
     rate: node.portRates?.[port.handleId],
     numberSmall: measureClean(number, 13) + 2 + measureClean(unit, 8) > WORDS,
-    nameSmall: measureClean(port.displayName, 8) > WORDS,
-    nameClipped: measureClean(port.displayName, 6) > WORDS,
+    // The mod's rule (CardPaint.words): full size when it fits in the game font (its 71 px), else 0.75; what still runs
+    // past the row in Monocraft is cut and faded.
+    nameSmall: mcTextWidth(port.displayName) > 71,
+    nameClipped: measureClean(port.displayName, mcTextWidth(port.displayName) > 71 ? 6 : 8) > WORDS,
     wired: port.connected,
     choice: (port.resource?.alternatives?.length ?? 0) > 1,
     resourceKey: makeResourceKey(port.kind, port.resourceId),

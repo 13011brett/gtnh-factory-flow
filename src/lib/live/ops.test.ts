@@ -9,6 +9,7 @@ import {
   jsonEqual,
   LIVE_COLLECTIONS,
   LIVE_PROTOCOL_VERSION,
+  LIVE_VALUE_MAX_DEPTH,
   plansEqual,
   readOps,
   type LiveOp,
@@ -258,6 +259,69 @@ describe("ops beyond the vectors", () => {
     expect("error" in readOps([{ o: "meta", f: { nodes: [] } }])).toBe(true);
     expect("error" in readOps([{ o: "del", c: "nodes", id: "" }])).toBe(true);
     expect("error" in readOps([{ o: "move", c: "nodes", id: "n" }])).toBe(true);
+  });
+
+  it("refuses names that reach a prototype anywhere in a batch", () => {
+    const wire = (text: string) => readOps(JSON.parse(text));
+    const refused = [
+      '[{"o":"patch","c":"annotations","id":"a","f":{"__proto__":{"position":{"x":1,"y":2}}},"d":["position"]}]',
+      '[{"o":"patch","c":"nodes","id":"n","f":{"gtnhplanner":{"a":[{"constructor":1}]}}}]',
+      '[{"o":"patch","c":"nodes","id":"n","f":{},"d":["prototype"]}]',
+      '[{"o":"put","c":"nodes","id":"n","v":{"id":"n","x":{"y":{"__proto__":{}}}}}]',
+      '[{"o":"meta","f":{"constructor":1}}]',
+      '[{"o":"meta","f":{"gtnhplanner":{"prototype":true}}}]',
+    ];
+    for (const text of refused) {
+      expect(wire(text), text).toHaveProperty("error");
+    }
+    expect(wire('[{"o":"meta","f":{"notes":"__proto__ constructor"}}]')).toHaveProperty("ops");
+  });
+
+  it("refuses values nested deeper than 64 levels", () => {
+    const nest = (levels: number): unknown => {
+      let value: unknown = 1;
+      for (let i = 0; i < levels; i += 1) {
+        value = i % 2 === 0 ? [value] : { a: value };
+      }
+      return value;
+    };
+    const put = (levels: number) => [
+      { o: "put", c: "nodes", id: "n", v: { id: "n", deep: nest(levels) } },
+    ];
+    expect(readOps(put(LIVE_VALUE_MAX_DEPTH - 1))).toHaveProperty("ops");
+    expect(readOps(put(LIVE_VALUE_MAX_DEPTH))).toHaveProperty("error");
+    const patch = (levels: number) => [
+      { o: "patch", c: "nodes", id: "n", f: { deep: nest(levels) } },
+    ];
+    expect(readOps(patch(LIVE_VALUE_MAX_DEPTH - 1))).toHaveProperty("ops");
+    expect(readOps(patch(LIVE_VALUE_MAX_DEPTH))).toHaveProperty("error");
+    expect(readOps([{ o: "meta", f: { notes: nest(LIVE_VALUE_MAX_DEPTH) } }])).toHaveProperty(
+      "ops",
+    );
+    expect(
+      readOps([{ o: "meta", f: { notes: nest(LIVE_VALUE_MAX_DEPTH + 1) } }]),
+    ).toHaveProperty("error");
+    // Far deeper than any stack: refused without recursing all the way down.
+    expect(readOps([{ o: "meta", f: { notes: nest(200_000) } }])).toHaveProperty("error");
+  });
+
+  it("writes a field named __proto__ as a plain field, never as the prototype", () => {
+    const ops = JSON.parse(
+      '[{"o":"patch","c":"annotations","id":"a","f":{"__proto__":{"position":{"x":1,"y":2}}},"d":["position"]}]',
+    ) as LiveOp[];
+    const plan: LivePlan = { annotations: [{ id: "a", position: { x: 0, y: 0 } }] };
+    const after = applyOps(plan, ops);
+    const thing = (after.annotations as Array<Record<string, unknown>>)[0]!;
+    expect(Object.getPrototypeOf(thing)).toBe(Object.prototype);
+    expect(Object.prototype.hasOwnProperty.call(thing, "__proto__")).toBe(true);
+    expect("position" in thing).toBe(false);
+    const clone = cloneJson(thing);
+    expect(Object.getPrototypeOf(clone)).toBe(Object.prototype);
+    expect(JSON.stringify(clone)).toBe('{"id":"a","__proto__":{"position":{"x":1,"y":2}}}');
+    const undo = invertOps(plan, ops);
+    expect(plansEqual(applyOps(after, undo), plan)).toBe(true);
+    const diff = diffPlans(plan, after);
+    expect(Object.getPrototypeOf((diff[0] as { f: object }).f)).toBe(Object.prototype);
   });
 });
 

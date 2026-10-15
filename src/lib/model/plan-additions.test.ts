@@ -3,7 +3,12 @@ import { loadBiodieselDemoProject } from "@/examples";
 import { game, planWithAdditions } from "./__fixtures__/plan-additions";
 import { parseFactoryProjectJson, serializeFactoryProject } from "@/lib/import-export/factory-json";
 import { decodePlanCode, encodePlanCode } from "@/lib/import-export/plan-code";
-import { factoryProjectSchema, GTNHPLANNER_DATA_MAX_BYTES, jsonByteLength } from "./schemas";
+import {
+  factoryProjectSchema,
+  GTNHPLANNER_DATA_MAX_BYTES,
+  jsonByteLength,
+  OPAQUE_DATA_MAX_DEPTH,
+} from "./schemas";
 import type { FactoryProject } from "./types";
 
 /**
@@ -56,6 +61,24 @@ describe("plan additions for cloud plans and task boards", () => {
     expect(factoryProjectSchema.safeParse(tooBig).success).toBe(false);
     const justFits = { v: 1, blob: "x".repeat(GTNHPLANNER_DATA_MAX_BYTES - 100) };
     expect(factoryProjectSchema.safeParse({ ...source, gtnhplanner: justFits }).success).toBe(true);
+  });
+
+  it("refuse opaque data nested past its depth, however deep", () => {
+    const source = planWithAdditions();
+    const nest = (levels: number): Record<string, unknown> => {
+      let value: Record<string, unknown> = { leaf: 1 };
+      for (let i = 1; i < levels; i += 1) {
+        value = { a: value };
+      }
+      return value;
+    };
+    const deep = (levels: number) => ({
+      ...source,
+      nodes: [{ ...source.nodes[0]!, gtnhplanner: nest(levels) }, ...source.nodes.slice(1)],
+    });
+    expect(factoryProjectSchema.safeParse(deep(OPAQUE_DATA_MAX_DEPTH)).success).toBe(true);
+    expect(factoryProjectSchema.safeParse(deep(OPAQUE_DATA_MAX_DEPTH + 1)).success).toBe(false);
+    expect(factoryProjectSchema.safeParse(deep(100_000)).success).toBe(false);
   });
 
   it("hold tasks to their limits", () => {

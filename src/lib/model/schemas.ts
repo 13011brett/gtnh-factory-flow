@@ -38,16 +38,47 @@ export function jsonByteLength(value: unknown): number {
   return utf8.encode(JSON.stringify(value) ?? "").length;
 }
 
+/** How deep opaque data (the game's, a recipe's metadata) may nest, in arrays and objects. */
+export const OPAQUE_DATA_MAX_DEPTH = 63;
+
+/**
+ * True when `value` nests no deeper than `levels` arrays and objects. Stops
+ * at the first level too deep, so it never recurses past `levels`.
+ */
+export function nestsAtMost(value: unknown, levels: number): boolean {
+  if (typeof value !== "object" || value === null) {
+    return true;
+  }
+  if (levels <= 0) {
+    return false;
+  }
+  const children = Array.isArray(value) ? value : Object.values(value);
+  return children.every((child) => nestsAtMost(child, levels - 1));
+}
+
+/**
+ * Opaque data: any JSON object, nested to a bounded depth so nothing stored
+ * is pathologically deep. Later checks are skipped when it fails: they
+ * serialize the value.
+ */
+const opaqueDataSchema = z
+  .record(z.string(), z.unknown())
+  .refine((value) => nestsAtMost(value, OPAQUE_DATA_MAX_DEPTH), {
+    message: `Nested more than ${OPAQUE_DATA_MAX_DEPTH} levels deep`,
+    abort: true,
+  });
+
 /**
  * The in-game planner's own data for a thing or the whole plan: opaque here
  * and kept exactly as written, so a website edit never loses what the game
  * stored. Bounded so one card cannot carry megabytes.
  */
-export const gtnhplannerDataSchema = z
-  .record(z.string(), z.unknown())
-  .refine((value) => jsonByteLength(value) <= GTNHPLANNER_DATA_MAX_BYTES, {
+export const gtnhplannerDataSchema = opaqueDataSchema.refine(
+  (value) => jsonByteLength(value) <= GTNHPLANNER_DATA_MAX_BYTES,
+  {
     message: `The game's data on one thing is limited to ${GTNHPLANNER_DATA_MAX_BYTES / 1024} KB`,
-  });
+  },
+);
 
 export const dominantColorSchema = z
   .string()
@@ -271,7 +302,12 @@ export const recipeSchema = z.object({
       sourceIdentifier: z.string().optional(),
     })
     .optional(),
-  metadata: z.record(z.string().min(1), z.unknown()).optional(),
+  metadata: z
+    .record(z.string().min(1), z.unknown())
+    .refine((value) => nestsAtMost(value, OPAQUE_DATA_MAX_DEPTH), {
+      message: `Nested more than ${OPAQUE_DATA_MAX_DEPTH} levels deep`,
+    })
+    .optional(),
   nei: z
     .object({
       iconPath: z.string().optional(),

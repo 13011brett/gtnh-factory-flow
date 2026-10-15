@@ -92,6 +92,25 @@ function isPlainObject(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Sets an own data property. JavaScript's `obj["__proto__"] = v` would set
+ * the prototype instead; JSON (and the game) treat that name as an ordinary
+ * key, so it is defined as one. The live service never lets the name in
+ * (`readOps`); this keeps the engine sound whoever calls it.
+ */
+function setField(target: Record<string, unknown>, key: string, value: unknown): void {
+  if (key === "__proto__") {
+    Object.defineProperty(target, key, {
+      value,
+      writable: true,
+      enumerable: true,
+      configurable: true,
+    });
+  } else {
+    target[key] = value;
+  }
+}
+
 /** A key counts only when it holds a value: `undefined` is absence. */
 function has(object: Record<string, unknown>, key: string): boolean {
   return Object.prototype.hasOwnProperty.call(object, key) && object[key] !== undefined;
@@ -151,7 +170,7 @@ export function cloneJson<T>(value: T): T {
     for (const key of Object.keys(value)) {
       const item = value[key];
       if (item !== undefined) {
-        out[key] = cloneJson(item);
+        setField(out, key, cloneJson(item));
       }
     }
     return out as T;
@@ -343,7 +362,7 @@ function writeFields(
       if (f[key] === undefined) {
         delete target[key];
       } else {
-        target[key] = cloneJson(f[key]);
+        setField(target, key, cloneJson(f[key]));
       }
     }
   }
@@ -387,7 +406,7 @@ function diffFields(
       continue;
     }
     if (!has(before, key) || !jsonEqual(before[key], after[key])) {
-      f[key] = cloneJson(after[key]);
+      setField(f, key, cloneJson(after[key]));
       changed = true;
     }
   }
@@ -486,7 +505,7 @@ function restoreFields(
       continue;
     }
     if (has(old, key)) {
-      restoreF[key] = cloneJson(old[key]);
+      setField(restoreF, key, cloneJson(old[key]));
     } else {
       restoreD.push(key);
     }
@@ -554,12 +573,61 @@ function invertOne(working: Working, op: LiveOp): LiveOp | null {
 
 export const LIVE_ID_MAX_LENGTH = 200;
 export const LIVE_FIELD_NAME_MAX_LENGTH = 100;
+/**
+ * How deep a value in a batch may nest, in arrays and objects: a put's thing
+ * and a plan field from their top, a patched field counted from its thing.
+ */
+export const LIVE_VALUE_MAX_DEPTH = 64;
+/** Names that reach an object's prototype in JavaScript: refused anywhere in a batch. */
+export const LIVE_FORBIDDEN_NAMES: ReadonlySet<string> = new Set([
+  "__proto__",
+  "constructor",
+  "prototype",
+]);
+
+/**
+ * The first problem in a value off the wire: a forbidden name at any depth,
+ * or nesting deeper than `levels`. It stops at the first, so it never
+ * recurses more than `levels` deep however deep the value goes.
+ */
+function valueProblem(value: unknown, levels: number): string | undefined {
+  if (typeof value !== "object" || value === null) {
+    return undefined;
+  }
+  if (levels <= 0) {
+    return `values nest at most ${LIVE_VALUE_MAX_DEPTH} levels`;
+  }
+  if (Array.isArray(value)) {
+    for (const item of value) {
+      const problem = valueProblem(item, levels - 1);
+      if (problem) {
+        return problem;
+      }
+    }
+    return undefined;
+  }
+  const object = value as Record<string, unknown>;
+  for (const key of Object.keys(object)) {
+    if (LIVE_FORBIDDEN_NAMES.has(key)) {
+      return `the name ${JSON.stringify(key)} is not allowed`;
+    }
+    const problem = valueProblem(object[key], levels - 1);
+    if (problem) {
+      return problem;
+    }
+  }
+  return undefined;
+}
 
 /**
  * Checks a batch's shape as it arrives from a socket: known op kinds, known
  * collections, string ids, a put's `v.id` equal to its id, no `id` in a patch,
- * no collection name in a meta. Returns the ops or the first problem. The
- * values themselves are checked after applying, against the plan schema.
+ * no collection name in a meta, no name that reaches a prototype
+ * (`LIVE_FORBIDDEN_NAMES`) at any depth, and nothing nested deeper than
+ * `LIVE_VALUE_MAX_DEPTH`. Returns the ops or the first problem. The values
+ * themselves are checked after applying, against the plan schema. This is the
+ * service's reader: what it refuses never reaches a client, so the engines
+ * and the vectors need no rule for it.
  */
 export function readOps(raw: unknown): { ops: LiveOp[] } | { error: string } {
   if (!Array.isArray(raw)) {
@@ -573,7 +641,7 @@ export function readOps(raw: unknown): { ops: LiveOp[] } | { error: string } {
       return { error: `${where} is not an object` };
     }
     if (op.o === "meta") {
-      const fields = readFields(op, isMetaKey);
+      const fields = readFields(op, isMetaKey, LIVE_VALUE_MAX_DEPTH);
       if ("error" in fields) {
         return { error: `${where}: ${fields.error}` };
       }
@@ -590,9 +658,13 @@ export function readOps(raw: unknown): { ops: LiveOp[] } | { error: string } {
       if (!isPlainObject(op.v) || op.v.id !== op.id) {
         return { error: `${where}: a put needs v with v.id equal to id` };
       }
+      const problem = valueProblem(op.v, LIVE_VALUE_MAX_DEPTH);
+      if (problem) {
+        return { error: `${where}: ${problem}` };
+      }
       ops.push({ o: "put", c: op.c, id: op.id, v: op.v as LiveThing });
     } else if (op.o === "patch") {
-      const fields = readFields(op, isThingKey);
+      const fields = readFields(op, isThingKey, LIVE_VALUE_MAX_DEPTH - 1);
       if ("error" in fields) {
         return { error: `${where}: ${fields.error}` };
       }
@@ -606,22 +678,34 @@ export function readOps(raw: unknown): { ops: LiveOp[] } | { error: string } {
   return { ops };
 }
 
+function isFieldName(key: string): boolean {
+  return key.length <= LIVE_FIELD_NAME_MAX_LENGTH && !LIVE_FORBIDDEN_NAMES.has(key);
+}
+
 function readFields(
   op: Record<string, unknown>,
   allowed: (key: string) => boolean,
+  levels: number,
 ): { value: { f: Record<string, unknown>; d?: string[] } } | { error: string } {
   if (!isPlainObject(op.f)) {
     return { error: "f must be an object" };
   }
   for (const key of Object.keys(op.f)) {
-    if (!allowed(key) || key.length > LIVE_FIELD_NAME_MAX_LENGTH) {
+    if (!allowed(key) || !isFieldName(key)) {
       return { error: `field ${JSON.stringify(key.slice(0, 40))} cannot be set` };
+    }
+    const problem = valueProblem(op.f[key], levels);
+    if (problem) {
+      return { error: `field ${JSON.stringify(key)}: ${problem}` };
     }
   }
   if (op.d === undefined) {
     return { value: { f: op.f } };
   }
-  if (!Array.isArray(op.d) || op.d.some((key) => typeof key !== "string" || !allowed(key))) {
+  if (
+    !Array.isArray(op.d) ||
+    op.d.some((key) => typeof key !== "string" || !allowed(key) || !isFieldName(key))
+  ) {
     return { error: "d must be a list of field names" };
   }
   return { value: { f: op.f, d: op.d as string[] } };

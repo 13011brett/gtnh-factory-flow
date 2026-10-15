@@ -18,6 +18,7 @@ import {
 } from "@/lib/datasets/browser-loader";
 import { loadResourceHistory, useFactoryStore } from "@/store/factory-store";
 import { useDesignStore } from "@/store/design-store";
+import { useCommunityAuthStore } from "@/store/community-auth-store";
 import { recordResourceTrend, resetResourceTrends } from "@/lib/resource-trends";
 import { useWorkspaceView, writeWorkspaceView } from "@/lib/workspace-view";
 import { openCommunityPost } from "@/lib/community/open-post";
@@ -204,6 +205,13 @@ export function FactoryPlannerApp() {
   // The library follows the account: sign-in starts the sync, sign-out stops
   // it, and every change here reaches the other devices a few seconds later.
   useEffect(() => startLibrarySync(), []);
+
+  // Who is signed in is asked once as the app opens. The mod's bar has no
+  // account key (the Library has it), so nothing else asks before the Library
+  // opens, and the account sync and live plans wait for the answer.
+  useEffect(() => {
+    void useCommunityAuthStore.getState().hydrate();
+  }, []);
 
   // Other browser tabs of the planner share this library: keep the open
   // design current with their saves (design-store.ts, canvasBase).

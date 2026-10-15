@@ -427,6 +427,9 @@ export class LiveService {
         conn.snapshots.delete(doc);
       },
       send: (frame) => conn.sendText(JSON.stringify(frame)),
+      // A room that failed: the client reconnects as after a restart, joins
+      // again and sends what it has not had acknowledged.
+      reload: () => ws.close(1012, "reload"),
       sendText: (text) => {
         if (ws.readyState !== WebSocket.OPEN) {
           return;
@@ -625,7 +628,12 @@ export class LiveService {
       // Already in it: a client that missed batches asks again. A snapshot
       // only when the plan moved on since the last one, at most once a
       // `resnapshotMs`; otherwise nothing, as it already has everything.
-      await current.enqueue(() => {
+      await current.enqueue(async () => {
+        try {
+          await current.whenDurable();
+        } catch {
+          return;
+        }
         const last = conn.snapshots.get(doc);
         if (
           !current.closed &&
@@ -664,7 +672,13 @@ export class LiveService {
         return;
       }
       const room = opened;
-      const joined = await room.enqueue(() => {
+      const joined = await room.enqueue(async () => {
+        // A snapshot holds nothing that is not on disk yet.
+        try {
+          await room.whenDurable();
+        } catch {
+          return false;
+        }
         if (room.closed) {
           return false;
         }
@@ -744,18 +758,21 @@ export class LiveService {
       if (!room.peers.has(conn)) {
         return undefined;
       }
-      // An async call runs up to its first await at once: that part is the
-      // batch's work, the rest waits on the disk.
       const started = performance.now();
-      const applying = room.apply(conn, cid, read.ops);
+      const applied = room.apply(conn, cid, read.ops);
       budget.spend(performance.now() - started);
-      return applying;
+      return applied;
     });
     if (!result) {
       this.error(conn, "forbidden", "Join the plan first.", { doc, cid });
     } else if (result.kind === "duplicate") {
       // Applied before (sent again after a reconnect): acknowledged to its
-      // sender alone, with nothing to apply.
+      // sender alone, with nothing to apply, once it is on disk.
+      try {
+        await room.whenDurable();
+      } catch {
+        return;
+      }
       conn.send({ t: "ops", doc, seq: result.seq, by: conn.userId, cid, ops: [] });
     } else if (result.kind === "refused") {
       this.error(conn, result.code, result.msg, { doc, cid });

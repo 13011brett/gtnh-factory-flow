@@ -17,6 +17,14 @@ import type { PlanStore } from "./store";
  * that keep the database up to date. Every change to the room (a batch, a
  * join, closing) runs through one queue, so batches apply in arrival order
  * and a snapshot never sees half a batch.
+ *
+ * A batch is applied in memory at once and goes to the journal, which syncs
+ * a turn's worth of lines together (journal.ts); it is broadcast, the sender
+ * included, only once its line is on disk. Nothing leaves the room before it
+ * is durable: a snapshot or a flush first waits for the journal to catch up.
+ * A journal that cannot be written fails the room: everyone in it is told to
+ * join again, and the plan is opened afresh from the database and the
+ * journal, which hold exactly what was ever acknowledged.
  */
 
 export interface RoomTiming {
@@ -38,6 +46,12 @@ export interface RoomPeer {
   sendText(text: string): void;
   /** The peer is out of this room (kicked): it forgets the room. */
   forget(doc: string): void;
+  /**
+   * The room failed and is gone: the client must join again for a fresh
+   * snapshot and send its unacknowledged batches again (the service closes
+   * its socket as a restart would).
+   */
+  reload(): void;
 }
 
 export interface RoomDeps {
@@ -46,6 +60,12 @@ export interface RoomDeps {
   timing: RoomTiming;
   /** The plan size limit, in JSON characters (the library's upload limit). */
   maxPlanChars?: number;
+  /**
+   * How many bytes of batches the journal may hold for the room before a
+   * flush trims them (default 8 MB): while the database is down nothing is
+   * trimmed, and past this batches are refused as `rate` until it is back.
+   */
+  maxJournalBytes?: number;
   /** Recently applied batch ids, kept across the room closing and opening again. */
   cids: Map<string, number>;
   log: (message: string) => void;
@@ -56,7 +76,9 @@ export interface RoomDeps {
 export type BatchResult =
   | { kind: "applied"; seq: number; ops: LiveOp[] }
   | { kind: "duplicate"; seq: number }
-  | { kind: "refused"; code: "bad_op" | "too_big"; msg: string };
+  | { kind: "refused"; code: "bad_op" | "too_big" | "rate"; msg: string };
+
+export const DEFAULT_MAX_JOURNAL_BYTES = 8 * 1024 * 1024;
 
 const RECENT_CIDS = 5000;
 /** Batch ids a room keeps on disk past a flush (journal.ts), so a late resend is still known. */
@@ -82,6 +104,11 @@ export class Room {
   closed = false;
 
   private flushedSeq = 0;
+  /** The last seq whose journal line is on disk. */
+  private durableSeq = 0;
+  /** Each journalled batch the database does not have yet: its seq and its line's bytes. */
+  private unflushed: Array<[seq: number, bytes: number]> = [];
+  private journalBytes = 0;
   /** The plan's JSON for snapshots, made once per version of the plan. */
   private planJson: { plan: LivePlan; text: string } | undefined;
   private size = 0;
@@ -123,6 +150,7 @@ export class Room {
     room.content = new LiveDoc(loaded.plan && typeof loaded.plan === "object" ? loaded.plan : {});
     room.seq = loaded.seq;
     room.flushedSeq = loaded.seq;
+    room.durableSeq = loaded.seq;
     room.lastFlushAt = Date.now();
     // Batch ids from before the last flush, then the journal's own: a resend
     // of any of them is acknowledged, never applied again.
@@ -148,6 +176,8 @@ export class Room {
         room.remember(entry.cid, entry.seq);
       }
       room.seq = entry.seq;
+      room.durableSeq = entry.seq;
+      room.noteJournalled(entry.seq, Buffer.byteLength(JSON.stringify(entry)) + 1);
     }
     if (replay.length > 0) {
       deps.log(`${doc}: replayed ${replay.length} journalled batches up to seq ${room.seq}`);
@@ -226,13 +256,19 @@ export class Room {
     return `${head.slice(0, -1)},"plan":${this.planJson.text},${tail.slice(1)}`;
   }
 
+  /** Settles once everything applied so far is on disk (rejects when the journal failed). */
+  whenDurable(): Promise<void> {
+    return this.deps.journal.durable(this.doc);
+  }
+
   /**
    * Applies one batch from `peer`: refused whole when its result breaks a
    * schema or the size limit, acknowledged without applying when its cid was
    * applied already (a resend after a reconnect). Comments get the server's
-   * stamp: who wrote them and when. Journalled before it is broadcast.
+   * stamp: who wrote them and when. Applied in memory at once and journalled;
+   * broadcast once its journal line is on disk.
    */
-  async apply(peer: RoomPeer, cid: string, incoming: LiveOp[]): Promise<BatchResult> {
+  apply(peer: RoomPeer, cid: string, incoming: LiveOp[]): BatchResult {
     if (this.closed) {
       return { kind: "refused", code: "bad_op", msg: "The plan is closed." };
     }
@@ -259,20 +295,56 @@ export class Room {
       };
     }
     const seq = this.seq + 1;
-    await this.deps.journal.append(this.doc, {
-      seq,
-      cid,
-      by: peer.userId,
-      at: new Date().toISOString(),
-      ops,
-    });
+    const line = `${JSON.stringify({ seq, cid, by: peer.userId, at: new Date().toISOString(), ops })}\n`;
+    const bytes = Buffer.byteLength(line);
+    const maxJournal = this.deps.maxJournalBytes ?? DEFAULT_MAX_JOURNAL_BYTES;
+    if (this.journalBytes + bytes > maxJournal) {
+      // The database has not taken the plan for a while (it is down, or slow):
+      // the edit waits on its sender's side rather than piling up here.
+      return {
+        kind: "refused",
+        code: "rate",
+        msg: "The plan cannot be saved right now. The edit goes again shortly.",
+      };
+    }
+    const durable = this.deps.journal.appendLine(this.doc, line);
     this.content.commit(ops);
     this.size = size;
     this.seq = seq;
     this.remember(cid, seq);
-    this.broadcast({ t: "ops", doc: this.doc, seq, by: peer.userId, cid, ops });
+    this.noteJournalled(seq, bytes);
+    const frame: ServerFrame = { t: "ops", doc: this.doc, seq, by: peer.userId, cid, ops };
+    // Lines settle in order, so broadcasts go out in seq order.
+    void durable.then(
+      () => {
+        if (!this.closed) {
+          this.durableSeq = Math.max(this.durableSeq, seq);
+          try {
+            this.broadcast(frame);
+          } catch (error) {
+            this.deps.log(this.doc + ": broadcast failed: " + String(error));
+          }
+        }
+      },
+      (error) => this.fail(`the journal could not be written: ${String(error)}`),
+    );
     this.scheduleFlush();
     return { kind: "applied", seq, ops };
+  }
+
+  private noteJournalled(seq: number, bytes: number): void {
+    this.unflushed.push([seq, bytes]);
+    this.journalBytes += bytes;
+  }
+
+  /** The database has the plan up to `seq`: its journal lines no longer count. */
+  private noteFlushed(seq: number): void {
+    let drop = 0;
+    while (drop < this.unflushed.length && this.unflushed[drop]![0] <= seq) {
+      this.journalBytes -= this.unflushed[drop]![1];
+      drop += 1;
+    }
+    this.unflushed.splice(0, drop);
   }
 
   /**
@@ -395,8 +467,11 @@ export class Room {
       return false;
     }
     const run = (async () => {
-      const plan = this.plan;
-      const seq = this.seq;
+      const captured = await this.capture();
+      if (!captured || this.closed) {
+        return false;
+      }
+      const { plan, seq } = captured;
       const sizeAtCapture = this.size;
       this.lastFlushAt = Date.now();
       try {
@@ -412,6 +487,7 @@ export class Room {
           return false;
         }
         this.flushedSeq = Math.max(this.flushedSeq, seq);
+        this.noteFlushed(seq);
         // Exact again: the stored plan measured, plus what came after it.
         this.size = sizeOf(plan) + (this.size - sizeAtCapture);
         await this.deps.journal.trim(this.doc, seq, this.recentCids());
@@ -427,6 +503,30 @@ export class Room {
     } finally {
       this.flushing = undefined;
     }
+  }
+
+  /**
+   * The plan and its seq as far as the journal has them on disk, for a flush:
+   * the database never gets a batch its sender could still lose. Batches
+   * apply whole between turns of the event loop, so the plan is consistent
+   * whenever it is read; when the journal keeps falling behind (a burst of
+   * edits), this flush is skipped and the next one tries.
+   */
+  private async capture(): Promise<{ plan: LivePlan; seq: number } | undefined> {
+    for (let round = 0; round < 5; round += 1) {
+      if (this.durableSeq >= this.seq) {
+        return { plan: this.plan, seq: this.seq };
+      }
+      try {
+        await this.whenDurable();
+      } catch {
+        return undefined;
+      }
+      if (this.closed) {
+        return undefined;
+      }
+    }
+    return undefined;
   }
 
   private async renew(): Promise<void> {
@@ -530,6 +630,26 @@ export class Room {
     this.peers.clear();
     await this.deps.journal.remove(this.doc).catch(() => undefined);
     this.finish();
+  }
+
+  /**
+   * The room can no longer be trusted (its journal failed): it closes without
+   * writing anything, and everyone in it joins again, which opens the plan
+   * afresh from the database and the journal.
+   */
+  private fail(reason: string): void {
+    if (this.closed) {
+      return;
+    }
+    this.deps.log(`${this.doc}: ${reason}; everyone in it joins again`);
+    const peers = [...this.peers];
+    this.peers.clear();
+    this.abandon();
+    this.deps.onClosed(this);
+    for (const peer of peers) {
+      peer.forget(this.doc);
+      peer.reload();
+    }
   }
 
   /** Stops the room's timers and stores nothing (a crash, simulated in tests). */

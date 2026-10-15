@@ -1,4 +1,4 @@
-import { mkdtempSync, rmSync } from "node:fs";
+import { mkdtempSync, readFileSync, rmSync, writeFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
@@ -76,10 +76,31 @@ const peer: RoomPeer = {
   client: "web",
   send: (frame: ServerFrame) => void frame,
   sendText: (text: string) => void text,
+  reload: () => undefined,
   forget: () => undefined,
 };
 
-async function openRoom(store: PlanStore, timing: Partial<RoomDeps["timing"]> = {}) {
+/** A peer that keeps what it is sent. */
+function listener(connId = "c2") {
+  const frames: ServerFrame[] = [];
+  let reloaded = 0;
+  const listening: RoomPeer = {
+    ...peer,
+    connId,
+    send: (frame) => frames.push(frame),
+    sendText: (text) => frames.push(JSON.parse(text) as ServerFrame),
+    reload: () => {
+      reloaded += 1;
+    },
+  };
+  return { peer: listening, frames, reloads: () => reloaded };
+}
+
+async function openRoom(
+  store: PlanStore,
+  timing: Partial<RoomDeps["timing"]> = {},
+  extra: Partial<RoomDeps> = {},
+) {
   const dir = mkdtempSync(path.join(tmpdir(), "gtnh-room-"));
   dirs.push(dir);
   const room = await Room.open(DOC, {
@@ -89,6 +110,7 @@ async function openRoom(store: PlanStore, timing: Partial<RoomDeps["timing"]> = 
     cids: new Map(),
     log: () => undefined,
     onClosed: () => undefined,
+    ...extra,
   });
   if (!room) {
     throw new Error("the room did not open");
@@ -122,5 +144,73 @@ describe("a room's writes", () => {
     expect(room.closed).toBe(true);
     const flushes = store.writes.filter((w) => w.kind === "flush");
     expect(flushes.map((w) => w.until)).toEqual([null]);
+  });
+});
+
+describe("the journal", () => {
+  it("writes the lines a turn brings in one write and one sync, in order", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "gtnh-journal-"));
+    dirs.push(dir);
+    const journal = new Journal(dir);
+    const entry = (seq: number) => ({ seq, cid: `c${seq}`, by: OWNER, at: "now", ops: rename(`T${seq}`) });
+    await Promise.all(Array.from({ length: 50 }, (_, at) => journal.append(DOC, entry(at + 1))));
+    expect(journal.writes).toBe(1);
+    await journal.append(DOC, entry(51));
+    expect(journal.writes).toBe(2);
+    expect((await journal.read(DOC)).map((line) => line.seq)).toEqual(
+      Array.from({ length: 51 }, (_, at) => at + 1),
+    );
+    await journal.durable(DOC);
+  });
+});
+
+describe("a room's batches", () => {
+  it("go out only once their journal line is on disk", async () => {
+    const room = await openRoom(new HeldStore());
+    const other = listener();
+    room.peers.add(other.peer);
+    const result = room.apply(peer, "c1", rename("Two"));
+    expect(result).toMatchObject({ kind: "applied", seq: 1 });
+    expect(other.frames).toEqual([]);
+    await room.whenDurable();
+    expect(other.frames).toMatchObject([{ t: "ops", seq: 1, cid: "c1" }]);
+  });
+
+  it("are refused as rate while the journal holds too much the database has not taken", async () => {
+    const store = new HeldStore();
+    const room = await openRoom(store, {}, { maxJournalBytes: 600 });
+    const results = Array.from({ length: 6 }, (_, at) =>
+      room.apply(peer, `c${at}`, rename(`A title long enough to fill the journal ${at}`)),
+    );
+    expect(results.map((result) => result.kind)).toContain("refused");
+    expect(results.at(-1)).toMatchObject({ kind: "refused", code: "rate" });
+    // Stored: the journal's lines no longer count, and batches go through again.
+    expect(await room.flush()).toBe(true);
+    expect(room.apply(peer, "after", rename("Again"))).toMatchObject({ kind: "applied" });
+  });
+
+  it("fail the room when the journal cannot be written: everyone joins again", async () => {
+    const dir = mkdtempSync(path.join(tmpdir(), "gtnh-room-"));
+    dirs.push(dir);
+    // A file where the journal's folder should be: nothing can be written.
+    const blocked = path.join(dir, "blocked");
+    writeFileSync(blocked, "not a folder");
+    let closed = 0;
+    const room = await openRoom(new HeldStore(), {}, {
+      journal: new Journal(path.join(blocked, "journal")),
+      onClosed: () => {
+        closed += 1;
+      },
+    });
+    const other = listener();
+    room.peers.add(other.peer);
+    expect(room.apply(peer, "c1", rename("Lost"))).toMatchObject({ kind: "applied" });
+    await expect(room.whenDurable()).rejects.toThrow();
+    await expect.poll(() => room.closed).toBe(true);
+    expect(closed).toBe(1);
+    expect(other.reloads()).toBe(1);
+    // Nothing that was never on disk went out.
+    expect(other.frames).toEqual([]);
+    expect(readFileSync(blocked, "utf8")).toBe("not a folder");
   });
 });

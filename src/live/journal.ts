@@ -10,6 +10,11 @@ import { docKey, parseDocKey } from "@/lib/live/protocol";
  * the service replays every file over the stored plans, so a crash between
  * flushes loses nothing.
  *
+ * Writes are grouped: the lines a doc gets within one turn of the event loop,
+ * and all that arrive while its last write is still on the disk, go in one
+ * write and one sync (a group commit). A busy plan syncs once per write's
+ * time, not once per batch.
+ *
  * Files are named `<ownerId>.<designId>.jsonl` (a doc key's colon is not a
  * legal file name character everywhere).
  *
@@ -30,9 +35,23 @@ export interface JournalEntry {
   ops: LiveOp[];
 }
 
+interface WaitingLine {
+  text: string;
+  resolve: () => void;
+  reject: (error: unknown) => void;
+}
+
 export class Journal {
   /** One queue per doc: a doc's writes stay in order, docs never wait on each other. */
   private readonly chains = new Map<string, Promise<unknown>>();
+  /** Each doc's lines waiting for its next group write. */
+  private readonly waiting = new Map<string, WaitingLine[]>();
+  /** Docs with a group write coming or on its way. */
+  private readonly writing = new Set<string>();
+  /** Each doc's last line's promise: everything appended so far is on disk when it settles. */
+  private readonly last = new Map<string, Promise<void>>();
+  /** Group writes made (each one write and one sync), for tests and the health check. */
+  writes = 0;
 
   constructor(readonly dir: string) {}
 
@@ -91,18 +110,74 @@ export class Journal {
     return entries;
   }
 
-  /** Appends one entry and syncs it to disk. A doc's calls run in order. */
+  /** Appends one entry; settles once it is synced to disk. A doc's lines land in order. */
   append(doc: string, entry: JournalEntry): Promise<void> {
-    return this.serial(doc, async () => {
-      await mkdir(this.dir, { recursive: true });
-      const handle = await open(this.fileFor(doc), "a");
-      try {
-        await handle.write(`${JSON.stringify(entry)}\n`);
-        await handle.datasync();
-      } finally {
-        await handle.close();
+    return this.appendLine(doc, `${JSON.stringify(entry)}\n`);
+  }
+
+  /** Appends one entry already serialized (with its newline), as `append`. */
+  appendLine(doc: string, text: string): Promise<void> {
+    const done = new Promise<void>((resolve, reject) => {
+      let lines = this.waiting.get(doc);
+      if (!lines) {
+        lines = [];
+        this.waiting.set(doc, lines);
+      }
+      lines.push({ text, resolve, reject });
+    });
+    // A failure is the caller's to handle; this copy only marks the end.
+    const settled = done.catch(() => undefined);
+    this.last.set(doc, done);
+    void settled.then(() => {
+      if (this.last.get(doc) === done) {
+        this.last.delete(doc);
       }
     });
+    this.schedule(doc);
+    return done;
+  }
+
+  /**
+   * Settles when every line appended for the doc so far is on disk (rejects
+   * when the write of the last one failed).
+   */
+  durable(doc: string): Promise<void> {
+    return this.last.get(doc) ?? Promise.resolve();
+  }
+
+  private schedule(doc: string): void {
+    if (this.writing.has(doc)) {
+      return;
+    }
+    this.writing.add(doc);
+    setImmediate(() => void this.serial(doc, () => this.writeGroup(doc)));
+  }
+
+  /** Everything waiting for the doc, in one write and one sync. */
+  private async writeGroup(doc: string): Promise<void> {
+    const lines = this.waiting.get(doc) ?? [];
+    this.waiting.delete(doc);
+    try {
+      if (lines.length > 0) {
+        await mkdir(this.dir, { recursive: true });
+        const handle = await open(this.fileFor(doc), "a");
+        try {
+          await handle.write(lines.map((line) => line.text).join(""));
+          await handle.datasync();
+          this.writes += 1;
+        } finally {
+          await handle.close();
+        }
+      }
+      lines.forEach((line) => line.resolve());
+    } catch (error) {
+      lines.forEach((line) => line.reject(error));
+    } finally {
+      this.writing.delete(doc);
+      if (this.waiting.has(doc)) {
+        this.schedule(doc);
+      }
+    }
   }
 
   /** The batch ids the last trim kept for a doc, oldest first. A damaged file reads as none. */
@@ -172,8 +247,11 @@ export class Journal {
     }
   }
 
-  /** Forgets a doc's journal and its batch ids (the plan was deleted). */
+  /** Forgets a doc's journal and its batch ids (the plan was deleted). Lines still waiting are refused. */
   remove(doc: string): Promise<void> {
+    const waiting = this.waiting.get(doc) ?? [];
+    this.waiting.delete(doc);
+    waiting.forEach((line) => line.reject(new Error("The plan's journal was removed.")));
     return this.serial(doc, async () => {
       await rm(this.fileFor(doc), { force: true });
       await rm(this.cidsFileFor(doc), { force: true });

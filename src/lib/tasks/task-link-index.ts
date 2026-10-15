@@ -2,17 +2,11 @@
 
 import { create } from "zustand";
 import { readDesign } from "@/lib/designs/design-storage";
-import type { PlanTask, PlanTaskStatus } from "@/lib/model/types";
+import type { PlanTask, PlanTaskItem, PlanTaskStatus } from "@/lib/model/types";
 import { useDesignStore } from "@/store/design-store";
 import { useFactoryStore } from "@/store/factory-store";
 import { myAccountId } from "@/store/live-session";
-import {
-  linkKey,
-  morePressing,
-  planLinkId,
-  planLinkIds,
-  taskLinks,
-} from "./task-links";
+import { itemLink, linkKey, morePressing, planLinkId, planLinkIds, taskLinks } from "./task-links";
 
 /**
  * Which cards some task is about, from the task boards loaded on this device
@@ -52,12 +46,29 @@ async function rebuild(): Promise<void> {
   const me = myAccountId();
   const active = designs.find((design) => design.id === activeDesignId);
   const statuses: Record<string, PlanTaskStatus> = {};
-  const add = (ownPlan: string, tasks: readonly PlanTask[] | undefined) => {
+  const mark = (link: { plan: string; node: string }, status: PlanTaskStatus) => {
+    const key = linkKey(link);
+    const before = statuses[key];
+    statuses[key] = before ? morePressing(before, status) : status;
+  };
+  // A task's cards: its own links (an older task's) and its machine things'.
+  const add = (
+    ownPlan: string,
+    tasks: readonly PlanTask[] | undefined,
+    items: readonly PlanTaskItem[] | undefined,
+  ) => {
+    const status = new Map<string, PlanTaskStatus>();
     for (const task of tasks ?? []) {
+      status.set(task.id, task.status);
       for (const link of taskLinks(task, ownPlan)) {
-        const key = linkKey(link);
-        const before = statuses[key];
-        statuses[key] = before ? morePressing(before, task.status) : task.status;
+        mark(link, task.status);
+      }
+    }
+    for (const item of items ?? []) {
+      const of = status.get(item.taskId);
+      const link = of ? itemLink(item, ownPlan) : undefined;
+      if (of && link) {
+        mark(link, of);
       }
     }
   };
@@ -69,14 +80,14 @@ async function rebuild(): Promise<void> {
     }
     const ownPlan = planLinkId(design, me);
     if (isActive) {
-      add(ownPlan, project.tasks);
+      add(ownPlan, project.tasks, project.taskItems);
       continue;
     }
     const record = await readDesign(design.id).catch(() => undefined);
     if (mine !== version) {
       return;
     }
-    add(ownPlan, record?.project.tasks);
+    add(ownPlan, record?.project.tasks, record?.project.taskItems);
   }
   if (mine === version) {
     useTaskLinkIndex.setState({
@@ -99,7 +110,10 @@ export function startTaskLinkIndex(): () => void {
     }
   });
   const stopProject = useFactoryStore.subscribe((state, previous) => {
-    if (state.project.tasks !== previous.project.tasks) {
+    if (
+      state.project.tasks !== previous.project.tasks ||
+      state.project.taskItems !== previous.project.taskItems
+    ) {
       queue();
     }
   });

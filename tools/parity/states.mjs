@@ -71,8 +71,8 @@ export const states = [
   { id: "drawer-trash-voided", ref: "drawer-trash-voided-methane", plan: drawerPlan, node: "methane", anchor: { x: 34, y: 20 }, drawer: true, extendH: 40, setup: none },
   { id: "drawer-product-any-set", ref: "drawer-product-any-set-rate-pulsing", plan: anyDrawerPlan, node: "aniline", anchor: { x: 34, y: 20 }, drawer: true, extendH: 40, setup: none },
   // ---- QA2 additions: rule menus and the folded rail (full board states are in qa2/*.mjs) ----
-  { id: "drawer-rule-menu", ref: "drawer-rule-menu-open", plan: drawerPlan, node: "aniline", anchor: { x: 34, y: 20 }, drawer: true, extendH: 40, setup: async (c) => { await c.page.locator(`${c.nodeSel} .cd-key`).click(); await wait(c, 700); } },
-  { id: "drawer-source-rule-menu", ref: "drawer-source-rule-menu", plan: drawerPlan, node: "acid", anchor: { x: 34, y: 20 }, drawer: true, extendH: 40, setup: async (c) => { await c.page.locator(`${c.nodeSel} .cd-key`).click(); await wait(c, 700); } },
+  { id: "drawer-rule-menu", ref: "drawer-rule-menu-open", plan: drawerPlan, node: "aniline", anchor: { x: 34, y: 20 }, drawer: true, extendH: 40, setup: async (c) => { { const b = await c.page.locator(`${c.nodeSel} .cd-key`).boundingBox(); await c.page.mouse.click(b.x + b.width / 2, b.y + b.height / 2); } await wait(c, 700); } },
+  { id: "drawer-source-rule-menu", ref: "drawer-source-rule-menu", plan: drawerPlan, node: "acid", anchor: { x: 34, y: 20 }, drawer: true, extendH: 40, setup: async (c) => { { const b = await c.page.locator(`${c.nodeSel} .cd-key`).boundingBox(); await c.page.mouse.click(b.x + b.width / 2, b.y + b.height / 2); } await wait(c, 700); } },
   // ---- overview rail ----
   { id: "overview-rail", ref: "overview-rail-full", plan: refChain, node: "nb", clip: "rail", setup: none },
   // ---- R2 gallery additions ----
@@ -88,6 +88,6 @@ export const states = [
   ...[["atleast", "at-least"], ["exactly", "exact"], ["atmost", "at-most"]].map(([n, mode]) => ({ id: "drawer-rule-" + n, ref: "drawer-product-" + n + "-rule", plan: { ...drawerPlan, drawers: drawerPlan.drawers.map((d) => (d.key === "aniline" ? { ...d, mode } : d)) }, node: "aniline", anchor: { x: 76, y: 40 }, drawer: true, extendH: 40, setup: none })),
   { id: "drawer-rule-any", ref: "drawer-product-any-rule-set-rate", plan: anyDrawerPlan, node: "aniline", anchor: { x: 76, y: 40 }, drawer: true, extendH: 40, setup: none },
   { id: "drawer-rule-trash", ref: "drawer-trash-void-rule", plan: drawerPlan, node: "methane", anchor: { x: 76, y: 40 }, drawer: true, extendH: 40, setup: none },
-  { id: "drawer-key-tip", ref: "drawer-rule-chip-tooltip", plan: drawerPlan, node: "aniline", anchor: { x: 72, y: 38 }, drawer: true, setup: async (c) => { await c.page.locator(c.nodeSel + " .cd-key").hover(); await wait(c, 1400); } },
+  { id: "drawer-key-tip", ref: "drawer-rule-chip-tooltip", plan: drawerPlan, node: "aniline", anchor: { x: 72, y: 38 }, drawer: true, setup: async (c) => { { const b = await c.page.locator(c.nodeSel + " .cd-key").boundingBox(); await c.page.mouse.move(b.x + b.width / 2, b.y + b.height / 2); } await wait(c, 1400); } },
   { id: "drawer-bar-tip", ref: "drawer-hover-bar-tooltip", plan: drawerPlan, node: "aniline", anchor: { x: 72, y: 38 }, drawer: true, setup: async (c) => { await c.page.locator(c.nodeSel + " .cd-bar").hover(); await wait(c, 1400); } },
 ];

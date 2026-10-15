@@ -120,33 +120,58 @@ export type LiveNotice =
   | { kind: "members"; ownerId: string; designId: string; members: PlanMember[] }
   | { kind: "deleted"; ownerId: string; designId: string };
 
+/** Waits before each retry of a notice the live service did not take (down, or restarting). */
+export const LIVE_NOTICE_RETRY_MS = [1000, 4000, 15_000] as const;
+
 /**
  * Tells the live service that sharing changed or a design went, so open
- * rooms update and anyone no longer allowed is dropped. Best effort and
- * quick: the change is already in the database, which the service checks
- * again on every join. Nothing happens unless LIVE_INTERNAL_URL and
- * LIVE_INTERNAL_TOKEN are set.
+ * rooms update and anyone no longer allowed is dropped. Quick: one attempt
+ * is awaited; when the service does not take it (no answer, or a 5xx) it is
+ * tried again in the background, `retryMs` apart. The change is already in
+ * the database, which the service reads again at every lease renewal (30 s),
+ * so a notice lost for good is late, never wrong for long. Nothing happens
+ * unless LIVE_INTERNAL_URL and LIVE_INTERNAL_TOKEN are set.
  */
-export async function notifyLive(notice: LiveNotice): Promise<boolean> {
+export async function notifyLive(
+  notice: LiveNotice,
+  retryMs: readonly number[] = LIVE_NOTICE_RETRY_MS,
+): Promise<boolean> {
   const base = process.env.LIVE_INTERNAL_URL?.replace(/\/+$/, "");
   const token = process.env.LIVE_INTERNAL_TOKEN;
   if (!base || !token) {
     return false;
   }
   const doc = docKey(notice.ownerId, notice.designId);
-  const body = notice.kind === "members" ? { doc, members: notice.members } : { doc };
-  try {
-    const response = await fetchWithDbTimeout(
-      `${base}/internal/${notice.kind}`,
-      {
-        method: "POST",
-        headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
-        body: JSON.stringify(body),
-      },
-      3000,
-    );
-    return response.ok;
-  } catch {
-    return false;
+  const body = JSON.stringify(
+    notice.kind === "members" ? { doc, members: notice.members } : { doc },
+  );
+  const send = async (): Promise<"taken" | "refused" | "again"> => {
+    try {
+      const response = await fetchWithDbTimeout(
+        `${base}/internal/${notice.kind}`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json", authorization: `Bearer ${token}` },
+          body,
+        },
+        3000,
+      );
+      return response.ok ? "taken" : response.status >= 500 ? "again" : "refused";
+    } catch {
+      return "again";
+    }
+  };
+  const first = await send();
+  if (first !== "again") {
+    return first === "taken";
   }
+  void (async () => {
+    for (const wait of retryMs) {
+      await new Promise((resolve) => setTimeout(resolve, wait).unref?.());
+      if ((await send()) !== "again") {
+        return;
+      }
+    }
+  })();
+  return false;
 }

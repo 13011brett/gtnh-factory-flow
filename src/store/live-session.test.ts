@@ -445,6 +445,34 @@ describe("live editing in the store", () => {
     expect(useLiveSession.getState().notice?.text).toBe("An edit was not saved: No.");
   });
 
+  it("asks to join again shortly when the service is too busy to open the plan", async () => {
+    vi.useFakeTimers({ shouldAdvanceTime: true });
+    try {
+      const send = service.handle.bind(service);
+      let refused = false;
+      service.handle = (frame) => {
+        if (frame.t === "join" && !refused) {
+          refused = true;
+          service.received.push(frame);
+          service.reply({ t: "error", doc: DOC, code: "rate", msg: "Busy." });
+          return;
+        }
+        send(frame);
+      };
+      await openLiveDesign(planWith(annotation("n1", "one")));
+      expect(service.sent("join")).toHaveLength(1);
+
+      await vi.advanceTimersByTimeAsync(4500);
+      await settle();
+      expect(service.sent("join")).toHaveLength(2);
+      useFactoryStore.getState().updateAnnotation("n1", { text: "two" });
+      await settle();
+      expect(service.sent("ops")).toHaveLength(1);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("keeps an edit too big to send off the wire, and sizes batches in bytes", async () => {
     await openLiveDesign(planWith(annotation("n1", "one")));
     // Over the service's batch limit in UTF-8 bytes, though not in characters.

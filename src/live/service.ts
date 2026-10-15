@@ -18,6 +18,7 @@ import {
 } from "@/lib/live/protocol";
 import { sameSecret } from "@/lib/server/cloud-plans";
 import { readSessionCookie, verifySessionToken } from "@/lib/server/session";
+import { FlushQueue } from "./flush-queue";
 import { Journal } from "./journal";
 import { Room, type RoomPeer, type RoomTiming } from "./room";
 import type { PlanStore } from "./store";
@@ -50,6 +51,12 @@ export const SERVICE_LIMITS = {
   bufferedBytes: 8 * 1024 * 1024,
   /** A connection already in a plan gets its snapshot again at most this often (and only when it moved on). */
   resnapshotMs: 1000,
+  /** Plans one account may have open at once, across all its connections. */
+  roomsPerAccount: 8,
+  /** Plans open at once in the whole service (LIVE_MAX_ROOMS); past it, joins wait. */
+  maxRooms: 500,
+  /** Whole-plan writes to the database at once, across every room. */
+  flushConcurrency: 4,
 };
 
 export interface LiveServiceOptions {
@@ -70,7 +77,12 @@ export interface LiveServiceOptions {
   log?: (message: string) => void;
 }
 
-const DEFAULT_TIMING: RoomTiming = { flushMs: 8000, renewMs: 30_000, leaseMs: 90_000 };
+const DEFAULT_TIMING: RoomTiming = {
+  flushMs: 8000,
+  renewMs: 30_000,
+  leaseMs: 90_000,
+  lingerMs: 60_000,
+};
 const HELLO_WAIT_MS = 10_000;
 const FRAMES_PER_SECOND = 200;
 const JOINS_PER_SECOND = 10;
@@ -154,7 +166,12 @@ export class LiveService {
   private readonly wss: WebSocketServer;
   private readonly journal: Journal;
   private readonly rooms = new Map<string, Promise<Room | undefined>>();
+  /** The rooms open now (not opening, not closed), oldest first. */
+  private readonly openRooms = new Set<Room>();
   private readonly connections = new Set<Connection>();
+  /** Each account's connections. */
+  private readonly byUser = new Map<string, Set<Connection>>();
+  private readonly flushes: FlushQueue;
   private readonly cids = new Map<string, number>();
   private readonly timing: RoomTiming;
   private readonly limits: typeof LIVE_LIMITS & typeof SERVICE_LIMITS;
@@ -169,6 +186,7 @@ export class LiveService {
     this.journal = new Journal(options.journalDir);
     this.timing = { ...DEFAULT_TIMING, ...options.timing };
     this.limits = { ...LIVE_LIMITS, ...SERVICE_LIMITS, ...options.limits };
+    this.flushes = new FlushQueue(this.limits.flushConcurrency);
     this.origins = new Set(
       options.allowedOrigins.map(normalizeOrigin).filter((origin): origin is string => !!origin),
     );
@@ -246,6 +264,8 @@ export class LiveService {
     }
     this.stopping = true;
     clearInterval(this.heartbeat);
+    // Every room's last flush goes now, whatever pause the database earned.
+    this.flushes.drain();
     const closed = new Promise<void>((resolve) => this.server.close(() => resolve()));
     const rooms = await Promise.all(
       [...this.rooms.values()].map((room) => room.catch(() => undefined)),
@@ -274,8 +294,12 @@ export class LiveService {
     this.server.close();
   }
 
-  get stats(): { rooms: number; connections: number } {
-    return { rooms: this.rooms.size, connections: this.connections.size };
+  get stats(): { rooms: number; connections: number; flushBacklog: number } {
+    return {
+      rooms: this.rooms.size,
+      connections: this.connections.size,
+      flushBacklog: this.flushes.backlog,
+    };
   }
 
   // -------------------------------------------------------------------------
@@ -395,7 +419,7 @@ export class LiveService {
         ws.close(4001, "auth");
         return;
       }
-      const held = [...this.connections].filter((conn) => conn.userId === user!.id).length;
+      const held = this.byUser.get(user.id)?.size ?? 0;
       if (held >= CONNECTIONS_PER_ACCOUNT) {
         ws.send(JSON.stringify({ t: "error", code: "rate", msg: "Too many live connections." }));
         ws.close(4029, "rate");
@@ -443,6 +467,12 @@ export class LiveService {
       },
     };
     this.connections.add(conn);
+    let mine = this.byUser.get(conn.userId);
+    if (!mine) {
+      mine = new Set();
+      this.byUser.set(conn.userId, mine);
+    }
+    mine.add(conn);
     const helloTimer = setTimeout(() => {
       if (!conn.hello) {
         ws.close(4002, "hello");
@@ -461,7 +491,10 @@ export class LiveService {
       clearTimeout(helloTimer);
       clearTimeout(conn.presenceTimer);
       this.connections.delete(conn);
-      if (![...this.connections].some((other) => other.userId === conn.userId)) {
+      const others = this.byUser.get(conn.userId);
+      others?.delete(conn);
+      if (!others || others.size === 0) {
+        this.byUser.delete(conn.userId);
         this.budgets.delete(conn.userId);
       }
       for (const room of conn.rooms.values()) {
@@ -581,11 +614,13 @@ export class LiveService {
     const opening = Room.open(doc, {
       store: this.options.store,
       journal: this.journal,
+      flushes: this.flushes,
       timing: this.timing,
       maxPlanChars: this.options.maxPlanChars,
       cids: this.cids,
       log: this.log,
       onClosed: (room) => {
+        this.openRooms.delete(room);
         if (this.rooms.get(room.doc) === opening) {
           this.rooms.delete(room.doc);
         }
@@ -599,6 +634,9 @@ export class LiveService {
     this.rooms.set(doc, opening);
     void opening.then(
       (room) => {
+        if (room && !room.closed) {
+          this.openRooms.add(room);
+        }
         if (!room && this.rooms.get(doc) === opening) {
           this.rooms.delete(doc);
         }
@@ -652,10 +690,25 @@ export class LiveService {
       this.error(conn, "rate", "Too many plans open at once.", { doc });
       return;
     }
-    const role = await this.options.store.role(conn.userId, key.ownerId, key.designId);
-    if (!role) {
-      this.error(conn, "forbidden", "This plan is not shared with you.", { doc });
+    const held = this.plansOpenBy(conn.userId);
+    if (!held.has(doc) && held.size >= this.limits.roomsPerAccount) {
+      this.error(conn, "rate", "Too many plans open at once.", { doc });
       return;
+    }
+    if (!this.rooms.has(doc)) {
+      if (this.rooms.size >= this.limits.maxRooms) {
+        // Full: a plan nobody is in makes room, and the client asks again.
+        this.closeOneIdleRoom();
+        this.error(conn, "rate", "The live service is busy. Try again shortly.", { doc });
+        return;
+      }
+      // Not open: the database says whether it may be, before anything is
+      // opened for it. An open room answers from its own members below.
+      const role = await this.options.store.role(conn.userId, key.ownerId, key.designId);
+      if (!role) {
+        this.error(conn, "forbidden", "This plan is not shared with you.", { doc });
+        return;
+      }
     }
     // A room closing as we arrive is replaced by a fresh one.
     for (let attempt = 0; attempt < 3; attempt += 1) {
@@ -682,10 +735,18 @@ export class LiveService {
         if (room.closed) {
           return false;
         }
-        if (conn.ws.readyState !== WebSocket.OPEN) {
+        if (conn.ws.readyState !== WebSocket.OPEN || room.peers.has(conn)) {
           return true;
         }
-        room.peers.add(conn);
+        // Checked in the room's turn against the members it holds, which
+        // sharing notices and every lease renewal keep current: someone
+        // unshared a moment ago is never let in.
+        const role = room.roleOf(conn.userId);
+        if (!role) {
+          this.error(conn, "forbidden", "This plan is not shared with you.", { doc });
+          return true;
+        }
+        room.admit(conn);
         conn.rooms.set(doc, room);
         conn.snapshots.set(doc, { seq: room.seq, at: Date.now() });
         conn.sendText(room.snapshotText(role));
@@ -697,6 +758,27 @@ export class LiveService {
       }
     }
     this.error(conn, "not_found", "The plan could not be opened. Try again.", { doc });
+  }
+
+  /** The plans an account has open, across its connections. */
+  private plansOpenBy(userId: string): Set<string> {
+    const docs = new Set<string>();
+    for (const conn of this.byUser.get(userId) ?? []) {
+      for (const doc of conn.rooms.keys()) {
+        docs.add(doc);
+      }
+    }
+    return docs;
+  }
+
+  /** Closes the room nobody has been in the longest, to make room for another. */
+  private closeOneIdleRoom(): void {
+    for (const room of this.openRooms) {
+      if (room.idle) {
+        void room.closeIfEmpty();
+        return;
+      }
+    }
   }
 
   private async onLeave(conn: Connection, rawDoc: string | undefined): Promise<void> {

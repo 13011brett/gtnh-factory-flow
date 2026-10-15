@@ -10,6 +10,7 @@ import {
 } from "@/lib/live/protocol";
 import { prepareBatch } from "./batch";
 import { LiveDoc } from "./doc";
+import type { FlushQueue } from "./flush-queue";
 import type { AppliedCid, Journal } from "./journal";
 import type { PlanStore } from "./store";
 
@@ -27,6 +28,11 @@ import type { PlanStore } from "./store";
  * join again, and the plan is opened afresh from the database and the
  * journal, which hold exactly what was ever acknowledged.
  *
+ * An empty room lingers (a minute by default) before its last flush lets the
+ * lease go, so someone leaving and coming back, or a page reloading, costs
+ * the database nothing. Every write of the whole plan waits its turn in the
+ * service's flush queue (flush-queue.ts).
+ *
  * The room's lease carries a token of its own; every write it makes is
  * conditional on it. A lease that is no longer the room's (taken by another,
  * or lapsed and cleared by a REST save) fails the room the same way: it never
@@ -40,6 +46,8 @@ export interface RoomTiming {
   renewMs: number;
   /** How far ahead each lease reaches. */
   leaseMs: number;
+  /** How long a room nobody is in stays open before it lets its lease go. */
+  lingerMs: number;
 }
 
 export interface RoomPeer {
@@ -63,6 +71,8 @@ export interface RoomPeer {
 export interface RoomDeps {
   store: PlanStore;
   journal: Journal;
+  /** The service's queue for writes of whole plans. */
+  flushes: FlushQueue;
   timing: RoomTiming;
   /** The plan size limit, in JSON characters (the library's upload limit). */
   maxPlanChars?: number;
@@ -92,6 +102,13 @@ export const ROOM_RECENT_CIDS = 1000;
 
 function sizeOf(value: unknown): number {
   return value === undefined ? 0 : JSON.stringify(value).length;
+}
+
+function sameMembers(a: LiveMember[], b: LiveMember[]): boolean {
+  return (
+    a.length === b.length &&
+    a.every((member, at) => member.id === b[at]!.id && member.username === b[at]!.username)
+  );
 }
 
 /** The fields the server writes on a comment: who wrote it and when. */
@@ -125,6 +142,7 @@ export class Room {
   private queue: Promise<unknown> = Promise.resolve();
   private flushTimer: ReturnType<typeof setTimeout> | undefined;
   private renewTimer: ReturnType<typeof setInterval> | undefined;
+  private lingerTimer: ReturnType<typeof setTimeout> | undefined;
   private lastFlushAt = 0;
   private flushing: Promise<boolean> | undefined;
   /**
@@ -228,6 +246,26 @@ export class Room {
       client: peer.client,
       conn: peer.connId,
     }));
+  }
+
+  /** What the account may do here, by the members the room knows: kept current by notices and every lease renewal. */
+  roleOf(userId: string): "owner" | "editor" | null {
+    if (userId === this.ownerId) {
+      return "owner";
+    }
+    return this.members.some((member) => member.id === userId) ? "editor" : null;
+  }
+
+  /** Lets a peer in (in the room's turn); a room lingering empty stays open. */
+  admit(peer: RoomPeer): void {
+    this.peers.add(peer);
+    clearTimeout(this.lingerTimer);
+    this.lingerTimer = undefined;
+  }
+
+  /** Nobody is in it: it is only waiting out its linger. */
+  get idle(): boolean {
+    return this.peers.size === 0 && !this.closed;
   }
 
   /** Runs `work` after everything queued before it. */
@@ -455,8 +493,8 @@ export class Room {
         if (this.closed) {
           return;
         }
-        if (this.peers.size === 0) {
-          // Everyone left while an earlier last flush failed: close now.
+        if (this.peers.size === 0 && !this.lingerTimer) {
+          // Everyone left, it lingered, and its last flush failed: close now.
           void this.closeIfEmpty();
         } else if (this.dirty) {
           this.scheduleFlush();
@@ -479,44 +517,67 @@ export class Room {
     if (this.closed || (this.ending && !final)) {
       return false;
     }
-    const run = (async () => {
-      const captured = await this.capture();
-      if (!captured || this.closed) {
-        return false;
-      }
-      const { plan, seq } = captured;
-      const sizeAtCapture = this.size;
-      this.lastFlushAt = Date.now();
-      try {
-        const outcome = await this.deps.store.flush(
-          this.ownerId,
-          this.designId,
-          this.token,
-          plan,
-          seq,
-          final ? null : this.leaseUntil(),
-        );
-        if (outcome !== "held") {
-          await this.leaseMissed(outcome);
-          return false;
-        }
-        this.flushedSeq = Math.max(this.flushedSeq, seq);
-        this.noteFlushed(seq);
-        // Exact again: the stored plan measured, plus what came after it.
-        this.size = sizeOf(plan) + (this.size - sizeAtCapture);
-        await this.deps.journal.trim(this.doc, seq, this.recentCids());
-        return true;
-      } catch (error) {
+    const run = this.deps.flushes
+      .run(() => this.write(final))
+      .catch((error: unknown) => {
         this.deps.log(`${this.doc}: flush failed, kept in the journal: ${String(error)}`);
         return false;
-      }
-    })();
+      });
     this.flushing = run;
     try {
       return await run;
     } finally {
       this.flushing = undefined;
     }
+  }
+
+  /**
+   * One flush, in its turn of the flush queue: the plan as far as the
+   * journal has it, written while the lease is the room's. Throws when the
+   * database fails, which pauses the queue.
+   */
+  private async write(final: boolean): Promise<boolean> {
+    // The room may have moved on while this waited for its turn.
+    if (this.closed || (this.ending && !final)) {
+      return false;
+    }
+    const captured = await this.capture();
+    if (!captured || this.closed) {
+      return false;
+    }
+    const { plan, seq } = captured;
+    const sizeAtCapture = this.size;
+    this.lastFlushAt = Date.now();
+    const outcome = await this.deps.store.flush(
+      this.ownerId,
+      this.designId,
+      this.token,
+      plan,
+      seq,
+      final ? null : this.leaseUntil(),
+    );
+    if (outcome !== "held") {
+      await this.leaseMissed(outcome);
+      return false;
+    }
+    this.flushedSeq = Math.max(this.flushedSeq, seq);
+    this.noteFlushed(seq);
+    // Exact again: the stored plan measured, plus what came after it.
+    this.size = sizeOf(plan) + (this.size - sizeAtCapture);
+    try {
+      await this.deps.journal.trim(this.doc, seq, this.recentCids());
+    } catch (error) {
+      // Stored all the same: the journal keeps the lines, and the next trim takes them.
+      this.deps.log(`${this.doc}: trimming the journal failed: ${String(error)}`);
+    }
+    return true;
+  }
+
+  /** Lets the lease go without writing the plan, in the flush queue's turn. */
+  private release(): Promise<void> {
+    return this.deps.flushes.run(() =>
+      this.deps.store.release(this.ownerId, this.designId, this.token),
+    );
   }
 
   /**
@@ -556,6 +617,17 @@ export class Room {
       );
       if (outcome !== "held") {
         await this.leaseMissed(outcome);
+        return;
+      }
+      // Who may be here, as the database has it: a sharing change whose
+      // notice never reached the service still takes effect within a renewal.
+      const members = await this.deps.store.members(this.ownerId, this.designId);
+      if (!this.closed && !sameMembers(members, this.members)) {
+        await this.enqueue(() => {
+          if (!this.closed) {
+            this.updateMembers(members);
+          }
+        });
       }
     } catch (error) {
       this.deps.log(`${this.doc}: lease renewal failed: ${String(error)}`);
@@ -571,15 +643,29 @@ export class Room {
     }
   }
 
-  /** Takes a peer out; the room closes when the last one goes. */
+  /** Takes a peer out; the room lingers once the last one goes, then closes. */
   leave(peer: RoomPeer): void {
     if (!this.peers.delete(peer)) {
       return;
     }
     this.broadcast({ t: "present", doc: this.doc, present: this.present });
     if (this.peers.size === 0) {
-      void this.closeIfEmpty();
+      this.linger();
     }
+  }
+
+  /** Nobody is here: the room closes once `lingerMs` passes with nobody back. */
+  private linger(): void {
+    if (this.closed || this.lingerTimer) {
+      return;
+    }
+    this.lingerTimer = setTimeout(() => {
+      this.lingerTimer = undefined;
+      if (this.peers.size === 0) {
+        void this.closeIfEmpty();
+      }
+    }, this.deps.timing.lingerMs);
+    this.lingerTimer.unref?.();
   }
 
   /**
@@ -595,7 +681,7 @@ export class Room {
       this.ending = true;
       const stored = this.dirty
         ? await this.flush(true)
-        : await this.deps.store.release(this.ownerId, this.designId, this.token).then(
+        : await this.release().then(
             () => true,
             (error) => {
               this.deps.log(`${this.doc}: releasing the lease failed: ${String(error)}`);
@@ -624,9 +710,7 @@ export class Room {
       if (this.dirty) {
         await this.flush(true);
       } else {
-        await this.deps.store
-          .release(this.ownerId, this.designId, this.token)
-          .catch(() => undefined);
+        await this.release().catch(() => undefined);
       }
       this.finish();
     });
@@ -646,7 +730,7 @@ export class Room {
     if (removed.length > 0) {
       this.broadcast({ t: "present", doc: this.doc, present: this.present });
       if (this.peers.size === 0) {
-        void this.closeIfEmpty();
+        this.linger();
       }
     }
   }
@@ -687,6 +771,7 @@ export class Room {
   abandon(): void {
     this.closed = true;
     clearTimeout(this.flushTimer);
+    clearTimeout(this.lingerTimer);
     clearInterval(this.renewTimer);
   }
 
@@ -696,8 +781,10 @@ export class Room {
     }
     this.closed = true;
     clearTimeout(this.flushTimer);
+    clearTimeout(this.lingerTimer);
     clearInterval(this.renewTimer);
     this.flushTimer = undefined;
+    this.lingerTimer = undefined;
     this.deps.onClosed(this);
   }
 }

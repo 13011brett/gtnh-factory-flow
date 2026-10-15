@@ -124,6 +124,8 @@ const BATCHES_PER_SECOND = 25;
 /** A batch's ops as JSON in UTF-8 bytes, kept well under the service's 256 KB frame. */
 const BATCH_BYTES = 200_000;
 const BATCH_OPS = Math.min(4000, LIVE_LIMITS.opsPerBatch);
+/** A join the service was too busy for goes again after this, plus up to as much again. */
+const JOIN_RETRY_MS = 2000;
 
 /** A string's length in UTF-8 bytes, as the service counts a frame. */
 export function utf8Length(text: string): number {
@@ -222,6 +224,8 @@ export class LiveSession {
   private authRefused = false;
   private retries = 0;
   private retryTimer?: ReturnType<typeof setTimeout>;
+  /** Asks to join again after the service said it was busy. */
+  private joinTimer?: ReturnType<typeof setTimeout>;
   private pingTimer?: ReturnType<typeof setInterval>;
   private markTimer?: ReturnType<typeof setInterval>;
   private room?: Room;
@@ -370,6 +374,8 @@ export class LiveSession {
   private disconnect(): void {
     clearTimeout(this.retryTimer);
     this.retryTimer = undefined;
+    clearTimeout(this.joinTimer);
+    this.joinTimer = undefined;
     clearInterval(this.pingTimer);
     this.pingTimer = undefined;
     const ws = this.ws;
@@ -400,6 +406,8 @@ export class LiveSession {
     this.welcomed = false;
     clearInterval(this.pingTimer);
     this.pingTimer = undefined;
+    clearTimeout(this.joinTimer);
+    this.joinTimer = undefined;
     this.outbox = [];
     if (this.room) {
       this.room.joined = false;
@@ -593,6 +601,20 @@ export class LiveSession {
     }
     if (!room.joined && (frame.code === "forbidden" || frame.code === "not_found")) {
       this.onRefusedDoc(room, frame.code);
+    } else if (!room.joined && frame.code === "rate") {
+      // The service is busy, or this account has too many plans open: ask
+      // again shortly on this connection.
+      room.joinSent = false;
+      clearTimeout(this.joinTimer);
+      this.joinTimer = setTimeout(
+        () => {
+          this.joinTimer = undefined;
+          if (this.room === room) {
+            this.joinIfReady();
+          }
+        },
+        JOIN_RETRY_MS + Math.random() * JOIN_RETRY_MS,
+      );
     }
   }
 

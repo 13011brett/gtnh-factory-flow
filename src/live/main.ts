@@ -12,6 +12,7 @@
  * - LIVE_JOURNAL_DIR: where unflushed batches are kept (required in production).
  * - LIVE_INTERNAL_TOKEN: shared with the website for /internal/*.
  * - LIVE_ALLOWED_ORIGINS: comma-separated browser origins (default: localhost:3000).
+ * - LIVE_MAX_ROOMS: plans open at once in the whole service (default 500).
  */
 import path from "node:path";
 import { isCommunityConfigured } from "@/lib/server/community";
@@ -41,6 +42,7 @@ async function main() {
     .split(",")
     .map((origin) => origin.trim())
     .filter(Boolean);
+  const maxRooms = Number(process.env.LIVE_MAX_ROOMS || "");
   let stop: (signal: string) => Promise<void> = async () => undefined;
   const service = new LiveService({
     onShutdownRequest: () => void stop("shutdown request"),
@@ -48,6 +50,7 @@ async function main() {
     journalDir: path.resolve(journalDir ?? path.join("scratch", "local-db", "live-journal")),
     allowedOrigins,
     internalToken: process.env.LIVE_INTERNAL_TOKEN || undefined,
+    limits: Number.isInteger(maxRooms) && maxRooms > 0 ? { maxRooms } : undefined,
   });
   const port = await service.start(
     Number(process.env.LIVE_PORT ?? 3001),

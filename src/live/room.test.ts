@@ -4,6 +4,7 @@ import path from "node:path";
 import { afterEach, describe, expect, it } from "vitest";
 import type { LiveOp, LivePlan } from "@/lib/live/ops";
 import type { ServerFrame } from "@/lib/live/protocol";
+import { FlushQueue } from "./flush-queue";
 import { Journal } from "./journal";
 import { Room, type RoomDeps, type RoomPeer } from "./room";
 import type { LeaseOutcome, PlanStore } from "./store";
@@ -128,7 +129,8 @@ async function openRoom(
   const room = await Room.open(DOC, {
     store,
     journal: new Journal(dir),
-    timing: { flushMs: 60_000, renewMs: 60_000, leaseMs: 5_000, ...timing },
+    flushes: new FlushQueue(),
+    timing: { flushMs: 60_000, renewMs: 60_000, leaseMs: 5_000, lingerMs: 0, ...timing },
     cids: new Map(),
     log: () => undefined,
     onClosed: () => undefined,
@@ -257,7 +259,8 @@ describe("a room's lease", () => {
     const again = await Room.open(DOC, {
       store,
       journal: room["deps"].journal,
-      timing: { flushMs: 60_000, renewMs: 60_000, leaseMs: 5_000 },
+      flushes: new FlushQueue(),
+      timing: { flushMs: 60_000, renewMs: 60_000, leaseMs: 5_000, lingerMs: 0 },
       cids: new Map(),
       log: () => undefined,
       onClosed: () => undefined,

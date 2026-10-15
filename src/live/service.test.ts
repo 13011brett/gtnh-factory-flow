@@ -16,7 +16,23 @@ import * as designRoute from "@/app/api/library/designs/[designId]/route";
 import * as memberRoute from "@/app/api/library/designs/[designId]/members/[userId]/route";
 import { Journal } from "./journal";
 import { LiveService, type LiveServiceOptions } from "./service";
-import { supabasePlanStore } from "./store";
+import { supabasePlanStore, type PlanStore } from "./store";
+
+/** The real store, counting each kind of call. */
+function countingStore(): { store: PlanStore; calls: Record<string, number> } {
+  const real = supabasePlanStore();
+  const calls: Record<string, number> = {};
+  const store = Object.fromEntries(
+    Object.entries(real).map(([name, call]) => [
+      name,
+      (...args: unknown[]) => {
+        calls[name] = (calls[name] ?? 0) + 1;
+        return (call as (...rest: unknown[]) => unknown)(...args);
+      },
+    ]),
+  ) as unknown as PlanStore;
+  return { store, calls };
+}
 
 /**
  * The live service in this process on a random port, against the local
@@ -146,9 +162,10 @@ async function startService(
     journalDir,
     allowedOrigins: [ORIGIN],
     internalToken: INTERNAL_TOKEN,
-    timing: { flushMs: 100, renewMs: 1000, leaseMs: 5000 },
     log: () => undefined,
     ...options,
+    // An empty room lets go at once here unless a test asks it to linger.
+    timing: { flushMs: 100, renewMs: 1000, leaseMs: 5000, lingerMs: 0, ...options.timing },
   });
   services.push(service);
   const port = await service.start(0);
@@ -846,6 +863,100 @@ describe("the live service", { timeout: 30_000 }, () => {
     await until(() => service.stats.connections === 1);
     raw.resume();
     await until(() => ann.closed);
+  });
+
+  it("keeps a room nobody is in a while: coming back costs the database nothing, and it lets go after", async () => {
+    const { store, calls } = countingStore();
+    const { port } = await startService({ store, timing: { lingerMs: 500, renewMs: 60_000 } });
+    const { designId, doc } = await makeDesign();
+    const ann = await TestClient.open(port, { who: "ann" });
+    await ann.hello();
+    await ann.join(doc);
+    ann.send({ t: "leave", doc });
+    const back = await TestClient.open(port, { who: "ann" });
+    await back.hello();
+    await back.join(doc);
+    back.send({ t: "leave", doc });
+    await ann.join(doc);
+    expect(calls.lease).toBe(1);
+    expect(calls.members).toBe(1);
+    expect(calls.role).toBe(1);
+    expect((await storedRow(designId)).live_lease_until).not.toBeNull();
+    await ann.close();
+    await back.close();
+    await until(async () => (await storedRow(designId)).live_lease_until === null);
+    expect(calls.lease).toBe(1);
+  });
+
+  it("holds an account to its plans open at once, and the service to its rooms", async () => {
+    const { port } = await startService({ limits: { roomsPerAccount: 2, maxRooms: 3 } });
+    const plans = await Promise.all([makeDesign(), makeDesign(), makeDesign(), makeDesign()]);
+    const tab = await TestClient.open(port, { who: "ann" });
+    const game = await TestClient.open(port, { who: "ann", origin: null });
+    await tab.hello();
+    await game.hello("game");
+    await tab.join(plans[0]!.doc);
+    await game.join(plans[1]!.doc);
+    // The same plan on another connection is no more plans.
+    await game.join(plans[0]!.doc);
+    tab.send({ t: "join", doc: plans[2]!.doc });
+    expect(await tab.next("error")).toMatchObject({ code: "rate", doc: plans[2]!.doc });
+
+    const bob = await TestClient.open(port, { who: "bob" });
+    await bob.hello();
+    await bob.join(plans[2]!.doc);
+    // Three rooms open: the fourth waits until one closes.
+    bob.send({ t: "join", doc: plans[3]!.doc });
+    expect(await bob.next("error")).toMatchObject({ code: "rate", doc: plans[3]!.doc });
+    tab.send({ t: "leave", doc: plans[0]!.doc });
+    game.send({ t: "leave", doc: plans[0]!.doc });
+    await until(async () => (await storedRow(plans[0]!.designId)).live_lease_until === null);
+    expect((await bob.join(plans[3]!.doc)).doc).toBe(plans[3]!.doc);
+  });
+
+  it("lets in only who the room holds as members, and reads them again at every renewal", async () => {
+    const { port } = await startService({ timing: { renewMs: 60_000 } });
+    const { doc } = await makeDesign();
+    const ann = await TestClient.open(port, { who: "ann" });
+    await ann.hello();
+    await ann.join(doc);
+    // The notice arrives while bob is still a member in the database: his
+    // join, checked in the room's turn, goes by what the room was told.
+    const notice = await fetch(`http://127.0.0.1:${port}/internal/members`, {
+      method: "POST",
+      headers: { authorization: `Bearer ${INTERNAL_TOKEN}`, "content-type": "application/json" },
+      body: JSON.stringify({ doc, members: [] }),
+    });
+    expect(notice.status).toBe(200);
+    const bob = await TestClient.open(port, { who: "bob" });
+    await bob.hello();
+    bob.send({ t: "join", doc });
+    expect(await bob.next("error")).toMatchObject({ code: "forbidden", doc });
+
+    // Unshared in the database with no notice at all: the next renewal reads
+    // the members and drops him.
+    const renewing = await startService({ timing: { renewMs: 300 } });
+    const { designId, doc: other } = await makeDesign();
+    const owner = await TestClient.open(renewing.port, { who: "ann" });
+    const member = await TestClient.open(renewing.port, { who: "bob" });
+    await owner.hello();
+    await member.hello();
+    await owner.join(other);
+    await member.join(other);
+    await getCommunityDb()
+      .from("library_design_members")
+      .delete()
+      .eq("owner_id", users.ann!.id)
+      .eq("design_id", designId)
+      .eq("member_id", users.bob!.id);
+    expect(await member.next("kicked", () => true, 5000)).toEqual({
+      t: "kicked",
+      doc: other,
+      reason: "unshared",
+    });
+    expect(await owner.next("members", (frame) => frame.members.length === 0)).toMatchObject({
+      doc: other,
+    });
   });
 
   it("stores only what the plan schema keeps, and refuses names that reach a prototype", async () => {

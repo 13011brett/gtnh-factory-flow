@@ -201,7 +201,7 @@ export async function POST(request: Request) {
     .eq("user_id", sessionUser.id);
   if ((count ?? 0) >= BLUEPRINT_MAX_PER_USER) {
     return NextResponse.json(
-      { error: `Blueprint library is full (${BLUEPRINT_MAX_PER_USER}). Delete some first.` },
+      { error: `Your blueprints are full (${BLUEPRINT_MAX_PER_USER}). Delete some first.` },
       { status: 409 },
     );
   }

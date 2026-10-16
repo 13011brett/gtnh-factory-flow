@@ -191,7 +191,7 @@ export async function PUT(request: Request, context: RouteContext) {
       .is("deleted_at", null);
     if ((count ?? 0) >= LIBRARY_MAX_DESIGNS) {
       return NextResponse.json(
-        { error: `Your library is full (${LIBRARY_MAX_DESIGNS} designs). Delete some first.` },
+        { error: `Your plans are full (${LIBRARY_MAX_DESIGNS} designs). Delete some first.` },
         { status: 409 },
       );
     }

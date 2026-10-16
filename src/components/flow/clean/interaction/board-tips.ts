@@ -11,7 +11,7 @@ const BY_LABEL: Array<{ match: RegExp; title: string; sub?: string }> = [
   { match: /^Rate unit\b/, title: "Rate unit: per tick, second, minute or hour" },
   { match: /^Power unit\b/, title: "Show power as EU/t, or as amps at each machine's tier" },
   { match: /^Fit the plan on the screen$/, title: "Zoom to fit the whole plan" },
-  { match: /^Open the library$/, title: "Plans: every plan you have, and the plans shared with you" },
+  { match: /^Open Plans$/, title: "Plans: every plan you have, and the plans shared with you" },
   { match: /^Share this setup$/, title: "Share a copy of this plan: a link, a code or a file" },
   { match: /^Open settings$/, title: "Settings" },
 ];

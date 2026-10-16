@@ -110,15 +110,15 @@ describe("the mod's top bar", () => {
     ]);
   });
 
-  it("a plan already posted offers Update in library and Save as new post, each opening the dialog for it", async () => {
+  it("a plan already posted offers Update in library and Post a new copy to Community, each opening the dialog for it", async () => {
     const onShare = vi.fn();
     useFactoryStore.setState({
       project: { ...useFactoryStore.getState().project, metadata: { communityPlanId: "post-1" } },
     });
     renderBar({ onShare });
     await openShare();
-    expect(shareRows().slice(-2)).toEqual(["Update my post...", "Post a new copy..."]);
-    fireEvent.click(shareRow("Post a new copy..."));
+    expect(shareRows().slice(-2)).toEqual(["Update in Community...", "Post a new copy to Community..."]);
+    fireEvent.click(shareRow("Post a new copy to Community..."));
     expect(onShare).toHaveBeenCalledWith("new");
   });
 

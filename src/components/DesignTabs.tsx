@@ -512,7 +512,7 @@ export function DesignTabs() {
         <button
           type="button"
           onClick={() => openLibrary()}
-          aria-label="Open the library"
+          aria-label="Open Plans"
           aria-pressed={shelf.active}
           data-help-anchor="library"
           className={[
@@ -523,7 +523,7 @@ export function DesignTabs() {
           ].join(" ")}
         >
           <Library className="h-3 w-3" aria-hidden />
-          Library
+          Plans
         </button>
         <span aria-hidden className="h-3.5 w-px shrink-0 bg-line" />
 

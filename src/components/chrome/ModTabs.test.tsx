@@ -110,10 +110,10 @@ describe("the plan tabs", () => {
     expect(actions.removeDesign).toHaveBeenCalledWith("b");
   });
 
-  it("the + menu: New plan, Open a plan, Paste plan, Browse library", () => {
+  it("the + menu: New plan, Open a plan, Paste plan, Browse Community", () => {
     render(<ModTabs {...props} />);
     fireEvent.click(screen.getByLabelText("New plan"));
-    expect(rows()).toEqual(["New plan", "Open a plan...My plans", "Open plan file....json", "Paste plana plan link, code or file", "Browse librarypublic plans"]);
+    expect(rows()).toEqual(["New plan", "Open a plan...My plans", "Open plan file....json", "Paste plana plan link, code or file", "Browse Communitypublic plans"]);
     fireEvent.click(screen.getByText("Paste plan"));
     expect(props.onPaste).toHaveBeenCalled();
   });

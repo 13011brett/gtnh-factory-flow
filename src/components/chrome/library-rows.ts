@@ -23,7 +23,7 @@ export function libraryRows(
     ];
   }
   return [
-    { label: "Update my post...", detail: "with the plan as it is", onSelect: () => open("update"), disabled: options.disabled },
-    { label: "Post a new copy...", detail: "a post of its own", onSelect: () => open("new"), disabled: options.disabled },
+    { label: "Update in Community...", detail: "with the plan as it is", onSelect: () => open("update"), disabled: options.disabled },
+    { label: "Post a new copy to Community...", detail: "a post of its own", onSelect: () => open("new"), disabled: options.disabled },
   ];
 }

@@ -310,7 +310,7 @@ function openDesignDb(): Promise<IDBDatabase> {
       gaveUp = true;
       reject(
         new Error(
-          "The design library is open in another tab. Close or reload that tab, then reload this one.",
+          "Your plans are open in another tab. Close or reload that tab, then reload this one.",
         ),
       );
     };

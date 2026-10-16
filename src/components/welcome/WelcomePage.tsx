@@ -149,7 +149,7 @@ export function WelcomePage() {
               </SecondaryButton>
               {/* Your own designs live in the library, not on this page. */}
               <SecondaryButton icon={Library} onClick={() => openLibrary()}>
-                Your library
+                Your plans
               </SecondaryButton>
             </div>
           </header>

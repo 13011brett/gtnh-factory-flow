@@ -193,9 +193,9 @@ const LEFT_COLUMN: HelpCard = {
 
 /** The Library pill at the head of the tab strip, ringed and arrowed. */
 const LIBRARY: HelpCard = {
-  title: "Library",
+  title: "Plans",
   rows: [
-    { icon: Library, text: "Your *designs*, in folders" },
+    { icon: Library, text: "Your *plans*, in folders" },
     { text: "*Community setups*: open in a new tab" },
     { text: "Favorites, saved and *posted* setups" },
   ],

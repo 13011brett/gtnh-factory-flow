@@ -141,7 +141,17 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
   // The mod's Share menu has the same rows, in the same words: copies only. Labels only. People are invited with
   // the Invite key; a copy posted to Community is the last row (never for a task board).
   const shareEntries: MenuEntry[] = [
-    { label: "Copy plan link", onSelect: () => void copyPlanLink(plan()) },
+    ...(LIVE
+      ? [
+          {
+            label: "Share with people...",
+            disabled: !signedIn,
+            tip: signedIn ? undefined : "Sign in to share with people",
+            onSelect: () => setInviting(true),
+          } satisfies MenuEntry,
+        ]
+      : []),
+    { label: "Copy plan link", ruleAbove: LIVE, onSelect: () => void copyPlanLink(plan()) },
     { label: "Copy plan code", onSelect: () => void copyPlanCode(plan()) },
     { label: "Export plan file", onSelect: () => downloadPlanFile(plan()) },
     { label: "Screenshot...", onSelect: onScreenshot },
@@ -201,7 +211,7 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
         gap={!LIVE}
         label="Share"
         width={42}
-        tip="Share a copy of this plan: a link, a code, a file or a picture, to the game, or post it to Community"
+        tip="Share this plan with people, or as a copy: a link, a code, a file or a picture, to the game, or post it to Community"
         open={menu?.kind === "share"}
         onClick={(event) => openMenuFrom("share", event)}
         menuAnchor

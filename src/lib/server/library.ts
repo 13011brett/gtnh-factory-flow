@@ -99,10 +99,10 @@ export function libraryStorageErrorMessage(
   fallback: string,
 ): string {
   if (error?.code === "PGRST205" || error?.code === "42P01") {
-    return "Library sync is not set up yet: run supabase/schema.sql in the Supabase SQL editor.";
+    return "Plan sync is not set up yet: run supabase/schema.sql in the Supabase SQL editor.";
   }
   if (error?.code === "PGRST204" || error?.code === "42703") {
-    return "Library sync is out of date: re-run the latest supabase/schema.sql in the Supabase SQL editor.";
+    return "Plan sync is out of date: re-run the latest supabase/schema.sql in the Supabase SQL editor.";
   }
   // Anything else: say what the database said, so the strip's red line
   // names the cause instead of hiding it behind a fallback.

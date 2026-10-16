@@ -29,7 +29,7 @@ import { AuthForm, useCommunityUser } from "./auth";
 /**
  * What the Share menu asked for: a new post for a plan not posted yet
  * (`save`), the plan's own post brought up to date (`update`), or a new post
- * for a plan already posted (`new`, Save as new post). The same words as the
+ * for a plan already posted (`new`, Post a new copy to Community). The same words as the
  * mod's Share menu.
  */
 export type ShareMode = "save" | "update" | "new";
@@ -78,7 +78,7 @@ export function SharePlanDialog({
   }>();
   const myPosts = user && myPostsFor?.username === user.username ? myPostsFor.posts : [];
   // The plan's own post, when it has one: Update brings it up to date.
-  // Save as new post ignores it and makes another.
+  // Post a new copy to Community ignores it and makes another.
   const [mode, setMode] = useState<ShareMode | undefined>(askedMode);
   const linkedPost =
     mode === "new"
@@ -235,9 +235,9 @@ export function SharePlanDialog({
   };
 
   const dialogTitle = linkedPost
-    ? "Update my post"
+    ? "Update in Community"
     : mode === "new"
-      ? "Save as new post"
+      ? "Post a new copy to Community"
       : isLiveConfigured()
         ? "Post a copy to Community"
         : "Post a copy to Community";
@@ -256,7 +256,7 @@ export function SharePlanDialog({
             <p className="text-sm">
               {shared.updated
                 ? "Your post is up to date."
-                : "Your setup is in Community. When the plan changes, Update my post brings the post up to date."}
+                : "Your setup is in Community. When the plan changes, Update in Community brings the post up to date."}
             </p>
             <div className="flex flex-wrap gap-2">
               <button
@@ -322,7 +322,7 @@ export function SharePlanDialog({
                 onClick={() => setMode("new")}
                 className="inline-flex items-center gap-1.5 rounded border border-line-strong px-3 py-1.5 text-sm hover:bg-surface-raised"
               >
-                Save as new post
+                Post a new copy to Community
               </button>
               <button
                 type="button"

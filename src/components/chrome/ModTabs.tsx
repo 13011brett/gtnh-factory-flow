@@ -344,7 +344,7 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
         { label: "Open a plan...", detail: "My plans", onSelect: () => openLibrary({ kind: "all" }) },
         { label: "Open plan file...", detail: ".json", onSelect: () => document.querySelector<HTMLInputElement>("[data-plan-file-input]")?.click() },
         { label: "Paste plan", detail: "a plan link, code or file", onSelect: onPaste },
-        { label: "Browse library", detail: "public plans", onSelect: () => openLibrary({ kind: "public" }) },
+        { label: "Browse Community", detail: "public plans", onSelect: () => openLibrary({ kind: "public" }) },
       ];
     }
     if (m.kind === "delete") {

@@ -479,7 +479,7 @@ export function SetupsGrid({
             editTags: true,
             onPickIcon: detailPlan.isMine ? () => setIconEditId(detailPlan.id) : undefined,
             primary: {
-              label: "Open",
+              label: detailPlan.isMine ? "Open" : "Open a copy",
               onClick: () => {
                 void open(detailPlan);
               },
@@ -648,7 +648,7 @@ export function SetupsGrid({
           onClose={closeMenu}
         >
           <MenuItem
-            label="Open"
+            label={menuPlan.isMine ? "Open" : "Open a copy"}
             onClick={() => {
               closeMenu();
               void open(menuPlan);

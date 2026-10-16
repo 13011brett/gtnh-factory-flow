@@ -413,7 +413,7 @@ export function LibraryPage() {
                 playBoardSound("shelfTick");
                 setLibraryView(railView(value));
               }}
-              aria-label="Where in the library"
+              aria-label="Where in Plans"
               className="h-9 w-full border-2 border-[var(--mc-33)] bg-[#17191d] px-2 text-[13px] font-bold text-neutral-100 outline-none shadow-[inset_2px_2px_0_#30343b,inset_-2px_-2px_0_#050607]"
             >
               <option value="all">My designs ({designs.length})</option>
@@ -624,7 +624,7 @@ export function LibraryPage() {
                       icon: "delete" as const,
                       confirm: detailPost
                         ? `Delete "${detailDesign.name}"? Its post comes down with it. This cannot be undone.`
-                        : `Delete "${detailDesign.name}" from your library? This cannot be undone.`,
+                        : `Delete "${detailDesign.name}" from Plans? This cannot be undone.`,
                       onClick: () => {
                         setDetailId(undefined);
                         void deleteDesign(detailDesign.id);

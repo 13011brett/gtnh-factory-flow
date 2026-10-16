@@ -47,7 +47,7 @@ async function renderDialog(mode?: "save" | "update" | "new") {
 describe("saving to the library", () => {
   it("Update in library pushes the plan as it is now to the plan's own post, only when asked", async () => {
     await renderDialog("update");
-    expect(screen.getByRole("dialog", { name: "Update my post" })).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: "Update in Community" })).toBeTruthy();
     expect(client.patchCommunityPlan).not.toHaveBeenCalled();
     await act(async () => {
       fireEvent.click(screen.getByText("Update post"));
@@ -60,9 +60,9 @@ describe("saving to the library", () => {
     expect(screen.getByText("Your post is up to date.")).toBeTruthy();
   });
 
-  it("Save as new post makes another post and links the plan to it, leaving the old one", async () => {
+  it("Post a new copy to Community makes another post and links the plan to it, leaving the old one", async () => {
     await renderDialog("new");
-    expect(screen.getByRole("dialog", { name: "Save as new post" })).toBeTruthy();
+    expect(screen.getByRole("dialog", { name: "Post a new copy to Community" })).toBeTruthy();
     await act(async () => {
       fireEvent.click(screen.getByText("Post a copy to Community"));
     });
@@ -71,9 +71,9 @@ describe("saving to the library", () => {
     expect(useFactoryStore.getState().project.metadata?.communityPlanId).toBe("post-2");
   });
 
-  it("from the update panel, Save as new post switches to a new post", async () => {
+  it("from the update panel, Post a new copy to Community switches to a new post", async () => {
     await renderDialog("update");
-    fireEvent.click(screen.getByText("Save as new post"));
-    expect(screen.getByRole("dialog", { name: "Save as new post" })).toBeTruthy();
+    fireEvent.click(screen.getByText("Post a new copy to Community"));
+    expect(screen.getByRole("dialog", { name: "Post a new copy to Community" })).toBeTruthy();
   });
 });

@@ -71,7 +71,7 @@ export async function GET(request: Request) {
   const error = designs.error ?? folders.error;
   if (error) {
     return NextResponse.json(
-      { error: libraryStorageErrorMessage(error, "Your library could not be loaded.") },
+      { error: libraryStorageErrorMessage(error, "Your plans could not be loaded.") },
       { status: 500 },
     );
   }

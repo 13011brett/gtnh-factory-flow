@@ -233,7 +233,7 @@ import { registerBoardCommands, reportArrange } from "../chrome/board-commands";
 import { BoardMinimap } from "./clean/minimap/BoardMinimap";
 import { registerMinimapRoutes } from "./clean/minimap/minimap-feed";
 import { FeedbackHost } from "./clean/feedback/FeedbackPanel";
-import { sandboxActive, TourBridge, TourHost, TourOffer } from "./clean/tour";
+import { TourBridge, TourHost, TourOffer } from "./clean/tour";
 import { GT_NODE_COLORS, GT_NODE_COLOR_PALETTE, flowRampColor } from "./node-colors";
 import {
   CANVAS_PATTERNS,
@@ -5361,10 +5361,9 @@ export function FactoryFlow() {
     [frameBoardCards],
   );
   // The Fit key fills the board with the plan, as close as the board itself zooms: on a big screen a small plan
-  // would otherwise stop at 1:1, a speck in the middle. Landing on a plan (opening one) keeps the 1:1 cap, and so
-  // does the tour, whose drags and drops are laid out at that size.
+  // would otherwise stop at 1:1, a speck in the middle. Landing on a plan (opening one) keeps the 1:1 cap.
   const handleFitView = useCallback(
-    () => frameBoardCards(undefined, sandboxActive() ? undefined : { maxZoom: boardMaxZoomValue }),
+    () => frameBoardCards(undefined, { maxZoom: boardMaxZoomValue }),
     [frameBoardCards, boardMaxZoomValue],
   );
 

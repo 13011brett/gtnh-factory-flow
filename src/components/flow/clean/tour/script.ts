@@ -300,7 +300,7 @@ const cloneStep: Step = {
 const drawerFromPort: Step = {
   id: "drawer-port",
   actions: [
-    A.drag(portHandle(0, "Output", "Iron Plate"), beside(card(0), 140, 170), { label: "the plates" }),
+    A.drag(portHandle(0, "Output", "Iron Plate"), clearBeside(card(0), 90), { label: "the plates" }),
     A.until(() => storageCount() >= 1, "the drawer"),
     A.wait(300),
   ],

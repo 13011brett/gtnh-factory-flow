@@ -1,6 +1,8 @@
 "use client";
 
 import { useFactoryStore } from "@/store/factory-store";
+import { NODE_GLANCE_LEAVE_ZOOM } from "../../node-detail";
+import { boardZoomScale } from "@/lib/ui-scale";
 import { draws } from "./cursor";
 import type { Rect } from "./placement";
 import { hitTest } from "./input";
@@ -182,22 +184,37 @@ export async function bringIntoView(el: Element): Promise<void> {
   await draws(3);
 }
 
+/**
+ * Zooms the board in to where cards still show their parts, about the middle of the view. Fit on a narrow board
+ * can leave the cards in the glance view (no count, no ports to click); a target off the pane is panned to later.
+ */
+export function keepDetail(): void {
+  const bridge = getBoardBridge();
+  const pane = bridge?.paneRect();
+  const v = bridge?.viewport();
+  if (!bridge || !pane || !v) return;
+  const floor = (NODE_GLANCE_LEAVE_ZOOM + 0.02) * boardZoomScale();
+  if (v.zoom >= floor) return;
+  bridge.setCenter((pane.width / 2 - v.x) / v.zoom, (pane.height / 2 - v.y) / v.zoom, floor);
+}
+
 /** Whether the element is clipped by a scrolling ancestor (a list scrolled past it). */
 export function clippedByScroller(el: Element): boolean {
   const r = el.getBoundingClientRect();
   for (let p = el.parentElement; p && p !== document.body; p = p.parentElement) {
     const o = getComputedStyle(p);
-    if (!/(auto|scroll|hidden)/.test(o.overflowY)) continue;
     const pr = p.getBoundingClientRect();
-    if (r.bottom > pr.bottom + 1 || r.top < pr.top - 1) return true;
+    if (/(auto|scroll|hidden)/.test(o.overflowY) && (r.bottom > pr.bottom + 1 || r.top < pr.top - 1)) return true;
+    // A narrow window clips a wide row sideways (a recipe's add key past the search box's right edge).
+    if (/(auto|scroll|hidden)/.test(o.overflowX) && (r.right > pr.right + 1 || r.left < pr.left - 1)) return true;
   }
-  return r.bottom > window.innerHeight || r.top < 0;
+  return r.bottom > window.innerHeight || r.top < 0 || r.right > window.innerWidth || r.left < 0;
 }
 
 /** Scrolls a list so the element shows (the recipe search, the items column, a menu). */
 export async function scrollToShow(el: Element): Promise<void> {
   if (el.closest('.react-flow') || !clippedByScroller(el)) return;
-  (el as HTMLElement).scrollIntoView({ block: 'center', inline: 'nearest', behavior: 'instant' as ScrollBehavior });
+  (el as HTMLElement).scrollIntoView({ block: 'center', inline: 'center', behavior: 'instant' as ScrollBehavior });
   await draws(2);
 }
 

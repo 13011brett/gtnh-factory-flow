@@ -1,7 +1,7 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
-import { COMPACT_MAX_HEIGHT, COMPACT_MAX_WIDTH } from "@/lib/viewport-breakpoints";
+import { isCompactViewport } from "@/lib/compact-view";
 import { Cursor, draws } from "./cursor";
 import { Director, tourWarnings, type NoteSpec } from "./director";
 import { resetPointerState } from "./input";
@@ -48,7 +48,8 @@ export function getTourCursor(): Cursor | undefined {
 /** Whether the planner can be toured right now (the host is mounted). */
 export function tourAvailable(): boolean {
   // The tour drives the full layout (the overview beside the board, the items column); compact boards have neither.
-  return layer !== undefined && window.innerWidth > COMPACT_MAX_WIDTH && window.innerHeight > COMPACT_MAX_HEIGHT;
+  // The cutoffs are in shell pixels, so the interface zoom counts: the media query knows it, window.innerWidth does not.
+  return layer !== undefined && !isCompactViewport();
 }
 
 export async function startTour(step = 0): Promise<void> {

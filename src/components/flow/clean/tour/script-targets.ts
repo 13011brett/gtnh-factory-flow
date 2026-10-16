@@ -109,6 +109,34 @@ export const leftOf =
     return { x: pane ? Math.max(x, pane.left + 70) : x, y: r.y + r.h / 2 };
   };
 
+/**
+ * A spot beside a thing that is on the board and clear of every card and drawer: to its right, else below, left,
+ * above (a narrow board leaves no room on the right, and a drop on a card makes no drawer).
+ */
+export const clearBeside =
+  (target: Target, gap: number): (() => Pt | null) =>
+  () => {
+    const el = target();
+    const pane = getBoardBridge()?.paneRect();
+    if (!el || !pane) return null;
+    const r = rectOf(el);
+    const others = [...document.querySelectorAll(".react-flow__node")].filter(visible).map(rectOf);
+    const m = 40;
+    const spots: Pt[] = [
+      { x: r.x + r.w + gap, y: r.y + r.h / 2 },
+      { x: r.x + r.w / 2, y: r.y + r.h + gap },
+      { x: r.x - gap, y: r.y + r.h / 2 },
+      { x: r.x + r.w / 2, y: r.y - gap },
+    ];
+    const free = (p: Pt) =>
+      p.x >= pane.left + m &&
+      p.x <= pane.right - m &&
+      p.y >= pane.top + m &&
+      p.y <= pane.bottom - m &&
+      !others.some((o) => p.x >= o.x - 8 && p.x <= o.x + o.w + 8 && p.y >= o.y - 8 && p.y <= o.y + o.h + 8);
+    return spots.find(free) ?? rightOf(target, gap)();
+  };
+
 /** Where a drag from the head of card B must end to leave B just under card A (a clone put right). */
 export const underCard =
   (a: Target, b: Target, headOfB: Target, gapPx = 50): (() => Pt | null) =>

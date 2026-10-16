@@ -25,7 +25,9 @@ import net.minecraft.client.gui.FontRenderer;
 import net.minecraft.client.gui.GuiScreen;
 import net.minecraft.client.renderer.RenderHelper;
 import net.minecraft.client.renderer.RenderBlocks;
+import net.minecraft.client.renderer.OpenGlHelper;
 import net.minecraft.client.renderer.Tessellator;
+import net.minecraft.client.renderer.texture.TextureMap;
 import net.minecraft.client.renderer.entity.RenderItem;
 import net.minecraft.client.shader.Framebuffer;
 import net.minecraft.item.Item;
@@ -35,6 +37,7 @@ import net.minecraftforge.oredict.OreDictionary;
 import org.lwjgl.BufferUtils;
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL12;
+import org.lwjgl.opengl.GL20;
 
 public final class ClientItemStackIconRenderer {
 
@@ -133,6 +136,13 @@ public final class ClientItemStackIconRenderer {
         ByteBuffer buffer;
         boolean projectionPushed = false;
         boolean modelViewPushed = false;
+        // A renderer that throws part way (GT items reading the player in a main-menu export) leaves its GL state
+        // behind: every icon after it came out as a dark silhouette in the RC-2 export. Each render gets its state
+        // back as the first icon found it: matrix stacks, shader program, texture units and the switches item rendering
+        // uses. Not with glPushAttrib: a renderer that pushed its own and threw would leave every later pop one short.
+        final int modelViewDepth = GL11.glGetInteger(GL11.GL_MODELVIEW_STACK_DEPTH);
+        final int projectionDepth = GL11.glGetInteger(GL11.GL_PROJECTION_STACK_DEPTH);
+        saveGlStateOnce();
 
         try {
             resetTessellator();
@@ -194,6 +204,7 @@ public final class ClientItemStackIconRenderer {
                 GL11.glPopMatrix();
             }
             GL11.glMatrixMode(GL11.GL_MODELVIEW);
+            restoreGlState(modelViewDepth, projectionDepth);
             framebuffer.unbindFramebuffer();
             framebuffer.deleteFramebuffer();
         }
@@ -667,6 +678,82 @@ public final class ClientItemStackIconRenderer {
             return new File(cacheDir(), "stack-" + sha1(key) + ".png");
         } catch (Throwable t) {
             return cacheFile(defaultFilename);
+        }
+    }
+
+    /** GL switches item rendering touches, as they stood before the first icon. */
+    private static final int[] SAVED_CAPS = new int[] { GL11.GL_BLEND, GL11.GL_ALPHA_TEST, GL11.GL_DEPTH_TEST,
+        GL11.GL_CULL_FACE, GL11.GL_LIGHTING, GL11.GL_COLOR_MATERIAL, GL11.GL_FOG, GL11.GL_TEXTURE_2D,
+        GL12.GL_RESCALE_NORMAL, GL11.GL_NORMALIZE, GL11.GL_LIGHT0, GL11.GL_LIGHT1 };
+    private static boolean[] savedCaps;
+    private static boolean savedLightmapTexture;
+    private static int savedBlendSrc, savedBlendDst, savedAlphaFunc, savedDepthFunc, savedShadeModel;
+    private static float savedAlphaRef;
+    private static boolean savedDepthMask;
+
+    /** Remembers the GL state the first icon renders in; every later render is put back to it. */
+    static void saveGlStateOnce() {
+        if (savedCaps != null) {
+            return;
+        }
+        boolean[] caps = new boolean[SAVED_CAPS.length];
+        for (int i = 0; i < SAVED_CAPS.length; i++) {
+            caps[i] = GL11.glIsEnabled(SAVED_CAPS[i]);
+        }
+        OpenGlHelper.setActiveTexture(OpenGlHelper.lightmapTexUnit);
+        savedLightmapTexture = GL11.glIsEnabled(GL11.GL_TEXTURE_2D);
+        OpenGlHelper.setActiveTexture(OpenGlHelper.defaultTexUnit);
+        savedBlendSrc = GL11.glGetInteger(GL11.GL_BLEND_SRC);
+        savedBlendDst = GL11.glGetInteger(GL11.GL_BLEND_DST);
+        savedAlphaFunc = GL11.glGetInteger(GL11.GL_ALPHA_TEST_FUNC);
+        savedAlphaRef = GL11.glGetFloat(GL11.GL_ALPHA_TEST_REF);
+        savedDepthFunc = GL11.glGetInteger(GL11.GL_DEPTH_FUNC);
+        savedDepthMask = GL11.glGetBoolean(GL11.GL_DEPTH_WRITEMASK);
+        savedShadeModel = GL11.glGetInteger(GL11.GL_SHADE_MODEL);
+        savedCaps = caps;
+    }
+
+    /** Back to the state the first icon rendered in: shader, matrix stacks, texture units, switches, colour. */
+    static void restoreGlState(final int modelViewDepth, final int projectionDepth) {
+        try {
+            GL20.glUseProgram(0);
+        } catch (Throwable ignored) {
+        }
+        GL11.glMatrixMode(GL11.GL_PROJECTION);
+        for (int i = 0; i < 32 && GL11.glGetInteger(GL11.GL_PROJECTION_STACK_DEPTH) > Math.max(1, projectionDepth); i++) {
+            GL11.glPopMatrix();
+        }
+        GL11.glMatrixMode(GL11.GL_MODELVIEW);
+        for (int i = 0; i < 32 && GL11.glGetInteger(GL11.GL_MODELVIEW_STACK_DEPTH) > Math.max(1, modelViewDepth); i++) {
+            GL11.glPopMatrix();
+        }
+        resetTessellator();
+        if (savedCaps == null) {
+            return;
+        }
+        OpenGlHelper.setActiveTexture(OpenGlHelper.lightmapTexUnit);
+        setCap(GL11.GL_TEXTURE_2D, savedLightmapTexture);
+        OpenGlHelper.setActiveTexture(OpenGlHelper.defaultTexUnit);
+        for (int i = 0; i < SAVED_CAPS.length; i++) {
+            setCap(SAVED_CAPS[i], savedCaps[i]);
+        }
+        GL11.glTexEnvi(GL11.GL_TEXTURE_ENV, GL11.GL_TEXTURE_ENV_MODE, GL11.GL_MODULATE);
+        GL11.glBlendFunc(savedBlendSrc, savedBlendDst);
+        GL11.glAlphaFunc(savedAlphaFunc, savedAlphaRef);
+        GL11.glDepthFunc(savedDepthFunc);
+        GL11.glDepthMask(savedDepthMask);
+        GL11.glShadeModel(savedShadeModel);
+        GL11.glColorMask(true, true, true, true);
+        GL11.glPolygonMode(GL11.GL_FRONT_AND_BACK, GL11.GL_FILL);
+        GL11.glColor4f(1.0F, 1.0F, 1.0F, 1.0F);
+        Minecraft.getMinecraft().getTextureManager().bindTexture(TextureMap.locationItemsTexture);
+    }
+
+    private static void setCap(final int cap, final boolean enabled) {
+        if (enabled) {
+            GL11.glEnable(cap);
+        } else {
+            GL11.glDisable(cap);
         }
     }
 

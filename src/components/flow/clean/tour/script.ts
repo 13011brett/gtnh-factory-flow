@@ -12,10 +12,10 @@ import {
   around,
   beside,
   leftOf,
-  rightOf,
   underCard,
   boardSpot,
   cardPart,
+  clearBeside,
   drawerOf,
   drawerPart,
   feedbackKey,
@@ -41,7 +41,7 @@ import {
   topKey,
   undoKey,
 } from "./script-targets";
-import { card, css, portRow, textOf, within, type Target } from "./targets";
+import { card, css, keepDetail, portRow, textOf, within, type Target } from "./targets";
 
 /**
  * The tour, step by step (the mod's Script, on the website's planner): each step acts something out on the real UI,
@@ -72,7 +72,8 @@ function unpin(index: number) {
   setNode(index, { portRates: undefined, solvePin: undefined });
 }
 
-const fit = A.click(fitKey, { label: "Fit key" });
+// Fit, then back in to where the cards show their parts: a narrow board fits a plan down to the glance view.
+const fit = A.seq(A.click(fitKey, { label: "Fit key" }), A.wait(350), A.run(keepDetail));
 const closeMenus = A.run(() => {
   pressKey("Escape");
 });
@@ -437,7 +438,7 @@ const forcedAdd: Step = {
     A.click(addRecipe(/./), { label: "add the maker" }),
     A.until(() => nodeCount() === 2, "the second card"),
     A.until(solved, "the solve"),
-    A.click(fitKey),
+    fit,
     A.wait(400),
   ],
   note: {
@@ -485,7 +486,7 @@ const forcedOutput: Step = {
 const trashStep: Step = {
   id: "trash",
   actions: [
-    A.drag(portHandle(0, "Output", "Iron Plate"), rightOf(card(0), 130), { label: "the plates" }),
+    A.drag(portHandle(0, "Output", "Iron Plate"), clearBeside(card(0), 130), { label: "the plates" }),
     A.until(() => drawerOf("Iron Plate")() !== null, "the plates drawer"),
     A.wait(300),
     // The new drawer can land against the card at the board's edge: Arrange gives it room.

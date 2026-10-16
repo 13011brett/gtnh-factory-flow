@@ -158,8 +158,9 @@ export function CleanDrawer({
       mode,
     );
   };
-  // R and U and the touch press menu are the hook's; a left click selects the drawer (React Flow's) and a right
-  // click is the board's menu, so those two are not taken from it.
+  // The item is the control, as a port row is: a click is the recipes that make it, a right click the ones that use
+  // it, R and U the same, a press on touch a menu of both. The rest of the drawer keeps its own right click (the
+  // rate box opens the drawer's menu) and a click there selects it, React Flow's.
   const rowBrowse = usePortRowBrowse({
     nodeId: storage.id,
     port: { displayName: label, handleId: outputHandleId },
@@ -401,6 +402,8 @@ export function CleanDrawer({
           onPointerMove={rowBrowse.handlers.onPointerMove}
           onPointerUp={rowBrowse.handlers.onPointerUp}
           onPointerCancel={rowBrowse.handlers.onPointerCancel}
+          onClick={rowBrowse.handlers.onClick}
+          onContextMenu={rowBrowse.handlers.onContextMenu}
         >
           {/* One grab point: typed as a source so a drag can start anywhere on it; the board runs in loose
               connection mode, so a wire coming the other way lands here too. */}
@@ -497,6 +500,13 @@ export function CleanDrawer({
                 event.stopPropagation();
                 if (view.kind === "trash" || locked || editing) return;
                 rule.beginEdit(rule.any ? undefined : rule.target);
+              }}
+              onContextMenu={(event) => {
+                // Not the item's: the box is the drawer's menu, as the rest of the drawer outside the item is.
+                if (event.defaultPrevented || locked) return;
+                event.preventDefault();
+                event.stopPropagation();
+                setContext({ x: event.clientX, y: event.clientY });
               }}
               onKeyDown={(event) => {
                 if (

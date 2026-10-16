@@ -262,3 +262,44 @@ describe("the rate box", () => {
     expect(stored().targetPerSecond).toBe(3);
   });
 });
+
+describe("the item", () => {
+  const browse = vi.fn();
+  beforeEach(() => {
+    browse.mockClear();
+    useFactoryStore.setState({ browseResource: browse } as never);
+  });
+
+  it("a click opens the recipes that make it", () => {
+    load(storage());
+    const { container } = renderDrawer(stored(), "source");
+    fireEvent.click(container.querySelector(".cd-body")!);
+    expect(browse).toHaveBeenCalledTimes(1);
+    expect(browse.mock.calls[0]![0]).toMatchObject({ kind: "item", id: "mock:dust" });
+    expect(browse.mock.calls[0]![1]).toBe("recipes");
+  });
+
+  it("a right click shows what uses it, not the drawer's menu", () => {
+    load(storage());
+    const { container } = renderDrawer(stored(), "source");
+    fireEvent.contextMenu(container.querySelector(".cd-body")!);
+    expect(browse.mock.calls[0]![1]).toBe("uses");
+    expect(screen.queryByText("Delete drawer")).toBeNull();
+  });
+
+  it("a right click on the rate box is the drawer's menu", () => {
+    load(storage());
+    const { container } = renderDrawer(stored(), "source");
+    fireEvent.contextMenu(container.querySelector(".cd-box")!);
+    expect(browse).not.toHaveBeenCalled();
+    expect(screen.getByText("Delete drawer")).toBeTruthy();
+  });
+
+  it("a click on the rate box or the rule key browses nothing", () => {
+    load(storage());
+    const { container } = renderDrawer(stored(), "source");
+    fireEvent.click(container.querySelector(".cd-box")!);
+    fireEvent.click(container.querySelector(".cd-key")!);
+    expect(browse).not.toHaveBeenCalled();
+  });
+});

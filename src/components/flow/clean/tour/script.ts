@@ -459,7 +459,12 @@ const forcedAdd: Step = {
     }),
     A.type(itemsSearch, "sulfuric acid", { label: "items search" }),
     A.until(() => itemTile("Sulfuric Acid")() !== null, "Sulfuric Acid in the list"),
+    // The list is still filling as the first tiles show: let it settle, and click again if the click hit a tile
+    // that moved.
+    A.wait(500),
     A.click(itemTile("Sulfuric Acid"), { label: "Sulfuric Acid" }),
+    A.wait(1200),
+    A.when(() => recipeOverlay() === null, A.click(itemTile("Sulfuric Acid"), { label: "Sulfuric Acid" })),
     A.until(() => recipeOverlay() !== null, "recipe search"),
     A.until(() => addRecipe(LARGE_REACTOR, ACID_RECIPE)() !== null, "the reactor's recipe", 20000),
     A.show(addRecipe(LARGE_REACTOR, ACID_RECIPE)),

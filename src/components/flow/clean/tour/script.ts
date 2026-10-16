@@ -3,7 +3,6 @@
 import { isLiveConfigured } from "@/lib/live/live-config";
 import { useFactoryStore } from "@/store/factory-store";
 import { setMinimap } from "../minimap/minimap-settings";
-import { setSeeThrough } from "../seethrough/see-through";
 import { A, type Action, type Step } from "./director";
 import { pressKey } from "./input";
 import {
@@ -519,35 +518,18 @@ const nonRecipe: Step = {
 const minimapStep: Step = {
   id: "minimap",
   actions: [
-    A.run(() => setMinimap({ show: true, size: "small", shape: "square", corner: "bottom-right", fit: true })),
+    A.run(() => setMinimap({ show: true, size: "small", shape: "square", corner: "bottom-right" })),
     A.wait(300),
-    A.key("]", { caps: ["]"] }),
-    A.wait(150),
-    A.key("]", { caps: ["]"] }),
-    A.wait(200),
-    A.key("[", { caps: ["["] }),
-    A.key("[", { caps: ["["] }),
-    A.wait(200),
     A.drag(() => { const m = document.querySelector("[data-minimap]"); if (!m) return null; const r = m.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }, () => { const m = document.querySelector("[data-minimap]"); if (!m) return null; const r = m.getBoundingClientRect(); return { x: r.left + r.width / 2 + 24, y: r.top + r.height / 2 + 12 }; }, { label: "the map" }),
     A.wait(300),
     fit,
   ],
   note: {
     text:
-      "The *minimap* shows your whole plan. Drag on it to move the board, and scroll over it to zoom it. *[* and *]* zoom it too, and *N* hides it. Its gear sets its size and corner.",
+      "The *minimap* shows your whole plan. Drag on it to move the board, and *N* hides it. Its gear sets its size and corner.",
     at: () => document.querySelector("[data-minimap]"),
   },
 };
-
-const seeThrough: Step = {
-  id: "see-through",
-  actions: [A.run(() => setSeeThrough(60)), A.wait(500)],
-  note: {
-    text: "*See-through* fades the board's paper and the overview, and leaves the cards and the words solid. It is in the settings.",
-    at: railRoot,
-  },
-};
-
 
 const stickyNote: Step = {
   id: "sticky-note",
@@ -644,7 +626,7 @@ const newPlan: Step = {
 
 const feedback: Step = {
   id: "feedback",
-  actions: [closeMenus, A.run(() => setSeeThrough(0)), A.wait(200)],
+  actions: [closeMenus, A.wait(200)],
   note: {
     text:
       "That's everything! Found a bug, or have an idea? *Feedback* sends it from here. Questions about your own setup do well in GTNH Planner's thread on the *GT New Horizons Discord*.",
@@ -682,7 +664,6 @@ export const STEPS: Step[] = [
   trashStep,
   nonRecipe,
   minimapStep,
-  seeThrough,
   stickyNote,
   ...(isLiveConfigured() ? [inviteStep] : []),
   plansStep,

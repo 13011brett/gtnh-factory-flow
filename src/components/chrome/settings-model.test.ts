@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { SEE_THROUGH_NAMES, SIZE_NAMES, sizeIndexOf, sizePercentOf, soundIndexOf, SOUND_NAMES, SOUND_VOLUME } from "./settings-model";
+import { SIZE_NAMES, sizeIndexOf, sizePercentOf, soundIndexOf, SOUND_NAMES, SOUND_VOLUME } from "./settings-model";
 
 describe("the settings box's choices", () => {
   it("names the sizes and sounds as the mod does", () => {
@@ -22,12 +22,5 @@ describe("the settings box's choices", () => {
     expect(soundIndexOf(true, 1.7)).toBe(3);
     // The default volume is Normal.
     expect(soundIndexOf(true, 0.9)).toBe(2);
-  });
-
-  it("lists See-through from 0% to 100% in fives", () => {
-    expect(SEE_THROUGH_NAMES[0]).toBe("0%");
-    expect(SEE_THROUGH_NAMES[6]).toBe("30%");
-    expect(SEE_THROUGH_NAMES.at(-1)).toBe("100%");
-    expect(SEE_THROUGH_NAMES).toHaveLength(21);
   });
 });

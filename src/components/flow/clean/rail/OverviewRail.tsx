@@ -56,7 +56,7 @@ import {
   type Setter,
 } from "./rail-layout";
 import { steppedRate } from "./rail-math";
-import { measureClean } from "../text-measure";
+import { measureClean, useFontEpoch } from "../text-measure";
 import { useRailData } from "./rail-data";
 import type { RailDrawer, RailLine, RailMachine, RailPin } from "./rail-model";
 import { hideTip, tipProps, type TipContent } from "./rail-tip";
@@ -996,6 +996,7 @@ const MachineRow = memo(function MachineRow({
   peak: boolean;
   state: RailState;
 }) {
+  useFontEpoch();
   const [hot, setHot] = useState(false);
   const colors = entry.tier ? tierChipColors(entry.tier) : undefined;
   const countKey = `count:${entry.nodeId}`;

@@ -214,14 +214,3 @@
   width: 130px;
   accent-color: #cfd0d6;
 }
-
-/* Zoom: Fit (the whole plan) or a hand zoom on the slider, which reads faint while Fit is on. */
-.mmap-fit {
-  padding: 2px 7px;
-}
-.mmap-slider-zoom {
-  width: 96px;
-}
-.mmap-slider-zoom[data-fit] {
-  opacity: 0.45;
-}

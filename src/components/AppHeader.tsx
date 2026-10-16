@@ -11,7 +11,6 @@ import { SharePlanDialog, type ShareMode } from "./community/SharePlanDialog";
 import { ModScreenshot } from "./chrome/ModScreenshot";
 import { DevMenu } from "./DevMenu";
 import { ModSettings } from "./chrome/ModSettings";
-import { MachineListDialog } from "./MachineListDialog";
 import { ModBar } from "./chrome/ModBar";
 
 /**
@@ -63,7 +62,6 @@ export function AppHeader(_props: AppHeaderProps) {
   // Settings lives up here for the same reason as the share dialog: the
   // compact menu closes behind it without unmounting it.
   const [isSettingsOpen, setSettingsOpen] = useState(false);
-  const [isMachineListOpen, setMachineListOpen] = useState(false);
   // Dialogs the bar and the header both open; they portal or sit fixed, so neither layout owns their place.
   const dialogs = (
     <>
@@ -76,12 +74,8 @@ export function AppHeader(_props: AppHeaderProps) {
       {shareMode !== false ? <SharePlanDialog mode={shareMode} onClose={() => setShareMode(false)} /> : null}
       {isExportOpen ? <ModScreenshot onClose={() => setExportOpen(false)} /> : null}
       {isSettingsOpen ? (
-        <ModSettings
-          onClose={() => setSettingsOpen(false)}
-          onOpenMachineList={() => setMachineListOpen(true)}
-        />
+        <ModSettings onClose={() => setSettingsOpen(false)} />
       ) : null}
-      {isMachineListOpen ? <MachineListDialog onClose={() => setMachineListOpen(false)} /> : null}
     </>
   );
 

@@ -5,7 +5,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { toBoard } from "./minimap-draw";
 import { MinimapEngine } from "./minimap-engine";
-import { getMinimap, MINIMAP_SIZES, setMinimap, stepMinimapZoom, useMinimapSettings } from "./minimap-settings";
+import { getMinimap, MINIMAP_SIZES, setMinimap, useMinimapSettings } from "./minimap-settings";
 import { clearDockOfMinimap } from "./dock-clearance";
 import { MinimapSettingsPanel } from "./MinimapSettingsPanel";
 import "./minimap.css";
@@ -13,9 +13,8 @@ import "./minimap.css";
 /**
  * The minimap (the mod's, on the board): the whole plan fitted in the board's corner, drawn on ONE canvas from
  * the board's own state, never from the DOM per frame (`MinimapEngine`). It holds still while the board pans and
- * zooms; only the frame of the board's view moves, and a press or drag on it carries the board there. The wheel over
- * it, or the [ and ] keys, zoom it by hand; a double click fits the plan again; N shows or hides it. No title: the
- * plan's tab names it. Mount it inside the board's ReactFlow.
+ * zooms; only the frame of the board's view moves, and a press or drag on it carries the board there. N shows or hides
+ * it. No title: the plan's tab names it. Mount it inside the board's ReactFlow.
  */
 
 function isTyping(target: EventTarget | null): boolean {
@@ -60,30 +59,15 @@ export function BoardMinimap({ hidden = false }: { hidden?: boolean }) {
     return clearDockOfMinimap(host, () => wrapRef.current, settings.corner);
   }, [visible, host, settings.corner, settings.size]);
 
-  // N, [ and ]: not while typing, not with a modifier.
+  // N: not while typing, not with a modifier.
   useEffect(() => {
     const onKey = (event: KeyboardEvent) => {
       if (event.ctrlKey || event.metaKey || event.altKey || isTyping(event.target)) return;
       if ((event.key === "n" || event.key === "N") && !event.shiftKey) setMinimap({ show: !getMinimap().show });
-      else if (event.key === "[" && getMinimap().show) stepMinimapZoom(-1);
-      else if (event.key === "]" && getMinimap().show) stepMinimapZoom(1);
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
-
-  // The wheel zooms the map (a native listener: React's wheel is passive).
-  useEffect(() => {
-    const el = wrapRef.current;
-    if (!el || !visible || !host) return;
-    const onWheel = (event: WheelEvent) => {
-      event.preventDefault();
-      event.stopPropagation();
-      stepMinimapZoom(event.deltaY > 0 ? -1 : 1);
-    };
-    el.addEventListener("wheel", onWheel, { passive: false });
-    return () => el.removeEventListener("wheel", onWheel);
-  }, [visible, host]);
 
   const carryTo = useCallback(
     (event: React.PointerEvent) => {
@@ -138,9 +122,6 @@ export function BoardMinimap({ hidden = false }: { hidden?: boolean }) {
           if (dragRef.current === event.pointerId) release();
         }}
         onPointerCancel={release}
-        onDoubleClick={() => {
-          setMinimap({ fit: true });
-        }}
       />
       <div
         role="button"

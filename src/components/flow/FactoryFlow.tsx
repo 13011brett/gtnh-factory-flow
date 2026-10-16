@@ -234,7 +234,6 @@ import { BoardMinimap } from "./clean/minimap/BoardMinimap";
 import { registerMinimapRoutes } from "./clean/minimap/minimap-feed";
 import { FeedbackHost } from "./clean/feedback/FeedbackPanel";
 import { TourBridge, TourHost, TourOffer } from "./clean/tour";
-import { SeeThroughController } from "./clean/seethrough/SeeThroughController";
 import { GT_NODE_COLORS, GT_NODE_COLOR_PALETTE, flowRampColor } from "./node-colors";
 import {
   CANVAS_PATTERNS,
@@ -6604,7 +6603,6 @@ export function FactoryFlow() {
           />
         )}
         <BoardFloors />
-        <SeeThroughController />
         <BoardMinimap hidden={isCompact} />
         <TourBridge />
         {/* Other people in a live plan: pointers and selections, a layer of

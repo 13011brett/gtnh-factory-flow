@@ -285,7 +285,6 @@
   background-color: #141414;
   background-image: radial-gradient(#26282d 1px, transparent 1.2px);
   background-size: 10px 10px;
-  opacity: var(--sp-solid, 1);
   box-shadow: 0 0 0 1px #34363c;
 }
 .sp-rail {
@@ -295,7 +294,6 @@
   bottom: 8px;
   width: 34px;
   background: #1d1f23;
-  opacity: var(--sp-solid, 1);
   display: flex;
   flex-direction: column;
   gap: 5px;

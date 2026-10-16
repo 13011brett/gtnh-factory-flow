@@ -200,22 +200,6 @@ export function drawMinimap(
   ctx.restore();
 }
 
-/** The zoom step (index) that shows the whole plan in a map `size` wide, never past the finest step. */
-export function fitZoomIndex(
-  bounds: { x0: number; y0: number; x1: number; y1: number } | undefined,
-  size: number,
-  zooms: readonly number[],
-): number {
-  if (!bounds) return 2;
-  const span = Math.max(bounds.x1 - bounds.x0, bounds.y1 - bounds.y0, 1);
-  const want = (size * 0.9) / span;
-  let best = 0;
-  zooms.forEach((z, i) => {
-    if (z <= want) best = i;
-  });
-  return best;
-}
-
 /** Room left round a fitted plan, map px. */
 export const FIT_MARGIN = 6;
 

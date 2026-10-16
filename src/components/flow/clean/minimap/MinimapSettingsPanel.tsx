@@ -4,7 +4,6 @@ import { useEffect, useRef } from "react";
 import {
   MINIMAP_CORNER_LABELS,
   MINIMAP_SIZE_LABELS,
-  MINIMAP_ZOOMS,
   setMinimap,
   useMinimapSettings,
   type MinimapCorner,
@@ -17,15 +16,9 @@ const SIZES: MinimapSize[] = ["small", "medium", "large", "huge"];
 const SHAPES: MinimapShape[] = ["circle", "square"];
 const CORNERS: MinimapCorner[] = ["top-left", "top-right", "bottom-left", "bottom-right"];
 
-/** The map's zoom as the mod's slider reads it: the percent of the board each map pixel shows. */
-export function zoomLabel(index: number): string {
-  return `${Math.round((MINIMAP_ZOOMS[index] ?? 0) * 100)}%`;
-}
-
 /**
- * The minimap's settings, row by row, as the mod's Minimap section: Show, Size, Shape, Position, Zoom (Fit, the
- * default, shows the whole plan; the slider zooms by hand), Centre on the card you select. No see-through row: the
- * map is see-through enough (the owner). Used by the map's own gear and by the settings dialog.
+ * The minimap's settings, row by row, as the mod's Minimap section: Show, Size, Shape, Position, Centre on the card
+ * you select. Used by the map's own gear and by the settings dialog.
  */
 export function MinimapSettingsRows({ className = "" }: { className?: string }) {
   const s = useMinimapSettings();
@@ -98,36 +91,6 @@ export function MinimapSettingsRows({ className = "" }: { className?: string }) 
             />
           ))}
         </div>
-      </div>
-      <div className="mmap-row">
-        <span className="mmap-row-name">
-          Zoom <kbd className="mmap-kbd">[</kbd> <kbd className="mmap-kbd">]</kbd>
-        </span>
-        <div
-          role="switch"
-          aria-checked={s.fit}
-          aria-label="Fit the whole plan"
-          title="Fit the whole plan"
-          tabIndex={0}
-          className="mmap-seg mmap-seg-item mmap-fit"
-          data-on={s.fit ? "" : undefined}
-          onClick={() => setMinimap({ fit: !s.fit })}
-          onKeyDown={(e) => (e.key === " " || e.key === "Enter") && setMinimap({ fit: !s.fit })}
-        >
-          Fit
-        </div>
-        <input
-          type="range"
-          className="mmap-slider mmap-slider-zoom"
-          min={0}
-          max={MINIMAP_ZOOMS.length - 1}
-          step={1}
-          value={s.zoom}
-          aria-label="Zoom"
-          data-fit={s.fit ? "" : undefined}
-          onChange={(e) => setMinimap({ fit: false, zoom: Number(e.target.value) })}
-        />
-        <span className="mmap-row-value">{s.fit ? "Fit" : zoomLabel(s.zoom)}</span>
       </div>
       <div className="mmap-row">
         <span className="mmap-row-name">Centre on the card you select</span>

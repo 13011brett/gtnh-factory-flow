@@ -38,7 +38,7 @@
 }
 .pn,
 .pn-skin {
-  font-family: var(--font-minecraft), monospace;
+  font-family: var(--app-font);
   font-size: 12px;
   line-height: 15px;
   font-weight: 400;
@@ -256,7 +256,7 @@ textarea.pn-field {
 
 /* The compact list menu (a select that is a menu): a key that opens the rows. */
 .pn-pick-key {
-  font-family: var(--font-minecraft), monospace;
+  font-family: var(--app-font);
   font-size: 12px;
   display: flex;
   align-items: center;
@@ -291,7 +291,7 @@ textarea.pn-field {
   gap: 3px;
 }
 .pn-chip {
-  font-family: var(--font-minecraft), monospace;
+  font-family: var(--app-font);
   font-size: 12px;
   flex: 1 1 0;
   min-width: 0;
@@ -339,7 +339,7 @@ textarea.pn-field {
   background: var(--pn-well);
   border: 1px solid var(--pn-edge);
   color: var(--pn-ink);
-  font-family: var(--font-minecraft), monospace;
+  font-family: var(--app-font);
   font-size: 12px;
 }
 .pn-search:focus-within {
@@ -366,7 +366,7 @@ textarea.pn-field {
   grid-template-columns: repeat(3, minmax(0, 1fr));
 }
 .pn-column {
-  font-family: var(--font-minecraft), monospace;
+  font-family: var(--app-font);
 }
 .pn-column .pn-chip {
   font-size: 11px;
@@ -404,7 +404,7 @@ textarea.pn-field {
  */
 .rs-mod,
 .rs-mod * {
-  font-family: var(--font-minecraft), monospace;
+  font-family: var(--app-font);
   border-radius: 0;
   letter-spacing: 0;
   -webkit-font-smoothing: none;

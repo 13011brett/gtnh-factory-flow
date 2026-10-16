@@ -187,7 +187,7 @@ export function RecipeListPicker({
     <div
       ref={rootRef}
       // The game font, as every menu on the mod's cards (the crop and mob pickers open from clean cards).
-      style={{ position: "fixed", left: anchorAt.left, top: anchorAt.top, bottom: anchorAt.bottom, width: anchorAt.width, maxHeight: anchorAt.maxHeight, fontFamily: "var(--font-minecraft), monospace", WebkitFontSmoothing: "none" }}
+      style={{ position: "fixed", left: anchorAt.left, top: anchorAt.top, bottom: anchorAt.bottom, width: anchorAt.width, maxHeight: anchorAt.maxHeight, fontFamily: "var(--app-font)", WebkitFontSmoothing: "none" }}
       // "nowheel" stops React Flow from zooming the canvas when scrolling the
       // list: its native wheel handler runs before React's synthetic one, so
       // stopPropagation alone is not enough.

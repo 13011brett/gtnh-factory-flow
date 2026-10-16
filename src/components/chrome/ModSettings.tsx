@@ -11,6 +11,7 @@ import {
   setAppFont,
   type AppFontId,
 } from "@/lib/app-font";
+import { resetMeasuredFont } from "@/components/flow/clean/text-measure";
 import { useDeviceSettings, writeDeviceSettings } from "@/lib/device-settings";
 import { SEE_THROUGH_STEP, setSeeThrough, useSeeThrough } from "@/components/flow/clean/seethrough/see-through";
 import { MinimapSettingsRows } from "@/components/flow/clean/minimap/MinimapSettingsPanel";
@@ -311,9 +312,11 @@ export function ModSettings({
           minWidth={150}
           entries={APP_FONTS.map((option) => ({
             label: option.label,
+            labelFont: option.stack,
             current: option.id === font,
             onSelect: () => {
               setAppFont(option.id);
+              resetMeasuredFont();
               setFont(option.id);
             },
           }))}

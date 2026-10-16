@@ -12,7 +12,7 @@
   --nei-slot: 32px;
   --nei-art: 28px;
   --nei-key: 28px;
-  font-family: var(--font-minecraft), monospace;
+  font-family: var(--app-font);
   -webkit-font-smoothing: none;
 }
 
@@ -62,7 +62,7 @@
     inset 1px 1px 0 #4a4c54,
     inset -1px -1px 0 #17191d;
   color: #e8e9ee;
-  font-family: var(--font-minecraft), monospace;
+  font-family: var(--app-font);
   font-size: 10px;
   line-height: 14px;
   cursor: pointer;
@@ -192,7 +192,7 @@
   color: #e0e0e0;
   caret-color: #d0d0d0;
   text-shadow: 2px 2px 0 #383838;
-  font-family: var(--font-minecraft), monospace;
+  font-family: var(--app-font);
   font-size: 14px;
   line-height: 16px;
 }
@@ -249,7 +249,7 @@
   border-radius: 0;
   box-shadow: none;
   color: #ffffff;
-  font-family: var(--font-minecraft), monospace;
+  font-family: var(--app-font);
   font-size: 14px;
   line-height: 17px;
   -webkit-font-smoothing: none;

@@ -47,6 +47,8 @@ export interface MenuEntry {
   plus?: boolean;
   /** A picture before the label. */
   icon?: ReactNode;
+  /** A font-family for the label alone (the font picker shows each font in itself). */
+  labelFont?: string;
   onSelect: () => void;
 }
 
@@ -179,7 +181,9 @@ function MenuRow({ entry, onClose }: { entry: MenuEntry; onClose: () => void }):
         {entry.dot ? <span className="mm-dot" style={{ background: entry.dot }} aria-hidden /> : null}
         {entry.plus ? <PixelIcon name="plus" className="mm-plus" /> : null}
         {entry.icon ?? null}
-        <span className="mm-label">{entry.label}</span>
+        <span className="mm-label" style={entry.labelFont ? { fontFamily: entry.labelFont } : undefined}>
+          {entry.label}
+        </span>
         {entry.detail ? <span className="mm-detail">{entry.detail}</span> : null}
       </div>
     </>

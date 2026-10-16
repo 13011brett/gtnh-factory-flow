@@ -22,7 +22,6 @@ function canvas(): CanvasRenderingContext2D | null {
 let appFamily: string | undefined;
 export function resetMeasuredFont(): void {
   appFamily = undefined;
-  cleanFamily = undefined;
   widths.clear();
 }
 
@@ -41,21 +40,9 @@ function family(): string {
   return value;
 }
 
-/** The clean card's own face: Monocraft (`--cc-font` in clean.css), whatever the app font is. */
-let cleanFamily: string | undefined;
+/** The clean card's face: the app's, which is Monocraft unless the font setting says otherwise. */
 function cleanFace(): string {
-  if (cleanFamily) return cleanFamily;
-  let value = "monospace";
-  try {
-    if (typeof document !== "undefined") {
-      const raw = getComputedStyle(document.documentElement).getPropertyValue("--font-minecraft").trim();
-      if (raw) value = `${raw}, monospace`;
-    }
-  } catch {
-    // Keep the generic family.
-  }
-  cleanFamily = value;
-  return value;
+  return family();
 }
 
 /** Width in CSS px of `text` at `size` px and `weight`, in the clean card's Monocraft. */

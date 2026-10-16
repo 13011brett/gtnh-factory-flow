@@ -8,7 +8,7 @@
   inset: 0;
   z-index: 300;
   pointer-events: none;
-  font-family: var(--font-minecraft), monospace;
+  font-family: var(--app-font);
 }
 .tour-shield {
   position: fixed;
@@ -324,7 +324,7 @@
   background: #23252a;
   border: 2px solid #ffd257;
   color: #e8e9ee;
-  font-family: var(--font-minecraft), monospace;
+  font-family: var(--app-font);
   font-size: 15px;
   line-height: 21px;
   animation: tour-in 220ms ease-out both;

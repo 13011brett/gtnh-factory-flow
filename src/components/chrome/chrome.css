@@ -27,7 +27,7 @@
   --mc-gold: #ffd257;
   --mc-cyan: #22d3ee;
   --mc-off: #5a5c65;
-  font-family: var(--font-minecraft), monospace;
+  font-family: var(--app-font);
   font-size: 8px;
   line-height: 10px;
   font-weight: 400;

@@ -17,7 +17,7 @@
   border: 1px solid #34363c;
   box-shadow: 6px 8px 0 rgba(0, 0, 0, 0.45);
   color: #e8e9ee;
-  font-family: var(--font-minecraft), monospace;
+  font-family: var(--app-font);
   font-size: 12px;
   line-height: 14px;
   user-select: none;

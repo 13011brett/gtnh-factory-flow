@@ -1,7 +1,7 @@
 /**
  * The planner's font, as a setting.
  *
- * Everything renders in Inter by default. This module owns the choice of
+ * Everything renders in the pixel font (Minecraft) by default. This module owns the choice of
  * something else: the option list the settings dialog shows, the
  * localStorage key it persists to, and the `data-app-font` attribute on
  * <html> that globals.css keys its `--app-font` overrides on.
@@ -14,7 +14,7 @@
  *
  * The no-flash boot script in layout.tsx reads the same storage key before
  * first paint; it deliberately does not validate the id, because an unknown
- * value matches no CSS rule and falls through to the Inter default.
+ * value matches no CSS rule and falls through to the default.
  */
 
 export type AppFontId =
@@ -94,7 +94,7 @@ export const APP_FONTS: readonly AppFontOption[] = [
   },
 ];
 
-export const DEFAULT_APP_FONT: AppFontId = "inter";
+export const DEFAULT_APP_FONT: AppFontId = "minecraft";
 
 /** Shared with the inline boot script in layout.tsx. */
 export const APP_FONT_STORAGE_KEY = "gtnh-app-font";

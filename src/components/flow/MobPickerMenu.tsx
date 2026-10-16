@@ -30,7 +30,7 @@ function dropFigure(output: RecipeOutput): string {
 function MobHover({ mob }: { mob: RecipeSummary }) {
   const eec = (mob.metadata as { eec?: EecMetadata } | undefined)?.eec;
   return (
-    <div className="min-w-[190px]" style={{ fontFamily: "var(--font-minecraft), monospace" }}>
+    <div className="min-w-[190px]" style={{ fontFamily: "var(--app-font)" }}>
       <p className="text-[14px] font-bold leading-4 text-white">
         {recipeChoiceName(mob.name)}
         {eec ? <span className="text-[11px] font-normal text-slate-400"> · {eec.maxHealth} health</span> : null}

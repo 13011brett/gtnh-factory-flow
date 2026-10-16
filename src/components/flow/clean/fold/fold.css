@@ -5,7 +5,7 @@
  */
 .fold-glyph {
   display: inline-block;
-  font-family: var(--font-minecraft), monospace;
+  font-family: var(--app-font);
   font-size: 13px;
   font-weight: 400;
   line-height: 17px;

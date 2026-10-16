@@ -16,7 +16,7 @@
   padding-top: 53px;
   background: var(--surface, #24272c);
   color: var(--mc-ink);
-  font-family: var(--font-minecraft), monospace;
+  font-family: var(--app-font);
   font-size: 11px;
   line-height: 16px;
 }

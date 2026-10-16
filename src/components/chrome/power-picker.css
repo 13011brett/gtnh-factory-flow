@@ -182,7 +182,7 @@
   padding: 6px;
   background: rgba(16, 18, 21, 0.94);
   box-shadow: 0 0 0 1px #3a3c43;
-  font-family: var(--font-minecraft), monospace;
+  font-family: var(--app-font);
   font-size: 8px;
   line-height: 9px;
   color: var(--mc-ink, #e8e9ee);

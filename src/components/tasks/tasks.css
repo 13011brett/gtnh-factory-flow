@@ -31,7 +31,7 @@
   --tb-key-hover: #2d2f35;
   --tb-key-hi: #4a4c54;
   --tb-key-lo: #17191d;
-  font-family: var(--font-minecraft), monospace;
+  font-family: var(--app-font);
   font-size: 8px;
   line-height: 10px;
   font-weight: 400;

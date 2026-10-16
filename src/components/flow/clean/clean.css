@@ -38,7 +38,7 @@
   --cc-accept-pulse: 1.43s;
   --cc-prompt: 1s;
   /* The mod's pixel typeface; sizes below are the mod's: x1.5 (12) figures, x1 (8) text, x0.75 (6) small. */
-  --cc-font: var(--font-minecraft), monospace;
+  --cc-font: var(--app-font);
 }
 
 /* ---- The card ---------------------------------------------------------- */

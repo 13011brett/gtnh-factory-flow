@@ -1,32 +1,116 @@
 # Rollout: cloud plans and live editing
 
-## Go (the state on 2026-10-15)
+## Go: the master plan (2026-10-16)
 
-Done: the migration (step 1) is in production; staging (step 2) runs `live-backport` (the mod backport with live
-editing merged in, 4.0.0) at `new.gtnhplanner.com` from `/opt/releases/live-backport-1792066008`; the mod's
-`0.2.0-beta.2` is a draft release on GitHub. When the owner says go, in this order:
+The switch makes the new site (staging, `live-backport`, 4.0.0) the one at `gtnhplanner.com`, publishes the mod's
+`0.2.0-beta.2`, and moves the recipe data from the 2.9.0-beta-2 export to an RC-2 export. Nobody should see more than
+a slow minute. Every phase can be undone on its own.
 
-1. Give staging room to serve everyone (it restarts, nobody but testers is on it):
-   `sed -i 's/^MemoryMax=900M/MemoryMax=1400M/; s/max-old-space-size=600/max-old-space-size=1000/' /etc/systemd/system/gtnh-flow-next.service && systemctl daemon-reload && systemctl restart gtnh-flow-next`,
-   then `curl -s http://127.0.0.1:3002/api/version` says 4.0.0.
-2. The switch, without downtime: in `/etc/caddy/Caddyfile` (back it up first) the `gtnhplanner.com` block keeps
-   `handle_path /umami/*` and its log, and its `reverse_proxy 127.0.0.1:3000 { header_up X-Client-Ip {client_ip} }`
-   becomes the three handles the `new.gtnhplanner.com` block already has (`@live` to 3001, `/api/datasets/*` to 3000,
-   the rest to 3002). Do the same in the `http://<ip>` block. `caddy validate`, `systemctl reload caddy`.
-   `gtnh-flow` on 3000 keeps running: it serves the warm recipe data. Check `https://gtnhplanner.com/api/version`
-   says 4.0.0, `/live/health` answers, a page loads.
-3. Rollback, if needed: copy the backed-up Caddyfile back and reload (one step, instant). The old site ignores the
-   new columns; plans it saves lose their task boards.
-4. GitHub: website `git push origin live-backport:main` (a fast-forward: live-backport contains main); mod
-   `git push origin mod-live-backport:main` (also a fast-forward), then publish the draft release
-   (`gh release edit 0.2.0-beta.2 --repo jackwrichards/gtnh-planner-mod --draft=false`), which tags the draft's
-   target commit. Publish after the switch: a beta.2 game asks `gtnhplanner.com/live/health` before it turns on
-   cloud plans.
-5. Later, at a quiet moment, back to one site process (a normal deploy, the usual 5 to 10 seconds of restart): add
-   `NEXT_PUBLIC_LIVE_URL=/live` to `/opt/shared/env.local`, add `npm run build:live` after `npm run build` in
-   `/opt/deploy.sh`, add `EnvironmentFile=/opt/shared/live.env` to the `gtnh-flow` unit (a drop-in), run the deploy,
-   point `gtnh-live`'s `WorkingDirectory` at `/opt/gtnh-flow` and restart it, set the `gtnhplanner.com` block back to
-   3000 for everything but `@live`, stop and disable `gtnh-flow-next`, and remove or repoint `new.gtnhplanner.com`.
+How the droplet stands (checked 2026-10-16): 4 GB of memory and a 2 GB swapfile. `gtnh-flow` (the old site, 3.11.1,
+port 3000, `/opt/gtnh-flow`) holds about 2.4 GB with the beta-2 recipe data loaded. Staging is `gtnh-flow-next`
+(3002, capped at 900 MB, release in `/opt/shared/cloud-live-release`) and `gtnh-live` (3001). Staging has no recipe
+data of its own: Caddy sends its `/api/datasets/*` to 3000. The droplet has room for one copy of the recipe data, not
+two, so staging cannot try the RC-2 data while the old site runs beta-2. `/opt/deploy.sh` builds `main` of
+`jackwrichards/gtnh-factory-flow` into `/opt/gtnh-flow`. The Supabase migration is already in production.
+
+### Phase A. Before the day (nothing players can see)
+
+1. **RC-2 recipe data.** Export from the RC-2 pack with the oracle mod and rebuild as `local-2.9.0-rc-2`
+   (`tools/dataset-pipeline/CLAUDE.md`). A fresh export re-mints about 37,000 crafting, furnace, bee, crop and essentia
+   recipe ids: carry the beta-2 ids over (match recipes by content key, as `graft-sparge.js` does) so saved plans keep
+   their recipes. Run `normalize-fluid-icon-alpha.mjs --rename`. Regenerate the mod's machine data and goldens from
+   it (`tools/audits/export-mod-machine-data.mjs`) and re-run the mod's tests.
+2. **Test the RC-2 data locally** (`npm run dev:local` with the new files in `public/datasets/gtnh`): item search,
+   the Nanochip Assembly Complex's circuit recipes, every Community plan in the old-against-new comparison
+   (`parity/` in the mod worktree: the same 60 plans solve the same apart from what RC-2 changed), and the tour at
+   1280x720 and 1920x1080.
+3. **Upload it without using it:** copy `local-2.9.0-rc-2` to `/opt/shared/gtnh-datasets/` but leave it out of
+   `datasets.manifest.json`, so nothing reads it yet. Check the disk (11 GB free; a dataset is about 0.7 GB).
+4. **Carry-over checks on staging:**
+   - A browser's own plans: copy a `gtnhplanner.com` browser profile's local storage into a `new.gtnhplanner.com`
+     one (headless) and open its plans: Build, Solve and Pool plans open as plan-mode boards with their numbers.
+   - Sign-in: a session cookie made by the old site is accepted by the new one (same `COMMUNITY_HASH_SALT`), so
+     signed-in players stay signed in.
+   - beta.1 games: the routes the beta.1 jar calls (`/api/community/auth/*`, `/api/community/plans*`,
+     `/api/datasets/*`, `/api/feedback`) answer the same on staging.
+5. **Freeze:** the last staging build is the build that goes live. The mod's draft release is final and its jar
+   was smoke-tested in the full pack.
+6. **Pick the hour:** the quietest hour in Umami's traffic. Tell the Discord thread beforehand.
+
+### Phase B. The switch (no downtime)
+
+1. **Backups:** copy `/etc/caddy/Caddyfile`, `/opt/shared/env.local`, both site units and
+   `/opt/shared/gtnh-datasets/datasets.manifest.json` beside themselves with a `.pre-go` suffix.
+2. **Give staging room to serve everyone.** It restarts, and only testers are on it:
+   `sed -i 's/^MemoryMax=900M/MemoryMax=1400M/; s/max-old-space-size=600/max-old-space-size=1000/'
+   /etc/systemd/system/gtnh-flow-next.service && systemctl daemon-reload && systemctl restart gtnh-flow-next`.
+   Then `curl -s http://127.0.0.1:3002/api/version` says 4.0.0.
+3. **Point gtnhplanner.com at the new site.** In the `gtnhplanner.com` block (and the `http://<ip>` block), keep
+   `handle_path /umami/*` and the log, and replace `reverse_proxy 127.0.0.1:3000 { header_up X-Client-Ip {client_ip} }`
+   with the three handles the `new.gtnhplanner.com` block has: `@live` to 3001, `/api/datasets/*` to 3000, the rest
+   to 3002. `caddy validate --config /etc/caddy/Caddyfile`, then `systemctl reload caddy`. A reload keeps open
+   connections, so nobody is cut off. The old site keeps running, serving only the recipe data.
+4. **Smoke test:**
+   - `https://gtnhplanner.com/api/version` says 4.0.0 and `https://gtnhplanner.com/live/health` answers.
+   - A page loads, Community lists, and a plan opens from it.
+   - Sign in, share a plan with a second account, and see the second cursor.
+   - The tour starts from the ? key.
+   - A beta.1 game can still sign in and open Community.
+5. **GitHub:**
+   - Website: `git push origin live-backport:main`, a fast-forward.
+   - Mod: `git push origin mod-live-backport:main`, also a fast-forward.
+   - Publish the draft: `gh release edit 0.2.0-beta.2 --repo jackwrichards/gtnh-planner-mod --draft=false`. Never
+     replace its text: the owner's pictures are in it.
+   - The order matters: a beta.2 game asks `/live/health` before it turns on cloud plans, and its quest things need
+     the new site.
+6. **Rollback, if needed:** put `Caddyfile.pre-go` back and `systemctl reload caddy`. It is one step and instant.
+   The old site ignores the new columns; plans it saves lose their task boards.
+
+### Phase C. RC-2 data (same day, once B is calm)
+
+The new site loads the RC-2 data, and the old site, which only serves recipe data now, is stopped.
+
+1. **Room for both copies while the new one warms.** Grow the swap to 6 GB for the hour:
+   `fallocate -l 4G /swapfile2 && chmod 600 /swapfile2 && mkswap /swapfile2 && swapon /swapfile2`.
+2. **Publish the data:** add `local-2.9.0-rc-2` to the manifest with `rebuild-manifest.mjs`, and set it as
+   `latestStableVersion`, which the website picks by default (`pickDefaultDatasetVersion`). Keep `local-2.9.0-beta-2`
+   listed so plans that name it still resolve.
+3. **Start a second copy of the new site on 3003 that serves the data:** a unit `gtnh-flow-rc2` copied from
+   `gtnh-flow-next`, with these changes:
+   - the same release and the old site's memory and heap (no MemoryMax, `--max-old-space-size=3072`);
+   - `PORT=3003`;
+   - the old site's `ExecStartPost` prewarm, pointed at 3003 and `local-2.9.0-rc-2`.
+   
+   Start it and wait until the prewarm returns. Nothing points at it yet.
+4. **Switch everything to it at once:** in both site blocks, send the rest and `/api/datasets/*` to 3003 (`@live`
+   stays on 3001). `caddy validate`, then `systemctl reload caddy`. Item search now shows RC-2 recipes, for example
+   the Nanochip Assembly Complex's.
+5. **Retire the others:**
+   - `systemctl stop gtnh-flow gtnh-flow-next && systemctl disable gtnh-flow gtnh-flow-next`.
+   - Remove the extra swap: `swapoff /swapfile2 && rm /swapfile2`.
+   - Phase D folds 3003 back into the usual `gtnh-flow` name.
+6. **Rollback:** `systemctl start gtnh-flow gtnh-flow-next`, put the Phase B Caddyfile back and reload. The beta-2 data is untouched.
+
+### Phase D. Tidy up (a later quiet moment, no downtime)
+
+Back to one site under the usual names, so `/opt/deploy.sh` deploys the new code. Traffic stays on 3003 until 3000 is
+warm, so the deploy's restart touches nobody. Add the extra swap of Phase C again for the hour, since both copies hold
+the data while 3000 warms.
+
+1. **The live address:** add `NEXT_PUBLIC_LIVE_URL=/live` to `/opt/shared/env.local`.
+2. **The deploy script:** add `npm run build:live` after `npm run build` in `/opt/deploy.sh`.
+3. **The site unit:** give `gtnh-flow` an `EnvironmentFile=/opt/shared/live.env` drop-in and the RC-2 prewarm.
+4. **Deploy:** run `/opt/deploy.sh`, which builds `main` (now 4.0.0) into `/opt/gtnh-flow`.
+5. **The live service:** point `gtnh-live`'s `WorkingDirectory` at `/opt/gtnh-flow` and restart it.
+6. **Caddy:** once 3000's prewarm returns, set the `gtnhplanner.com` block back to 3000 for everything but `@live`.
+7. **The interim copy:** stop and disable `gtnh-flow-rc2`, and remove the extra swap.
+8. **new.gtnhplanner.com:** remove its Caddy block and its Cloudflare CNAME, or keep it as a test site.
+
+### Phase E. After
+
+- **The first day:** watch the logs: `journalctl -u gtnh-flow-next -u gtnh-live -f` (after D, `-u gtnh-flow`),
+  `/live/health`, and feedback issues on GitHub.
+- **Moving the pack:** when GTNH moves past RC-2, export again and repeat Phase C. The live site stays up throughout.
 
 The rest of this file is the plan as written before staging, with what was actually deployed in section 2.7.
 

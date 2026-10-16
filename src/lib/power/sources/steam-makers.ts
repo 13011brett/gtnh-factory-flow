@@ -8,6 +8,7 @@
 import { findFuel, powerPlannerData, type PowerFuelEntry } from "../planner-data";
 import type { PowerModel, PowerSourceDefinition, PowerSetting } from "../types";
 import { formatAmount, items, liters, stat } from "./helpers";
+import { railcraftSteamSources } from "./railcraft";
 
 interface BoilerSpec {
   id: string;
@@ -561,6 +562,8 @@ export const steamMakerSources: PowerSourceDefinition[] = [
   lavaBoiler,
   advancedBoiler,
   ...BOILER_SPECS.map(buildBoiler),
+  // Railcraft's multiblock boiler, beside the GT boilers (sources/railcraft.ts).
+  ...railcraftSteamSources,
   ...powerPlannerData.heatExchangers.map(buildExchanger),
 ];
 

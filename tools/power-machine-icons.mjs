@@ -83,6 +83,9 @@ const MACHINES = {
   "advanced-boiler": { query: "advanced boiler", id: "gregtech:gt.blockmachines@753" },
   rtg: { query: "radioisotope", id: "gregtech:gt.blockmachines@869" },
   "dyson-swarm": { query: "dyson", id: "gregtech:gt.blockmachines@14001" },
+  // Railcraft: the Water Tank Siding, and the boiler's Solid Fueled Firebox (its default fuel is coal).
+  "railcraft-water-tank": { query: "water tank siding", id: "railcraft:machine.alpha@14" },
+  "railcraft-boiler": { query: "boiler firebox", id: "railcraft:machine.beta@5" },
 };
 
 const out = {};

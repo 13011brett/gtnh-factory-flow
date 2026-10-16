@@ -278,7 +278,7 @@ export function PowerSourceOverlay() {
 /** The machine catalog up top; solar and endgame on the shelf below. */
 const GROUP_SHELVES: PowerGroupId[][] = [
   ["burners", "turbines", "steam", "engines", "reactors"],
-  ["passive", "endgame"],
+  ["passive", "endgame", "other"],
 ];
 
 /** The same tier badge the machine list and card headers wear. */

@@ -24,3 +24,6 @@
   unresolved name shows as a stat, not a port.
 - Retiring a select option key needs `legacyKeys`: shipped plans store the old key.
 - Exam: `power.test.ts`, `rotor-data.test.ts` and each `sources/*.test.ts` (Java values).
+- Railcraft's Water Tank and boiler (`sources/railcraft.ts`) follow Railcraft's own source (GTNH fork, tag
+  9.17.26), not the workbook; the mod pins the same values. The tank is the one source in the
+  "other" group, the picker's Other column after its planning cards.

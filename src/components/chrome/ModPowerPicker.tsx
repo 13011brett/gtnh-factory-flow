@@ -24,7 +24,7 @@ import { PixelBolt } from "./pixel-icons";
 const SHEET_W = 802 + 16;
 
 /** The columns of kinds, the short groups sharing one (the mod's COLUMNS). */
-const COLUMNS: ReadonlyArray<ReadonlyArray<PowerGroupId | "other">> = [
+const COLUMNS: ReadonlyArray<ReadonlyArray<PowerGroupId>> = [
   ["other", "burners"],
   ["turbines"],
   ["steam"],
@@ -65,7 +65,7 @@ export function ModPowerPicker() {
   const addPowerSourceNode = useFactoryStore((state) => state.addPowerSourceNode);
   const addCustomRateNode = useFactoryStore((state) => state.addCustomRateNode);
   const [query, setQuery] = useState("");
-  const [groupFilter, setGroupFilter] = useState<PowerGroupId | "other" | "all">("all");
+  const [groupFilter, setGroupFilter] = useState<PowerGroupId | "all">("all");
   const [tierFilter, setTierFilter] = useState<string>("all");
   const [menu, setMenu] = useState<{ kind: "group" | "tier"; anchor: ChromeAnchor }>();
   const [preview, setPreview] = useState<{ entry: Entry; rect: DOMRect }>();
@@ -132,12 +132,11 @@ export function ModPowerPicker() {
         }
       }
     }
-    if (groupFilter !== "other") {
-      for (const hit of searchPowerSources(query)) {
-        if (groupFilter !== "all" && hit.source.group !== groupFilter) continue;
-        if (tierFilter !== "all" && hit.source.unlock !== tierFilter) continue;
-        out.push({ kind: "source", hit });
-      }
+    // Then the sources: Other's own (the Railcraft Water Tank) come after its planning cards.
+    for (const hit of searchPowerSources(query)) {
+      if (groupFilter !== "all" && hit.source.group !== groupFilter) continue;
+      if (tierFilter !== "all" && hit.source.unlock !== tierFilter) continue;
+      out.push({ kind: "source", hit });
     }
     return out;
   }, [open, query, groupFilter, tierFilter]);
@@ -160,16 +159,14 @@ export function ModPowerPicker() {
   if (!open) return null;
 
   const searching = query.trim() !== "";
-  const groupTitle = (id: PowerGroupId | "other") =>
-    id === "other" ? "Other" : (POWER_GROUPS.find((group) => group.id === id)?.name ?? id);
-  const inGroup = (id: PowerGroupId | "other") =>
+  const groupTitle = (id: PowerGroupId) => POWER_GROUPS.find((group) => group.id === id)?.name ?? id;
+  const inGroup = (id: PowerGroupId) =>
     entries.filter((entry) => (entry.kind === "other" ? id === "other" : entry.hit.source.group === id));
 
   const menuEntries: MenuEntry[] =
     menu?.kind === "group"
       ? [
           { label: "All types", current: groupFilter === "all", onSelect: () => setGroupFilter("all") },
-          { label: "Other", current: groupFilter === "other", onSelect: () => setGroupFilter("other") },
           ...POWER_GROUPS.map((group) => ({
             label: group.name,
             current: groupFilter === group.id,

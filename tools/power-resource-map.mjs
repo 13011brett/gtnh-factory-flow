@@ -248,6 +248,11 @@ const AUX_NAMES = [
   ["Potassium Hydroxide Dust", "item"],
   ["Caesium Hydroxide Dust", "item"],
   ["Francium Hydroxide Dust", "item"],
+  // The Railcraft boiler's liquid fuels the workbook tables lack (Railcraft's FuelManager, EnderIO's IMC).
+  ["Hootch", "fluid"],
+  ["Fire Water", "fluid"],
+  ["Biofuel", "fluid"],
+  ["Blazing Pyrotheum", "fluid"],
 ];
 
 /**

@@ -8,6 +8,7 @@
  */
 
 export type PowerGroupId =
+  | "other"
   | "burners"
   | "engines"
   | "steam"

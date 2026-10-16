@@ -3,6 +3,8 @@
  * whole page and a cache, so a card never reads the DOM to size a word. Falls
  * back to a per-character estimate where there is no canvas (tests, server).
  */
+import { useSyncExternalStore } from "react";
+
 let context: CanvasRenderingContext2D | null | undefined;
 const widths = new Map<string, number>();
 
@@ -23,6 +25,28 @@ let appFamily: string | undefined;
 export function resetMeasuredFont(): void {
   appFamily = undefined;
   widths.clear();
+  fontEpoch += 1;
+  for (const listener of fontListeners) listener();
+}
+
+let fontEpoch = 0;
+const fontListeners = new Set<() => void>();
+
+/** Counts font changes: a component that measures text in render calls this, so a new font re-measures it. */
+export function useFontEpoch(): number {
+  return useSyncExternalStore(
+    (listener) => {
+      fontListeners.add(listener);
+      return () => fontListeners.delete(listener);
+    },
+    () => fontEpoch,
+    () => 0,
+  );
+}
+
+/** The epoch now, for a cache that holds something read from the font. */
+export function currentFontEpoch(): number {
+  return fontEpoch;
 }
 
 function family(): string {

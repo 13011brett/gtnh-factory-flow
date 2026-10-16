@@ -31,6 +31,7 @@ import { useRenderedHandles } from "../../use-rendered-handles";
 import { usePortRowBrowse } from "../../use-port-row-browse";
 import type { StorageNodeData } from "../../StorageNode";
 import { checklistLocked } from "../../RecipeNode";
+import { useFontEpoch } from "../text-measure";
 import { TO_PRODUCT, TO_TRASH, bufferThroughput, buildDrawerView } from "./drawer-model";
 import { DrawerIcon } from "./DrawerIcon";
 import { BoardMenu, MenuLine, MenuRow } from "../menus/BoardMenu";
@@ -85,6 +86,7 @@ export function CleanDrawer({
   role: StorageRole;
 }) {
   const { storage, result } = data;
+  const fontEpoch = useFontEpoch();
   useEffect(() => ensureInteractionHost(), []);
   const category = useFactoryStore((state) =>
     getCategoryPresentation(state.project.recipes, storage.kind, storage.resourceId),
@@ -127,7 +129,7 @@ export function CleanDrawer({
       buildDrawerView({ storage, role, label, result, unanchored, unmet, linked: role !== "idle" }),
     // The rate and power dials change the strings (the units are read inside).
     // eslint-disable-next-line react-hooks/exhaustive-deps
-    [storage, role, label, result, unanchored, unmet, rateUnit, powerUnit],
+    [storage, role, label, result, unanchored, unmet, rateUnit, powerUnit, fontEpoch],
   );
   // "Set rate" blinks off the board's one clock (virtual/prompt-phase.ts).
   useEffect(() => {
@@ -595,6 +597,7 @@ export function CleanDrawerFace({
   const label = resourceLabel(
     category ?? { id: storage.resourceId, displayName: storage.displayName },
   );
+  useFontEpoch();
   const view = buildDrawerView({
     storage,
     role,

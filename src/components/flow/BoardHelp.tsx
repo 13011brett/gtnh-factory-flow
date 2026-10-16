@@ -11,7 +11,6 @@ import {
   RotateCcw,
   Search,
   Share2,
-  Store,
   Library,
   Trash2,
   TriangleAlert,
@@ -225,7 +224,6 @@ const PLAN_TOTALS: HelpCard = {
 const MACHINES: HelpCard = {
   title: "Machine list",
   rows: [
-    { icon: Store, text: "In *Settings* (the menu on a phone)" },
     { text: "Required *machines by tier*" },
     { chip: "PEAK/AVG", text: "Full-load / actual power" },
     { mouse: "left", text: "Click a row to *locate machines*" },

@@ -5,7 +5,7 @@ import { memo, useCallback, useEffect, useLayoutEffect, useRef, useState, type C
 import { snapToGrid } from "@/lib/board-grid";
 import type { FactoryAnnotation } from "@/lib/model/types";
 import { useFactoryStore } from "@/store/factory-store";
-import { measureClean } from "../text-measure";
+import { measureClean, useFontEpoch } from "../text-measure";
 import type { TipSpec } from "../interaction/tip-spec";
 import { NoteMenu, type NoteMenuState } from "./NoteMenu";
 import "./note.css";
@@ -71,6 +71,7 @@ function caretOffsetAt(display: HTMLElement | null, x: number, y: number): numbe
 
 function StickyNoteComponent({ data, selected, width, height }: NodeProps<StickyNoteFlowNode>) {
   const { annotation } = data;
+  useFontEpoch();
   const updateAnnotation = useFactoryStore((state) => state.updateAnnotation);
   const deleteAnnotation = useFactoryStore((state) => state.deleteAnnotation);
   const locked = useFactoryStore((state) => state.isReadOnly || state.checklistMode);

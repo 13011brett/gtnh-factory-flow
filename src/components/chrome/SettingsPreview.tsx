@@ -9,19 +9,17 @@ const CARD_SCALE = [0.78, 0.9, 1, 1.14];
 /**
  * The settings' pictures of what they change, beside the section's rows, drawn from the settings as they are now so a
  * switch shows its effect at once (the mod's SettingsPreview): Board shows two cards on a board over a little world,
- * the board fading as See-through rises, names under the cards when zoomed out, a circuit among a card's inputs, the
+ * names under the cards when zoomed out, a circuit among a card's inputs, the
  * cards bigger or smaller with Size; Sound shows a speaker at its loudness; Controls the mouse and what each button does.
  */
 export function SettingsPreview({
   section,
-  seeThrough,
   names,
   circuit,
   sizeIndex,
   soundIndex,
 }: {
   section: string;
-  seeThrough: number;
   names: boolean;
   circuit: boolean;
   sizeIndex: number;
@@ -29,23 +27,19 @@ export function SettingsPreview({
 }) {
   if (section === "Sound") return <SoundPicture level={soundIndex} />;
   if (section === "Controls") return <ControlsPicture />;
-  return <BoardPicture seeThrough={seeThrough} names={names} circuit={circuit} scale={CARD_SCALE[sizeIndex < 0 ? 2 : sizeIndex]} />;
+  return <BoardPicture names={names} circuit={circuit} scale={CARD_SCALE[sizeIndex < 0 ? 2 : sizeIndex]} />;
 }
 
 function BoardPicture({
-  seeThrough,
   names,
   circuit,
   scale,
 }: {
-  seeThrough: number;
   names: boolean;
   circuit: boolean;
   scale: number;
 }) {
-  // The board's own paper, as solid as See-through leaves it: the world shows through the rest.
-  const solid = 1 - seeThrough / 100;
-  const paper = { "--sp-solid": String(solid), "--sp-scale": String(scale) } as CSSProperties;
+  const paper = { "--sp-scale": String(scale) } as CSSProperties;
   return (
     <div className="sp-board" style={paper} data-names={names ? "" : undefined} data-circuit={circuit ? "" : undefined}>
       <div className="sp-world" />

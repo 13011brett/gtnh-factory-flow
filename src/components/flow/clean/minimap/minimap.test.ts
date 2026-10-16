@@ -1,20 +1,15 @@
 // @vitest-environment jsdom
 import { beforeEach, describe, expect, it } from "vitest";
-import { fitView, fitZoomIndex, toBoard, toMap, tileVisible, drawMinimap } from "./minimap-draw";
+import { fitView, toBoard, toMap, tileVisible, drawMinimap } from "./minimap-draw";
 import { mapCamera } from "./minimap-engine";
 import { dockPadding } from "./dock-clearance";
 import {
   DEFAULT_MINIMAP,
   MINIMAP_KEY,
   MINIMAP_SIZES,
-  MINIMAP_ZOOMS,
   getMinimap,
-  nearestZoomIndex,
   normalizeMinimap,
-  noteFittedZoom,
-  upgradeMinimap,
   setMinimap,
-  stepMinimapZoom,
 } from "./minimap-settings";
 import { buildScene, formatCount, wireColor } from "./minimap-scene";
 
@@ -27,57 +22,37 @@ describe("minimap settings", () => {
 
   it("falls back to the defaults for anything stored badly", () => {
     expect(normalizeMinimap(undefined)).toEqual(DEFAULT_MINIMAP);
-    expect(normalizeMinimap({ size: "gigantic", shape: 3, corner: "middle", zoom: 99, fade: 1000 })).toEqual({
-      ...DEFAULT_MINIMAP,
-      zoom: MINIMAP_ZOOMS.length - 1,
-    });
+    expect(normalizeMinimap({ size: "gigantic", shape: 3, corner: "middle", zoom: 99, fit: false, fade: 1000 })).toEqual(
+      DEFAULT_MINIMAP,
+    );
   });
 
-  it("opens small and fitted to the whole plan, with no see-through of its own", () => {
+  it("opens small, with no zoom or see-through of its own", () => {
     expect(DEFAULT_MINIMAP.size).toBe("small");
-    expect(DEFAULT_MINIMAP.fit).toBe(true);
+    expect("zoom" in DEFAULT_MINIMAP).toBe(false);
+    expect("fit" in DEFAULT_MINIMAP).toBe(false);
     expect("fade" in DEFAULT_MINIMAP).toBe(false);
   });
 
-  it("puts settings saved before the fitted map back to small and fitted, keeping the rest", () => {
-    const old = { show: true, size: "medium", shape: "circle", corner: "top-left", zoom: 5, follow: true, fade: 30 };
-    expect(normalizeMinimap(upgradeMinimap(old))).toEqual({
-      ...DEFAULT_MINIMAP,
+  it("ignores a zoom stored by an earlier version and keeps the rest", () => {
+    const old = { show: true, size: "medium", shape: "circle", corner: "top-left", zoom: 5, fit: false, follow: true, fade: 30 };
+    expect(normalizeMinimap(old)).toEqual({
       show: true,
+      size: "medium",
       shape: "circle",
       corner: "top-left",
       follow: true,
     });
-    // Once saved with fit, a chosen size and zoom stay.
-    const chosen = { ...DEFAULT_MINIMAP, size: "large", fit: false, zoom: 6 };
-    expect(normalizeMinimap(upgradeMinimap(chosen))).toEqual(chosen);
   });
 
-  it("steps a hand zoom on from the fitted zoom on screen, leaving Fit", () => {
-    setMinimap({ fit: true, zoom: 0 });
-    noteFittedZoom(0.2);
-    stepMinimapZoom(1);
-    expect(getMinimap()).toMatchObject({ fit: false, zoom: nearestZoomIndex(0.2) + 1 });
-    expect(MINIMAP_ZOOMS[nearestZoomIndex(0.2)]).toBe(0.18);
-  });
-
-  it("keeps the mod's sizes and ten zoom steps", () => {
+  it("keeps the mod's sizes", () => {
     expect(MINIMAP_SIZES).toEqual({ small: 130, medium: 190, large: 260, huge: 355 });
-    expect(MINIMAP_ZOOMS).toHaveLength(10);
-    expect(MINIMAP_ZOOMS[DEFAULT_MINIMAP.zoom]).toBe(0.09);
   });
 
-  it("writes to the browser and steps the zoom within its ends", () => {
+  it("writes to the browser", () => {
     setMinimap({ shape: "circle" });
-    expect(JSON.parse(window.localStorage.getItem(MINIMAP_KEY)!)).toMatchObject({ shape: "circle", fit: true });
-    setMinimap({ zoom: 0, fit: false });
-    stepMinimapZoom(-1);
-    expect(getMinimap().zoom).toBe(0);
-    setMinimap({ zoom: 9 });
-    stepMinimapZoom(1);
-    expect(getMinimap().zoom).toBe(9);
-    stepMinimapZoom(-1);
-    expect(getMinimap().zoom).toBe(8);
+    expect(JSON.parse(window.localStorage.getItem(MINIMAP_KEY)!)).toMatchObject({ shape: "circle" });
+    expect(getMinimap().shape).toBe("circle");
   });
 });
 
@@ -154,14 +129,6 @@ describe("minimap drawing", () => {
     const tile = { id: "t", kind: "card" as const, x: 5000, y: 0, w: 100, h: 100, tint: "#888888", label: "" };
     expect(tileVisible(view, tile)).toBe(false);
     expect(tileVisible(view, { ...tile, x: 100 })).toBe(true);
-  });
-
-  it("picks the finest zoom that shows the whole plan", () => {
-    const bounds = { x0: 0, y0: 0, x1: 2000, y1: 500 };
-    const i = fitZoomIndex(bounds, 190, MINIMAP_ZOOMS);
-    expect(MINIMAP_ZOOMS[i]! * 2000).toBeLessThanOrEqual(190 * 0.9 + 1e-9);
-    expect(i === MINIMAP_ZOOMS.length - 1 || MINIMAP_ZOOMS[i + 1]! * 2000 > 190 * 0.9).toBe(true);
-    expect(fitZoomIndex(undefined, 190, MINIMAP_ZOOMS)).toBe(2);
   });
 
   it("draws wires and tiles through the 2D context, wires first, and skips tiles off the map", () => {

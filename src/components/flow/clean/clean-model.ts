@@ -50,7 +50,7 @@ import { orderMachineHandlers } from "../MachinePicker";
 import type { RecipeNodeData } from "../RecipeNode";
 import { CC_GEOMETRY } from "./tokens";
 import { isPinned, pinMachineKey, settingControls } from "./menus/settings-model";
-import { mcTextWidth, measureClean } from "./text-measure";
+import { mcTextWidth, measureClean, useFontEpoch } from "./text-measure";
 
 type VoltageTier = Parameters<typeof getVoltageTierIndex>[0];
 
@@ -409,6 +409,7 @@ export function useCleanCardModel(
   selected: boolean,
 ): { view: CleanCardView; actions: CleanCardActions; context: CleanCardContext } {
   const { projectNode, recipe, result } = data;
+  useFontEpoch();
   const updateNode = useFactoryStore((state) => state.updateNode);
   const averageDraw = useWorkspaceView().averageMachineDraw;
   useRateDisplayUnits();

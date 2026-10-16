@@ -3,7 +3,6 @@ import {
   UI_SCALE_MAX_PERCENT,
   UI_SCALE_MIN_PERCENT,
 } from "@/lib/ui-scale-boot";
-import { SEE_THROUGH_STEP } from "@/components/flow/clean/seethrough/see-through";
 
 /** The mod's Board "Size" choices (Tiny, Small, Normal, Large) as the interface size's percent. */
 export const SIZE_NAMES = ["Tiny", "Small", "Normal", "Large"] as const;
@@ -31,9 +30,3 @@ export function soundIndexOf(enabled: boolean, volume: number): number {
   }
   return best;
 }
-
-/** The See-through slider's values, "0%" to "100%" in steps of 5. */
-export const SEE_THROUGH_NAMES: readonly string[] = Array.from(
-  { length: 100 / SEE_THROUGH_STEP + 1 },
-  (_, index) => `${index * SEE_THROUGH_STEP}%`,
-);

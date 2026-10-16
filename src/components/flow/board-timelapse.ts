@@ -2,12 +2,7 @@ import { playBoardSound } from "@/lib/board-sounds";
 import { computeBoardLevelView } from "@/lib/model/board-windows";
 import type { FactoryProject } from "@/lib/model/types";
 import { useFactoryStore } from "@/store/factory-store";
-import { getBoardTiltSnapshot, writeBoardTilt, type BoardTilt } from "./board-tilt";
-import {
-  isNodeDetailGlanceForced,
-  NODE_GLANCE_LEAVE_ZOOM,
-  setNodeDetailGlanceForced,
-} from "./node-detail";
+import { NODE_GLANCE_LEAVE_ZOOM } from "./node-detail";
 import { boardZoomScale } from "@/lib/ui-scale";
 
 /**
@@ -1158,120 +1153,6 @@ export function stopBoardTimelapse(options?: { reframe?: boolean }): void {
       useFactoryStore.getState().frameBoardNodes();
     }
   }
-  // A preset run hands the player's own settings back however it ended.
-  if (restorePresetSettings) {
-    const restore = restorePresetSettings;
-    restorePresetSettings = undefined;
-    restore();
-  }
-}
-
-/**
- * The two PLAYER-FACING shows: complete configurations (dials, tilt, glance
- * faces) applied for the run and restored when it ends, so pressing play
- * never changes anyone's settings. The dev menu remains the workbench.
- */
-export interface BoardTimelapsePreset {
-  id: string;
-  /** Player-facing name and one plain line on what the camera does. */
-  name: string;
-  line: string;
-  speed: number;
-  volume: number;
-  mode: TimelapseCameraMode;
-  cineZoom?: number;
-  cameraPace: number;
-  wireDrawMs: number;
-  popMs: number;
-  zoom: { min: number; max: number };
-  tilt: BoardTilt;
-  forceGlance: boolean;
-}
-
-export const BOARD_TIMELAPSE_PRESETS: BoardTimelapsePreset[] = [
-  {
-    id: "afar",
-    name: "From afar",
-    line: "One slow shot of the whole build.",
-    speed: 2,
-    volume: 0.15,
-    mode: "cinematic",
-    cineZoom: 1.95,
-    cameraPace: 0.7,
-    wireDrawMs: 660,
-    popMs: 260,
-    zoom: { min: 0.54, max: 0.42 },
-    tilt: { pitch: 11, yaw: -27, drift: true, always: false },
-    forceGlance: true,
-  },
-  {
-    id: "close",
-    name: "Up close",
-    line: "The camera follows each machine as it lands.",
-    speed: 4,
-    volume: 0.15,
-    mode: "follow",
-    cameraPace: 0.15,
-    wireDrawMs: 1440,
-    popMs: 2160,
-    zoom: { min: 0.4, max: 0.7 },
-    tilt: { pitch: 11, yaw: -27, drift: true, always: false },
-    forceGlance: true,
-  },
-];
-
-/** Set while a preset run is live; stopBoardTimelapse hands settings back. */
-let restorePresetSettings: (() => void) | undefined;
-
-export function runBoardTimelapsePreset(preset: BoardTimelapsePreset): boolean {
-  // A live preset run restores its settings first, so `prior` is always
-  // the player's own configuration, never a half-applied show's.
-  stopBoardTimelapse();
-  const prior = {
-    speed: timelapseSpeed,
-    volume: timelapseVolume,
-    mode: timelapseCameraMode,
-    cineZoom: timelapseCineZoom,
-    pace: timelapseCameraPace,
-    wireDrawMs: timelapseWireDrawMs,
-    popMs: timelapsePopMs,
-    zoom: timelapseZoomRange,
-    tilt: getBoardTiltSnapshot(),
-    glance: isNodeDetailGlanceForced(),
-  };
-  setBoardTimelapseSpeed(preset.speed);
-  setBoardTimelapseVolume(preset.volume);
-  setBoardTimelapseCameraMode(preset.mode);
-  if (preset.cineZoom !== undefined) {
-    setBoardTimelapseCineZoom(preset.cineZoom);
-  }
-  setBoardTimelapseCameraPace(preset.cameraPace);
-  setBoardTimelapseWireDrawMs(preset.wireDrawMs);
-  setBoardTimelapsePopMs(preset.popMs);
-  setBoardTimelapseZoomRange(preset.zoom);
-  writeBoardTilt(preset.tilt);
-  setNodeDetailGlanceForced(preset.forceGlance);
-  const restore = () => {
-    setBoardTimelapseSpeed(prior.speed);
-    setBoardTimelapseVolume(prior.volume);
-    setBoardTimelapseCameraMode(prior.mode);
-    setBoardTimelapseCineZoom(prior.cineZoom);
-    setBoardTimelapseCameraPace(prior.pace);
-    setBoardTimelapseWireDrawMs(prior.wireDrawMs);
-    setBoardTimelapsePopMs(prior.popMs);
-    setBoardTimelapseZoomRange(prior.zoom);
-    writeBoardTilt(prior.tilt);
-    setNodeDetailGlanceForced(prior.glance);
-  };
-  const started = startBoardTimelapse();
-  if (started) {
-    // Installed only AFTER the start: startBoardTimelapse begins by
-    // stopping any prior run, and the stop path is what fires this.
-    restorePresetSettings = restore;
-  } else {
-    restore();
-  }
-  return started;
 }
 
 /**

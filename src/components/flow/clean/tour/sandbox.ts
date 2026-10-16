@@ -7,11 +7,10 @@ import { leaveWelcomeTab } from "@/lib/welcome/welcome-tab";
 import { useDesignStore } from "@/store/design-store";
 import { useFactoryStore } from "@/store/factory-store";
 import { getMinimap, setMinimap, snapshotMinimap, type MinimapSettings } from "../minimap/minimap-settings";
-import { readSeeThrough, setSeeThrough } from "../seethrough/see-through";
 
 /**
  * The tour's own plan, kept apart from the player's: the player's design is saved first and put aside, the tour
- * plays on a design of its own called "Tour plan", and what it borrows (the minimap's and the see-through
+ * plays on a design of its own called "Tour plan", and what it borrows (the minimap's
  * settings, the items column's search) is copied first and put back. Leaving from any step keeps the player where
  * they are: if the tour put anything on the plan in front of them it stays, joining their plans as "Tour plan";
  * if not, it is removed and their own design comes back.
@@ -23,7 +22,6 @@ interface Saved {
   priorDesignId?: string;
   tourDesignId?: string;
   minimap: MinimapSettings;
-  seeThrough: number;
   recipeSearch: string;
   /** The designs there were once the tour's plan was made: any other was made by the tour (a task board). */
   known?: Set<string>;
@@ -48,7 +46,6 @@ export async function enterSandbox(): Promise<void> {
   saved = {
     priorDesignId: prior,
     minimap: snapshotMinimap(),
-    seeThrough: readSeeThrough(),
     recipeSearch: factory.recipeSearch,
   };
   // The player's work is saved before the plan is put aside.
@@ -58,7 +55,7 @@ export async function enterSandbox(): Promise<void> {
   await designs.importProjectAsDesign(tourProject(), TOUR_PLAN_NAME);
   saved.tourDesignId = useDesignStore.getState().activeDesignId;
   saved.known = new Set(useDesignStore.getState().designs.map((d) => d.id));
-  // The tour shows its own board: the map on, the paper solid.
+  // The tour shows its own board: the map on.
   setMinimap({ show: true });
 }
 
@@ -66,7 +63,6 @@ export async function enterSandbox(): Promise<void> {
 export function resetBorrowedSettings(): void {
   if (!saved) return;
   setMinimap({ ...saved.minimap, show: true });
-  setSeeThrough(saved.seeThrough);
 }
 
 function madeByTour(s: Saved): string[] {
@@ -127,7 +123,6 @@ export async function leaveSandbox(): Promise<void> {
   factory.clearResourceBrowser();
   factory.setRecipeSearch(s.recipeSearch);
   setMinimap(s.minimap);
-  setSeeThrough(s.seeThrough);
   const onTourPlan = s.tourDesignId !== undefined && designs.activeDesignId === s.tourDesignId;
   if (onTourPlan && tourPlanTouched()) {
     // The plan in front of them joins theirs as "Tour plan": saved as it is, and the screen stays.

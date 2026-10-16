@@ -2,9 +2,10 @@ import type { useStoreApi } from "@xyflow/react";
 import { useFactoryStore } from "@/store/factory-store";
 import { drawMinimap, fitView, type MapView } from "./minimap-draw";
 import { readMinimapRoutes } from "./minimap-feed";
-import { getMinimap, MINIMAP_SIZES, MINIMAP_ZOOMS, noteFittedZoom } from "./minimap-settings";
+import { getMinimap, MINIMAP_SIZES } from "./minimap-settings";
 import { buildScene, type DrawerKind, type Scene, type SceneNode, type TileExtras } from "./minimap-scene";
 import { publishMinimapScene } from "./scene-store";
+import { currentFontEpoch } from "../text-measure";
 
 /**
  * The map's frame loop, outside React: it listens to the board's own store, rebuilds the scene when nodes or
@@ -19,6 +20,8 @@ const REBUILD_GAP_MS = 100;
 /** A map of this many tiles redraws at most every DRAW_GAP_MS while the camera moves (1,500 tiles are 10 ms a draw). */
 const BIG_MAP_TILES = 300;
 const DRAW_GAP_MS = 40;
+/** Where the map looks when there is no plan to fit. */
+const FALLBACK_ZOOM = 0.09;
 
 const IMAGE_CACHE = new Map<string, HTMLImageElement | "loading" | "failed">();
 
@@ -123,6 +126,17 @@ export class MinimapEngine {
   private stopped = false;
   /** The map's face, read once: asking for a computed style every frame would cost a style recalculation. */
   private font: string | undefined;
+  private fontAt = -1;
+
+  /** The canvas's face, read again when the font setting changes. */
+  private fontFor(canvas: HTMLCanvasElement): string {
+    const epoch = currentFontEpoch();
+    if (this.font === undefined || this.fontAt !== epoch) {
+      this.font = getComputedStyle(canvas).fontFamily || "monospace";
+      this.fontAt = epoch;
+    }
+    return this.font;
+  }
   private lastRebuildAt = -1000;
   private deferTimer = 0;
   private drawTimer = 0;
@@ -266,8 +280,8 @@ export class MinimapEngine {
     const circle = cfg.shape === "circle";
     const sel = cfg.follow ? this.scene?.tiles.find((t) => t.selected) : undefined;
     const camera = mapCamera({
-      fit: cfg.fit,
-      zoom: MINIMAP_ZOOMS[cfg.zoom] ?? MINIMAP_ZOOMS[2],
+      fit: true,
+      zoom: FALLBACK_ZOOM,
       side,
       circle,
       bounds: this.scene?.bounds,
@@ -277,7 +291,6 @@ export class MinimapEngine {
       selected: sel ? { x: sel.x + sel.w / 2, y: sel.y + sel.h / 2 } : undefined,
     });
     this.anchor = camera.anchor;
-    if (cfg.fit && camera.fitted) noteFittedZoom(camera.zoom);
     const { cx, cy } = camera;
     const dpr = window.devicePixelRatio || 1;
     const px = Math.round(side * dpr);
@@ -296,7 +309,7 @@ export class MinimapEngine {
       circle,
     };
     drawMinimap(ctx, this.scene, view, {
-      font: (this.font ??= getComputedStyle(canvas).fontFamily || "monospace"),
+      font: this.fontFor(canvas),
       viewRect,
       image: (url) => {
         const hit = IMAGE_CACHE.get(url);

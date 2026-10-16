@@ -13,17 +13,13 @@ import {
 } from "@/lib/app-font";
 import { resetMeasuredFont } from "@/components/flow/clean/text-measure";
 import { useDeviceSettings, writeDeviceSettings } from "@/lib/device-settings";
-import { SEE_THROUGH_STEP, setSeeThrough, useSeeThrough } from "@/components/flow/clean/seethrough/see-through";
 import { MinimapSettingsRows } from "@/components/flow/clean/minimap/MinimapSettingsPanel";
 import { getSoundLevel, playSfx, setSoundLevel, sfxClick, sfxTick, sfxToggle } from "@/lib/sound/sfx";
 import { setUiScalePercent, useUiScalePercent } from "@/lib/ui-scale";
-import { BOARD_TIMELAPSE_PRESETS, runBoardTimelapsePreset } from "@/components/flow/board-timelapse";
-import { useFactoryStore } from "@/store/factory-store";
 import { ChromeMenu, chromeAnchorOf, MENU_ANCHOR_ATTR, type ChromeAnchor } from "./ChromeMenu";
 import { knock, OPEN_CONTROLS_EVENT, OPEN_TOUR_EVENT } from "./chrome-events";
 import { SettingsPreview } from "./SettingsPreview";
 import {
-  SEE_THROUGH_NAMES,
   SIZE_NAMES,
   SOUND_NAMES,
   sizeIndexOf,
@@ -60,22 +56,12 @@ interface Section {
  * right, each with the control that fits it (a switch, a row of choices, a slider), a picture of what the section
  * changes beside them, and the section left open remembered. A change saves at once.
  */
-export function ModSettings({
-  onClose,
-  onOpenMachineList,
-}: {
-  onClose: () => void;
-  onOpenMachineList?: () => void;
-}) {
+export function ModSettings({ onClose }: { onClose: () => void }) {
   const settings = useDeviceSettings();
-  const seeThrough = useSeeThrough();
   const uiPercent = useUiScalePercent();
   const [font, setFont] = useState<AppFontId>(() => getStoredAppFont());
   const [soundIndex, setSoundIndex] = useState(() => getSoundLevel());
   const [menu, setMenu] = useState<{ anchor: ChromeAnchor }>();
-  const canPlayTimelapse = useFactoryStore(
-    (state) => state.project.nodes.length + (state.project.storages?.length ?? 0) >= 2,
-  );
   const dragRef = useRef<string | undefined>(undefined);
 
   useEffect(() => {
@@ -133,48 +119,12 @@ export function ModSettings({
           to: (index) => writeDeviceSettings({ circuitAsInput: index === 1 }),
         },
         {
-          label: "See-through",
-          about: "Fades the board and the overview.",
-          kind: "slider",
-          names: SEE_THROUGH_NAMES,
-          at: seeThrough / SEE_THROUGH_STEP,
-          to: (index) => setSeeThrough(index * SEE_THROUGH_STEP),
-        },
-        {
           label: "Font",
           about: "Sets the font of the planner.",
           kind: "button",
           names: [APP_FONTS.find((option) => option.id === font)?.label ?? "Minecraft"],
           at: 0,
           to: (_, anchor) => anchor && setMenu({ anchor: chromeAnchorOf(anchor) }),
-        },
-        ...(onOpenMachineList
-          ? [
-              {
-                label: "Machine list",
-                about: "Opens the list of machines.",
-                kind: "button" as const,
-                names: ["Open"],
-                at: 0,
-                to: () => {
-                  onClose();
-                  onOpenMachineList();
-                },
-              },
-            ]
-          : []),
-        {
-          label: "Animation",
-          about: "Plays the plan being built.",
-          hint: "build timelapse",
-          kind: "button" as const,
-          names: BOARD_TIMELAPSE_PRESETS.map((preset) => preset.name),
-          at: -1,
-          off: !canPlayTimelapse,
-          to: (index) => {
-            onClose();
-            requestAnimationFrame(() => runBoardTimelapsePreset(BOARD_TIMELAPSE_PRESETS[index]));
-          },
         },
       ],
     },
@@ -295,7 +245,6 @@ export function ModSettings({
           <div className="ms-preview" aria-hidden>
             <SettingsPreview
               section={section.name}
-              seeThrough={seeThrough}
               names={settings.zoomedOutNames}
               circuit={settings.circuitAsInput}
               sizeIndex={sizeIndexOf(uiPercent)}

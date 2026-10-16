@@ -8,8 +8,6 @@ import { useSyncExternalStore } from "react";
  * through `writeDeviceSettings`; storage that is blocked costs the reload its
  * values, nothing more.
  *
- * The See-through slider is not here: it has one home, `useSeeThrough` / `setSeeThrough`
- * (`components/flow/clean/seethrough/see-through.ts`), which the board and the settings both use.
  */
 export interface DeviceSettings {
   /** "Names when zoomed out": the glance cards carry their names. */

@@ -257,6 +257,10 @@ export const drawerPart =
     return el && visible(el) ? el : null;
   };
 
+/** A card's Forced row at a port (what the plan brings in or sends out there anyway). */
+export const forcedRow = (cardIndex: number, side: "Input" | "Output", name: string): Target =>
+  within(portRow(cardIndex, side, name), ".cc-forced");
+
 // endregion
 
 // region The top bar and the chrome
@@ -360,3 +364,14 @@ export const byOwnText =
 
 /** The top bar's Non-recipe key, which opens the non-recipe machines (the mod's own place for it). */
 export const powerKey: Target = barKey("nonrecipe");
+
+/** The overview's block for a resource's spare (forced) flow, with its places and their share bars. */
+export const spareBlock = (name: string): Target => textOf(".rail-spare", new RegExp(escapeRe(name)), () => railRoot());
+
+/** The nth place's share bar of a spare block. */
+export const spareBar =
+  (name: string, index: number): Target =>
+  () => {
+    const bars = [...(spareBlock(name)()?.querySelectorAll(".rail-spare-bar") ?? [])].filter(visible);
+    return bars[index] ?? null;
+  };

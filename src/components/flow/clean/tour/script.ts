@@ -19,11 +19,13 @@ import {
   drawerPart,
   feedbackKey,
   fitKey,
+  forcedRow,
   libraryKey,
   itemTile,
   itemsSearch,
   menuRow,
   nodeCount,
+  pointIn,
   settingsSheet,
   portBox,
   portHandle,
@@ -36,6 +38,8 @@ import {
   recipeOverlay,
   redoKey,
   solved,
+  spareBar,
+  spareBlock,
   storageCount,
   topKey,
   undoKey,
@@ -78,6 +82,35 @@ const closeMenus = A.run(() => {
 });
 
 const BENDER = /Bending Machine/;
+
+// The forced-flow chain: sulfuric acid from a Large Chemical Reactor, its oxygen from an Electrolyzer (water in,
+// oxygen and hydrogen cells out), its acid used by a Mixer (sugar and acid in, diluted acid and charcoal out).
+// Rows are told apart by the text of their parts, run together.
+const ELECTROLYZER = /^Electrolyzer/;
+const ACID_RECIPE = /Sulfur Dust×1Programmed CircuitNCOxygen3,000LWater1,000L/;
+const WATER_TO_OXYGEN = /NCWater1,000LHydrogen Cell×2Oxygen1,000L/;
+const SUGAR_MIXER = /Sugar×4Sulfuric Acid1,000L/;
+const mixers: Target = textOf("button[aria-expanded]", /^Mixer[0-9]/, recipeOverlay);
+
+/** Whether the drawer for a resource is a trash drawer (or, with "Product", a product drawer): read off its rule key. */
+function drawerIs(name: string, kind: "Trash" | "Product"): boolean {
+  const key = drawerPart(name, "rule")();
+  if (!key) return false;
+  const trash = key.getAttribute("aria-label") === "Rule: Trash";
+  return kind === "Trash" ? trash : !trash;
+}
+
+/** Electrolyzers to pin: twice what the reactor needs for the mixer's acid, so they make too much oxygen. */
+function electrolyzersForExcess(): number {
+  const nodes = store().project.nodes;
+  const flows = (index: number, side: "inputs" | "outputs") => {
+    const id = nodes[index]?.id;
+    return id ? store().lastResult.nodes[id]?.[side]?.["fluid:oxygen"]?.amountPerSecond ?? 0 : 0;
+  };
+  const each = flows(1, "outputs") / Math.max(1, machines(1));
+  const needed = flows(0, "inputs");
+  return each > 0 ? Math.max(6, 2 * Math.ceil(needed / each - 1e-6)) : 10;
+}
 
 // region From the items list to a card
 
@@ -406,22 +439,13 @@ const units: Step = {
 
 // region Forced inputs and outputs
 
-/** The bender, added the way step one added it (search, pick the item, add its recipe), on a clean board. */
-const addBender: Action[] = [
-  A.run(() => {
-    store().clearResourceBrowser();
-    store().setRecipeSearch("");
-  }),
-  A.type(itemsSearch, "iron plate", { label: "items search" }),
-  A.until(() => itemTile("Iron Plate")() !== null, "Iron Plate in the list"),
-  A.click(itemTile("Iron Plate"), { label: "Iron Plate" }),
-  A.until(() => recipeOverlay() !== null, "recipe search"),
-  A.until(() => addRecipe(BENDER)() !== null, "the bender's recipe", 20000),
-  A.show(addRecipe(BENDER)),
-  A.click(addRecipe(BENDER), { label: "add the bender's recipe" }),
-  A.until(() => nodeCount() === 1, "the card"),
-  A.until(solved, "the solve"),
-  fit,
+const LARGE_REACTOR = /^Large Chemical Reactor/;
+
+/** The recipe search's add key for a port's what-makes-it (left click) or what-uses-it (right click) page. */
+const searchFromPort = (port: Target, button: 0 | 2, label: string): Action[] => [
+  A.click(within(port, ".cc-icon"), { button, label }),
+  A.until(() => recipeOverlay() !== null, `${label}: recipe search`, 20000),
+  A.wait(300),
 ];
 
 const forcedAdd: Step = {
@@ -429,12 +453,35 @@ const forcedAdd: Step = {
   actions: [
     A.run(() => store().cleanBoard()),
     A.until(() => nodeCount() === 0, "the clean board"),
-    ...addBender,
-    A.click(within(portRow(0, "Input", "Iron Ingot"), ".cc-icon"), { label: "the ingots input" }),
-    A.until(() => recipeOverlay() !== null, "what makes ingots", 20000),
-    A.until(() => addRecipe(/./)() !== null, "a recipe that makes ingots", 20000),
-    A.show(addRecipe(/./)),
-    A.click(addRecipe(/./), { label: "add the maker" }),
+    A.run(() => {
+      store().clearResourceBrowser();
+      store().setRecipeSearch("");
+    }),
+    A.type(itemsSearch, "sulfuric acid", { label: "items search" }),
+    A.until(() => itemTile("Sulfuric Acid")() !== null, "Sulfuric Acid in the list"),
+    A.click(itemTile("Sulfuric Acid"), { label: "Sulfuric Acid" }),
+    A.until(() => recipeOverlay() !== null, "recipe search"),
+    A.until(() => addRecipe(LARGE_REACTOR, ACID_RECIPE)() !== null, "the reactor's recipe", 20000),
+    A.show(addRecipe(LARGE_REACTOR, ACID_RECIPE)),
+    A.click(addRecipe(LARGE_REACTOR, ACID_RECIPE), { label: "add the reactor's recipe" }),
+    A.until(() => nodeCount() === 1, "the card"),
+    A.until(solved, "the solve"),
+    fit,
+    A.type(portBox(0, "Output", "Sulfuric Acid"), "20", { enter: true, label: "the acid's rate box" }),
+    A.until(() => machines(0) > 0, "the reactor's count"),
+    A.until(solved, "the solve"),
+    A.wait(300),
+  ],
+  note: { text: "Add as many recipes to a plan as you like.", at: card(0) },
+};
+
+const forcedWired: Step = {
+  id: "forced-wired",
+  actions: [
+    ...searchFromPort(portRow(0, "Input", "Oxygen"), 0, "the oxygen input"),
+    A.until(() => addRecipe(ELECTROLYZER, WATER_TO_OXYGEN)() !== null, "the electrolyzer's recipe", 20000),
+    A.show(addRecipe(ELECTROLYZER, WATER_TO_OXYGEN)),
+    A.click(addRecipe(ELECTROLYZER, WATER_TO_OXYGEN), { label: "add the electrolyzer's recipe" }),
     A.until(() => nodeCount() === 2, "the second card"),
     A.until(solved, "the solve"),
     fit,
@@ -449,32 +496,79 @@ const forcedAdd: Step = {
 const forcedInput: Step = {
   id: "forced-input",
   actions: [
-    A.type(cardPart(1, "count"), "1", { enter: true, label: "the maker's count" }),
-    A.until(() => pinnedCount(1) === 1, "the maker's pin"),
-    A.type(cardPart(0, "count"), "6", { enter: true, label: "the bender's count" }),
-    A.until(() => pinnedCount(0) === 6, "the bender's pin"),
+    A.type(cardPart(1, "count"), "1", { enter: true, label: "the electrolyzer's count" }),
+    A.until(() => pinnedCount(1) === 1, "the electrolyzer's pin"),
     A.until(solved, "the solve"),
+    A.until(() => forcedRow(0, "Input", "Oxygen")() !== null, "the reactor's Forced row"),
     A.wait(400),
   ],
   note: {
-    text: "One maker is pinned but the bender needs more ingots than it makes. The plan has to bring in the rest anyway: a *forced input*.",
-    at: portRow(0, "Input", "Iron Ingot"),
+    text:
+      "The acid is set and one electrolyzer is pinned, but it can't keep up. The plan has to bring in the rest of the oxygen anyway: a *forced input*.",
+    at: forcedRow(0, "Input", "Oxygen"),
   },
+};
+
+const forcedUses: Step = {
+  id: "forced-uses",
+  actions: [
+    ...searchFromPort(portRow(0, "Output", "Sulfuric Acid"), 2, "the acid output"),
+    // Far down the list, and a group's rows are drawn only once it is in view: bring the mixers up.
+    A.until(() => mixers() !== null, "the mixers' group", 20000),
+    A.run(() => mixers()?.scrollIntoView({ block: "start", behavior: "instant" as ScrollBehavior })),
+    A.wait(300),
+    A.until(() => addRecipe(/^Mixer/, SUGAR_MIXER)() !== null, "the mixer's recipe", 20000),
+    A.show(addRecipe(/^Mixer/, SUGAR_MIXER)),
+    A.click(addRecipe(/^Mixer/, SUGAR_MIXER), { label: "add the mixer's recipe" }),
+    A.until(() => nodeCount() === 3, "the third card"),
+    A.until(solved, "the solve"),
+    fit,
+    A.wait(400),
+  ],
+  note: { text: "*Right-click* an output to find *what uses it*.", at: card(2) },
 };
 
 const forcedOutput: Step = {
   id: "forced-output",
   actions: [
-    A.type(cardPart(0, "count"), "1", { enter: true, label: "the bender's count" }),
-    A.until(() => pinnedCount(0) === 1, "the bender's pin"),
-    A.type(cardPart(1, "count"), "6", { enter: true, label: "the maker's count" }),
-    A.until(() => pinnedCount(1) === 6, "the maker's pin"),
+    A.type(cardPart(2, "count"), "1", { enter: true, label: "the mixer's count" }),
+    A.until(() => pinnedCount(2) === 1, "the mixer's pin"),
+    // The acid's own rate goes (the mod drops a port's rate once it is wired): the reactor is free to make more than the mixer takes.
+    A.run(() => setNode(0, { portRates: undefined })),
+    A.until(solved, "the solve"),
+    A.wait(600),
+    (c) => A.type(cardPart(1, "count"), String(electrolyzersForExcess()), { enter: true, label: "the electrolyzer's count" })(c),
+    A.until(() => (pinnedCount(1) ?? 0) > 1, "the electrolyzer's pin"),
+    A.until(() => spareBlock("Oxygen")() !== null, "the spare oxygen block", 6000),
     A.until(solved, "the solve"),
     A.wait(400),
   ],
   note: {
-    text: "Now the maker makes more than the bender uses. The excess leaves the plan as a *forced output*.",
-    at: card(1),
+    text:
+      "Electrolyzer pinned high, mixer pinned low: more oxygen is made than used. The excess leaves the plan as a *forced output*.",
+    at: spareBlock("Oxygen"),
+  },
+};
+
+const forcedSplit: Step = {
+  id: "forced-split",
+  actions: [
+    A.click(pointIn(spareBar("Oxygen", 0), 0.97, 0.5), { label: "the first end of the slider" }),
+    A.until(solved, "the solve"),
+    A.wait(1000),
+    A.click(pointIn(spareBar("Oxygen", 1), 0.97, 0.5), { label: "the other end of the slider" }),
+    A.until(solved, "the solve"),
+    A.wait(1000),
+    A.click(pointIn(spareBar("Oxygen", 0), 0.5, 0.5), { label: "the middle of the slider" }),
+    A.until(solved, "the solve"),
+    // Off the bar, so its tip is gone when the note shows.
+    A.go(boardSpot(0.5, 0.12), "free board"),
+    A.wait(400),
+  ],
+  note: {
+    text:
+      "The excess can leave at more than one machine. The *slider* sets the split: oxygen out of the electrolyzer, or extra acid out of the reactor. *Auto* hands it back to the solver.",
+    at: spareBlock("Oxygen"),
   },
 };
 
@@ -485,20 +579,40 @@ const forcedOutput: Step = {
 const trashStep: Step = {
   id: "trash",
   actions: [
-    A.drag(portHandle(0, "Output", "Iron Plate"), clearBeside(card(0), 130), { label: "the plates" }),
-    A.until(() => drawerOf("Iron Plate")() !== null, "the plates drawer"),
+    A.drag(portHandle(2, "Output", "Charcoal"), clearBeside(card(2), 130), { label: "the charcoal" }),
+    A.until(() => drawerOf("Charcoal")() !== null, "the charcoal drawer"),
     A.wait(300),
     // The new drawer can land against the card at the board's edge: Arrange gives it room.
     A.click(topKey(/^Arrange/), { label: "Arrange" }),
     A.wait(1500),
     fit,
     A.wait(400),
-    A.click(drawerPart("Iron Plate", "rule"), { label: "the drawer's rule key" }),
+    A.click(drawerPart("Charcoal", "rule"), { label: "the drawer's rule key" }),
+    A.click(menuRow(/^Void it/), { label: "Void it" }),
+    A.until(() => drawerIs("Charcoal", "Trash"), "the trash drawer"),
+    A.until(solved, "the solve"),
     A.wait(400),
   ],
   note: {
     text: "This key's menu also makes a product drawer *trash*: it voids what comes in, and leaves your outputs.",
-    at: drawerPart("Iron Plate", "rule"),
+    at: drawerPart("Charcoal", "rule"),
+  },
+};
+
+const productStep: Step = {
+  id: "product",
+  actions: [
+    A.when(() => !drawerIs("Charcoal", "Product"), A.seq(
+      A.click(drawerPart("Charcoal", "rule"), { label: "the drawer's rule key" }),
+      A.click(menuRow(/^Keep it/), { label: "Keep it" }),
+    )),
+    A.until(() => drawerIs("Charcoal", "Product"), "the product drawer"),
+    A.until(solved, "the solve"),
+    A.wait(400),
+  ],
+  note: {
+    text: "And back to a *product*. On *Any* it takes whatever comes out; set a rate and the plan works toward it.",
+    at: drawerPart("Charcoal", "body"),
   },
 };
 
@@ -540,7 +654,7 @@ const stickyNote: Step = {
     A.click(textOf("button, [role=menuitem], [role=button], li", /^Add (a )?sticky note$/), { label: "Add sticky note" }),
     A.until(() => css(".sn")() !== null, "the note"),
     A.wait(300),
-    A.type(css(".sn-area"), "Ingots come in from the left.", { keep: true, label: "the note's text" }),
+    A.type(css(".sn-area"), "Hydrogen comes from the electrolyzers by the door.", { keep: true, label: "the note's text" }),
     A.wait(300),
     A.click(boardSpot(0.5, 0.92), { label: "free board" }),
     A.wait(300),
@@ -659,9 +773,13 @@ export const STEPS: Step[] = [
   undo,
   units,
   forcedAdd,
+  forcedWired,
   forcedInput,
+  forcedUses,
   forcedOutput,
+  forcedSplit,
   trashStep,
+  productStep,
   nonRecipe,
   minimapStep,
   stickyNote,

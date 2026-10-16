@@ -489,6 +489,12 @@ const DISTILLUS_HEIGHT_CONTROL = countControl(
   [3, 4, 5, 6, 7, 8, 9, 10, 11, 12],
   9,
 );
+/**
+ * The Mega Distillation Tower's Tower Height: its middle slices, 1 through 5, as its tooltip and the hologram count
+ * them (the top slice is extra). Only distillery mode reads it; the full 5 is the default.
+ */
+const MEGA_DT_HEIGHT = "megaDtHeight";
+const MEGA_DT_HEIGHT_CONTROL = countControl(MEGA_DT_HEIGHT, "Tower Height", [1, 2, 3, 4, 5], 4);
 const LATEX_SINGULARITY = "latexSingularity";
 const LATEX_SINGULARITY_CONTROL = choiceControl(LATEX_SINGULARITY, "Controller Slot", [
   "Empty",
@@ -845,15 +851,27 @@ const MACHINES: Record<string, MachineBehaviour> = {
     speed: 3,
     parallels: (c) => c.voltageTier * 2,
   },
+  // MTEMegaDistillationTower: the mode follows the recipe map. Tower mode: 1.5x speed, 90% EU, 256 parallels.
+  // Distillery mode: 2x speed, 50% EU, getMaxParallelRecipes = 256 * (1 + height / 2) with Java's whole division,
+  // where height is the middle slices plus the top (checkMachine counts on past the last middle slice): 512, 512,
+  // 768, 768 and 1024 parallels for 1 to 5 slices.
   "Mega Distillation Tower": {
-    // Tower mode: 1.5x speed, 10% EU discount, 256 parallels. Distillery mode
-    // (2x, half EU, up to 1024) is a different recipe map and not covered.
     overclock: OVERCLOCK.normal(),
-    speed: 1.5,
-    power: 0.9,
-    parallels: 256,
+    speed: (c) => (c.recipeMap?.toLowerCase() === "distillery" ? 2 : 1.5),
+    power: (c) => (c.recipeMap?.toLowerCase() === "distillery" ? 0.5 : 0.9),
+    parallels: (c) =>
+      c.recipeMap?.toLowerCase() === "distillery"
+        ? 256 * (1 + Math.floor((Math.min(5, Math.max(1, Math.floor(c.value(MEGA_DT_HEIGHT)))) + 1) / 2))
+        : 256,
     fullPowerPool: true,
     unlimitedTierSkip: true,
+    // The dataset's own tower height carries made-up multipliers; ours follows the game.
+    hidesControls: ["structure-tower-height"],
+    controlsFor: (recipe) =>
+      (recipe.source?.recipeMap ?? recipe.machineType ?? "").toLowerCase() === "distillery"
+        ? [MEGA_DT_HEIGHT_CONTROL]
+        : [],
+    note: "Distillery mode: 512 parallels at 1 or 2 slices, 768 at 3 or 4, 1024 at the full 5. Tower mode has 256 parallels at any height.",
   },
   "Molecular Transformer": { overclock: OVERCLOCK.normal() },
   "Nuclear Salt Processing Plant": {

@@ -30,7 +30,6 @@
   box-sizing: border-box;
   border: 2px solid #ffd257;
   pointer-events: none;
-  animation: tour-fade 180ms ease-out both;
 }
 
 .tour-note {
@@ -51,7 +50,6 @@
   pointer-events: auto;
   outline: none;
   user-select: none;
-  animation: tour-in 200ms ease-out both;
 }
 .tour-note[data-nothing] {
   width: 380px;
@@ -166,10 +164,6 @@
 }
 .tour-note-body[data-glyphs] .tour-line {
   margin-bottom: 4px;
-  opacity: 0.8;
-}
-.tour-note-body[data-glyphs] .tour-line[data-lit] {
-  opacity: 1;
 }
 .tour-glyph {
   flex: none;

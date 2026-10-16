@@ -17,8 +17,11 @@ import { useFactoryStore } from "@/store/factory-store";
 import { ResourceIcon } from "@/components/nei/ResourceIcon";
 import { tierChipColors } from "@/components/flow/clean/tokens";
 import { measureClean } from "@/components/flow/clean/text-measure";
-import { ChromeMenu, chromeAnchorOf, MENU_ANCHOR_ATTR, type ChromeAnchor, type MenuEntry } from "./ChromeMenu";
+import { CHROME_SCREEN_K, ChromeMenu, chromeAnchorOf, MENU_ANCHOR_ATTR, type ChromeAnchor, type MenuEntry } from "./ChromeMenu";
 import { PixelBolt } from "./pixel-icons";
+
+/** The sheet's width with the backdrop's side padding, in the mod's GUI pixels (power-picker.css .mp, .mp-backdrop). */
+const SHEET_W = 802 + 16;
 
 /** The columns of kinds, the short groups sharing one (the mod's COLUMNS). */
 const COLUMNS: ReadonlyArray<ReadonlyArray<PowerGroupId | "other">> = [
@@ -67,7 +70,7 @@ export function ModPowerPicker() {
   const [menu, setMenu] = useState<{ kind: "group" | "tier"; anchor: ChromeAnchor }>();
   const [preview, setPreview] = useState<{ entry: Entry; rect: DOMRect }>();
   const sheetRef = useRef<HTMLDivElement>(null);
-  const [frame, setFrame] = useState({ left: 0, right: 0, top: 0 });
+  const [frame, setFrame] = useState({ left: 0, right: 0, top: 0, zoom: 1 });
 
   // Esc closes it, from anywhere (the search too).
   useEffect(() => {
@@ -105,9 +108,13 @@ export function ModPowerPicker() {
       const groups = strip ? Array.from(strip.children) : [];
       const bottom = groups.length ? Math.max(...groups.map((group) => group.getBoundingClientRect().bottom)) : 0;
       const bar = strip ? { getBoundingClientRect: () => ({ bottom }) } : document.querySelector<HTMLElement>("[data-mod-bar]");
-      const scale = getUiScale();
-      const items = main ? Number(main.dataset.rightPx ?? 0) : 0;
-      setFrame({ left: 0, right: Math.round(items), top: bar ? Math.round(bar.getBoundingClientRect().bottom / scale) : 0 });
+      // The mod's size, as the bar and its menus wear it (CHROME_SCREEN_K on the interface's zoom), or smaller where the
+      // board is too narrow for the sheet: the whole picker shrinks rather than its columns cutting the names off.
+      const items = (main ? Number(main.dataset.rightPx ?? 0) : 0) * getUiScale();
+      const room = window.innerWidth - items;
+      const zoom = Math.min(getUiScale() * CHROME_SCREEN_K, room / SHEET_W);
+      const barBottom = bar ? bar.getBoundingClientRect().bottom : 0;
+      setFrame({ left: 0, right: Math.round(items / zoom), top: Math.round(barBottom / zoom), zoom });
     };
     measure();
     window.addEventListener("resize", measure);
@@ -186,8 +193,8 @@ export function ModPowerPicker() {
 
   return createPortal(
     <div
-      className="mp-backdrop ui-zoom"
-      style={{ left: frame.left, right: frame.right, top: frame.top }}
+      className="mp-backdrop"
+      style={{ left: frame.left, right: frame.right, top: frame.top, zoom: frame.zoom }}
       onPointerDown={closePowerMenu}
     >
       <div
@@ -249,7 +256,7 @@ export function ModPowerPicker() {
           )}
         </div>
       </div>
-      {preview ? <Preview entry={preview.entry} rect={preview.rect} /> : null}
+      {preview ? <Preview entry={preview.entry} rect={preview.rect} scale={frame.zoom} /> : null}
       {menu ? (
         <ChromeMenu
           anchor={menu.anchor}
@@ -440,8 +447,7 @@ function TankArt({ size }: { size: number }) {
 }
 
 /** The machine under the mouse, beside its tile: its picture large, its name, kind and unlock tier, what it does. */
-function Preview({ entry, rect }: { entry: Entry; rect: DOMRect }) {
-  const scale = getUiScale();
+function Preview({ entry, rect, scale }: { entry: Entry; rect: DOMRect; scale: number }) {
   const source = entry.kind === "source" ? entry.hit.source : undefined;
   const name = source?.name ?? (entry.kind === "other" ? entry.card.name : "");
   const kind = source ? (POWER_GROUPS.find((group) => group.id === source.group)?.name ?? "") : "Other";

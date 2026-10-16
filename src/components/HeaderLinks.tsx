@@ -6,6 +6,7 @@ import { useDropdownDismiss } from "@/lib/hooks/use-dropdown-dismiss";
 import { Bug, ChevronDown, Compass, Heart, Library, Route } from "lucide-react";
 import { openFeedback } from "@/components/flow/clean/feedback/feedback-store";
 import { startTour } from "@/components/flow/clean/tour/tour-controller";
+import { useIsCompactViewport } from "@/lib/compact-view";
 import { leaveLibrary, openLibrary } from "@/lib/library/library-tab";
 import { openWelcomeTab } from "@/lib/welcome/welcome-tab";
 import { APP_VERSION } from "@/lib/version";
@@ -77,6 +78,8 @@ export function SupportButton() {
  * and Support.
  */
 export function MenuLinks({ onAction, auxiliary = false }: { onAction?: () => void; auxiliary?: boolean }) {
+  // The tour needs the full layout: on a compact one it is not offered rather than doing nothing.
+  const compact = useIsCompactViewport();
   return (
     <div className="flex flex-col">
       <button
@@ -106,7 +109,7 @@ export function MenuLinks({ onAction, auxiliary = false }: { onAction?: () => vo
         </span>
         <span className="truncate">Community</span>
       </button> : null}
-      <button
+      {compact ? null : <button
         type="button"
         onClick={() => {
           onAction?.();
@@ -118,7 +121,7 @@ export function MenuLinks({ onAction, auxiliary = false }: { onAction?: () => vo
           <Route className="h-3.5 w-3.5" aria-hidden />
         </span>
         <span className="truncate">Take the tour</span>
-      </button>
+      </button>}
       <MenuLink href={GITHUB_URL} label="Source on GitHub">
         <GithubMark />
       </MenuLink>

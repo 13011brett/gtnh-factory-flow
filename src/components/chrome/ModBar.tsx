@@ -3,7 +3,7 @@
 import "./chrome.css";
 
 import { useCallback, useEffect, useRef, useState, type MouseEvent } from "react";
-import { useIsCompactViewport } from "@/lib/compact-view";
+import { isCompactViewport, useIsCompactViewport } from "@/lib/compact-view";
 import { usePlanLayout } from "@/components/use-plan-layout";
 import { leaveLibrary, openLibrary, useLibraryTab } from "@/lib/library/library-tab";
 import { isPowerDisplayUnit } from "@/lib/model/rate-unit";
@@ -345,14 +345,19 @@ function helpEntries({
   openControls: () => void;
 }): MenuEntry[] {
   return [
-    {
-      label: "Take the tour",
-      detail: "3 minutes",
-      onSelect: () => {
-        // The tour lives in its own package; with nothing listening yet the knock goes unanswered.
-        knock(OPEN_TOUR_EVENT);
-      },
-    },
+    // The tour needs the full layout: on a compact one it is not offered rather than doing nothing.
+    ...(isCompactViewport()
+      ? []
+      : [
+          {
+            label: "Take the tour",
+            detail: "3 minutes",
+            onSelect: () => {
+              // The tour lives in its own package; with nothing listening yet the knock goes unanswered.
+              knock(OPEN_TOUR_EVENT);
+            },
+          },
+        ]),
     { label: "Controls and shortcuts", onSelect: openControls },
     { label: "Welcome", ruleAbove: true, onSelect: () => HelpLinks.openWelcome() },
     { label: unreadNotes ? "What's new *" : "What's new", detail: HelpLinks.version, onSelect: onChangelog },

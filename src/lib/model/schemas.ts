@@ -625,6 +625,9 @@ export const PLAN_TASK_LIMITS = {
    */
   pictureThumbLength: 96_000,
   pictureFileLength: 200,
+  /** A quest's name and quest line, and its icon's item key. */
+  questTextLength: 200,
+  questIconLength: 512,
 } as const;
 
 const taskIdSchema = z.string().min(1).max(PLAN_TASK_LIMITS.idLength);
@@ -687,13 +690,25 @@ export const planPictureSchema = z.object({
 });
 
 /**
+ * A quest in the game's quest book, the game's only: its id there, with its name, icon (an item key) and quest line.
+ * Kept as it came, so a plan the website saves keeps the game's quests.
+ */
+export const planQuestSchema = z.object({
+  id: taskIdSchema,
+  name: z.string().max(PLAN_TASK_LIMITS.questTextLength),
+  icon: z.string().max(PLAN_TASK_LIMITS.questIconLength).optional(),
+  line: z.string().max(PLAN_TASK_LIMITS.questTextLength).optional(),
+});
+
+/**
  * One thing on a task, each with its own checkbox: a machine (a card on a plan, `link`), a location (`place`) or a
  * screenshot (`picture`). An older checklist line has no kind. `text` is always the thing in words.
  */
 export const planTaskItemSchema = z.object({
   id: taskIdSchema,
   taskId: taskIdSchema,
-  kind: z.enum(["machine", "location", "picture"]).optional(),
+  // "quest" is the game's only: the website shows it as its words and keeps `quest` as it came.
+  kind: z.enum(["machine", "location", "picture", "quest"]).optional(),
   text: z.string().min(1).max(PLAN_TASK_LIMITS.itemTextLength),
   done: z.boolean(),
   order: orderKeySchema,
@@ -701,6 +716,7 @@ export const planTaskItemSchema = z.object({
   nodeId: taskIdSchema.optional(),
   place: planPlaceSchema.optional(),
   picture: planPictureSchema.optional(),
+  quest: planQuestSchema.optional(),
 });
 
 export const planTaskCommentSchema = z.object({

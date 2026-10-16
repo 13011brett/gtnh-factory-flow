@@ -122,6 +122,21 @@ export function planWithAdditions(): FactoryProject {
           file: "2026-10-14_10.30.00.png",
         },
       },
+      {
+        // A quest in the game's quest book: the game's only, kept as it came.
+        id: "i6",
+        taskId: "t1",
+        kind: "quest",
+        text: "Steam Age",
+        done: false,
+        order: "a5",
+        quest: {
+          id: "0f2a43a5-6c1e-4d7a-9b3b-6a8f3b0e2c11",
+          name: "Steam Age",
+          icon: "item:IC2:itemToolBronzePickaxe:0",
+          line: "Tier 1 - Steam",
+        },
+      },
     ],
     taskComments: [
       {

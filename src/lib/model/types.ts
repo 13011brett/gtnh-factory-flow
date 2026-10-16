@@ -171,6 +171,17 @@ export interface PlanPicture {
 }
 
 /**
+ * A quest in the game's quest book (the game's only, as the screenshot is): its id there, with its name, icon (an
+ * item key) and quest line, to read where the book is not. Kept as it came; the website shows the thing's words.
+ */
+export interface PlanQuest {
+  id: string;
+  name: string;
+  icon?: string;
+  line?: string;
+}
+
+/**
  * One thing on a task, its own thing so two people can tick two at once: a machine (`link`), a location (`place`)
  * or a screenshot (`picture`). An item with no `kind` is an older checklist line: a machine when it has a link, else
  * words. `text` is always written, the thing in words, so a reader that knows only lines shows something true.
@@ -178,7 +189,8 @@ export interface PlanPicture {
 export interface PlanTaskItem {
   id: string;
   taskId: string;
-  kind?: PlanTaskItemKind;
+  /** A quest (`quest`) is the game's only: the website shows it as its words. */
+  kind?: PlanTaskItemKind | "quest";
   text: string;
   done: boolean;
   order: string;
@@ -188,6 +200,7 @@ export interface PlanTaskItem {
   nodeId?: string;
   place?: PlanPlace;
   picture?: PlanPicture;
+  quest?: PlanQuest;
 }
 
 /** A comment on a task. `at` is stamped by the server. */

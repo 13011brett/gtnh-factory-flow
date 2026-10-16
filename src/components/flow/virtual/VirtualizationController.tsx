@@ -18,6 +18,8 @@ import { applyZoomTo, setZoomTargets } from "./zoom-var";
 export const CAMERA_MOVING_ATTRIBUTE = "data-camera-moving";
 /** The camera counts as moving until it has rested this long. */
 const CAMERA_REST_MS = 150;
+/** A pan takes the pointer once it has moved this many pixels. */
+const PAN_CAPTURE_SLOP = 4;
 
 /**
  * Feeds the camera to the virtualizer and runs its steps (card-virtualizer.ts), culls the wires
@@ -234,14 +236,7 @@ export const VirtualizationController = memo(function VirtualizationController({
       if (state.transform !== previous.transform || state.width !== previous.width || state.height !== previous.height) {
         feedView();
       }
-      if (state.paneDragging && !previous.paneDragging && downPointer !== undefined) {
-        const pane = board.querySelector(".react-flow__pane") ?? board;
-        try {
-          pane.setPointerCapture(downPointer);
-        } catch {
-          // The pointer is already gone.
-        }
-      }
+      if (state.paneDragging && !previous.paneDragging && downPointer !== undefined) panArmed = true;
       if (state.transform !== previous.transform) cameraMoved(state);
       else if (movingTimer !== undefined && (state.connection.inProgress || state.userSelectionActive)) {
         clearTimeout(movingTimer);
@@ -300,14 +295,32 @@ export const VirtualizationController = memo(function VirtualizationController({
     // A press React Flow takes as a camera pan keeps the pointer on the pane (captured as the pan starts): without
     // it the browser hit-tests every move of the pan against everything on screen to find what is under it (1.1 s
     // of a 5 s pan with a thousand cards in view); captured, every move goes straight to the pane.
+    // Only once the pointer has moved: a press that does not move is a click, and a middle click (a drawer's rate
+    // cleared, a count unpinned) ends on the pane when it is captured, so its auxclick never reaches the control.
     let downPointer: number | undefined;
+    let downAt = { x: 0, y: 0 };
+    let panArmed = false;
     const onPaneDown = (event: PointerEvent) => {
       downPointer = event.pointerId;
+      downAt = { x: event.clientX, y: event.clientY };
+    };
+    const onPaneMove = (event: PointerEvent) => {
+      if (!panArmed || event.pointerId !== downPointer) return;
+      if (Math.hypot(event.clientX - downAt.x, event.clientY - downAt.y) < PAN_CAPTURE_SLOP) return;
+      panArmed = false;
+      const pane = board.querySelector(".react-flow__pane") ?? board;
+      try {
+        pane.setPointerCapture(event.pointerId);
+      } catch {
+        // The pointer is already gone.
+      }
     };
     const onPaneUp = () => {
       downPointer = undefined;
+      panArmed = false;
     };
     board.addEventListener("pointerdown", onPaneDown, true);
+    window.addEventListener("pointermove", onPaneMove, true);
     window.addEventListener("pointerup", onPaneUp, true);
     window.addEventListener("pointercancel", onPaneUp, true);
     board.addEventListener("pointerover", onOver);
@@ -350,6 +363,7 @@ export const VirtualizationController = memo(function VirtualizationController({
       setHovered(undefined);
       setFocused(undefined);
       board.removeEventListener("pointerdown", onPaneDown, true);
+      window.removeEventListener("pointermove", onPaneMove, true);
       window.removeEventListener("pointerup", onPaneUp, true);
       window.removeEventListener("pointercancel", onPaneUp, true);
       board.removeEventListener("pointerover", onOver);

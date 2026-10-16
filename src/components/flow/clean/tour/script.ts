@@ -138,7 +138,7 @@ const mouseAround: Step = {
   ],
   note: {
     text:
-      "{M} *Middle mouse* to pan.\n{W} *Scroll* to zoom.\n{L} *Left click* to pan, or drag things around.\nTry it, then press next.",
+      "{M} *Middle mouse* to pan.\n{W} *Scroll* to zoom.\n{L} *Left click* to pan, or drag things around.",
     nothing: true,
   },
 };
@@ -156,7 +156,7 @@ const keysAround: Step = {
   ],
   note: {
     text:
-      "{K} *W A S D* or the *arrow keys* to pan.\n{K} *Page Up* and *Page Down*, or *+* and *-*, to zoom.\nTry it, then press next.",
+      "{K} *W A S D* or the *arrow keys* to pan.\n{K} *Page Up* and *Page Down*, or *+* and *-*, to zoom.",
     nothing: true,
   },
 };

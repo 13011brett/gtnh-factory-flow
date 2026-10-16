@@ -78,26 +78,41 @@ export function TourHost() {
         void leaveTour();
         return;
       }
+      // Nothing else reaches the planner while the tour plays: only Esc, and the note's own keys.
+      event.preventDefault();
+      event.stopPropagation();
       if (typing || event.ctrlKey || event.metaKey || event.altKey) return;
-      if (event.key === "ArrowRight" || event.key === " " || event.key === "Enter") {
-        event.preventDefault();
-        event.stopPropagation();
-        tourNext();
-      } else if (event.key === "ArrowLeft") {
-        event.preventDefault();
-        event.stopPropagation();
-        tourBack();
-      }
+      if (event.key === "ArrowRight" || event.key === " " || event.key === "Enter") tourNext();
+      else if (event.key === "ArrowLeft") tourBack();
+    };
+    const onKeyUp = (event: KeyboardEvent) => {
+      if (!event.isTrusted) return;
+      event.preventDefault();
+      event.stopPropagation();
     };
     window.addEventListener("keydown", onKey, true);
-    return () => window.removeEventListener("keydown", onKey, true);
+    window.addEventListener("keyup", onKeyUp, true);
+    return () => {
+      window.removeEventListener("keydown", onKey, true);
+      window.removeEventListener("keyup", onKeyUp, true);
+    };
   }, [active]);
 
   if (!mounted) return null;
   return createPortal(
     <div ref={layerRef} className="tour-layer" data-tour="layer" data-active={active ? "" : undefined}>
-      {tour.phase === "playing" ? (
-        <div className="tour-shield" data-tour="shield" onPointerDown={tourHurry} onClick={tourHurry} />
+      {/* Over the whole page for the whole tour: the player can only use the note. While a step plays, a click
+          hurries it to its note. */}
+      {active ? (
+        <div
+          className="tour-shield"
+          data-tour="shield"
+          data-waiting={tour.phase === "waiting" ? "" : undefined}
+          onPointerDown={tour.phase === "playing" ? tourHurry : undefined}
+          onClick={tour.phase === "playing" ? tourHurry : undefined}
+          onWheel={(event) => event.stopPropagation()}
+          onContextMenu={(event) => event.preventDefault()}
+        />
       ) : null}
       {active && note && tour.phase === "waiting" ? (
         <Callout

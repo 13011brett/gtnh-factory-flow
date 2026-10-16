@@ -18,6 +18,10 @@
   background: transparent;
 }
 
+.tour-shield[data-waiting] {
+  cursor: default;
+}
+
 .tour-frame {
   position: fixed;
   left: 0;

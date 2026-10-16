@@ -2,6 +2,7 @@
 
 import { useFactoryStore } from "@/store/factory-store";
 import { NODE_GLANCE_LEAVE_ZOOM } from "../../node-detail";
+import { boardCameraMaxZoom } from "../../board-camera";
 import { boardZoomScale } from "@/lib/ui-scale";
 import { draws } from "./cursor";
 import type { Rect } from "./placement";
@@ -187,6 +188,7 @@ export async function bringIntoView(el: Element): Promise<void> {
 /**
  * Zooms the board in to where cards still show their parts, about the middle of the view. Fit on a narrow board
  * can leave the cards in the glance view (no count, no ports to click); a target off the pane is panned to later.
+ * Nor closer than 1:1: the Fit key fills a big screen, and the steps' drags and drops are laid out at that size.
  */
 export function keepDetail(): void {
   const bridge = getBoardBridge();
@@ -194,8 +196,9 @@ export function keepDetail(): void {
   const v = bridge?.viewport();
   if (!bridge || !pane || !v) return;
   const floor = (NODE_GLANCE_LEAVE_ZOOM + 0.02) * boardZoomScale();
-  if (v.zoom >= floor) return;
-  bridge.setCenter((pane.width / 2 - v.x) / v.zoom, (pane.height / 2 - v.y) / v.zoom, floor);
+  const ceiling = boardCameraMaxZoom();
+  if (v.zoom >= floor && v.zoom <= ceiling) return;
+  bridge.setCenter((pane.width / 2 - v.x) / v.zoom, (pane.height / 2 - v.y) / v.zoom, v.zoom < floor ? floor : ceiling);
 }
 
 /** Whether the element is clipped by a scrolling ancestor (a list scrolled past it). */

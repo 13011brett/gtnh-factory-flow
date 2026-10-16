@@ -32,7 +32,8 @@ import { boardZoomScale } from "@/lib/ui-scale";
  * per card.
  */
 export const BOARD_MIN_ZOOM = 0.05;
-export const BOARD_MAX_ZOOM = 1.8;
+// High enough that Fit fills a big screen with a small plan.
+export const BOARD_MAX_ZOOM = 3;
 
 /**
  * The ceiling as the board actually applies it: the 1:1 number times the

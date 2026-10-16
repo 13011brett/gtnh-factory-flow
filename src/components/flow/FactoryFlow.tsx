@@ -5360,7 +5360,12 @@ export function FactoryFlow() {
     (nodeIds: string[]) => frameBoardCards(nodeIds),
     [frameBoardCards],
   );
-  const handleFitView = useCallback(() => frameBoardCards(), [frameBoardCards]);
+  // The Fit key fills the board with the plan, as close as the board itself zooms: on a big screen a small plan
+  // would otherwise stop at 1:1, a speck in the middle. Landing on a plan (opening one) keeps the 1:1 cap.
+  const handleFitView = useCallback(
+    () => frameBoardCards(undefined, { maxZoom: boardMaxZoomValue }),
+    [frameBoardCards, boardMaxZoomValue],
+  );
 
   // A freshly landed card gets the arrive pop (board motion). Done to the DOM
   // rather than through the node objects on purpose: a transient class is

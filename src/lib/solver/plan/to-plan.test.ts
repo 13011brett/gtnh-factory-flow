@@ -135,16 +135,22 @@ describe.each(EXAMPLES)("example $name", ({ name, load }) => {
     expect(openAsPlan(opened.project).origin).toBeUndefined();
   });
 
-  it("a Build plan opens, solves, and every card runs at its built count", () => {
+  it("a Build plan opens, solves, and every card runs up to its built count, never below what Build ran it at", () => {
+    // Its counts become Up to pins (docs/up-to.md): a card runs as hard as the plan lets it, as in Build, not at its
+    // count whatever it takes. A bare port Build read as a stop is a free end here, so a card may run more than in Build.
     const stored = raw();
+    const books = calculateThroughput(stored, { generatedAt: "t" });
     const plan = toPlanProject(stored);
     const result = calculateThroughput(plan, { generatedAt: "t" });
     expect(result.plan).toBeDefined();
+    expect(result.plan?.failure).toBeUndefined();
     expect(Object.keys(result.bottlenecks ?? {}).filter((key) => key.startsWith("solve-"))).toEqual([]);
     for (const entry of stored.nodes.filter((candidate) => candidate.enabled)) {
       const solved = cardCount(result, entry);
       expect(Number.isFinite(solved)).toBe(true);
-      expect(solved, entry.id).toBeCloseTo(entry.machineCount, 6);
+      expect(solved, entry.id).toBeLessThanOrEqual(entry.machineCount + 1e-6);
+      const built = entry.machineCount * Math.min(1, Math.max(0, books.nodes[entry.id]?.utilization ?? 0));
+      expect(solved, entry.id).toBeGreaterThanOrEqual(built - 1e-6 * Math.max(1, entry.machineCount));
     }
   });
 

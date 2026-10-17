@@ -11,7 +11,7 @@ import { loadInput } from "./__fixtures__/load";
 import { SolveContext } from "./context";
 import { evaluateSupportWith, resolveChoice } from "./enumerate";
 import { setColumnOrder, takeLpCount } from "./lp";
-import { MAX_READOUT_LPS } from "./readout";
+import { MAX_READOUT_LPS, readoutBudget } from "./readout";
 import { runChain, solvePiece } from "./solve-core";
 import { planExtensions, solvePlan } from "./solve-plan";
 import { levels } from "./trade";
@@ -417,6 +417,62 @@ const banked = (taker: "any" | "upTo"): SolveInput =>
     },
   );
 
+/** m (Up to 2, ore -> x) puts its x into a buffer (`rule`, `rate`) that t (x -> y; Up to 1 or any count) draws from. */
+const buffered = (taker: "upTo" | "any", rule: DrawerRule = "ANY", rate = 0): SolveInput =>
+  plan(
+    [machine("m", [port(9, "ore")], [port(1, "x")]), machine("t", [port(1, "x")], [port(2, "y")])],
+    [],
+    taker === "upTo" ? [upTo(["m"], 2), upTo(["t"], 1)] : [upTo(["m"], 2)],
+    {
+      drawers: [
+        {
+          id: "buf",
+          label: "x",
+          kind: "BUFFER",
+          rule,
+          rate,
+          links: [{ node: "m", port: 0 }],
+          takers: [{ node: "t", port: 0 }],
+        },
+      ],
+    },
+  );
+
+/**
+ * s (Up to `feeder`, ore -> x) feeds m (Up to 2, x -> y), whose y goes to a product drawer taking at most 1/s. With
+ * `feeder` 1, m is held at half by both ends at once; with 1.5 its output is the tighter.
+ */
+const twoSided = (feeder: number): SolveInput =>
+  plan(
+    [machine("m", [port(1, "x")], [port(2, "y")]), machine("s", [port(9, "ore")], [port(1, "x")])],
+    [edge("x", "s", 0, "m", 0)],
+    [upTo(["m"], 2), upTo(["s"], feeder)],
+    {
+      drawers: [
+        {
+          id: "out",
+          label: "y",
+          kind: "PRODUCT",
+          rule: "AT_MOST",
+          rate: 1,
+          links: [{ node: "m", port: 0 }],
+        },
+      ],
+    },
+  );
+
+/** p1 and p2 (Up to 1, 1 x/s each) feed c (Up to 1, 3 x a craft): c could take half as much again as both make. */
+const twoProducers = (): SolveInput =>
+  plan(
+    [
+      machine("c", [port(1, "x", 3)], [port(2, "y")]),
+      machine("p1", [port(9, "ore")], [port(1, "x")]),
+      machine("p2", [port(9, "ore")], [port(1, "x")]),
+    ],
+    [edge("x1", "p1", 0, "c", 0), edge("x2", "p2", 0, "c", 0)],
+    [upTo(["c"], 1), upTo(["p1"], 1), upTo(["p2"], 1)],
+  );
+
 /** m (Up to 2) takes x and w, 1 a craft each, from e1 and e2 (Exactly 1, 1/s each): both inputs short at once. */
 const twoShortInputs = (): SolveInput =>
   plan(
@@ -463,6 +519,12 @@ const FIXTURES: Record<string, () => SolveInput> = {
   "topped loop, trading": toppedLoopTrading,
   "banked, any taker": () => banked("any"),
   "banked, Up to taker": () => banked("upTo"),
+  "buffer, Up to taker": () => buffered("upTo"),
+  "buffer, any taker": () => buffered("any"),
+  "buffer with a rule": () => buffered("upTo", "AT_MOST", 0.5),
+  "two-sided, tied": () => twoSided(1),
+  "two-sided, output tighter": () => twoSided(1.5),
+  "two producers": twoProducers,
   "two short inputs": twoShortInputs,
   "two full outputs": twoFullOutputs,
 };
@@ -738,6 +800,87 @@ describe("Up to: a drawer on a wired port is the player's own end", () => {
   });
 });
 
+describe("Up to: a buffer of any rule banks what its takers do not take", () => {
+  it("a slower Up to taker: the maker runs full, the taker full, the buffer banks the rest, nothing forced", () => {
+    const s = solved(buffered("upTo")).solution;
+    expect(s.machineCounts["m"]).toBeCloseTo(2, 9);
+    expect(s.machineCounts["t"]).toBeCloseTo(1, 9);
+    expect(s.drawers.banked).toEqual({ buf: expect.closeTo(1, 9) });
+    expect(s.drawers.rates["buf"]).toBeCloseTo(1, 9);
+    expect(s.drawers.ports["buf"]).toEqual([
+      { port: ref("m", 0, false), ratePerSecond: expect.closeTo(1, 9) },
+      { port: ref("t", 0, true), ratePerSecond: expect.closeTo(1, 9) },
+    ]);
+    expect(s.gatedSinks).toEqual([]);
+    expect(s.gatedSources).toEqual([]);
+    expect(s.openGates).toBe(0);
+    expect(readoutOf(s, "m").reason).toBe("FULL");
+    expect(readoutOf(s, "t").reason).toBe("FULL");
+  });
+
+  it("a taker of any count takes all of it first (ship before banking): nothing banked", () => {
+    const s = solved(buffered("any")).solution;
+    expect(s.machineCounts["m"]).toBeCloseTo(2, 9);
+    expect(s.machineCounts["t"]).toBeCloseTo(2, 9);
+    expect(s.drawers.banked).toEqual({ buf: 0 });
+    expect(s.gatedSinks).toEqual([]);
+  });
+
+  it("a buffer with a rule keeps it over what passes through, and banks nothing", () => {
+    const s = solved(buffered("upTo", "AT_MOST", 0.5)).solution;
+    expect(s.machineCounts["m"]).toBeCloseTo(0.5, 9);
+    expect(s.machineCounts["t"]).toBeCloseTo(0.5, 9);
+    expect(s.drawers.banked).toBeUndefined();
+    expect(s.gatedSinks).toEqual([]);
+    expect(readoutOf(s, "m").reason).toBe("CLOGGED");
+  });
+
+  it("without Up to pools a buffer is wiring only: no bank", () => {
+    const i = buffered("upTo");
+    const ctx = new SolveContext({
+      ...i,
+      pools: i.pools.map((p) => ({ ...p, exact: true, upTo: false })),
+    });
+    expect(ctx.bankPorts.size).toBe(0);
+  });
+});
+
+describe("Up to: the reasons weigh the inputs against the outputs, as old Build does", () => {
+  it("held at both ends at once: the input story first, STARVED; its feeder at full is a BOTTLENECK for it", () => {
+    const s = solved(twoSided(1)).solution;
+    expect(s.machineCounts["m"]).toBeCloseTo(1, 9);
+    expect(readoutOf(s, "m")).toMatchObject({
+      reason: "STARVED",
+      port: ref("m", 0, true),
+      upstream: ["s"],
+    });
+    // Nothing downstream of s could use more of it (m's output is capped too), but m is short of what s makes: s
+    // wants what m would draw at its count.
+    expect(readoutOf(s, "s")).toMatchObject({ reason: "BOTTLENECK", wants: expect.closeTo(2, 9) });
+  });
+
+  it("the output strictly tighter: CLOGGED at the capped output, and its feeder CLOGGED behind it", () => {
+    const s = solved(twoSided(1.5)).solution;
+    expect(s.machineCounts["m"]).toBeCloseTo(1, 9);
+    expect(s.machineCounts["s"]).toBeCloseTo(1, 9);
+    expect(readoutOf(s, "m")).toMatchObject({ reason: "CLOGGED", port: ref("m", 0, false) });
+    expect(readoutOf(s, "s")).toMatchObject({ reason: "CLOGGED", port: ref("s", 0, false) });
+  });
+
+  it("two producers short of one consumer: both are BOTTLENECKs, the consumer STARVED with both upstream", () => {
+    const s = solved(twoProducers()).solution;
+    expect(s.machineCounts["c"]).toBeCloseTo(2 / 3, 9);
+    expect(readoutOf(s, "c")).toMatchObject({
+      reason: "STARVED",
+      port: ref("c", 0, true),
+      upstream: ["p1", "p2"],
+    });
+    for (const p of ["p1", "p2"]) {
+      expect(readoutOf(s, p)).toMatchObject({ reason: "BOTTLENECK", wants: expect.closeTo(2, 9) });
+    }
+  });
+});
+
 describe("Up to: several ports short at once", () => {
   it("two inputs short together, neither alone: STARVED at the first, the other tied", () => {
     const s = solved(twoShortInputs()).solution;
@@ -842,21 +985,32 @@ describe("Up to: wherever a support is settled", () => {
     expect(s.drawers.shortfalls[0]!.limitingNodes).toEqual(["e", "p"]);
   });
 
-  it("the read-out's work is counted: past MAX_READOUT_LPS models a reason is null, in pool order", () => {
-    const n = MAX_READOUT_LPS + 8;
-    const ids = Array.from({ length: n }, (_, k) => `c${String(k).padStart(3, "0")}`);
+  it("the read-out's work is counted: past its budget a reason is null, in pool order", () => {
+    // Ten consumers (Up to 1) each take one of twelve goods a craft from twelve Exactly producers making five a second:
+    // each consumer runs at half, short of all twelve together, and its reason takes thirteen models (inputs fed, then
+    // each input alone), more than its allowance: the budget (96) runs out on the eighth.
+    const goods = Array.from({ length: 12 }, (_, k) => k + 1);
+    const ids = Array.from({ length: 10 }, (_, k) => `c${String(k).padStart(2, "0")}`);
     const i = plan(
       [
-        ...ids.map((id) => machine(id, [port(1, "x")], [port(2, "y")])),
-        machine("e", [], [port(1, "x")], n / 2),
+        ...ids.map((id) =>
+          machine(
+            id,
+            goods.map((g) => port(g, `g${g}`)),
+            [port(99, "y")],
+          ),
+        ),
+        ...goods.map((g) => machine(`p${String(g).padStart(2, "0")}`, [], [port(g, `g${g}`)], 5)),
       ],
-      ids.map((id) => edge(`w${id}`, "e", 0, id, 0)),
+      ids.flatMap((id) =>
+        goods.map((g) => edge(`w${id}-${g}`, `p${String(g).padStart(2, "0")}`, 0, id, g - 1)),
+      ),
       ids.map((id) => upTo([id], 1)),
     );
+    expect(readoutBudget(ids.length)).toBe(MAX_READOUT_LPS);
     const s = solved(i).solution;
     const reasons = ids.map((id) => readoutOf(s, id).reason);
-    expect(reasons.slice(0, MAX_READOUT_LPS).every((r) => r === "STARVED")).toBe(true);
-    expect(reasons.slice(MAX_READOUT_LPS).every((r) => r === null)).toBe(true);
+    expect(reasons).toEqual([...Array<string>(7).fill("STARVED"), null, null, null]);
     for (const id of ids) expect(s.machineCounts[id]).toBeCloseTo(0.5, 9);
   });
 });

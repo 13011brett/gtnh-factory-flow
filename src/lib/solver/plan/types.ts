@@ -213,16 +213,23 @@ export interface DrawerReadout {
    * first, in link order: what each of its wires carries. Empty for a plan with no buffer.
    */
   ports: Record<Id, External[]>;
+  /**
+   * Up to plans only (docs/up-to.md, "Buffers"): per BUFFER with rule ANY, what it banks, units/s: what its makers put
+   * into it beyond what its takers take (old Build's overflow). Never in the forced flows. Absent when the plan has no
+   * Up to pool or no such buffer.
+   */
+  banked?: Record<Id, number>;
 }
 
 /**
- * Why an Up to card runs where it does (docs/up-to.md, "The reasons"):
+ * Why an Up to card runs where it does (docs/up-to.md, "The read-out"; old Build's verdicts):
  * - FULL: at its count; nothing else in the plan would use more of it.
- * - BOTTLENECK: at its count, and the rest of the plan would use more (`wants`).
- * - STARVED: below its count because an input runs short (`port`).
- * - CLOGGED: below its count because an output has nowhere to go (`port`).
- * - UNUSED: at zero because nothing takes what it makes (`port`).
- * - LIMITED: below its count for a reason no single port explains (another rule of the plan).
+ * - BOTTLENECK: at its count, and the rest of the plan would use more, or a STARVED card is short of what it makes
+ *   (`wants`).
+ * - STARVED: below its count because its inputs run short, as tight as its outputs or tighter (`port`).
+ * - CLOGGED: below its count because its outputs have nowhere to go, strictly tighter than its inputs (`port`).
+ * - UNUSED: CLOGGED at zero: nothing takes what it makes (`port`).
+ * - LIMITED: below its count for a reason no port explains (another rule of the plan).
  */
 export type UpToReason = "FULL" | "BOTTLENECK" | "STARVED" | "CLOGGED" | "UNUSED" | "LIMITED";
 

@@ -81,7 +81,14 @@ export function drawerReadout(ctx: SolveContext, point: StageOutcome): DrawerRea
       });
     }
   });
-  return { rates, unmet, shortfalls: [...ctx.shortfalls], ports };
+  if (ctx.bankPorts.size === 0) return { rates, unmet, shortfalls: [...ctx.shortfalls], ports };
+  // With Up to pools a buffer of rule ANY banks what its takers do not take (docs/up-to.md, "Buffers").
+  const banked: Record<string, number> = {};
+  for (const [p, d] of ctx.bankPorts) {
+    const id = ctx.model.drawers[d]!.id;
+    banked[id] = (banked[id] ?? 0) + point.externals[p]!;
+  }
+  return { rates, unmet, shortfalls: [...ctx.shortfalls], ports, banked };
 }
 
 /**
@@ -299,7 +306,8 @@ export function buildSolutionView(
   let externalQuantity = 0;
   model.connectedPorts.forEach((port, p) => {
     const ext = point.externals[p]!;
-    if (!(ext > tol)) return;
+    // What a buffer banks is the buffer's (`DrawerReadout.banked`), not a forced flow.
+    if (!(ext > tol) || ctx.bankPorts.has(p)) return;
     (port.input ? gatedSources : gatedSinks).push({ port: ctx.refOf(p), ratePerSecond: ext });
     externalQuantity += ext;
   });

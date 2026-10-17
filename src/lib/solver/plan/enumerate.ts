@@ -221,11 +221,17 @@ export function enumerate(
     for (let g = 0; g < ctx.model.gates.length; g++) if (g !== out) without.add(g);
     return fixedQuantity(ctx, without).ok;
   });
+  // With Up to pools (docs/up-to.md) a gate whose every port is a buffer's bank, or closed by the guard, can never open
+  // as a gate: never swapped into (it would only drop `out`).
+  const shut = new Set<number>(ctx.bankPorts.keys());
+  if (ctx.guard !== null && ctx.guard.cap <= 0) for (const p of ctx.guard.ports) shut.add(p);
+  const noGate = (g: number): boolean =>
+    shut.size > 0 && ctx.model.gates[g]!.ports.every((p) => shut.has(p));
   const swaps: Array<[number, number]> = [];
   decisions.forEach((out, i) => {
     if (!movable[i]) return;
     for (let into = 0; into < ctx.model.gates.length; into++)
-      if (!open.has(into)) swaps.push([out, into]);
+      if (!open.has(into) && !noGate(into)) swaps.push([out, into]);
   });
   const cap = Math.min(swaps.length, effort(MAX_ALT_SWAPS));
   const tried = swaps.slice(0, cap);

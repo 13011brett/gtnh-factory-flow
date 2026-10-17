@@ -243,8 +243,11 @@ export function relaxedModel(ctx: SolveContext): ModelLp {
   return lp;
 }
 
+/** Closes every external outside `open`'s gates, except what a buffer banks (it is no gate: docs/up-to.md). */
 export function closeGatesOutside(ctx: SolveContext, lp: ModelLp, open: ReadonlySet<number>): void {
-  for (let p = 0; p < lp.nPorts; p++) if (!open.has(ctx.model.portGate[p]!)) lp.closeExt(p);
+  for (let p = 0; p < lp.nPorts; p++) {
+    if (!open.has(ctx.model.portGate[p]!) && !ctx.bankPorts.has(p)) lp.closeExt(p);
+  }
 }
 
 // ---------------------------------------------------------------------------

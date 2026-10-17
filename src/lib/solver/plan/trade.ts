@@ -162,13 +162,17 @@ export function settleTrades(
   return { ok: true, held };
 }
 
-/** The drawer stages' levels: the source drawers' wired ports, then the sinks', each only when there are any. */
+/**
+ * The drawer stages' levels: the source drawers' wired ports, then the sinks' with every port a buffer banks at (what
+ * its takers do not take: old Build's "ship before banking"), each only when there are any.
+ */
 function drawerLevels(ctx: SolveContext): Level[] {
   const sources = new Set<number>();
   const sinks = new Set<number>();
   for (const row of ctx.model.drawers) {
     for (const p of row.externalPorts) (row.kind === "SOURCE" ? sources : sinks).add(p);
   }
+  for (const p of ctx.bankPorts.keys()) sinks.add(p);
   const out: Level[] = [];
   for (const [buying, ports] of [
     [true, sources],

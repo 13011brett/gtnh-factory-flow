@@ -40,6 +40,8 @@ export interface PoolData {
   machines: number[];
   capacity: number;
   exact: boolean;
+  /** The Up to rule (docs/up-to.md): a cap the push runs up against, never forced flow. Never with `exact`. */
+  upTo: boolean;
 }
 
 export interface DrawerRow {
@@ -232,7 +234,12 @@ export function buildModel(input: SolveInput): ModelData {
       if (m !== undefined && !members.includes(m)) members.push(m);
     }
     if (members.length === 0) continue;
-    pools.push({ machines: members, capacity: pool.capacity, exact: pool.exact });
+    pools.push({
+      machines: members,
+      capacity: pool.capacity,
+      exact: pool.exact,
+      upTo: !pool.exact && pool.upTo === true,
+    });
   }
 
   const drawers: DrawerRow[] = [];

@@ -1,10 +1,18 @@
 /**
  * AUTO's trading (spec-solver 3.4.2; Java `TradeStage`, `Solver.levels/leastAt/heldAt`). The plan buys as far upstream
  * as it can and sells as far downstream as it can: level by level, buying first (most steps first), then selling (most
- * steps first), it trades as little as it can at each level, holding every level before.
+ * steps first), it trades as little as it can at each level, holding every level before. What is held rides on
+ * `Trades`, with the Up to push's bands (docs/up-to.md, `push.ts`), so every model of a support keeps all of it.
  */
 import type { SolveContext } from "./context";
-import { baseModel, closeGatesOutside, runModel, type ModelLp, type SolveResult } from "./lp";
+import {
+  baseModel,
+  closeGatesOutside,
+  levelTerms,
+  runModel,
+  type ModelLp,
+  type SolveResult,
+} from "./lp";
 import type { Note } from "./types";
 import { NUMERICS, scaleOf } from "./validate";
 
@@ -54,14 +62,28 @@ export interface Trades {
   open: ReadonlySet<number> | null;
   levels: Level[];
   caps: number[];
+  /** The push's bands: each Up to pool's level held in [lo, hi] (docs/up-to.md, "Hold"). Empty without Up to pools. */
+  floors: Band[];
+}
+
+/** An Up to pool's level (its machine time over its capacity) held between `lo` and `hi`, both in 0..1. */
+export interface Band {
+  pool: number;
+  lo: number;
+  hi: number;
 }
 
 export function tradesWithin(open: ReadonlySet<number> | null): Trades {
-  return { open, levels: [], caps: [] };
+  return { open, levels: [], caps: [], floors: [] };
 }
 
 export function holding(trades: Trades, level: Level, cap: number): Trades {
-  return { open: trades.open, levels: [...trades.levels, level], caps: [...trades.caps, cap] };
+  return {
+    open: trades.open,
+    levels: [...trades.levels, level],
+    caps: [...trades.caps, cap],
+    floors: trades.floors,
+  };
 }
 
 /**
@@ -73,7 +95,7 @@ export function heldAt(reached: number, extents: ArrayLike<number>): number {
   return reached <= rounding ? 0 : reached;
 }
 
-/** The base model with the open gates and every held level applied. */
+/** The base model with the open gates, every held level and every push band applied. */
 export function tradeModel(ctx: SolveContext, held: Trades): ModelLp {
   const lp = baseModel(ctx);
   if (held.open !== null) closeGatesOutside(ctx, lp, held.open);
@@ -90,6 +112,11 @@ export function tradeModel(ctx: SolveContext, held: Trades): ModelLp {
       cap,
     );
   });
+  // Rows, not column bounds: a column the program keeps must start at 0.
+  for (const band of held.floors) {
+    const { cols, vals } = levelTerms(ctx, lp, band.pool);
+    lp.addRow(cols, vals, band.lo, band.hi);
+  }
   return lp;
 }
 

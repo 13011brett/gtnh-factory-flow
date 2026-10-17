@@ -1,19 +1,28 @@
 /**
  * The public entry of the plan solver (spec-solver 0, 3.4, 3.9.3, 5; Java `Balancer.solveWithAlternatives`): islands,
  * each solved by the full chain (drawer relaxation, stored choice, alternatives, spares) with island-local indexing, then
- * merged into one `SolutionView` + `Alternatives` read over the whole plan. A pure function: same input, same output.
+ * merged into one `SolutionView` + `Alternatives` read over the whole plan; each island's Up to read-out is its own
+ * (docs/up-to.md). A pure function: same input, same output.
  */
 import { inputDigest, type PieceCache } from "./cache";
 import { SolveContext, type StageOutcome } from "./context";
 import { applyChoice, enumerate } from "./enumerate";
 import { splitIslands } from "./islands";
-import { comparePortRef } from "./ids";
+import { compareIds, comparePortRef } from "./ids";
 import { portKey } from "./model";
 import { drawerRelaxation } from "./relax";
 import { applySpares } from "./spares";
 import { buildSolutionView, solvePiece, type CoreExtensions, type Piece } from "./solve-core";
 import { DISPLAY_ORDER, compareKeys } from "./enumerate";
-import type { Alternative, Answer, Leftover, Note, PortRef, SolveInput } from "./types";
+import type {
+  Alternative,
+  Answer,
+  Leftover,
+  Note,
+  PortRef,
+  SolveInput,
+  UpToReadout,
+} from "./types";
 
 /** The extensions WP1c adds to the core: drawer relaxation, and after the point is committed the choice, the search and the spares. */
 export const planExtensions: CoreExtensions = {
@@ -76,6 +85,7 @@ export function solvePlan(
   const options: Alternative[] = [];
   const choiceNotes: Note[] = [];
   const spares: Leftover[] = [];
+  const upTo: UpToReadout[] = [];
   let complete = true;
   for (const piece of pieces) {
     const c = piece.ctx;
@@ -111,6 +121,7 @@ export function solvePlan(
     choiceNotes.push(...answer.alternatives.notes);
     complete &&= answer.alternatives.complete;
     spares.push(...answer.solution.spares);
+    upTo.push(...(answer.solution.upTo ?? []));
   }
   whole.commit(whole.outcome(extents, flows, externals, support));
   // Each option keeps its island's key: a stored choice applies to the islands its anchors sit on.
@@ -123,7 +134,8 @@ export function solvePlan(
         compareKeys(a.key, b.key),
     );
   spares.sort((a, b) => comparePortRef(decisionOf(a), decisionOf(b)));
-  const solution = buildSolutionView(whole, spares);
+  upTo.sort((a, b) => compareIds(a.node, b.node));
+  const solution = buildSolutionView(whole, spares, upTo.length > 0 ? upTo : undefined);
   return {
     kind: "solved",
     solution,

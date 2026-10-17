@@ -19,6 +19,15 @@ export const NUMERICS = {
   edgeFirst: 1e6,
   /** A level that reached at most this (times the plan's scale) is closed. */
   heldAtRounding: 1e-9,
+  /**
+   * The push (docs/up-to.md), in levels (a pool's machine time over its capacity, 0..1): how far past a round's level
+   * a pool must reach to count as rising, and the room under stage A's sum.
+   */
+  pushTol: 1e-8,
+  /** A pool's level is held from the level itself to this far above it (wider than `pushTol`). */
+  bandAbove: 1e-7,
+  /** The Up to read-out, in levels: what a probe must add to count as raising a pool or using more. */
+  readoutTol: 1e-6,
 } as const;
 
 /** `Double.MIN_NORMAL`: the floor that keeps a scale divisible. */

@@ -4,7 +4,8 @@
  * open, every external free, pins and pools held) with each drawer bound given a priced slack. The drawers that needed
  * slack are unmet: their bounds are loosened to what the relaxed point reaches, the core re-runs the chain once on a
  * fresh context under them, and each unmet drawer is told what holds it back (pins, other drawers, pools), found by
- * dropping them one at a time, capped at MAX_PROBES models for the whole relaxation.
+ * dropping them one at a time, capped at MAX_PROBES models for the whole relaxation. Its models keep the Up to guard
+ * (docs/up-to.md): a rate the Up to machines cannot reach is a shortfall that names the Up to card, never a forced flow.
  */
 import { note, type SolveContext } from "./context";
 import { relaxedModel, runModel } from "./lp";
@@ -135,8 +136,16 @@ export function drawerRelaxation(ctx: SolveContext): ((fresh: SolveContext) => v
       ctx.droppedPools.add(p);
       try {
         if (keptWithout(ctx, d)) {
-          groups++;
-          limits.push(note("LIMIT_GROUP", ctx.model.pools[p]!.capacity));
+          const pool = ctx.model.pools[p]!;
+          if (pool.upTo) {
+            // An Up to count is the card's pin: it is named by its card, not counted as a group.
+            const md = ctx.model.machines[pool.machines[0]!]!;
+            nodes.push(md.spec.id);
+            limits.push(note("LIMIT_PIN", md.spec.name, note("PIN_UP_TO")));
+          } else {
+            groups++;
+            limits.push(note("LIMIT_GROUP", pool.capacity));
+          }
         }
       } finally {
         ctx.droppedPools.delete(p);

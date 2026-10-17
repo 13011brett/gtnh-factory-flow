@@ -4,6 +4,7 @@
  */
 import { comparePortRef } from "./ids";
 import { buildModel, TICKS_PER_SECOND, type ModelData } from "./model";
+import type { Trades } from "./trade";
 import { NUMERICS, scaleOf, solutionScale, validatePoint } from "./validate";
 import type {
   ChoiceKey,
@@ -23,6 +24,17 @@ export const PIN_STRENGTH: PinKind[] = ["PIN_COUNT", "PIN_TARGET", "PIN_EXTENT"]
 
 export function note(message: SolverMessage, ...args: Note["args"]): Note {
   return { message, args };
+}
+
+/**
+ * The guard (docs/up-to.md, `guard.ts`): no forced flow makes up an Up to card's gap. The ports on its wire networks
+ * that no drawer is linked to, and the most their externals may trade together.
+ */
+export interface Guard {
+  /** Connected-port indices, ascending. */
+  ports: number[];
+  /** The most their externals (each times `externalWeight`) come to together; 0 closes every one of them. */
+  cap: number;
 }
 
 /** One solved point. Arrays are indexed by machine, edge and connected port. */
@@ -50,8 +62,18 @@ export class SolveContext {
   readonly drawerUpper: number[];
   readonly unmetDrawers: Id[] = [];
   readonly shortfalls: Shortfall[] = [];
-  /** Pool rows left out of the models built now (the relaxation's probes only). */
+  /** Pool rows left out of the models built now (the relaxation's and the read-out's probes only). */
   readonly droppedPools = new Set<number>();
+  /** The Up to pools' indices, in pool order (docs/up-to.md). */
+  readonly upToPools: number[];
+  /** The guard every model this context builds applies; null when none applies (`guard.ts` sets it). */
+  guard: Guard | null = null;
+  /** The guard has been worked out (once per context, before the first pass). */
+  guardReady = false;
+  /** Models built now leave the guard out (the pin diagnosis: a drawer shortfall is never a pin conflict). */
+  guardOff = false;
+  /** The trading (with the push's bands) the committed point was settled under; the Up to read-out probes it. */
+  committedTrades: Trades | null = null;
   shortCircuit = false;
   /** Gates the committed answer opens, tiny ones included (set by the flow stage). */
   openGates: Set<number> = new Set();
@@ -119,8 +141,13 @@ export class SolveContext {
       setBounds(this, i, row.rule, row.rate);
       if (asksForFlow) anchor = true;
     }
-    for (const pool of this.model.pools) anchor ||= pool.exact && pool.capacity > 0;
+    // An exact pool sets its part's size; so does an Up to pool (docs/up-to.md, "Anchoring").
+    for (const pool of this.model.pools) anchor ||= (pool.exact || pool.upTo) && pool.capacity > 0;
     this.anchored = any || anchor;
+    this.upToPools = [];
+    this.model.pools.forEach((pool, p) => {
+      if (pool.upTo) this.upToPools.push(p);
+    });
     this.constructionNotes = this.notes.length;
   }
 
@@ -300,6 +327,13 @@ export class SolveContext {
   /** Machine count at an extent (for display). */
   countOf(m: number, extent: number): number {
     return (extent * this.model.machines[m]!.durTicks) / TICKS_PER_SECOND;
+  }
+
+  /** A pool's machine time at a point: the sum over its machines of extent * durTicks / 20. */
+  poolTime(pool: number, extents: ArrayLike<number>): number {
+    let time = 0;
+    for (const m of this.model.pools[pool]!.machines) time += this.countOf(m, extents[m]!);
+    return time;
   }
 }
 

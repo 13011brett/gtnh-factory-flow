@@ -1,13 +1,17 @@
 /**
  * The AUTO solver for one island (spec-solver 3.4, 3.5.1, 3.9): the chain (fast path, else trades then least flow with
- * the canonical point), the pin diagnosis, and the read-out (`SolutionView`). Alternatives, spares, the stored choice,
- * the drawer relaxation and the island split belong to WP1c; they plug in through `CoreExtensions`.
+ * the canonical point; with Up to pools the guard and the push, docs/up-to.md), the pin diagnosis, and the read-out
+ * (`SolutionView`, its Up to part from `readout.ts`). Alternatives, spares, the stored choice, the drawer relaxation
+ * and the island split belong to WP1c; they plug in through `CoreExtensions`.
  */
 import { note, SolveContext, PIN_STRENGTH, type StageOutcome } from "./context";
 import { runFastPath } from "./fast-path";
 import { runFlowMin } from "./flow-min";
+import { prepareGuard } from "./guard";
 import { TICKS_PER_SECOND, portKey } from "./model";
 import { externalsLp } from "./probes";
+import { pushUpTo } from "./push";
+import { readUpTo } from "./readout";
 import { settleTrades } from "./trade";
 import type {
   Alternatives,
@@ -19,6 +23,7 @@ import type {
   PortRef,
   SolutionView,
   SolveInput,
+  UpToReadout,
 } from "./types";
 import { NUMERICS } from "./validate";
 
@@ -93,6 +98,8 @@ export function diagnosePins(ctx: SolveContext): Note | null {
   );
   const saved = new Map<number, number>();
   const dropped: Note[] = [];
+  // Without the guard (docs/up-to.md): a rate the Up to machines cannot reach is the drawer relaxation's to report.
+  ctx.guardOff = true;
   try {
     for (const m of pinned) {
       if (externalsLp(ctx, null).ok) break;
@@ -109,21 +116,26 @@ export function diagnosePins(ctx: SolveContext): Note | null {
       );
     }
   } finally {
+    ctx.guardOff = false;
     for (const [m, value] of saved) ctx.pinnedExtent[m] = value;
   }
   return dropped.length === 0 ? null : note("PIN_CONFLICT", dropped);
 }
 
-/** One pass of the chain: the fast path, else trades then least flow with the canonical point. */
+/**
+ * One pass of the chain: the guard (once per context), then the fast path, else trades, the Up to push, and least flow
+ * with the canonical point.
+ */
 function pass(ctx: SolveContext): Settlement {
   ctx.stageNotes = [];
   ctx.shortCircuit = false;
+  prepareGuard(ctx);
   runFastPath(ctx);
   if (ctx.shortCircuit) return { kind: "solved" };
   const trades = settleTrades(ctx);
   if (!trades.ok)
     return { kind: "stalled", reason: note("STAGE_FAILED", "trades", trades.rejection) };
-  const flow = runFlowMin(ctx, trades.held);
+  const flow = runFlowMin(ctx, pushUpTo(ctx, trades.held));
   if (!flow.ok)
     return { kind: "stalled", reason: note("STAGE_FAILED", "internal flow", flow.rejection) };
   return ctx.point === null
@@ -252,8 +264,15 @@ function wiringDiagnostics(ctx: SolveContext, tol: number, terminalIn: External[
   return [...result.values()];
 }
 
-/** The view over the committed point (`SolutionView.of`). */
-export function buildSolutionView(ctx: SolveContext, spares: Leftover[] = []): SolutionView {
+/**
+ * The view over the committed point (`SolutionView.of`). `upTo` is the Up to read-out (`readout.ts`, or the islands'
+ * read-outs merged), absent when the plan has no Up to pool.
+ */
+export function buildSolutionView(
+  ctx: SolveContext,
+  spares: Leftover[] = [],
+  upTo?: UpToReadout[],
+): SolutionView {
   const model = ctx.model;
   const point = ctx.point!;
   const tol = NUMERICS.dust * ctx.solutionScaleOf(point);
@@ -261,10 +280,14 @@ export function buildSolutionView(ctx: SolveContext, spares: Leftover[] = []): S
   const machineCounts: Record<string, number> = {};
   const edgeFlowsPerSecond: Record<string, number> = {};
   const unneeded: string[] = [];
+  // An idle Up to machine is UNUSED in its read-out, never "(set count)" (docs/up-to.md, "Anchoring").
+  const upToMachine = new Set<number>();
+  for (const p of ctx.upToPools) for (const m of model.pools[p]!.machines) upToMachine.add(m);
   model.machines.forEach((md, m) => {
     extentsPerSecond[md.spec.id] = point.extents[m]!;
     machineCounts[md.spec.id] = (point.extents[m]! * md.durTicks) / TICKS_PER_SECOND;
-    if (Number.isNaN(ctx.pinnedExtent[m]!) && point.extents[m]! <= tol) unneeded.push(md.spec.id);
+    if (Number.isNaN(ctx.pinnedExtent[m]!) && !upToMachine.has(m) && point.extents[m]! <= tol)
+      unneeded.push(md.spec.id);
   });
   // The plan's own wires only: a buffer's edges are the solver's, read out per port on the drawer.
   for (let e = 0; e < model.drawnEdges; e++)
@@ -297,6 +320,7 @@ export function buildSolutionView(ctx: SolveContext, spares: Leftover[] = []): S
   let totalInternalFlow = 0;
   for (const f of point.flows) totalInternalFlow += f;
   return {
+    ...(upTo !== undefined ? { upTo } : {}),
     extentsPerSecond,
     machineCounts,
     edgeFlowsPerSecond,
@@ -359,14 +383,8 @@ export function solvePiece(input: SolveInput, ext: CoreExtensions = {}): Piece {
     complete: true,
     notes: [],
   };
-  return {
-    ctx,
-    answer: {
-      kind: "solved",
-      solution: buildSolutionView(ctx, finished?.spares ?? []),
-      alternatives,
-    },
-  };
+  const solution = buildSolutionView(ctx, finished?.spares ?? [], readUpTo(ctx));
+  return { ctx, answer: { kind: "solved", solution, alternatives } };
 }
 
 /** The answer for a plan solved as ONE model (no island split: that is WP1c's `islands.ts`). */

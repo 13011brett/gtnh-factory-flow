@@ -33,7 +33,7 @@
   user-select: none;
   overflow: hidden;
 }
-/* Right of the board (the settings' "Items list" puts the items on the left): the edge on its other side. */
+/* Right of the board (the settings' "Item browser" puts the items on the left): the edge on its other side. */
 .rail-root[data-side="right"] {
   border-right: 0;
   border-left: 1px solid #0c0d10;

@@ -14,7 +14,7 @@ export interface DeviceSettings {
   zoomedOutNames: boolean;
   /** "Circuit as an input": a programmed circuit counts as an input of its card. */
   circuitAsInput: boolean;
-  /** "Items list": on plan boards the items list on the left and the overview on the right (the other way round). */
+  /** "Item browser": on plan boards the items list on the left and the overview on the right (the other way round). */
   itemsLeft: boolean;
   /** The settings box's open section, kept so it opens where it was left. */
   settingsSection: string;

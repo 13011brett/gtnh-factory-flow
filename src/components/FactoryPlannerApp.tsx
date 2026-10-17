@@ -506,7 +506,7 @@ export function ColumnWorkspace({ workspace, onLoadDatasetVersion, header }: Wor
         } as CSSProperties}
       >
         {/* The bar over the board only; the overview and the items list beside it both run the screen's height, so
-            the bar has the width between them. Which side each takes is the settings' "Items list". */}
+            the bar has the width between them. Which side each takes is the settings' "Item browser". */}
         {header ? (
           <div className="min-w-0" style={{ gridColumn: 2, gridRow: 1 }}>
             {header}

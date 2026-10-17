@@ -119,8 +119,8 @@ export function ModSettings({ onClose }: { onClose: () => void }) {
           to: (index) => writeDeviceSettings({ circuitAsInput: index === 1 }),
         },
         {
-          label: "Items list",
-          about: "Puts the items list on the left or right. The overview takes the other side.",
+          label: "Item browser",
+          about: "The side it sits on.",
           kind: "choice",
           names: ["Left", "Right"],
           at: settings.itemsLeft ? 0 : 1,

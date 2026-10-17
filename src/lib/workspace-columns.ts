@@ -5,7 +5,7 @@
  * Classic boards: items browser left, board, resource inspector right.
  * Plan-mode boards (`project.planMode`, not Pool): the overview rail left, the
  * board, the items browser right, like NEI beside the mod's board, or the other
- * way round (the settings' "Items list"). There is no inspector on those.
+ * way round (the settings' "Item browser"). There is no inspector on those.
  *
  * All lengths are SHELL px.
  */

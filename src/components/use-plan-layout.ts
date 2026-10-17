@@ -14,7 +14,7 @@ export function usePlanLayout(): boolean {
 }
 
 /**
- * Whether the items browser sits right of the board: on plan boards, unless the settings' "Items list" puts it on the
+ * Whether the items browser sits right of the board: on plan boards, unless the settings' "Item browser" puts it on the
  * left (and the overview on the right). A phone's drawers keep it on the right.
  */
 export function useItemsOnRight(): boolean {

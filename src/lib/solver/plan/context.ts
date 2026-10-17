@@ -4,8 +4,18 @@
  */
 import { comparePortRef } from "./ids";
 import { buildModel, TICKS_PER_SECOND, type ModelData } from "./model";
+import type { Trades } from "./trade";
 import { NUMERICS, scaleOf, solutionScale, validatePoint } from "./validate";
-import type { ChoiceKey, DrawerRule, Id, Note, PortRef, Shortfall, SolveInput, SolverMessage } from "./types";
+import type {
+  ChoiceKey,
+  DrawerRule,
+  Id,
+  Note,
+  PortRef,
+  Shortfall,
+  SolveInput,
+  SolverMessage,
+} from "./types";
 
 export type PinKind = "PIN_COUNT" | "PIN_TARGET" | "PIN_EXTENT";
 
@@ -14,6 +24,17 @@ export const PIN_STRENGTH: PinKind[] = ["PIN_COUNT", "PIN_TARGET", "PIN_EXTENT"]
 
 export function note(message: SolverMessage, ...args: Note["args"]): Note {
   return { message, args };
+}
+
+/**
+ * The guard (docs/up-to.md, `guard.ts`): no forced flow makes up an Up to card's gap. The ports on its wire networks
+ * that no drawer is linked to, and the most their externals may trade together.
+ */
+export interface Guard {
+  /** Connected-port indices, ascending. */
+  ports: number[];
+  /** The most their externals (each times `externalWeight`) come to together; 0 closes every one of them. */
+  cap: number;
 }
 
 /** One solved point. Arrays are indexed by machine, edge and connected port. */
@@ -41,8 +62,18 @@ export class SolveContext {
   readonly drawerUpper: number[];
   readonly unmetDrawers: Id[] = [];
   readonly shortfalls: Shortfall[] = [];
-  /** Pool rows left out of the models built now (the relaxation's probes only). */
+  /** Pool rows left out of the models built now (the relaxation's and the read-out's probes only). */
   readonly droppedPools = new Set<number>();
+  /** The Up to pools' indices, in pool order (docs/up-to.md). */
+  readonly upToPools: number[];
+  /** The guard every model this context builds applies; null when none applies (`guard.ts` sets it). */
+  guard: Guard | null = null;
+  /** The guard has been worked out (once per context, before the first pass). */
+  guardReady = false;
+  /** Models built now leave the guard out (the pin diagnosis: a drawer shortfall is never a pin conflict). */
+  guardOff = false;
+  /** The trading (with the push's bands) the committed point was settled under; the Up to read-out probes it. */
+  committedTrades: Trades | null = null;
   shortCircuit = false;
   /** Gates the committed answer opens, tiny ones included (set by the flow stage). */
   openGates: Set<number> = new Set();
@@ -91,13 +122,18 @@ export class SolveContext {
       const row = this.model.drawers[i]!;
       if (row.rule === "ANY") continue;
       const asksForFlow = row.rule !== "AT_MOST" && row.rate > 0;
-      const hasTerms = row.extentMachines.length > 0 || row.flowEdges.length > 0 || row.externalPorts.length > 0;
+      const hasTerms =
+        row.extentMachines.length > 0 || row.flowEdges.length > 0 || row.externalPorts.length > 0;
       if (!hasTerms) {
         // Nothing reaches it: a rule asking for flow cannot be met and would only break the plan.
         if (asksForFlow) {
           this.unmetDrawers.push(row.id);
           this.notes.push(
-            note(row.externalPorts.length > 0 ? "DRAWER_WIRED_IGNORED" : "DRAWER_NOT_CONNECTED", row.label, row.id),
+            note(
+              row.externalPorts.length > 0 ? "DRAWER_WIRED_IGNORED" : "DRAWER_NOT_CONNECTED",
+              row.label,
+              row.id,
+            ),
           );
         }
         continue;
@@ -105,8 +141,13 @@ export class SolveContext {
       setBounds(this, i, row.rule, row.rate);
       if (asksForFlow) anchor = true;
     }
-    for (const pool of this.model.pools) anchor ||= pool.exact && pool.capacity > 0;
+    // An exact pool sets its part's size; so does an Up to pool (docs/up-to.md, "Anchoring").
+    for (const pool of this.model.pools) anchor ||= (pool.exact || pool.upTo) && pool.capacity > 0;
     this.anchored = any || anchor;
+    this.upToPools = [];
+    this.model.pools.forEach((pool, p) => {
+      if (pool.upTo) this.upToPools.push(p);
+    });
     this.constructionNotes = this.notes.length;
   }
 
@@ -119,7 +160,16 @@ export class SolveContext {
       if (!Number.isInteger(i) || i < 0 || i >= md.outQty.length || !(md.outQty[i]! > 0)) continue;
       const actual = chosenExtent * md.outQty[i]!;
       if (actual > rate * (1 + NUMERICS.tieRel)) {
-        this.notes.push(note("OVERSHOOTS_TARGET", md.spec.name, md.spec.outputs[i]!.name, actual, rate, md.spec.id));
+        this.notes.push(
+          note(
+            "OVERSHOOTS_TARGET",
+            md.spec.name,
+            md.spec.outputs[i]!.name,
+            actual,
+            rate,
+            md.spec.id,
+          ),
+        );
       }
     }
   }
@@ -140,7 +190,8 @@ export class SolveContext {
   ): number {
     const row = this.model.drawers[drawer]!;
     let total = 0;
-    for (let i = 0; i < row.extentMachines.length; i++) total += extents[row.extentMachines[i]!]! * row.extentQty[i]!;
+    for (let i = 0; i < row.extentMachines.length; i++)
+      total += extents[row.extentMachines[i]!]! * row.extentQty[i]!;
     for (const e of row.flowEdges) total += flows[e]!;
     for (const p of row.externalPorts) total += externals[p]!;
     return total;
@@ -177,7 +228,8 @@ export class SolveContext {
   carryingGates(externals: ArrayLike<number>, fallback: Iterable<number> = []): Set<number> {
     const carrying = new Set<number>(fallback);
     const dust = NUMERICS.dust * scaleOf(externals);
-    for (let p = 0; p < externals.length; p++) if (externals[p]! > dust) carrying.add(this.model.portGate[p]!);
+    for (let p = 0; p < externals.length; p++)
+      if (externals[p]! > dust) carrying.add(this.model.portGate[p]!);
     return carrying;
   }
 
@@ -192,7 +244,12 @@ export class SolveContext {
   }
 
   /** The point a fresh solve holds, with its derived metrics. `support` overrides the one read off the externals. */
-  outcome(extents: number[], flows: number[], externals: number[], support?: Set<number>): StageOutcome {
+  outcome(
+    extents: number[],
+    flows: number[],
+    externals: number[],
+    support?: Set<number>,
+  ): StageOutcome {
     let qty = 0;
     for (let p = 0; p < externals.length; p++) qty += externals[p]! * this.externalWeight(p);
     let flowSum = 0;
@@ -259,13 +316,24 @@ export class SolveContext {
     this.point = snapped ? this.outcome(extents, flows, externals, committed.support) : committed;
   }
 
-  validate(extents: ArrayLike<number>, flows: ArrayLike<number>, externals: ArrayLike<number>): string | null {
+  validate(
+    extents: ArrayLike<number>,
+    flows: ArrayLike<number>,
+    externals: ArrayLike<number>,
+  ): string | null {
     return validatePoint(this.model, extents, flows, externals);
   }
 
   /** Machine count at an extent (for display). */
   countOf(m: number, extent: number): number {
     return (extent * this.model.machines[m]!.durTicks) / TICKS_PER_SECOND;
+  }
+
+  /** A pool's machine time at a point: the sum over its machines of extent * durTicks / 20. */
+  poolTime(pool: number, extents: ArrayLike<number>): number {
+    let time = 0;
+    for (const m of this.model.pools[pool]!.machines) time += this.countOf(m, extents[m]!);
+    return time;
   }
 }
 

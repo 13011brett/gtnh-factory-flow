@@ -7,10 +7,12 @@
 import { canonicalHolding } from "./canonical";
 import { note, type SolveContext, type StageOutcome } from "./context";
 import { leastFlowHolding } from "./flow-min";
+import { prepareGuard } from "./guard";
 import { comparePortRef } from "./ids";
 import { portKey } from "./model";
 import { fixedQuantity, gatesThatMayHelp } from "./probes";
-import { levels, measureLevel, settleTrades } from "./trade";
+import { pushUpTo } from "./push";
+import { levels, measureLevel, settleTrades, type Trades } from "./trade";
 import type { Alternative, Alternatives, ChoiceKey, External, Note, PortRef, Rank } from "./types";
 import { NUMERICS, scaleOf } from "./validate";
 
@@ -94,7 +96,12 @@ export function displayOrder(): Rank[] {
 export const DISPLAY_ORDER = displayOrder();
 
 /** Why `alt` is not the default: the earliest rule that separates the two. */
-function rankOf(prefs: Preference[], alt: StageOutcome, incumbent: number[][], tolerance: number): Rank {
+function rankOf(
+  prefs: Preference[],
+  alt: StageOutcome,
+  incumbent: number[][],
+  tolerance: number,
+): Rank {
   for (let i = 0; i < Math.min(prefs.length, incumbent.length); i++) {
     const preference = prefs[i]!;
     const mine = preference.measure(alt.externals, alt.flows);
@@ -118,15 +125,26 @@ function rankOf(prefs: Preference[], alt: StageOutcome, incumbent: number[][], t
 // ---------------------------------------------------------------------------
 
 /**
- * The canonical point with exactly `open`'s gates allowed, settled as AUTO settles a plan: trades level by level, then
- * least flow and the canonical tie-break. Null when they do not balance. Commits nothing.
+ * The canonical point with exactly `open`'s gates allowed, settled as AUTO settles a plan: trades level by level, the
+ * Up to push (docs/up-to.md), then least flow and the canonical tie-break; with the trading (and bands) it was settled
+ * under. Null when they do not balance. Commits nothing.
  */
-export function evaluateSupport(ctx: SolveContext, open: ReadonlySet<number>): StageOutcome | null {
-  const trades = settleTrades(ctx, open);
-  if (!trades.ok) return null;
-  const s3 = leastFlowHolding(ctx, trades.held);
+export function evaluateSupportWith(
+  ctx: SolveContext,
+  open: ReadonlySet<number>,
+): { point: StageOutcome; trades: Trades } | null {
+  prepareGuard(ctx);
+  const settled = settleTrades(ctx, open);
+  if (!settled.ok) return null;
+  const trades = pushUpTo(ctx, settled.held);
+  const s3 = leastFlowHolding(ctx, trades);
   if (!s3.ok) return null;
-  return canonicalHolding(ctx, trades.held, s3.point);
+  return { point: canonicalHolding(ctx, trades, s3.point), trades };
+}
+
+/** `evaluateSupportWith`'s point only. */
+export function evaluateSupport(ctx: SolveContext, open: ReadonlySet<number>): StageOutcome | null {
+  return evaluateSupportWith(ctx, open)?.point ?? null;
 }
 
 function asAlternative(
@@ -188,7 +206,8 @@ export function enumerate(
   let flowStar = 0;
   for (const f of point.flows) flowStar += f;
   let qtyStar = 0;
-  for (let p = 0; p < point.externals.length; p++) qtyStar += point.externals[p]! * ctx.externalWeight(p);
+  for (let p = 0; p < point.externals.length; p++)
+    qtyStar += point.externals[p]! * ctx.externalWeight(p);
   const prefs = preferences(ctx);
   const incumbentCost = prefs.map((pref) => pref.measure(point.externals, point.flows));
   const tol = NUMERICS.tieRel * Math.max(Math.max(flowStar, qtyStar), ctx.solutionScaleOf(point));
@@ -204,7 +223,8 @@ export function enumerate(
   const swaps: Array<[number, number]> = [];
   decisions.forEach((out, i) => {
     if (!movable[i]) return;
-    for (let into = 0; into < ctx.model.gates.length; into++) if (!open.has(into)) swaps.push([out, into]);
+    for (let into = 0; into < ctx.model.gates.length; into++)
+      if (!open.has(into)) swaps.push([out, into]);
   });
   const cap = Math.min(swaps.length, effort(MAX_ALT_SWAPS));
   const tried = swaps.slice(0, cap);
@@ -231,7 +251,13 @@ export function enumerate(
     trial.delete(out);
     trial.add(into);
     const alt = evaluateSupport(ctx, trial);
-    if (alt === null || alt.support.size !== incumbent.size || !alt.support.has(into) || alt.support.has(out)) continue;
+    if (
+      alt === null ||
+      alt.support.size !== incumbent.size ||
+      !alt.support.has(into) ||
+      alt.support.has(out)
+    )
+      continue;
     const key = ctx.keyOf(alt.support);
     const text = keyString(key);
     if (seen.has(text)) continue;
@@ -239,7 +265,16 @@ export function enumerate(
     points.set(text, alt);
     const list = byDecision.get(out) ?? [];
     byDecision.set(out, list);
-    list.push(asAlternative(ctx, alt.externals, alt.support, out, into, rankOf(prefs, alt, incumbentCost, tol)));
+    list.push(
+      asAlternative(
+        ctx,
+        alt.externals,
+        alt.support,
+        out,
+        into,
+        rankOf(prefs, alt, incumbentCost, tol),
+      ),
+    );
   }
 
   const best = (a: Alternative, b: Alternative): number =>
@@ -261,7 +296,14 @@ export function enumerate(
   options.sort((a, b) => comparePortRef(a.replaces, b.replaces) || best(a, b));
   if (shown < found) notes.push(note("SHOWING_CLOSEST", shown, found));
   if (cap < swaps.length) notes.push(note("STOPPED_EARLY", cap, swaps.length - cap));
-  if (stats) Object.assign(stats, { decisions: decisions.length, swaps: swaps.length, tried: cap, found, shown });
+  if (stats)
+    Object.assign(stats, {
+      decisions: decisions.length,
+      swaps: swaps.length,
+      tried: cap,
+      found,
+      shown,
+    });
   return { chosen, options, complete, notes };
 }
 
@@ -310,7 +352,8 @@ const sameSet = (a: ReadonlySet<number>, b: ReadonlySet<number>): boolean =>
 
 /**
  * Applies a stored choice, or says in a note why it could not be. Returns the point to commit: the incumbent when the
- * choice no longer fits or already is the answer; never null.
+ * choice no longer fits or already is the answer; never null. When it is the choice's point, `ctx.committedTrades`
+ * becomes the trading that point was settled under (the Up to read-out probes it).
  */
 export function applyChoice(ctx: SolveContext, choice: readonly PortRef[]): StageOutcome {
   const incumbent = ctx.point!;
@@ -320,11 +363,12 @@ export function applyChoice(ctx: SolveContext, choice: readonly PortRef[]): Stag
     return incumbent;
   }
   if (sameSet(target, incumbent.support)) return incumbent;
-  const alt = evaluateSupport(ctx, target);
-  if (alt === null || alt.support.size !== incumbent.support.size) {
+  const alt = evaluateSupportWith(ctx, target);
+  if (alt === null || alt.point.support.size !== incumbent.support.size) {
     // Gate count is the one bar a choice may not fall below: it is a real optimum; the rest is preference.
     ctx.notes.push(note("CHOICE_NEEDS_MORE_GATES"));
     return incumbent;
   }
-  return alt;
+  ctx.committedTrades = alt.trades;
+  return alt.point;
 }

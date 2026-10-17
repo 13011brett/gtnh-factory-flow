@@ -17,7 +17,7 @@ export interface LpRow {
   hi: number;
 }
 
-/** Columns: extents (M), flows (E), externals (P), then any extras (drawer slacks). */
+/** Columns: extents (M), flows (E), externals (P), then any extras (drawer slacks, the push's level, probes' supply). */
 export class ModelLp {
   readonly lo: number[] = [];
   readonly hi: number[] = [];
@@ -29,6 +29,10 @@ export class ModelLp {
   /** Per drawer, the relaxation's slack columns (-1 when none). */
   drawerUnder: number[] = [];
   drawerOver: number[] = [];
+  /** Per connected port, its conservation row. */
+  readonly conservation: LpRow[] = [];
+  /** Extra columns that cross the boundary at a port (`feedPort`): the independent check counts them as its external. */
+  readonly fed: Array<{ col: number; port: number }> = [];
 
   constructor(ctx: SolveContext) {
     this.nMachines = ctx.model.machines.length;
@@ -78,6 +82,43 @@ export class ModelLp {
   setFlowCost(e: number, cost: number): void {
     this.cost[this.flowCol(e)] = cost;
   }
+
+  /**
+   * A free crossing at connected port `p`, outside every trade, guard and drawer row: supply at an input, a sink at an
+   * output (the Up to read-out's probes). Enters the port's conservation row as its external does.
+   */
+  feedPort(p: number): number {
+    const row = this.conservation[p]!;
+    const ext = this.extCol(p);
+    const col = this.addColumn(0, Infinity, 0);
+    row.cols.push(col);
+    row.vals.push(row.vals[row.cols.indexOf(ext)]!);
+    this.fed.push({ col, port: p });
+    return col;
+  }
+}
+
+/** A pool's level (machine time over capacity) as row terms over the extents. */
+export function levelTerms(
+  ctx: SolveContext,
+  lp: ModelLp,
+  pool: number,
+): { cols: number[]; vals: number[] } {
+  const data = ctx.model.pools[pool]!;
+  return {
+    cols: data.machines.map((m) => lp.extentCol(m)),
+    vals: data.machines.map(
+      (m) => ctx.model.machines[m]!.durTicks / TICKS_PER_SECOND / data.capacity,
+    ),
+  };
+}
+
+/** Adds `weight` times a pool's level to the objective (minimised: a negative weight pushes it up). */
+export function priceLevel(ctx: SolveContext, lp: ModelLp, pool: number, weight: number): void {
+  const { cols, vals } = levelTerms(ctx, lp, pool);
+  cols.forEach((c, i) => {
+    lp.cost[c] = lp.cost[c]! + weight * vals[i]!;
+  });
 }
 
 /** Pool rows: the machines of a shared machine spend at most (or exactly) its capacity in machine time. */
@@ -104,7 +145,7 @@ function addConservation(ctx: SolveContext, lp: ModelLp): void {
     vals.push(scale);
     cols.push(lp.extentCol(port.machine));
     vals.push(-port.qtyPerCraft * scale);
-    lp.addRow(cols, vals, 0, 0);
+    lp.conservation.push(lp.addRow(cols, vals, 0, 0));
   });
 }
 
@@ -147,25 +188,58 @@ export function addDrawerRows(ctx: SolveContext, lp: ModelLp, relaxed: boolean):
         vals.push(-scale);
       }
     }
-    lp.addRow(cols, vals, Number.isNaN(lower) ? -Infinity : lower * scale, Number.isNaN(upper) ? Infinity : upper * scale);
+    lp.addRow(
+      cols,
+      vals,
+      Number.isNaN(lower) ? -Infinity : lower * scale,
+      Number.isNaN(upper) ? Infinity : upper * scale,
+    );
   });
 }
 
-/** extents + pools + flows + externals + conservation + drawers, every cost zero. */
-export function baseModel(ctx: SolveContext): ModelLp {
+/**
+ * The guard (docs/up-to.md): the guarded externals closed, or held together to the least they can be. Nothing when
+ * the context has none or has it switched off.
+ */
+function addGuard(ctx: SolveContext, lp: ModelLp): void {
+  const guard = ctx.guard;
+  if (guard === null || ctx.guardOff) return;
+  if (guard.cap <= 0) {
+    for (const p of guard.ports) lp.closeExt(p);
+    return;
+  }
+  lp.addRow(
+    guard.ports.map((p) => lp.extCol(p)),
+    guard.ports.map((p) => ctx.externalWeight(p)),
+    -Infinity,
+    guard.cap,
+  );
+}
+
+export interface BaseOptions {
+  /** The drawer rows (default true). */
+  drawers?: boolean;
+  /** The context's guard (default true; the guard's own LP leaves it out). */
+  guard?: boolean;
+}
+
+/** extents + pools + flows + externals + conservation + drawers + the guard, every cost zero. */
+export function baseModel(ctx: SolveContext, options: BaseOptions = {}): ModelLp {
   const lp = new ModelLp(ctx);
   addPools(ctx, lp);
   addConservation(ctx, lp);
-  addDrawerRows(ctx, lp, false);
+  if (options.drawers !== false) addDrawerRows(ctx, lp, false);
+  if (options.guard !== false) addGuard(ctx, lp);
   return lp;
 }
 
-/** The relaxation LP: the base model without drawers, then drawers with slacks. */
+/** The relaxation LP: the base model without drawers, then drawers with slacks, then the guard. */
 export function relaxedModel(ctx: SolveContext): ModelLp {
   const lp = new ModelLp(ctx);
   addPools(ctx, lp);
   addConservation(ctx, lp);
   addDrawerRows(ctx, lp, true);
+  addGuard(ctx, lp);
   return lp;
 }
 
@@ -325,6 +399,7 @@ export function runModel(ctx: SolveContext, lp: ModelLp, label: string): SolveRe
     const extents = x.slice(0, lp.nMachines);
     const flows = x.slice(lp.nMachines, lp.nMachines + lp.nEdges);
     const externals = x.slice(lp.nMachines + lp.nEdges, lp.nMachines + lp.nEdges + lp.nPorts);
+    for (const { col, port } of lp.fed) externals[port] = externals[port]! + x[col]!;
     const residual = ctx.validate(extents, flows, externals);
     if (residual !== null) {
       last = note("SOLVER_NOT_CONSERVING", residual);

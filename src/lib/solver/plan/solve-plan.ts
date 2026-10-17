@@ -1,19 +1,28 @@
 /**
  * The public entry of the plan solver (spec-solver 0, 3.4, 3.9.3, 5; Java `Balancer.solveWithAlternatives`): islands,
  * each solved by the full chain (drawer relaxation, stored choice, alternatives, spares) with island-local indexing, then
- * merged into one `SolutionView` + `Alternatives` read over the whole plan. A pure function: same input, same output.
+ * merged into one `SolutionView` + `Alternatives` read over the whole plan; each island's Up to read-out is its own
+ * (docs/up-to.md). A pure function: same input, same output.
  */
 import { inputDigest, type PieceCache } from "./cache";
 import { SolveContext, type StageOutcome } from "./context";
 import { applyChoice, enumerate } from "./enumerate";
 import { splitIslands } from "./islands";
-import { comparePortRef } from "./ids";
+import { compareIds, comparePortRef } from "./ids";
 import { portKey } from "./model";
 import { drawerRelaxation } from "./relax";
 import { applySpares } from "./spares";
 import { buildSolutionView, solvePiece, type CoreExtensions, type Piece } from "./solve-core";
 import { DISPLAY_ORDER, compareKeys } from "./enumerate";
-import type { Alternative, Answer, Leftover, Note, PortRef, SolveInput } from "./types";
+import type {
+  Alternative,
+  Answer,
+  Leftover,
+  Note,
+  PortRef,
+  SolveInput,
+  UpToReadout,
+} from "./types";
 
 /** The extensions WP1c adds to the core: drawer relaxation, and after the point is committed the choice, the search and the spares. */
 export const planExtensions: CoreExtensions = {
@@ -35,14 +44,20 @@ function decisionOf(leftover: Leftover): PortRef {
 }
 
 function portOf(whole: SolveContext, ref: PortRef): number {
-  return whole.model.portLookup.get(portKey(whole.model.machineIndex.get(ref.node)!, ref.port, ref.input))!;
+  return whole.model.portLookup.get(
+    portKey(whole.model.machineIndex.get(ref.node)!, ref.port, ref.input),
+  )!;
 }
 
 /**
  * The plan's answer: every island solved by itself, read together as one plan's. With a `cache` an island whose input
  * was solved before (by value) is read back, not solved again; the answer is the same either way.
  */
-export function solvePlan(input: SolveInput, ext: CoreExtensions = planExtensions, cache?: PieceCache): Answer {
+export function solvePlan(
+  input: SolveInput,
+  ext: CoreExtensions = planExtensions,
+  cache?: PieceCache,
+): Answer {
   const solveIsland = (island: SolveInput): Piece => {
     if (!cache) return solvePiece(island, ext);
     const key = inputDigest(island);
@@ -70,6 +85,7 @@ export function solvePlan(input: SolveInput, ext: CoreExtensions = planExtension
   const options: Alternative[] = [];
   const choiceNotes: Note[] = [];
   const spares: Leftover[] = [];
+  const upTo: UpToReadout[] = [];
   let complete = true;
   for (const piece of pieces) {
     const c = piece.ctx;
@@ -78,7 +94,9 @@ export function solvePlan(input: SolveInput, ext: CoreExtensions = planExtension
       // An island with nothing to size is idle, not broken; any other stands unsolved, and says why.
       if (answer.failure.message !== "NO_PIN") {
         whole.stageNotes.push(answer.failure);
-        whole.stageNotes.push(...answer.notes.slice(Math.min(c.constructionNotes, answer.notes.length)));
+        whole.stageNotes.push(
+          ...answer.notes.slice(Math.min(c.constructionNotes, answer.notes.length)),
+        );
       }
       continue;
     }
@@ -89,18 +107,21 @@ export function solvePlan(input: SolveInput, ext: CoreExtensions = planExtension
     c.model.edges.forEach((e, i) => {
       flows[edgeIndex.get(e.id)!] = point.flows[i]!;
     });
-    for (let q = 0; q < c.model.connectedPorts.length; q++) externals[portOf(whole, c.refOf(q))] = point.externals[q]!;
+    for (let q = 0; q < c.model.connectedPorts.length; q++)
+      externals[portOf(whole, c.refOf(q))] = point.externals[q]!;
     for (const g of point.support) {
       support.add(model.portGate[portOf(whole, c.refOf(c.model.gates[g]!.ports[0]!))]!);
     }
     whole.stageNotes.push(...c.notes.slice(c.constructionNotes));
     whole.stageNotes.push(...c.stageNotes);
-    for (const id of c.unmetDrawers) if (!whole.unmetDrawers.includes(id)) whole.unmetDrawers.push(id);
+    for (const id of c.unmetDrawers)
+      if (!whole.unmetDrawers.includes(id)) whole.unmetDrawers.push(id);
     whole.shortfalls.push(...c.shortfalls);
     options.push(...answer.alternatives.options);
     choiceNotes.push(...answer.alternatives.notes);
     complete &&= answer.alternatives.complete;
     spares.push(...answer.solution.spares);
+    upTo.push(...(answer.solution.upTo ?? []));
   }
   whole.commit(whole.outcome(extents, flows, externals, support));
   // Each option keeps its island's key: a stored choice applies to the islands its anchors sit on.
@@ -113,11 +134,16 @@ export function solvePlan(input: SolveInput, ext: CoreExtensions = planExtension
         compareKeys(a.key, b.key),
     );
   spares.sort((a, b) => comparePortRef(decisionOf(a), decisionOf(b)));
-  const solution = buildSolutionView(whole, spares);
+  upTo.sort((a, b) => compareIds(a.node, b.node));
+  const solution = buildSolutionView(whole, spares, upTo.length > 0 ? upTo : undefined);
   return {
     kind: "solved",
     solution,
-    alternatives: { chosen: whole.keyOf(support), options: planOptions, complete, notes: choiceNotes },
+    alternatives: {
+      chosen: whole.keyOf(support),
+      options: planOptions,
+      complete,
+      notes: choiceNotes,
+    },
   };
 }
-

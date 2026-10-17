@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_DEVICE_SETTINGS, parseDeviceSettings } from "./device-settings";
 
 describe("device settings", () => {
-  it("starts at the mod's defaults: names on, items on the right, Board section", () => {
+  it("starts at the mod's defaults: names on, problem outlines on, items on the right, Board section", () => {
     expect(DEFAULT_DEVICE_SETTINGS).toEqual({
       zoomedOutNames: true,
+      problemOutlines: true,
       itemsLeft: false,
       settingsSection: "Board",
     });
@@ -18,6 +19,10 @@ describe("device settings", () => {
     expect(read.settingsSection).toBe("Board");
     // Only an explicit false means off: a missing names key is on.
     expect(parseDeviceSettings("{}").zoomedOutNames).toBe(true);
+    expect(parseDeviceSettings("{}").problemOutlines).toBe(true);
+    expect(parseDeviceSettings(JSON.stringify({ problemOutlines: false })).problemOutlines).toBe(
+      false,
+    );
   });
 
   it("ignores values of the wrong kind", () => {
@@ -29,6 +34,11 @@ describe("device settings", () => {
     const read = parseDeviceSettings(
       JSON.stringify({ circuitAsInput: false, zoomedOutNames: false }),
     );
-    expect(read).toEqual({ zoomedOutNames: false, itemsLeft: false, settingsSection: "Board" });
+    expect(read).toEqual({
+      zoomedOutNames: false,
+      problemOutlines: true,
+      itemsLeft: false,
+      settingsSection: "Board",
+    });
   });
 });

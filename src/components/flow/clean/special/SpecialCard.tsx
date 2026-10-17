@@ -24,6 +24,7 @@ import {
   glyph,
 } from "../CleanCard";
 import { frameTone, type CleanCardView, type CleanChipView } from "../clean-model";
+import { glanceFace } from "../glance";
 import { ensureInteractionHost, tipAttrs, useClickSlop, type TipSpec } from "../interaction";
 import { menuTip, powerPanelTip } from "../interaction/tips";
 import { syncPromptPhase } from "../../virtual/prompt-phase";
@@ -364,7 +365,7 @@ export interface SpecialCardProps {
 export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
   const { view, actions, context } = model;
   const { wasClick, onPointerDownCapture } = useClickSlop();
-  const glanceNames = useDeviceSettings().zoomedOutNames;
+  const { zoomedOutNames: glanceNames, problemOutlines } = useDeviceSettings();
   // A task board somewhere on this device is about this card: a dot before the name, as on the plain card.
   const taskStatus = useCardTaskStatus(view.nodeId);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -459,6 +460,10 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
   const pictureEnd = (powerRow ?? lastRailRow) + 1;
   const stripRow = pictureEnd;
   const countText = view.count?.text ?? "";
+  const glance = glanceFace(
+    view.glyph === "gauge" ? GAUGE_URL : view.glanceArt ? `url(${view.glanceArt})` : undefined,
+    view.glance,
+  );
 
   const powerRowView = view.power ? (
     <div
@@ -486,7 +491,7 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
       data-cannot-run={view.cannotRun ? "" : undefined}
       data-unset={view.unset ? "" : undefined}
       data-empty={view.sockets ? "" : undefined}
-      data-tone={frameTone(view.foot)}
+      data-tone={problemOutlines ? frameTone(view.foot) : undefined}
       data-loop={view.loop}
       onPointerDownCapture={onPointerDownCapture}
     >
@@ -705,15 +710,13 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
         data-node-detail="glance"
         data-count={countText}
         data-name={glanceNames ? view.name : undefined}
+        data-bar={glance["data-bar"]}
+        data-tone={glance["data-tone"]}
         aria-hidden
-        style={
-          view.glyph === "gauge"
-            ? ({ backgroundImage: GAUGE_URL } as CSSProperties)
-            : view.glanceArt
-              ? { backgroundImage: `url(${view.glanceArt})` }
-              : undefined
-        }
-      />
+        style={glance.style}
+      >
+        {glance.text}
+      </div>
 
       {menu ? (
         <CardActionsMenu

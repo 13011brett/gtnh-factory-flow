@@ -1023,6 +1023,53 @@
   color: var(--cc-ink);
   text-shadow: 0 0 6px rgba(0, 0, 0, 0.8);
 }
+/* The Up to bar along a zoomed-out card's foot (glance.ts): the fill (to --glance-fill, in the reason's tone) and the
+   track are background layers over the picture, the reason's word is the layer's own text on the bar. Every size is in
+   card pixels, so a zoom step re-lays nothing out: near the glance step the word reads, further out the fill does. */
+.cc-glance[data-bar] {
+  --glance-tone: var(--cc-muted);
+  --glance-bar-h: 36px;
+  --glance-track: #17191d;
+  --glance-fill-ink: color-mix(in srgb, var(--glance-tone) 45%, #17191d);
+  display: flex;
+  align-items: flex-end;
+  padding-bottom: 0;
+  background-position:
+    left bottom,
+    left bottom,
+    center 12px;
+  background-size:
+    var(--glance-fill) var(--glance-bar-h),
+    100% var(--glance-bar-h),
+    auto calc(100% - var(--glance-bar-h) - 18px);
+  background-origin: border-box, border-box, border-box;
+  font-size: 24px;
+  line-height: var(--glance-bar-h);
+  color: var(--glance-tone);
+  white-space: nowrap;
+  overflow: hidden;
+}
+.cc-glance[data-bar]::after {
+  bottom: calc(var(--glance-bar-h) + 2px + 4px / var(--board-zoom, 1));
+}
+.cc-glance[data-tone="full"] {
+  --glance-tone: #5ee9b5;
+}
+.cc-glance[data-tone="bottleneck"] {
+  --glance-tone: #f06262;
+}
+.cc-glance[data-tone="starved"] {
+  --glance-tone: #e0a63a;
+}
+.cc-glance[data-tone="clogged"] {
+  --glance-tone: #b49cf0;
+}
+.cc-glance[data-tone="unused"] {
+  --glance-tone: #8a8e97;
+}
+.cc-glance[data-tone="limited"] {
+  --glance-tone: #f472b6;
+}
 /* "Names when zoomed out": the card's name just under it, at a constant screen size (the mod draws it under the card). */
 .cc-glance[data-name]::before {
   content: attr(data-name);

@@ -93,6 +93,8 @@ export interface SpecialView {
   foot?: CleanCardView["foot"];
   /** The card is in a dead loop or a clog lock: its outline pulses in the ring's tone. */
   loop?: CleanCardView["loop"];
+  /** The Up to bar its zoomed-out face draws along its foot. */
+  glance?: CleanCardView["glance"];
   /** A crop farm with no crop yet: a dashed key to pick one in place of the rails. */
   pick?: boolean;
   /** A crop farm with a crop: the head key that picks another. */

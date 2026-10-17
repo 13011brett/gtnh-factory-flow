@@ -60,6 +60,7 @@ import { CC, CC_GEOMETRY } from "./tokens";
 import { mixHex } from "./colors";
 import { UP_TO_COLOR } from "./up-to-reason";
 import { cardLoop, type LoopTone } from "./loops";
+import { glanceBar, type GlanceBar } from "./glance";
 import { isPinned, pinMachineKey, settingControls } from "./menus/settings-model";
 import { mcTextWidth, measureClean, useFontEpoch } from "./text-measure";
 
@@ -215,6 +216,8 @@ export interface CleanCardView {
   foot?: CleanFootView;
   /** The card is in a dead loop or a clog lock (`PlanSolveExtras.loops`): its outline pulses in the ring's tone. */
   loop?: LoopTone;
+  /** The Up to bar its zoomed-out face draws along its foot (glance.ts). */
+  glance?: GlanceBar;
   /** The programmed circuit: a badge in the well's top-left corner, its icon with its number on it. */
   circuit?: RecipeProgrammedCircuit;
   chips: CleanChipView[];
@@ -1073,6 +1076,7 @@ export function useCleanCardModel(
     count,
     foot,
     loop: cardLoop(plan?.loops, projectNode.id),
+    glance: glanceBar(countState.upTo),
     circuit: derived.circuit,
     chips: strip.chips,
     stripHeight: strip.height,

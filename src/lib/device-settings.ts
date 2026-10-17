@@ -12,6 +12,8 @@ import { useSyncExternalStore } from "react";
 export interface DeviceSettings {
   /** "Names when zoomed out": the glance cards carry their names. */
   zoomedOutNames: boolean;
+  /** "Problem outlines": a card with a problem draws its edge in its bar's colour. */
+  problemOutlines: boolean;
   /** "Item browser": on plan boards the items list on the left and the overview on the right (the other way round). */
   itemsLeft: boolean;
   /** The settings box's open section, kept so it opens where it was left. */
@@ -20,6 +22,7 @@ export interface DeviceSettings {
 
 export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   zoomedOutNames: true,
+  problemOutlines: true,
   itemsLeft: false,
   settingsSection: "Board",
 };
@@ -40,6 +43,10 @@ export function parseDeviceSettings(raw: string | null): DeviceSettings {
         typeof parsed.zoomedOutNames === "boolean"
           ? parsed.zoomedOutNames
           : DEFAULT_DEVICE_SETTINGS.zoomedOutNames,
+      problemOutlines:
+        typeof parsed.problemOutlines === "boolean"
+          ? parsed.problemOutlines
+          : DEFAULT_DEVICE_SETTINGS.problemOutlines,
       itemsLeft:
         typeof parsed.itemsLeft === "boolean"
           ? parsed.itemsLeft

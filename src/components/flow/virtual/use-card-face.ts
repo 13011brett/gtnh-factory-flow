@@ -13,6 +13,8 @@ import {
 } from "../clean/clean-model";
 import { CC_GEOMETRY } from "../clean/tokens";
 import { cardLoop, type LoopTone } from "../clean/loops";
+import { glanceBar, type GlanceBar } from "../clean/glance";
+import { useDeviceSettings } from "@/lib/device-settings";
 import { estimateRecipeCardHeight } from "./card-shell";
 import { useMachineHandlerIconEntries, useRecipeMapIcons } from "../machine-icons";
 import type { RecipeNodeData } from "../RecipeNode";
@@ -35,6 +37,8 @@ export interface ShellFace {
   tone?: string;
   /** The card is in a dead loop or a clog lock: its outline pulses in the ring's tone, as the card's does. */
   loop?: LoopTone;
+  /** The Up to bar along the glance face's foot, as the card's own glance face draws it. */
+  bar?: GlanceBar;
   /** The count the glance face prints. */
   count: string;
   /** The picture the glance face draws. */
@@ -122,6 +126,7 @@ export function useCardFace(
   const { projectNode, recipe, result } = data;
   const machineIcons = useMachineHandlerIconEntries();
   const mapIcons = useRecipeMapIcons();
+  const { problemOutlines } = useDeviceSettings();
   const layoutKey = useCardLayoutKey(data);
   const nodeKey = stableNodeKey(projectNode);
   // Keyed on the node's own data, not its identity: an Arrange gives every card a new position and no new machine.
@@ -135,8 +140,9 @@ export function useCardFace(
     selected,
     cannotRun: derived.powerReport !== undefined && derived.powerReport.state !== "ok",
     unset: count.unset,
-    tone: stateFrameTone(count, plan, projectNode.id),
+    tone: problemOutlines ? stateFrameTone(count, plan, projectNode.id) : undefined,
     loop: cardLoop(plan?.loops, projectNode.id),
+    bar: glanceBar(count.upTo),
     count: `×${formatSolvedMachines(count.value)}`,
     art: art ?? machineIcon?.iconPath,
     fallbackWidth: CC_GEOMETRY.cardWidth,

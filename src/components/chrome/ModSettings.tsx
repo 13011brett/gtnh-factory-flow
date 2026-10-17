@@ -108,6 +108,14 @@ export function ModSettings({ onClose }: { onClose: () => void }) {
           to: (index) => writeDeviceSettings({ zoomedOutNames: index === 1 }),
         },
         {
+          label: "Problem outlines",
+          about: "Draws a card's edge in its bar's colour.",
+          kind: "switch",
+          names: ["Off", "On"],
+          at: settings.problemOutlines ? 1 : 0,
+          to: (index) => writeDeviceSettings({ problemOutlines: index === 1 }),
+        },
+        {
           label: "Item browser",
           about: "The side it sits on.",
           kind: "choice",

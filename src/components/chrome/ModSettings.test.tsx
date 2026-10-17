@@ -32,7 +32,13 @@ describe("the settings box", () => {
     render(<ModSettings onClose={vi.fn()} />);
     expect(screen.getByRole("dialog", { name: "Settings" })).toBeTruthy();
     expect(sections()).toEqual(["Board", "Minimap", "Sound", "Controls"]);
-    expect(rowLabels()).toEqual(["Size", "Names when zoomed out", "Item browser", "Font"]);
+    expect(rowLabels()).toEqual([
+      "Size",
+      "Names when zoomed out",
+      "Problem outlines",
+      "Item browser",
+      "Font",
+    ]);
     expect(document.querySelector(".ms-preview .sp-board")).toBeTruthy();
   });
 
@@ -61,6 +67,9 @@ describe("the settings box", () => {
     ).toBe(false);
     // The picture shows the effect at once.
     expect(document.querySelector(".sp-board")?.hasAttribute("data-names")).toBe(false);
+    expect(readDeviceSettings().problemOutlines).toBe(true);
+    fireEvent.click(screen.getByText("Problem outlines"));
+    expect(readDeviceSettings().problemOutlines).toBe(false);
   });
 
   it("Minimap is a section of the minimap's own rows", () => {

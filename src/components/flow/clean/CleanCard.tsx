@@ -46,6 +46,7 @@ import type {
   CleanPortView,
 } from "./clean-model";
 import { circuitNumber, frameTone, reasonStripes } from "./clean-model";
+import { glanceFace } from "./glance";
 import type { PinRule } from "@/lib/model/pin-rule";
 import { CountRuleMenu } from "./menus/CountRuleMenu";
 import { tierChipColors } from "./tokens";
@@ -801,7 +802,8 @@ export interface CleanCardProps {
 /** The clean recipe card: header, hairline, port rails around the picture, power row, settings strip. */
 export function CleanCard({ view, actions, context, recipe, node }: CleanCardProps) {
   const { wasClick, onPointerDownCapture } = useClickSlop();
-  const glanceNames = useDeviceSettings().zoomedOutNames;
+  const { zoomedOutNames: glanceNames, problemOutlines } = useDeviceSettings();
+  const glance = glanceFace(view.glanceArt ? `url(${view.glanceArt})` : undefined, view.glance);
   // A task board somewhere on this device is about this card: the most pressing one's colour, a dot before the name.
   const taskStatus = useCardTaskStatus(view.nodeId);
   const rootRef = useRef<HTMLDivElement>(null);
@@ -872,7 +874,7 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
       data-selected={view.selected ? "" : undefined}
       data-cannot-run={view.cannotRun ? "" : undefined}
       data-unset={view.unset ? "" : undefined}
-      data-tone={frameTone(view.foot)}
+      data-tone={problemOutlines ? frameTone(view.foot) : undefined}
       data-loop={view.loop}
       onPointerDownCapture={onPointerDownCapture}
     >
@@ -1072,9 +1074,13 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
         data-node-detail="glance"
         data-count={view.count.text}
         data-name={glanceNames ? view.name : undefined}
+        data-bar={glance["data-bar"]}
+        data-tone={glance["data-tone"]}
         aria-hidden
-        style={view.glanceArt ? { backgroundImage: `url(${view.glanceArt})` } : undefined}
-      />
+        style={glance.style}
+      >
+        {glance.text}
+      </div>
 
       {sheetAnchor ? (
         <SettingsSheet

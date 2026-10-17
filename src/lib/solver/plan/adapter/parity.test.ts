@@ -44,8 +44,26 @@ function joinBuffers(input: SolveInput): SolveInput {
   return { ...input, edges, drawers: input.drawers.filter((d) => d.kind !== "BUFFER") };
 }
 
+/**
+ * A converted Build plan's pins are Up to (docs/up-to.md), but the mod's corpus still has exact pins (the mod re-dump
+ * follows the mod's Up to port). This reads the Up to pools the way the mod's inputs spell them: a one-machine Up to
+ * pool is a fixed count at its capacity, a shared card's is an exact pool. Everything else compares as it was.
+ */
+function asExactPins(input: SolveInput): SolveInput {
+  const single = new Map(input.pools.filter((p) => p.upTo && p.machines.length === 1).map((p) => [p.machines[0]!, p.capacity]));
+  return {
+    ...input,
+    machines: input.machines.map((m) =>
+      single.has(m.id) ? { ...m, countFixed: true, machineCount: single.get(m.id)! } : m,
+    ),
+    pools: input.pools
+      .filter((p) => !(p.upTo && p.machines.length === 1))
+      .map(({ upTo, ...p }) => (upTo ? { ...p, exact: true } : p)),
+  };
+}
+
 function adapterInput(path: string): SolveInput {
-  return joinBuffers(adapterInputWithBuffers(path));
+  return joinBuffers(asExactPins(adapterInputWithBuffers(path)));
 }
 
 function adapterInputWithBuffers(path: string): SolveInput {
@@ -135,6 +153,23 @@ describe("adapter vs the mod's corpus: structure (level 2)", () => {
     }
   });
 
+  for (const [name, [path, corpus]] of Object.entries(FIXTURES)) {
+    it(`${name}: every pin of the mod's input is an Up to pool of the same capacity`, () => {
+      const mine = adapterInputWithBuffers(path);
+      const theirs = loadInput(corpus);
+      // The converted plan fixes no count of its own: each built count is an Up to pool.
+      expect(mine.machines.filter((m) => m.countFixed)).toEqual([]);
+      const caps = (pools: SolveInput["pools"]) => pools.map((p) => [p.machines.length, p.capacity]);
+      const singles = mine.pools.filter((p) => p.upTo && p.machines.length === 1);
+      expect(singles.map((p) => p.capacity).sort((x, y) => x - y)).toEqual(
+        theirs.machines.filter((m) => m.countFixed).map((m) => m.machineCount).sort((x, y) => x - y),
+      );
+      const shared = mine.pools.filter((p) => !(p.upTo && p.machines.length === 1));
+      expect(caps(shared)).toEqual(caps(theirs.pools));
+      expect(shared.every((p) => p.upTo && !p.exact)).toBe(true);
+    });
+  }
+
   it("alumina differs in exactly the three machines the settings differ on", () => {
     // Website: Calcite -> Quicklime LCR D0.5 x1, Sodium Aluminate -> Alumina Hydroxide D0.5 x1, Mixer D25.
     // Game dump: D1 x2, D1 x2, D66 (a lower tier). Same craft rate per machine for the first two.
@@ -170,7 +205,7 @@ describe.skipIf(solveForTest === null)("adapter + solver vs the mod's goldens (l
   it("solved with its buffers as buffer drawers, each plan sizes its machines as the golden does", async () => {
     for (const name of ["titanium", "pa-cell"] as const) {
       const [path, corpus] = FIXTURES[name];
-      const answer = await solveForTest!(adapterInputWithBuffers(path));
+      const answer = await solveForTest!(asExactPins(adapterInputWithBuffers(path)));
       expect(answer.kind).toBe("solved");
       if (answer.kind !== "solved") return;
       const golden = loadGolden(corpus).solution as { machineCounts: Record<string, number> };

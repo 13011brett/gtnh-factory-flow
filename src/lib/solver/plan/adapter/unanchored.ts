@@ -8,7 +8,7 @@ import type { PlanModel } from "./model";
  * `Unanchored.of`, spec-solver 3.10): the board's "(set count)" and
  * "Set rate". Union-find over machines and drawers joined by wires, drawer
  * links and shared-machine groups. A part is set when any of it has a pinned
- * count, a port rate, a pinned shared card, or a drawer asking for a number
+ * count (Exactly or Up to), a port rate, a pinned shared card, or a drawer asking for a number
  * (at least or exactly, with something linked). Hidden helpers are never named.
  */
 export function findUnanchored(model: PlanModel, storages: readonly FactoryStorage[]): Id[] {
@@ -81,7 +81,7 @@ export function findUnanchored(model: PlanModel, storages: readonly FactoryStora
     }
   }
   for (const pool of input.pools) {
-    if (pool.exact && pool.capacity > 0 && pool.machines[0] !== undefined) {
+    if ((pool.exact || pool.upTo) && pool.capacity > 0 && pool.machines[0] !== undefined) {
       anchored.add(find(pool.machines[0]));
     }
   }

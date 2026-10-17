@@ -11,6 +11,8 @@ export interface UnanchoredGraph {
   nodes: Array<{
     id: Id;
     countFixed: boolean;
+    /** An Up to pin (docs/up-to.md) anchors its part of the plan as an exact one does. */
+    upTo?: boolean;
     targetOutputRates?: Record<number, number | null | undefined>;
     targetInputRates?: Record<number, number | null | undefined>;
   }>;
@@ -65,7 +67,7 @@ export function unanchored(graph: UnanchoredGraph): Set<Id> {
 
   const anchored = new Set<Id>();
   for (const n of graph.nodes) {
-    if (n.countFixed || anyRate(n.targetOutputRates) || anyRate(n.targetInputRates)) anchored.add(root(n.id));
+    if (n.countFixed || n.upTo || anyRate(n.targetOutputRates) || anyRate(n.targetInputRates)) anchored.add(root(n.id));
   }
   for (const d of graph.drawers) {
     if (d.rule !== "ANY" && d.rule !== "AT_MOST" && d.rate > 0 && d.links.length > 0) anchored.add(root(d.id));

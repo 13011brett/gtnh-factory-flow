@@ -1,3 +1,4 @@
+import { sectionOwnerId } from "../../../model/shared-machine";
 import { compareIds } from "../ids";
 import { makeLeftoverKey } from "../port-key";
 import type {
@@ -12,11 +13,15 @@ import type {
   PlanForced,
   PlanBearer,
   PlanLeftover,
+  PlanShortfall,
   PlanSide,
   PlanSolveExtras,
   PlanTerminal,
+  PlanUpTo,
   PortKey,
   PortRef,
+  Shortfall,
+  UpToReadout,
 } from "../types";
 import type { PlanModel } from "./model";
 
@@ -176,6 +181,8 @@ export function readAnswer(model: PlanModel, answer: Answer): PlanReading {
     }
   }
 
+  const upTo = readUpTo(model, solution.upTo ?? []);
+  const shortfalls = readShortfalls(model, (solution.drawers ?? EMPTY_DRAWERS).shortfalls);
   const unneeded = solution.unneeded.filter((id) => model.machines.has(id) && !model.hidden.has(id));
   const notes: Note[] = [...solution.notes, ...alternatives.notes];
   const choiceNotes = notes.filter((n) => CHOICE_NOTES.has(n.message));
@@ -190,6 +197,8 @@ export function readAnswer(model: PlanModel, answer: Answer): PlanReading {
     counts,
     edgeFlows,
     extras: {
+      ...(Object.keys(upTo).length > 0 ? { upTo } : {}),
+      ...(shortfalls.length > 0 ? { shortfalls } : {}),
       forced,
       leftovers,
       unneeded,
@@ -203,6 +212,48 @@ export function readAnswer(model: PlanModel, answer: Answer): PlanReading {
       choiceNotes,
     },
   };
+}
+
+/** The Up to read-outs by CARD id: a shared card's whole pool is one entry under the card's id. */
+export function readUpTo(model: PlanModel, readouts: readonly UpToReadout[]): Record<Id, PlanUpTo> {
+  const cardOf = (id: Id): Id => model.machines.get(id)?.owner ?? sectionOwnerId(id);
+  const rowOf = (ref: PortRef) => model.row(ref);
+  const out: Record<Id, PlanUpTo> = {};
+  for (const r of readouts) {
+    const card = cardOf(r.node);
+    const row = r.port ? rowOf(r.port) : undefined;
+    const tied = (r.tied ?? []).flatMap((ref) => {
+      const tiedRow = rowOf(ref);
+      return tiedRow ? [tiedRow.portKey] : [];
+    });
+    const upstream = [...new Set((r.upstream ?? []).map(cardOf))];
+    out[card] = {
+      capacity: r.capacity,
+      reached: r.reached,
+      reason: r.reason,
+      ...(row ? { portKey: row.portKey, resourceKey: row.key } : {}),
+      ...(tied.length > 0 ? { tied } : {}),
+      ...(r.wants !== undefined ? { wants: r.wants } : {}),
+      ...(upstream.length > 0 ? { upstream } : {}),
+    };
+  }
+  return out;
+}
+
+/** Drawers the answer falls short of, with the limiting machines turned into cards (first seen first, once each). */
+export function readShortfalls(model: PlanModel, shortfalls: readonly Shortfall[]): PlanShortfall[] {
+  return shortfalls
+    .filter((s) => !model.hidden.has(s.drawer))
+    .map((s) => ({
+      drawerId: s.drawer,
+      rule: s.rule,
+      target: s.target,
+      reachable: s.reachable,
+      limitingCards: [
+        ...new Set(s.limitingNodes.map((id) => model.machines.get(id)?.owner ?? sectionOwnerId(id))),
+      ],
+      limitingDrawers: [...s.limitingDrawers],
+    }));
 }
 
 function readLeftover(model: PlanModel, spare: Leftover, alternatives: Alternatives): PlanLeftover[] {

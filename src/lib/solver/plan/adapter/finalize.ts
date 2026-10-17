@@ -9,10 +9,18 @@ import type {
 import { TICKS_PER_SECOND } from "../../../model/types";
 import { calculateEffectiveBalances, splitBalances } from "../../balances";
 import type { PlanSolveArgs } from "./args";
+import type { PlanUpTo } from "../types";
 import type { PlanReading } from "./answer";
 import type { PlanModel } from "./model";
 
 const EPSILON = 0.000001;
+
+/** An Up to card's status: its read-out's bottleneck, or below its count, else balanced. */
+function upToStatus(upTo: PlanUpTo, level: number): NodeThroughputResult["status"] {
+  if (upTo.reason === "BOTTLENECK") return "bottleneck";
+  if (level < 1 - EPSILON) return "underutilized";
+  return "balanced";
+}
 
 /**
  * The plan-mode result: every machine report rewritten AT THE SOLVED SCALE
@@ -40,7 +48,8 @@ export function finalizePlanResult(
     const entry = model.machines.get(nodeResult.nodeId);
     const count = reading.counts.get(nodeResult.nodeId) ?? 0;
     const built = entry?.builtCount ?? 0;
-    nodeResult.theoreticalMachinesRequired = count;
+    const upTo = reading.extras.upTo?.[nodeResult.nodeId];
+    nodeResult.theoreticalMachinesRequired = upTo ? upTo.reached : count;
     nodeResult.disposalUtilization = 1;
     // Flows are nameplate at the built count; the solved scale is count / built.
     const act = built > 0 ? count / built : 0;
@@ -63,13 +72,15 @@ export function finalizePlanResult(
     }
     nodeResult.euT *= act;
     totalEuT += nodeResult.euT;
-    nodeResult.utilization = 1;
-    nodeResult.capableUtilization = 1;
-    nodeResult.demandUtilization = 1;
+    // An Up to card is as full as it got of what it may be; the others run flat out at the solved count.
+    const level = upTo && upTo.capacity > 0 ? Math.min(1, upTo.reached / upTo.capacity) : 1;
+    nodeResult.utilization = level;
+    nodeResult.capableUtilization = level;
+    nodeResult.demandUtilization = level;
     const primary = Object.values(nodeResult.outputs)[0];
     nodeResult.requiredRatePerSecond = primary?.amountPerSecond ?? 0;
     nodeResult.maxRatePerSecond = primary?.amountPerSecond ?? 0;
-    nodeResult.status = "balanced";
+    nodeResult.status = upTo ? upToStatus(upTo, level) : "balanced";
   }
 
   // EVERY edge gets a result: a missing entry is how wires vanish.

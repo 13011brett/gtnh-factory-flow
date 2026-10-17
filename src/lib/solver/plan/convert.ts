@@ -53,8 +53,9 @@ export interface PlanConversion {
  *
  * The same rules as the mod's importer of website plans (FfConverter):
  * - Build runs every card at its count, so each enabled card's `machineCount`
- *   becomes its pin (`solvePin`). A classic Solve project keeps the pins it
- *   has.
+ *   becomes its pin (`solvePin`), an Up to pin (never `solvePinExact`: it is what the
+ *   built machines can do, not a demand). A classic Solve project keeps the pins it
+ *   has, which read as Up to as well.
  * - A card's `targetOutput` becomes a port rate on its output row, and the
  *   plan's `targetRate` lands on the first card making the resource (unless a
  *   card already targets it). The classic fields are left as they are.

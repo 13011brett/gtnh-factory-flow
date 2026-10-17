@@ -1,5 +1,6 @@
 import { isCustomRateRecipe } from "../../../model/custom-rate";
 import { isFluidTankRecipe } from "../../../model/fluid-tank";
+import { pinRuleOf } from "../../../model/pin-rule";
 import { resourceLabel } from "../../../model/resources";
 import {
   listSharedMachineGroups,
@@ -321,12 +322,25 @@ export function buildPlanModel(args: PlanSolveArgs): PlanModel {
   const pools: PoolIn[] = [];
   const grouped = new Set<Id>();
   for (const [card, ids] of groups) {
-    const pin = machines.get(card)?.node.solvePin;
+    const owner = machines.get(card);
+    const pin = owner?.node.solvePin;
     for (const id of ids) {
       grouped.add(id);
     }
-    if (positive(pin)) {
-      pools.push({ machines: [...ids].sort(compareIds), capacity: pin, exact: true });
+    if (owner && positive(pin)) {
+      // Exactly pins the group's machine time; Up to caps it and runs it as high as the plan lets it.
+      const exact = pinRuleOf(owner.node, owner.recipe) === "exact";
+      pools.push({ machines: [...ids].sort(compareIds), capacity: pin, exact, upTo: !exact });
+    }
+  }
+  // A single card's Up to pin is a one-machine pool; its count is the engine's to find.
+  const upToSingles = new Set<Id>();
+  for (const entry of entries) {
+    if (entry.section !== 0 || grouped.has(entry.id) || isFluidTankRecipe(entry.recipe)) continue;
+    const pin = entry.node.solvePin;
+    if (positive(pin) && pinRuleOf(entry.node, entry.recipe) === "upTo") {
+      upToSingles.add(entry.id);
+      pools.push({ machines: [entry.id], capacity: pin, exact: false, upTo: true });
     }
   }
   pools.sort((a, b) => compareIds(a.machines[0]!, b.machines[0]!));
@@ -404,7 +418,7 @@ export function buildPlanModel(args: PlanSolveArgs): PlanModel {
         // Pinned at its dial: the card is the rate.
         countFixed = true;
         machineCount = positive(pin) ? pin : entry.builtCount > 0 ? entry.builtCount : 1;
-      } else if (positive(pin)) {
+      } else if (positive(pin) && !upToSingles.has(entry.id)) {
         countFixed = true;
         machineCount = pin;
       }

@@ -58,9 +58,10 @@ Where things are:
 - [ ] The owner's top bar refactor (branch `top-bar`, merged 2026-10-18): one row that never wraps, flat keys like the
       tabs and +, the bar across the whole width with the overview and the items list under it, and Settings' "Item
       browser" switch (left or right). Check what of it the mod's own layout already has.
-- [ ] (in progress) An annotations key in the board toolbar's top right, a pencil: Add sticky note, Add box, Add arrow,
-      as the board's right-click menu, plus the board background where the website has one (the mod need not grow a
-      background setting if it has none).
+- [ ] An annotations key at the board toolbar's far right, a pixel pencil, tip "Add a sticky note, box or arrow, or
+      change the background": it opens the board's empty-board menu under the key (Add sticky note, Add box, Add
+      arrow, landing in the middle of the view). The website's menu also has Background (its paper themes and
+      patterns); the mod need not grow a background setting if it has none.
 - [ ] The Peak/Avg key leaves the top toolbar; the overview's machine section keeps its own.
 
 ## Done in both (for reference)

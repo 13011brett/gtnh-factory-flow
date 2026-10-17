@@ -12,7 +12,7 @@ import { TICKS_PER_SECOND, portKey } from "./model";
 import { externalsLp } from "./probes";
 import { pushUpTo } from "./push";
 import { readUpTo } from "./readout";
-import { settleTrades } from "./trade";
+import { settleDrawers, settleTrades } from "./trade";
 import type {
   Alternatives,
   Answer,
@@ -123,8 +123,8 @@ export function diagnosePins(ctx: SolveContext): Note | null {
 }
 
 /**
- * One pass of the chain: the guard (once per context), then the fast path, else trades, the Up to push, and least flow
- * with the canonical point.
+ * One pass of the chain: the guard (once per context), then the fast path, else trades, the Up to push, the drawer
+ * stages, and least flow with the canonical point.
  */
 function pass(ctx: SolveContext): Settlement {
   ctx.stageNotes = [];
@@ -135,9 +135,11 @@ function pass(ctx: SolveContext): Settlement {
   const trades = settleTrades(ctx);
   if (!trades.ok)
     return { kind: "stalled", reason: note("STAGE_FAILED", "trades", trades.rejection) };
-  const flow = runFlowMin(ctx, pushUpTo(ctx, trades.held));
+  const pushed = pushUpTo(ctx, trades.held);
+  const flow = runFlowMin(ctx, settleDrawers(ctx, pushed));
   if (!flow.ok)
     return { kind: "stalled", reason: note("STAGE_FAILED", "internal flow", flow.rejection) };
+  ctx.committedTrades = pushed;
   return ctx.point === null
     ? { kind: "stalled", reason: note("BALANCE_FAILED", ctx.rejection) }
     : { kind: "solved" };

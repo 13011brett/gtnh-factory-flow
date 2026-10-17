@@ -14,8 +14,10 @@ import { setColumnOrder, takeLpCount } from "./lp";
 import { MAX_READOUT_LPS } from "./readout";
 import { runChain, solvePiece } from "./solve-core";
 import { planExtensions, solvePlan } from "./solve-plan";
+import { levels } from "./trade";
 import type {
   Answer,
+  DrawerRule,
   EdgeIn,
   MachineIn,
   Note,
@@ -335,6 +337,110 @@ const twoIslands = (): SolveInput =>
     [upTo(["a1"], 2), upTo(["a2"], 1), upTo(["b1"], 1), upTo(["b2"], 3)],
   );
 
+/**
+ * Old Build's loop top-up, converted: m (Up to 2, x -> y) and r (Up to 3, y -> half an x) in a loop on the x wire, with
+ * a source drawer (`rule`, `rate`) on m's x input and a byproduct drawer on r's x output, both on wired ports.
+ */
+const toppedLoop = (rule: DrawerRule = "ANY", rate = 0): SolveInput =>
+  plan(
+    [
+      machine("m", [port(1, "x")], [port(2, "y")]),
+      machine("r", [port(2, "y")], [port(1, "x", 0.5)]),
+    ],
+    [edge("y", "m", 0, "r", 0), edge("x", "r", 0, "m", 0)],
+    [upTo(["m"], 2), upTo(["r"], 3)],
+    {
+      drawers: [
+        { id: "top-up", label: "x", kind: "SOURCE", rule, rate, links: [{ node: "m", port: 0 }] },
+        {
+          id: "spare",
+          label: "x",
+          kind: "BYPRODUCT",
+          rule: "ANY",
+          rate: 0,
+          links: [{ node: "r", port: 0 }],
+        },
+      ],
+    },
+  );
+
+/**
+ * The topped loop on an island that must also trade, so the fast path cannot settle it and the trades do: e (Exactly 1)
+ * makes 1 z/s for k (Exactly 1, half a z a craft), the spare half sold at e. A seed drawer of any rate on e's and r's
+ * unwired inputs puts them on one island.
+ */
+const toppedLoopTrading = (): SolveInput => {
+  const loop = toppedLoop();
+  return {
+    ...loop,
+    machines: [
+      machine("e", [port(8, "seed")], [port(5, "z")], 1),
+      machine("k", [port(5, "z", 0.5)], [], 1),
+      loop.machines[0]!,
+      { ...loop.machines[1]!, inputs: [...loop.machines[1]!.inputs, port(8, "seed")] },
+    ],
+    edges: [...loop.edges, edge("z", "e", 0, "k", 0)],
+    drawers: [
+      ...loop.drawers,
+      {
+        id: "seed",
+        label: "seed",
+        kind: "SOURCE",
+        rule: "ANY",
+        rate: 0,
+        links: [
+          { node: "e", port: 0 },
+          { node: "r", port: 1 },
+        ],
+      },
+    ],
+  };
+};
+
+/** p (Up to 2, ore -> x) -> `taker` (x -> y), with a byproduct drawer on p's wired x output. */
+const banked = (taker: "any" | "upTo"): SolveInput =>
+  plan(
+    [machine("p", [port(9, "ore")], [port(1, "x")]), machine("q", [port(1, "x")], [port(2, "y")])],
+    [edge("e1", "p", 0, "q", 0)],
+    taker === "upTo" ? [upTo(["p"], 2), upTo(["q"], 1)] : [upTo(["p"], 2)],
+    {
+      drawers: [
+        {
+          id: "spare",
+          label: "x",
+          kind: "BYPRODUCT",
+          rule: "ANY",
+          rate: 0,
+          links: [{ node: "p", port: 0 }],
+        },
+      ],
+    },
+  );
+
+/** m (Up to 2) takes x and w, 1 a craft each, from e1 and e2 (Exactly 1, 1/s each): both inputs short at once. */
+const twoShortInputs = (): SolveInput =>
+  plan(
+    [
+      machine("e1", [], [port(1, "x")], 1),
+      machine("e2", [], [port(2, "w")], 1),
+      machine("m", [port(1, "x"), port(2, "w")], [port(3, "y")]),
+    ],
+    [edge("x", "e1", 0, "m", 0), edge("w", "e2", 0, "m", 1)],
+    [upTo(["m"], 2)],
+  );
+
+/** n (Up to 2) makes y and v, 1 a craft each, for c1 and c2 (Exactly 1, 1/s each): both outputs full at once. */
+const twoFullOutputs = (): SolveInput =>
+  plan(
+    [
+      machine("c1", [port(2, "y")], [], 1),
+      machine("c2", [port(3, "v")], [], 1),
+      machine("n", [port(9, "ore")], [port(2, "y"), port(3, "v")]),
+    ],
+    [edge("y", "n", 0, "c1", 0), edge("v", "n", 1, "c2", 0)],
+    [upTo(["n"], 2)],
+  );
+
 const FIXTURES: Record<string, () => SolveInput> = {
   "chain, second slower": () => chain(2, 1),
   "chain, first slower": () => chain(2, 3),
@@ -352,6 +458,13 @@ const FIXTURES: Record<string, () => SolveInput> = {
   "shared pool": sharedPool,
   alternatives: () => withAlternatives(),
   "two islands": twoIslands,
+  "topped loop": () => toppedLoop(),
+  "topped loop, capped": () => toppedLoop("AT_MOST", 0.5),
+  "topped loop, trading": toppedLoopTrading,
+  "banked, any taker": () => banked("any"),
+  "banked, Up to taker": () => banked("upTo"),
+  "two short inputs": twoShortInputs,
+  "two full outputs": twoFullOutputs,
 };
 
 // ---------------------------------------------------------------------------
@@ -558,6 +671,95 @@ describe("Up to: the push and the read-out", () => {
 // Alternatives, islands, the pin diagnosis, the budget
 // ---------------------------------------------------------------------------
 
+describe("Up to: a drawer on a wired port is the player's own end", () => {
+  it("a source drawer of any rate tops up a loop: the machine runs at its count, drawing the least that does it", () => {
+    const s = solved(toppedLoop()).solution;
+    expect(s.machineCounts["m"]).toBeCloseTo(2, 9);
+    expect(s.machineCounts["r"]).toBeCloseTo(2, 9);
+    // r's half an x a craft goes back into m before anything is drawn (recycle before importing), none to the spare.
+    expect(s.drawers.rates["top-up"]).toBeCloseTo(1, 9);
+    expect(s.drawers.rates["spare"]).toBeCloseTo(0, 9);
+    expect(s.edgeFlowsPerSecond["x"]).toBeCloseTo(1, 9);
+    expect(readoutOf(s, "m")).toMatchObject({ reason: "BOTTLENECK", wants: expect.closeTo(3, 9) });
+    expect(readoutOf(s, "r")).toMatchObject({
+      reason: "STARVED",
+      port: ref("r", 0, true),
+      upstream: ["m"],
+    });
+  });
+
+  it("the same where the trades settle it: they hold only forced flow, never the drawer's supply", () => {
+    const s = solved(toppedLoopTrading()).solution;
+    expect(s.gatedSinks).toEqual([
+      { port: ref("e", 0, false), ratePerSecond: expect.closeTo(0.5, 9) },
+    ]);
+    expect(s.machineCounts["m"]).toBeCloseTo(2, 9);
+    expect(s.machineCounts["r"]).toBeCloseTo(2, 9);
+    expect(s.drawers.rates["top-up"]).toBeCloseTo(1, 9);
+    expect(s.drawers.rates["spare"]).toBeCloseTo(0, 9);
+  });
+
+  it("a capped source drawer: the machine reaches what it allows, and is STARVED at the drawer's port", () => {
+    const s = solved(toppedLoop("AT_MOST", 0.5)).solution;
+    expect(s.machineCounts["m"]).toBeCloseTo(1, 9);
+    expect(s.machineCounts["r"]).toBeCloseTo(1, 9);
+    expect(s.drawers.rates["top-up"]).toBeCloseTo(0.5, 9);
+    expect(s.drawers.rates["spare"]).toBeCloseTo(0, 9);
+    expect(readoutOf(s, "m")).toMatchObject({ reason: "STARVED", port: ref("m", 0, true) });
+  });
+
+  it("a byproduct drawer is permission to run: what a taker can use goes to it first (ship before banking)", () => {
+    const any = solved(banked("any")).solution;
+    expect(any.machineCounts["p"]).toBeCloseTo(2, 9);
+    expect(any.machineCounts["q"]).toBeCloseTo(2, 9);
+    expect(any.drawers.rates["spare"]).toBeCloseTo(0, 9);
+    const full = solved(banked("upTo")).solution;
+    expect(full.machineCounts["p"]).toBeCloseTo(2, 9);
+    expect(full.machineCounts["q"]).toBeCloseTo(1, 9);
+    expect(full.drawers.rates["spare"]).toBeCloseTo(1, 9);
+    expect(readoutOf(full, "p").reason).toBe("FULL");
+    expect(readoutOf(full, "q").reason).toBe("FULL");
+  });
+
+  it("the trade levels (and the alternatives' ranks) leave a drawer's ports out only with Up to pools", () => {
+    const traded = (i: SolveInput) => {
+      const ctx = new SolveContext(i);
+      return { drawn: [...ctx.drawnPorts], ports: levels(ctx).flatMap((l) => l.ports) };
+    };
+    const up = traded(toppedLoop());
+    expect(up.drawn).toHaveLength(2);
+    for (const p of up.drawn) expect(up.ports).not.toContain(p);
+    const exact = toppedLoop();
+    const plain = traded({
+      ...exact,
+      pools: exact.pools.map((p) => ({ ...p, exact: true, upTo: false })),
+    });
+    for (const p of plain.drawn) expect(plain.ports).toContain(p);
+  });
+});
+
+describe("Up to: several ports short at once", () => {
+  it("two inputs short together, neither alone: STARVED at the first, the other tied", () => {
+    const s = solved(twoShortInputs()).solution;
+    expect(s.machineCounts["m"]).toBeCloseTo(1, 9);
+    expect(readoutOf(s, "m")).toMatchObject({
+      reason: "STARVED",
+      port: ref("m", 0, true),
+      tied: [ref("m", 1, true)],
+    });
+  });
+
+  it("two outputs full together, neither alone: CLOGGED at the first, the other tied", () => {
+    const s = solved(twoFullOutputs()).solution;
+    expect(s.machineCounts["n"]).toBeCloseTo(1, 9);
+    expect(readoutOf(s, "n")).toMatchObject({
+      reason: "CLOGGED",
+      port: ref("n", 0, false),
+      tied: [ref("n", 1, false)],
+    });
+  });
+});
+
 describe("Up to: wherever a support is settled", () => {
   it("the alternatives and the stored choice push: the Up to card stays at its count on every support", () => {
     const first = solved(withAlternatives());
@@ -720,6 +922,8 @@ describe("Up to: determinism and work", () => {
       expect(takeLpCount(), name).toBe(n);
       counts[name] = n;
     }
-    for (const [name, n] of Object.entries(counts)) expect(n, name).toBeLessThanOrEqual(20);
+    // A drawer that carries flow opens a gate, so the alternatives search tries swaps, and each support it settles is
+    // pushed again (about ten models): the topped loops' swaps are most of their counts.
+    for (const [name, n] of Object.entries(counts)) expect(n, name).toBeLessThanOrEqual(64);
   });
 });

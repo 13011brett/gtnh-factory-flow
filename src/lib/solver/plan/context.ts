@@ -66,13 +66,19 @@ export class SolveContext {
   readonly droppedPools = new Set<number>();
   /** The Up to pools' indices, in pool order (docs/up-to.md). */
   readonly upToPools: number[];
+  /** Connected ports a drawer is linked to (every drawer's `externalPorts`): the player's own supply or sink. */
+  readonly drawnPorts: Set<number>;
   /** The guard every model this context builds applies; null when none applies (`guard.ts` sets it). */
   guard: Guard | null = null;
   /** The guard has been worked out (once per context, before the first pass). */
   guardReady = false;
   /** Models built now leave the guard out (the pin diagnosis: a drawer shortfall is never a pin conflict). */
   guardOff = false;
-  /** The trading (with the push's bands) the committed point was settled under; the Up to read-out probes it. */
+  /**
+   * What the committed point was settled under, as the plan's own limits: the trade levels and the push's bands, not
+   * the drawer stages after them (those only pick among the pushed points, as least flow does). The Up to read-out
+   * probes it.
+   */
   committedTrades: Trades | null = null;
   shortCircuit = false;
   /** Gates the committed answer opens, tiny ones included (set by the flow stage). */
@@ -148,6 +154,8 @@ export class SolveContext {
     this.model.pools.forEach((pool, p) => {
       if (pool.upTo) this.upToPools.push(p);
     });
+    this.drawnPorts = new Set<number>();
+    for (const row of this.model.drawers) for (const p of row.externalPorts) this.drawnPorts.add(p);
     this.constructionNotes = this.notes.length;
   }
 
@@ -287,10 +295,11 @@ export class SolveContext {
 
   /**
    * Commits the answer with what the solver left at its dust set to exactly zero, so an idle machine reads 0 and
-   * `unneeded` works. The point keeps the SAME support it was given.
+   * `unneeded` works. Dust of the point's scale, or of 1 when the point is smaller (`validatePoint`): a point that is
+   * all but zero commits as zero. The point keeps the SAME support it was given.
    */
   commit(committed: StageOutcome): void {
-    const tol = NUMERICS.dust * this.solutionScaleOf(committed);
+    const tol = NUMERICS.dust * Math.max(1, this.solutionScaleOf(committed));
     const extents = committed.extents.slice();
     const flows = committed.flows.slice();
     const externals = committed.externals.slice();

@@ -25,11 +25,9 @@ export function guardedPorts(ctx: SolveContext): number[] {
   model.connectedPorts.forEach((port, p) => {
     if (upTo.has(port.machine)) networks.add(model.portComponent[p]!);
   });
-  const drawn = new Set<number>();
-  for (const drawer of model.drawers) for (const p of drawer.externalPorts) drawn.add(p);
   const ports: number[] = [];
   for (let p = 0; p < model.connectedPorts.length; p++) {
-    if (networks.has(model.portComponent[p]!) && !drawn.has(p)) ports.push(p);
+    if (networks.has(model.portComponent[p]!) && !ctx.drawnPorts.has(p)) ports.push(p);
   }
   return ports;
 }

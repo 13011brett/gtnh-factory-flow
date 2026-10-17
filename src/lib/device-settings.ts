@@ -20,7 +20,7 @@ export interface DeviceSettings {
 
 export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   zoomedOutNames: true,
-  circuitAsInput: false,
+  circuitAsInput: true,
   settingsSection: "Board",
 };
 

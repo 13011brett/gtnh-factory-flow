@@ -53,9 +53,9 @@ describe("the settings box", () => {
     expect(readDeviceSettings().zoomedOutNames).toBe(false);
     expect(JSON.parse(window.localStorage.getItem("gtnh-factory-flow.device-settings.v1")!).zoomedOutNames).toBe(false);
     fireEvent.click(screen.getByText("Circuit as an input"));
-    expect(readDeviceSettings().circuitAsInput).toBe(true);
+    expect(readDeviceSettings().circuitAsInput).toBe(false);
     // The picture shows the effect at once.
-    expect(document.querySelector(".sp-board")?.hasAttribute("data-circuit")).toBe(true);
+    expect(document.querySelector(".sp-board")?.hasAttribute("data-circuit")).toBe(false);
     expect(document.querySelector(".sp-board")?.hasAttribute("data-names")).toBe(false);
   });
 

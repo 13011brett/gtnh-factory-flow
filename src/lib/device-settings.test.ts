@@ -2,10 +2,10 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_DEVICE_SETTINGS, parseDeviceSettings } from "./device-settings";
 
 describe("device settings", () => {
-  it("starts at the mod's defaults: names on, circuit off, Board section", () => {
+  it("starts at the defaults: names on, circuit as an input on, Board section", () => {
     expect(DEFAULT_DEVICE_SETTINGS).toEqual({
       zoomedOutNames: true,
-      circuitAsInput: false,
+      circuitAsInput: true,
       settingsSection: "Board",
     });
     expect(parseDeviceSettings(null)).toBe(DEFAULT_DEVICE_SETTINGS);
@@ -15,7 +15,7 @@ describe("device settings", () => {
   it("keeps a saved value, and an absent key falls back to its default", () => {
     const read = parseDeviceSettings(JSON.stringify({ zoomedOutNames: false }));
     expect(read.zoomedOutNames).toBe(false);
-    expect(read.circuitAsInput).toBe(false);
+    expect(read.circuitAsInput).toBe(true);
     expect(read.settingsSection).toBe("Board");
     // Only an explicit false means off: a missing names key is on.
     expect(parseDeviceSettings("{}").zoomedOutNames).toBe(true);

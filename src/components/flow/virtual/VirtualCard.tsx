@@ -12,6 +12,7 @@ import {
 import { useStoreApi, useUpdateNodeInternals } from "@xyflow/react";
 import "./virtual.css";
 import { applyZoomTo } from "./zoom-var";
+import { syncPromptPhase } from "./prompt-phase";
 import { boardVirtualizer, virtualizationEnabled } from "./card-virtualizer";
 import type { ShellFace } from "./use-card-face";
 
@@ -192,6 +193,10 @@ export function CardShell({
       boardVirtualizer.markUndrawn(nodeId);
     }
   }, [layoutKey, nodeId]);
+  useEffect(() => {
+    // A ring's outline pulses off the prompts' clock, on a shell as on its card.
+    if (face.loop) syncPromptPhase();
+  }, [face.loop]);
   useLayoutEffect(() => {
     const wrapper = ref.current?.closest(".react-flow__node");
     if (!wrapper) return;
@@ -240,6 +245,7 @@ export function CardShell({
       data-cannot-run={face.cannotRun ? "" : undefined}
       data-unset={face.unset ? "" : undefined}
       data-tone={face.tone}
+      data-loop={face.loop}
       style={style}
     >
       <div

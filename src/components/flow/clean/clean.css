@@ -89,6 +89,37 @@
   --cc-frame: #94c3f3;
 }
 
+/* A card in a dead loop or a clog lock (data-loop, PlanSolveExtras.loops): its outline, two pixels, pulses in the ring's
+   tone (a dead loop in STARVED's amber, a clog lock in CLOGGED's purple), dimming in the grey half of the prompts' one
+   clock (virtual/prompt-phase.ts). Colour only; steady with reduced motion (the clock stays in its first half). After
+   the reason tones, so the ring wins. */
+.cc-card[data-loop] {
+  --cc-frame: var(--cc-loop);
+  box-shadow:
+    inset 0 0 0 2px var(--cc-frame),
+    6px 8px 7px rgba(0, 0, 0, 0.36);
+}
+.cc-card[data-loop="dead"] {
+  --cc-loop: #e0a63a;
+}
+.cc-card[data-loop="clog"] {
+  --cc-loop: #b49cf0;
+}
+:root[data-cc-blink] .cc-card[data-loop] {
+  --cc-frame: color-mix(in srgb, var(--cc-loop) 30%, var(--cc-edge));
+}
+/* A ring's wires (FactoryFlow ResourceEdge, `cc-loop-wire`): lit in its tone, steady. */
+.cc-loop-wire {
+  opacity: 0.8;
+  pointer-events: none;
+}
+.cc-loop-wire[data-loop="dead"] {
+  stroke: #e0a63a;
+}
+.cc-loop-wire[data-loop="clog"] {
+  stroke: #b49cf0;
+}
+
 /* Selection and "cannot run" rings, outside the edge. */
 .cc-card::before {
   content: "";

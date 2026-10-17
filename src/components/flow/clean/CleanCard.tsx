@@ -808,10 +808,11 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
   useEffect(() => ensureInteractionHost(), []);
   // Every prompt on the board shares one phase however late it mounted.
   useEffect(() => {
-    if (!view.unset) return;
+    // A ring's outline pulses off the same clock as the prompts.
+    if (!view.unset && !view.loop) return;
     // Queued: getAnimations flushes the page's style, once a frame for every card mounted in it.
     syncPromptPhase();
-  }, [view.unset]);
+  }, [view.unset, view.loop]);
   const deleteNode = useFactoryStore((state) => state.deleteNode);
   const duplicateNode = useFactoryStore((state) => state.duplicateNode);
   const [listOpen, setListOpen] = useState(false);
@@ -872,6 +873,7 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
       data-cannot-run={view.cannotRun ? "" : undefined}
       data-unset={view.unset ? "" : undefined}
       data-tone={frameTone(view.foot)}
+      data-loop={view.loop}
       onPointerDownCapture={onPointerDownCapture}
     >
       <div className="cc-head">

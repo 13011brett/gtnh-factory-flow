@@ -4,6 +4,7 @@ import type { FactoryProject, ResourceKind, ThroughputResult } from "@/lib/model
 import { rateMultiplierForKind, rateSuffixForKind } from "@/lib/model/rate-unit";
 import { pinRuleOf } from "@/lib/model/pin-rule";
 import { UP_TO_WORD } from "../up-to-reason";
+import { loopSentence } from "../loops";
 import type { Note, NoteArg, PlanNote, PlanShortfall } from "@/lib/solver/plan/types";
 import { splitResultNodeId } from "./rail-model";
 
@@ -108,12 +109,37 @@ export function buildNotices(
     }
   }
 
-  // The cards and drawers that hold a drawer's rate back, as short sentences.
   const recipeOf = new Map(project.recipes.map((r) => [r.id, r]));
   const cardName = (id: string): string => {
     const node = project.nodes.find((n) => n.id === id);
     return recipeOf.get(node?.recipeId ?? "")?.machineType ?? "machine";
   };
+
+  // Old Build's rings: a dead loop's cards wait on each other, a clog lock's are stuck on a surplus. Show me frames
+  // the ring's cards.
+  const resourceName = (key: string): string => {
+    const at = key.indexOf(":");
+    const kind = key.slice(0, at);
+    const id = key.slice(at + 1);
+    for (const recipe of project.recipes) {
+      for (const slot of [...recipe.inputs, ...recipe.outputs]) {
+        if (slot.kind === kind && slot.id === id) return slot.displayName ?? id;
+      }
+    }
+    return id;
+  };
+  for (const loop of extras.loops ?? []) {
+    const cards = loop.cards.filter((id) => nodeIds.has(id));
+    if (cards.length === 0) continue;
+    out.push({
+      id: `loop:${loop.kind}:${cards.join(",")}`,
+      severity: "warn",
+      text: loopSentence(loop, cards.map(cardName), loop.resourceKeys.map(resourceName)),
+      focus: cards,
+    });
+  }
+
+  // The cards and drawers that hold a drawer's rate back, as short sentences.
   const holdersOf = (s: PlanShortfall): string => {
     const parts: string[] = [];
     for (const id of s.limitingCards) {

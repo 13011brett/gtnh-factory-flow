@@ -91,6 +91,8 @@ export interface SpecialView {
   count?: CleanCardView["count"];
   /** The bar along the foot: an Up to card's reason, or an Exactly card's forced input. */
   foot?: CleanCardView["foot"];
+  /** The card is in a dead loop or a clog lock: its outline pulses in the ring's tone. */
+  loop?: CleanCardView["loop"];
   /** A crop farm with no crop yet: a dashed key to pick one in place of the rails. */
   pick?: boolean;
   /** A crop farm with a crop: the head key that picks another. */

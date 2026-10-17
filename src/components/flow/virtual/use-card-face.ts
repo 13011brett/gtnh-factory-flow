@@ -12,6 +12,7 @@ import {
   stateFrameTone,
 } from "../clean/clean-model";
 import { CC_GEOMETRY } from "../clean/tokens";
+import { cardLoop, type LoopTone } from "../clean/loops";
 import { estimateRecipeCardHeight } from "./card-shell";
 import { useMachineHandlerIconEntries, useRecipeMapIcons } from "../machine-icons";
 import type { RecipeNodeData } from "../RecipeNode";
@@ -32,6 +33,8 @@ export interface ShellFace {
   unset: boolean;
   /** A problem card's frame tone (clean-model `stateFrameTone`), as the card wears it. */
   tone?: string;
+  /** The card is in a dead loop or a clog lock: its outline pulses in the ring's tone, as the card's does. */
+  loop?: LoopTone;
   /** The count the glance face prints. */
   count: string;
   /** The picture the glance face draws. */
@@ -133,6 +136,7 @@ export function useCardFace(
     cannotRun: derived.powerReport !== undefined && derived.powerReport.state !== "ok",
     unset: count.unset,
     tone: stateFrameTone(count, plan, projectNode.id),
+    loop: cardLoop(plan?.loops, projectNode.id),
     count: `×${formatSolvedMachines(count.value)}`,
     art: art ?? machineIcon?.iconPath,
     fallbackWidth: CC_GEOMETRY.cardWidth,

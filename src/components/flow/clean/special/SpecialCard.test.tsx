@@ -426,3 +426,8 @@ it("puts a generator's bar under its warnings", () => {
   expect(foot.style.gridRow).toBe("5");
   expect(container.querySelectorAll("*").length).toBeLessThanOrEqual(PLAIN_BUDGET);
 });
+
+it("marks a special card in a ring as the plain card is marked", () => {
+  const { container } = renderCard({ ...baseView(), loop: "clog" });
+  expect(container.querySelector(".cc-card")!.getAttribute("data-loop")).toBe("clog");
+});

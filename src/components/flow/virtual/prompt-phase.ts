@@ -16,7 +16,9 @@ const PULSES = new Set(["cc-accept", "cc-glow"]);
 export const BLINK_ATTRIBUTE = "data-cc-blink";
 /** One whole blink (gold then grey), as `--cc-prompt` says in clean.css. */
 export const BLINK_MS = 1000;
-const PROMPTS = ".cc-count[data-prompt], .cc-prb[data-prompt], .cd-box[data-prompt]";
+/** Everything that blinks off the clock: the prompts, and the outline of a card in a dead loop or a clog lock. */
+const PROMPTS =
+  ".cc-count[data-prompt], .cc-prb[data-prompt], .cd-box[data-prompt], .cc-card[data-loop]";
 
 let frame = 0;
 let clock: ReturnType<typeof setTimeout> | undefined;
@@ -59,7 +61,12 @@ function tick() {
 /** Starts the prompts' clock if it is not running (it stops itself when no prompt is left). */
 export function startPromptClock(): void {
   // (Not in jsdom, which has no Web Animations: a test's fake timers would run it for ever.)
-  if (clock !== undefined || typeof document === "undefined" || typeof document.getAnimations !== "function") return;
+  if (
+    clock !== undefined ||
+    typeof document === "undefined" ||
+    typeof document.getAnimations !== "function"
+  )
+    return;
   clock = setTimeout(tick, 0);
 }
 

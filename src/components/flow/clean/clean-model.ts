@@ -59,6 +59,7 @@ import type { RecipeNodeData } from "../RecipeNode";
 import { CC, CC_GEOMETRY } from "./tokens";
 import { mixHex } from "./colors";
 import { UP_TO_COLOR } from "./up-to-reason";
+import { cardLoop, type LoopTone } from "./loops";
 import { isPinned, pinMachineKey, settingControls } from "./menus/settings-model";
 import { mcTextWidth, measureClean, useFontEpoch } from "./text-measure";
 
@@ -212,6 +213,8 @@ export interface CleanCardView {
   count: CleanCountView;
   /** The bar along the foot; absent when there is nothing to say (Any, or Exactly with nothing forced). */
   foot?: CleanFootView;
+  /** The card is in a dead loop or a clog lock (`PlanSolveExtras.loops`): its outline pulses in the ring's tone. */
+  loop?: LoopTone;
   /** The programmed circuit: a badge in the well's top-left corner, its icon with its number on it. */
   circuit?: RecipeProgrammedCircuit;
   chips: CleanChipView[];
@@ -1069,6 +1072,7 @@ export function useCleanCardModel(
     glanceArt: art ?? machineIcon?.iconPath,
     count,
     foot,
+    loop: cardLoop(plan?.loops, projectNode.id),
     circuit: derived.circuit,
     chips: strip.chips,
     stripHeight: strip.height,

@@ -17,7 +17,7 @@ import { makeLeftoverKey, makePortKey } from "../port-key";
 import type { PlanLeftover, PlanSolveExtras } from "../types";
 
 /**
- * Four hand-built plan-mode results for the UI packages, shaped exactly as the
+ * Five hand-built plan-mode results for the UI packages, shaped exactly as the
  * adapter will return them (`ThroughputResult` with `plan`), so cards, drawers
  * and the overview can be built before the solver is wired. The numbers are
  * consistent (every wire's flow balances at its ports, forced rows are the
@@ -35,6 +35,8 @@ import type { PlanLeftover, PlanSolveExtras } from "../types";
  *   mockUnneeded    a machine nothing pinned feeds or needs at zero, a separate
  *                   island nothing sets (unanchored recipe and drawer), and a
  *                   drawer whose rate cannot be reached (note + unmet).
+ *   mockLoops       a dead loop of three Up to cards and a clog lock of two
+ *                   (`extras.loops`).
  *   mockUpTo        Up to cards in every reason (`extras.upTo`), an Exactly
  *                   card fed by a forced input, an Exactly card with nothing
  *                   forced and an Any card. The other mocks' pins are Exactly.
@@ -55,6 +57,8 @@ interface MockRecipe {
   outputs: Slot[];
   /** A GregTech recipe dialled to this programmed circuit (the card's badge in the well). */
   circuit?: string;
+  /** The machine the recipe runs in (`machineType`, the name notices use); "Mock Machine" by default. */
+  machine?: string;
 }
 
 interface MockNode {
@@ -122,7 +126,7 @@ function build(spec: MockSpec): MockPlan {
   const recipes: Recipe[] = spec.recipes.map((r) => ({
     id: r.id,
     name: r.id,
-    machineType: "Mock Machine",
+    machineType: r.machine ?? "Mock Machine",
     minimumTier: "LV",
     durationTicks: 20,
     eut: 30,
@@ -720,4 +724,124 @@ export const mockUpTo: MockPlan = build({
   },
 });
 
-export const mockPlans: MockPlan[] = [mockForced, mockLeftovers, mockUnneeded, mockUpTo];
+// ---------------------------------------------------------------------------
+// 5. Old Build's rings: a dead loop and a clog lock
+// ---------------------------------------------------------------------------
+
+export const mockLoops: MockPlan = build({
+  id: "mock-loops",
+  name: "Dead loop and clog lock",
+  description:
+    "Three Up to cards in a ring with nothing feeding it (a dead loop), and two that feed each other and are stuck on a surplus of hydrogen (a clog lock).",
+  recipes: [
+    {
+      id: "Ring Electrolysis",
+      machine: "Electrolyzer",
+      inputs: [["Sludge", 1]],
+      outputs: [["Gas", 1]],
+    },
+    {
+      id: "Ring Reaction",
+      machine: "Chemical Reactor",
+      inputs: [["Gas", 1]],
+      outputs: [["Slurry", 1]],
+    },
+    { id: "Ring Mixing", machine: "Mixer", inputs: [["Slurry", 1]], outputs: [["Sludge", 1]] },
+    {
+      id: "Water Splitting",
+      machine: "Electrolyzer",
+      inputs: [["Water", 1]],
+      outputs: [
+        ["Hydrogen", 2],
+        ["Oxygen", 1],
+      ],
+    },
+    {
+      id: "Water Making",
+      machine: "Mixer",
+      inputs: [
+        ["Hydrogen", 1],
+        ["Oxygen", 1],
+      ],
+      outputs: [["Water", 1]],
+    },
+  ],
+  nodes: [
+    { id: "ra", recipe: "Ring Electrolysis", count: 0, pin: 2, utilization: 0, x: 0, y: 0 },
+    { id: "rb", recipe: "Ring Reaction", count: 0, pin: 2, utilization: 0, x: 480, y: 0 },
+    { id: "rc", recipe: "Ring Mixing", count: 0, pin: 2, utilization: 0, x: 240, y: 300 },
+    { id: "split", recipe: "Water Splitting", count: 0, pin: 2, utilization: 0, x: 0, y: 700 },
+    { id: "make", recipe: "Water Making", count: 0, pin: 2, utilization: 0, x: 480, y: 700 },
+  ],
+  drawers: [],
+  wires: [
+    { id: "w-ab", from: "ra", to: "rb", item: "Gas", perSecond: 0 },
+    { id: "w-bc", from: "rb", to: "rc", item: "Slurry", perSecond: 0 },
+    { id: "w-ca", from: "rc", to: "ra", item: "Sludge", perSecond: 0 },
+    { id: "w-h", from: "split", to: "make", item: "Hydrogen", perSecond: 0 },
+    { id: "w-o", from: "split", to: "make", item: "Oxygen", perSecond: 0 },
+    { id: "w-w", from: "make", to: "split", item: "Water", perSecond: 0 },
+  ],
+  extras: {
+    upTo: {
+      ra: {
+        capacity: 2,
+        reached: 0,
+        reason: "STARVED",
+        portKey: inn("ra", "Sludge"),
+        resourceKey: "item:Sludge",
+      },
+      rb: {
+        capacity: 2,
+        reached: 0,
+        reason: "STARVED",
+        portKey: inn("rb", "Gas"),
+        resourceKey: "item:Gas",
+      },
+      rc: {
+        capacity: 2,
+        reached: 0,
+        reason: "STARVED",
+        portKey: inn("rc", "Slurry"),
+        resourceKey: "item:Slurry",
+      },
+      split: {
+        capacity: 2,
+        reached: 0,
+        reason: "CLOGGED",
+        portKey: out("split", "Hydrogen"),
+        resourceKey: "item:Hydrogen",
+      },
+      make: {
+        capacity: 2,
+        reached: 0,
+        reason: "STARVED",
+        portKey: inn("make", "Hydrogen"),
+        resourceKey: "item:Hydrogen",
+      },
+    },
+    loops: [
+      {
+        kind: "DEAD_LOOP",
+        cards: ["ra", "rb", "rc"],
+        portKeys: [inn("ra", "Sludge"), inn("rb", "Gas"), inn("rc", "Slurry")],
+        resourceKeys: ["item:Sludge", "item:Gas", "item:Slurry"],
+      },
+      {
+        kind: "CLOG_LOCK",
+        cards: ["split", "make"],
+        portKeys: [out("split", "Hydrogen")],
+        resourceKeys: ["item:Hydrogen"],
+      },
+    ],
+    forced: [],
+    leftovers: [],
+    unneeded: [],
+    unanchored: [],
+    terminals: [],
+    notes: [],
+    openGates: 0,
+  },
+});
+
+export const mockPlans: MockPlan[] = [mockForced, mockLeftovers, mockUnneeded, mockUpTo, mockLoops];

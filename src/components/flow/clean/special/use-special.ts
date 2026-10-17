@@ -358,6 +358,7 @@ export function useSharedCardModel(data: RecipeNodeData, selected: boolean): Spe
     icon: iconOf(base.context),
     count,
     foot,
+    loop: base.view.loop,
     chips: base.view.chips,
     stripHeight: base.view.stripHeight,
     warnings: [],
@@ -486,6 +487,7 @@ export function usePowerCardModel(data: RecipeNodeData, selected: boolean): Spec
     count,
     // The generator's rows and count are the plain card's: so is its bar.
     foot: base.view.foot,
+    loop: base.view.loop,
     chips,
     stripHeight: strip.height,
     warnings: info.warnings ?? [],
@@ -674,6 +676,7 @@ export function useCropCardModel(data: RecipeNodeData, selected: boolean): Speci
     icon: iconOf(base.context),
     count: placeholder ? undefined : count,
     foot: placeholder ? undefined : base.view.foot,
+    loop: base.view.loop,
     chips: base.view.chips,
     stripHeight: base.view.stripHeight,
     warnings: [],
@@ -802,6 +805,7 @@ export function useHolderCardModel(
     count,
     // An Exactly custom rate card fed by a forced input says so, as any Exactly card does.
     foot: count && !empty ? base.view.foot : undefined,
+    loop: base.view.loop,
     chips,
     stripHeight,
     warnings: [],

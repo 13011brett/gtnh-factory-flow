@@ -321,6 +321,17 @@ it("outlines a problem card in its bar's tone, and leaves Any and a full card al
   expect(forced.getAttribute("data-tone")).toBe("forced");
 });
 
+it("marks a card in a ring so its outline pulses in the ring's tone", () => {
+  const dead = renderCard({ ...upToView(), loop: "dead" }).container.querySelector(".cc-card")!;
+  expect(dead.getAttribute("data-loop")).toBe("dead");
+  cleanup();
+  const clog = renderCard({ ...upToView(), loop: "clog" }).container.querySelector(".cc-card")!;
+  expect(clog.getAttribute("data-loop")).toBe("clog");
+  cleanup();
+  const none = renderCard(upToView()).container.querySelector(".cc-card")!;
+  expect(none.hasAttribute("data-loop")).toBe(false);
+});
+
 it("lights the row its reason names", () => {
   const view = upToView();
   const lit = {

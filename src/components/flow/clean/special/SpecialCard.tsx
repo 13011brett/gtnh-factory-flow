@@ -370,9 +370,9 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   useEffect(() => ensureInteractionHost(), []);
   useEffect(() => {
-    // Every prompt on the board blinks off one clock (virtual/prompt-phase.ts).
-    if (view.unset) syncPromptPhase();
-  }, [view.unset]);
+    // Every prompt on the board, and a ring's outline, blinks off one clock (virtual/prompt-phase.ts).
+    if (view.unset || view.loop) syncPromptPhase();
+  }, [view.unset, view.loop]);
   const deleteNode = useFactoryStore((state) => state.deleteNode);
   const duplicateNode = useFactoryStore((state) => state.duplicateNode);
   const [listOpen, setListOpen] = useState(false);
@@ -487,6 +487,7 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
       data-unset={view.unset ? "" : undefined}
       data-empty={view.sockets ? "" : undefined}
       data-tone={frameTone(view.foot)}
+      data-loop={view.loop}
       onPointerDownCapture={onPointerDownCapture}
     >
       <div className="cc-head">

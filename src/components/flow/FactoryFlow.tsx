@@ -333,6 +333,7 @@ import { compareEdgeDepth, edgeCasingWidth } from "./edge-geometry";
 import { EDGE_HOP_MAX_RADIUS, buildHoppedPath, type HopSpan } from "./wire-hops";
 import { describeDeathSpiral, findDeathSpirals } from "./death-spiral";
 import { describeClogLock, findClogLocks } from "./clog-lock";
+import { loopEdges, type LoopTone } from "./clean/loops";
 import { findUnwiredNodeIds } from "./node-verdict";
 import { useBoardPulseGate, useBoardPulseSync } from "./animation-phase";
 import { useSlicedMount } from "./sliced-mount";
@@ -786,6 +787,8 @@ type ResourceEdgeData = {
   isDeadLoop?: boolean;
   /** This wire is part of a jam whose surplus has nowhere to go. */
   isClogLock?: boolean;
+  /** A plan board's dead loop or clog lock runs along this wire (`PlanSolveExtras.loops`, clean/loops.ts). */
+  planLoop?: LoopTone;
   /**
    * Channels: flat edges carrying the same resource between the same two
    * cards (a shared machine's two recipes, two slots of one material, wires
@@ -3011,6 +3014,8 @@ export function FactoryFlow() {
     // is cached per solve, but the lookup below runs for every wire.
     const deathSpiralEdges = findDeathSpirals(project, result).byEdge;
     const clogLockEdges = findClogLocks(project, result).byEdge;
+    // A plan board's rings: the wires joining their cards along their rows.
+    const planLoopEdges = loopEdges(project.edges, result.plan?.loops);
     const ceilingFor = (sourceId: string) => {
       let ceiling = supplyCeilings.get(sourceId);
       if (ceiling === undefined) {
@@ -3382,6 +3387,7 @@ export function FactoryFlow() {
           // shape, not N red cards that happen to sit together.
           isDeadLoop: deathSpiralEdges.has(edge.id),
           isClogLock: clogLockEdges.has(edge.id),
+          planLoop: planLoopEdges.get(edge.id),
           flowRate: anyLineMode
             ? {
                 heat: flowHeat,
@@ -9252,6 +9258,18 @@ function ResourceEdgeComponent({
           strokeLinecap="round"
           strokeLinejoin="round"
           style={{ pointerEvents: "none" }}
+        />
+      ) : null}
+      {/* A plan board's ring along this wire: lit in its tone, steady (clean.css `.cc-loop-wire`). */}
+      {data?.planLoop ? (
+        <path
+          className="cc-loop-wire"
+          data-loop={data.planLoop}
+          d={liveRoute.path}
+          fill="none"
+          strokeWidth={coreStrokeWidth + 4}
+          strokeLinecap="round"
+          strokeLinejoin="round"
         />
       ) : null}
       {/* Direction arrows: FILLED heads in the wire's colour lifted brighter,

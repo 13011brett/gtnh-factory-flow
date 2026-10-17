@@ -520,11 +520,16 @@ export interface FactoryNode {
    */
   extraRecipes?: FactoryNodeRecipeSection[];
   /**
-   * Solve mode's pin: run EXACTLY this many machines, and solve the rest of
-   * the line around it ("I want 20 LGTs; what feeds them"). Absent means the
-   * count is the solver's to choose. Ignored in Build mode.
+   * The machine count the player set. By default it is an Up to count
+   * (docs/up-to.md): the machines run as hard as the plan lets them, never
+   * above it, and say why when they run less. With `solvePinExact` it is an
+   * Exactly count: run this many flat out and solve the rest around it, gaps
+   * shown as forced flows. Absent means the count is the solver's to choose
+   * (Any). A custom rate card's pin is always exact.
    */
   solvePin?: number;
+  /** `solvePin` is Exactly, not Up to. Absent or false: Up to. Meaningless without `solvePin`. */
+  solvePinExact?: boolean;
   /**
    * Plan mode's port-rate pins, units per second by canonical handle id
    * (`output:item:foo`, `r2:input:fluid:bar` for a shared machine's section).

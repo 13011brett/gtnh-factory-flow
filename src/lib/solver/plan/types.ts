@@ -72,6 +72,12 @@ export interface PoolIn {
   capacity: number;
   /** false: a cap (sum of machine time <= capacity). true: the count is pinned (== capacity). */
   exact: boolean;
+  /**
+   * The Up to rule (docs/up-to.md), read only when `exact` is false: the machines run as hard as the plan lets them,
+   * never above `capacity`, and no forced flow makes up what they cannot do. Anchors its part of the plan. A one-card
+   * pool is how a single card's Up to pin reaches the engine. Absent = false (a plain cap, the mod's older groups).
+   */
+  upTo?: boolean;
 }
 
 export type DrawerKind = "SOURCE" | "PRODUCT" | "BYPRODUCT" | "TRASH" | "BUFFER";
@@ -143,6 +149,7 @@ export type SolverMessage =
   | "PIN_COUNT"
   | "PIN_TARGET"
   | "PIN_EXTENT"
+  | "PIN_UP_TO"
   | "SOLVER_UNSATISFIABLE"
   | "SOLVER_BUDGET"
   | "SOLVER_NOT_CONSERVING"
@@ -208,7 +215,42 @@ export interface DrawerReadout {
   ports: Record<Id, External[]>;
 }
 
+/**
+ * Why an Up to card runs where it does (docs/up-to.md, "The reasons"):
+ * - FULL: at its count; nothing else in the plan would use more of it.
+ * - BOTTLENECK: at its count, and the rest of the plan would use more (`wants`).
+ * - STARVED: below its count because an input runs short (`port`).
+ * - CLOGGED: below its count because an output has nowhere to go (`port`).
+ * - UNUSED: at zero because nothing takes what it makes (`port`).
+ * - LIMITED: below its count for a reason no single port explains (another rule of the plan).
+ */
+export type UpToReason = "FULL" | "BOTTLENECK" | "STARVED" | "CLOGGED" | "UNUSED" | "LIMITED";
+
+/** The read-out of one Up to pool at the committed point. */
+export interface UpToReadout {
+  /** The pool's first machine: the card (a shared card's section 0). */
+  node: Id;
+  /** Every machine of the pool, in pool order. */
+  machines: Id[];
+  /** Up to this many machines (the pool's capacity). */
+  capacity: number;
+  /** Machines' worth running: the pool's machine time, sum of extent * durTicks / 20. */
+  reached: number;
+  /** Null when the read-out's work budget ran out before this pool. */
+  reason: UpToReason | null;
+  /** STARVED, CLOGGED, UNUSED: the port that holds it back (the first in machine, then port order). */
+  port?: PortRef;
+  /** Other ports that hold it back just as alone. */
+  tied?: PortRef[];
+  /** BOTTLENECK: how many machines the rest of the plan would use. */
+  wants?: number;
+  /** STARVED: the Up to cards (their `node`) making the short input that are FULL or BOTTLENECK: where to act. */
+  upstream?: Id[];
+}
+
 export interface SolutionView {
+  /** Up to pools only, by `node` (`compareIds`). Absent when the plan has none. */
+  upTo?: UpToReadout[];
   /** Crafts/s, every machine (0 for idle). */
   extentsPerSecond: Record<Id, number>;
   /** extent * durTicks / 20, fractional. */
@@ -383,7 +425,42 @@ export interface PlanTerminal {
   perSecond: number;
 }
 
+/** An Up to card's read-out as the board shows it (`UpToReadout` in the website's words). */
+export interface PlanUpTo {
+  /** Up to this many machines. */
+  capacity: number;
+  /** Machines' worth running. */
+  reached: number;
+  reason: UpToReason | null;
+  /** STARVED, CLOGGED, UNUSED: the row that holds it back. */
+  portKey?: PortKey;
+  /** `kind:id` of that row's resource. */
+  resourceKey?: string;
+  /** Other rows that hold it back just as alone. */
+  tied?: PortKey[];
+  /** BOTTLENECK: how many machines the rest of the plan would use. */
+  wants?: number;
+  /** STARVED: card ids upstream on the short input that are full: where to act. */
+  upstream?: Id[];
+}
+
+/** A drawer whose rule the answer cannot keep, and what holds it back, in card ids. */
+export interface PlanShortfall {
+  drawerId: Id;
+  rule: DrawerRule;
+  target: number;
+  reachable: number;
+  /** Cards whose pin (an exact count, a rate, or an Up to count) holds it back. */
+  limitingCards: Id[];
+  /** Other drawers whose rule holds it back. */
+  limitingDrawers: Id[];
+}
+
 export interface PlanSolveExtras {
+  /** Every Up to card, by card id (a shared card's whole pool under the card's id). Absent when none. */
+  upTo?: Record<Id, PlanUpTo>;
+  /** Drawers the answer falls short of, with what holds each back. Absent when none. */
+  shortfalls?: PlanShortfall[];
   forced: PlanForced[];
   leftovers: PlanLeftover[];
   /** Unpinned machines the answer leaves at zero (nothing pinned feeds or needs them). */

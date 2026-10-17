@@ -5,6 +5,7 @@ import { ReactFlowProvider } from "@xyflow/react";
 import type { FactoryNode, Recipe, ResourceKind } from "@/lib/model/types";
 import type { RailPort } from "../node-verdict";
 import { CleanCard } from "./CleanCard";
+import { writeDeviceSettings } from "@/lib/device-settings";
 import type {
   CleanCardActions,
   CleanCardContext,
@@ -319,6 +320,36 @@ it("outlines a problem card in its bar's tone, and leaves Any and a full card al
     foot: buildFootView(exactCount, undefined, { inputs: fed, outputs: view.outputs }),
   }).container.querySelector(".cc-card")!;
   expect(forced.getAttribute("data-tone")).toBe("forced");
+});
+
+it("draws its Up to bar on the zoomed-out face, one element", () => {
+  const { container } = renderCard({
+    ...upToView(),
+    glance: { tone: "starved", fill: 0.76, word: "STARVED" },
+  });
+  const glance = container.querySelector<HTMLElement>(".cc-glance")!;
+  expect(glance.children.length).toBe(0);
+  expect(glance.getAttribute("data-bar")).toBe("");
+  expect(glance.getAttribute("data-tone")).toBe("starved");
+  expect(glance.textContent).toBe("STARVED");
+  expect(glance.style.getPropertyValue("--glance-fill")).toBe("76%");
+  cleanup();
+  const plain = renderCard(referenceView()).container.querySelector(".cc-glance")!;
+  expect(plain.hasAttribute("data-bar")).toBe(false);
+  expect(plain.textContent).toBe("");
+});
+
+it("keeps the normal edge with Problem outlines off, and the ring's outline either way", () => {
+  writeDeviceSettings({ problemOutlines: false });
+  try {
+    const card = renderCard({ ...upToView(), loop: "dead" }).container.querySelector(".cc-card")!;
+    expect(card.hasAttribute("data-tone")).toBe(false);
+    expect(card.getAttribute("data-loop")).toBe("dead");
+    // The bar and its colour stay.
+    expect(card.querySelector(".cc-foot")!.getAttribute("data-tone")).toBe("starved");
+  } finally {
+    writeDeviceSettings({ problemOutlines: true });
+  }
 });
 
 it("marks a card in a ring so its outline pulses in the ring's tone", () => {

@@ -13,6 +13,7 @@ import { useStoreApi, useUpdateNodeInternals } from "@xyflow/react";
 import "./virtual.css";
 import { applyZoomTo } from "./zoom-var";
 import { syncPromptPhase } from "./prompt-phase";
+import { glanceFace } from "../clean/glance";
 import { boardVirtualizer, virtualizationEnabled } from "./card-virtualizer";
 import type { ShellFace } from "./use-card-face";
 
@@ -208,6 +209,7 @@ export function CardShell({
     }
     return () => wrapper.removeAttribute(FAR_ATTRIBUTE);
   }, [far]);
+  const glance = glanceFace(face.art ? `url(${face.art})` : undefined, face.bar);
   const internal = storeApi.getState().nodeLookup.get(nodeId);
   const measured = internal?.measured;
   const handles = markers && !far ? internal?.internals.handleBounds : undefined;
@@ -252,9 +254,13 @@ export function CardShell({
         className="cc-glance"
         data-node-detail="glance"
         data-count={face.count}
+        data-bar={glance["data-bar"]}
+        data-tone={glance["data-tone"]}
         aria-hidden
-        style={face.art ? { backgroundImage: `url(${face.art})` } : undefined}
-      />
+        style={glance.style}
+      >
+        {glance.text}
+      </div>
       {handles?.source?.map((h) => marker("source", h))}
       {handles?.target?.map((h) => marker("target", h))}
     </div>

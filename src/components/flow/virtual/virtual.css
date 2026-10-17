@@ -60,6 +60,10 @@
   transform: translate(calc(-6px / var(--board-zoom, 1)), calc(-4px / var(--board-zoom, 1)))
     scale(min(calc(1 / var(--board-zoom, 1)), 4.5));
 }
+/* Over an Up to bar the count sits on top of it (the bar is card pixels tall, glance.ts). */
+.factory-flow-board[data-detail-level="glance"] .cc-card[data-shell] > .cc-glance[data-bar]::after {
+  bottom: calc(var(--glance-bar-h) + 2px);
+}
 
 /*
  * While only the camera moves (VirtualizationController.tsx) nothing on the board takes the pointer: the browser

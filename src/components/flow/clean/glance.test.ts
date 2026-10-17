@@ -1,0 +1,41 @@
+import { describe, expect, it } from "vitest";
+import { glanceBar, glanceFace } from "./glance";
+
+describe("the zoomed-out bar", () => {
+  it("fills to what runs over the count, in the reason's tone with its word", () => {
+    expect(glanceBar({ capacity: 24, reached: 18, reason: "STARVED" })).toEqual({
+      tone: "starved",
+      fill: 0.75,
+      word: "STARVED",
+    });
+    // A bottleneck's runs to what the line wants, as the card's own bar.
+    expect(glanceBar({ capacity: 24, reached: 24, reason: "BOTTLENECK", wants: 32 })).toEqual({
+      tone: "bottleneck",
+      fill: 0.75,
+      word: "BOTTLENECK",
+    });
+    expect(glanceBar({ capacity: 6, reached: 3, reason: null })).toEqual({
+      tone: "plain",
+      fill: 0.5,
+      word: "",
+    });
+    expect(glanceBar({ capacity: 0, reached: 0, reason: "UNUSED" })!.fill).toBe(0);
+    expect(glanceBar(undefined)).toBeUndefined();
+  });
+
+  it("is two background layers over the picture, the word the layer's own text", () => {
+    const face = glanceFace("url(/art.png)", { tone: "clogged", fill: 0.5, word: "CLOGGED" });
+    expect(face["data-bar"]).toBe("");
+    expect(face["data-tone"]).toBe("clogged");
+    expect(face.text).toBe("CLOGGED");
+    const style = face.style as Record<string, string>;
+    expect(style["--glance-fill"]).toBe("50%");
+    // The picture stays a url the minimap can read back.
+    expect(style.backgroundImage.split(", ").at(-1)).toBe("url(/art.png)");
+    expect(glanceFace("url(/art.png)", undefined)).toEqual({
+      style: { backgroundImage: "url(/art.png)" },
+      text: "",
+    });
+    expect(glanceFace(undefined, undefined).style).toBeUndefined();
+  });
+});

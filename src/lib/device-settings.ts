@@ -14,6 +14,8 @@ export interface DeviceSettings {
   zoomedOutNames: boolean;
   /** "Circuit as an input": a programmed circuit counts as an input of its card. */
   circuitAsInput: boolean;
+  /** "Items list": on plan boards the items list on the left and the overview on the right (the other way round). */
+  itemsLeft: boolean;
   /** The settings box's open section, kept so it opens where it was left. */
   settingsSection: string;
 }
@@ -21,6 +23,7 @@ export interface DeviceSettings {
 export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   zoomedOutNames: true,
   circuitAsInput: false,
+  itemsLeft: false,
   settingsSection: "Board",
 };
 
@@ -44,6 +47,7 @@ export function parseDeviceSettings(raw: string | null): DeviceSettings {
         typeof parsed.circuitAsInput === "boolean"
           ? parsed.circuitAsInput
           : DEFAULT_DEVICE_SETTINGS.circuitAsInput,
+      itemsLeft: typeof parsed.itemsLeft === "boolean" ? parsed.itemsLeft : DEFAULT_DEVICE_SETTINGS.itemsLeft,
       settingsSection:
         typeof parsed.settingsSection === "string"
           ? parsed.settingsSection

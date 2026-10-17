@@ -110,11 +110,14 @@ export function ModPowerPicker() {
       const bar = strip ? { getBoundingClientRect: () => ({ bottom }) } : document.querySelector<HTMLElement>("[data-mod-bar]");
       // The mod's size, as the bar and its menus wear it (CHROME_SCREEN_K on the interface's zoom), or smaller where the
       // board is too narrow for the sheet: the whole picker shrinks rather than its columns cutting the names off.
-      const items = (main ? Number(main.dataset.rightPx ?? 0) : 0) * getUiScale();
+      // The items list is on the right, or on the left where the settings put it there.
+      const itemsLeft = main?.dataset.itemsSide === "left" && main.hasAttribute("data-plan-layout");
+      const items = (main ? Number((itemsLeft ? main.dataset.leftPx : main.dataset.rightPx) ?? 0) : 0) * getUiScale();
       const room = window.innerWidth - items;
       const zoom = Math.min(getUiScale() * CHROME_SCREEN_K, room / SHEET_W);
       const barBottom = bar ? bar.getBoundingClientRect().bottom : 0;
-      setFrame({ left: 0, right: Math.round(items / zoom), top: Math.round(barBottom / zoom), zoom });
+      const inset = Math.round(items / zoom);
+      setFrame({ left: itemsLeft ? inset : 0, right: itemsLeft ? 0 : inset, top: Math.round(barBottom / zoom), zoom });
     };
     measure();
     window.addEventListener("resize", measure);

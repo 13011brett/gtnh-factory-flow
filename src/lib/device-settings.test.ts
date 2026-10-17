@@ -2,10 +2,11 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_DEVICE_SETTINGS, parseDeviceSettings } from "./device-settings";
 
 describe("device settings", () => {
-  it("starts at the mod's defaults: names on, circuit off, Board section", () => {
+  it("starts at the mod's defaults: names on, circuit off, items on the right, Board section", () => {
     expect(DEFAULT_DEVICE_SETTINGS).toEqual({
       zoomedOutNames: true,
       circuitAsInput: false,
+      itemsLeft: false,
       settingsSection: "Board",
     });
     expect(parseDeviceSettings(null)).toBe(DEFAULT_DEVICE_SETTINGS);

@@ -4,10 +4,10 @@ import { Copy, LockKeyhole } from "lucide-react";
 import { useState } from "react";
 import { copyViewedPost } from "@/lib/community/open-post";
 import { writeWorkspaceView } from "@/lib/workspace-view";
-import { usePlanLayout } from "../use-plan-layout";
+import { useItemsOnRight } from "../use-plan-layout";
 
 export function ViewOnlyNotice() {
-  const itemsOnRight = usePlanLayout();
+  const itemsOnRight = useItemsOnRight();
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState<string>();
 

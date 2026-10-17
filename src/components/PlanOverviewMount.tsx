@@ -5,10 +5,11 @@ import { OverviewRail, useRailColumnWidth } from "./flow/clean/rail/OverviewRail
 
 export const usePlanOverviewWidth = useRailColumnWidth;
 
-export function PlanOverview({ inDrawer = false }: { inDrawer?: boolean }) {
+/** {@code side}: the side of the board the overview sits on (the settings' "Items list" may put it on the right). */
+export function PlanOverview({ inDrawer = false, side = "left" }: { inDrawer?: boolean; side?: "left" | "right" }) {
   return (
     <div data-testid="plan-overview" className="h-full min-h-0 min-w-0">
-      <OverviewRail forceOpen={inDrawer} />
+      <OverviewRail forceOpen={inDrawer} side={side} />
     </div>
   );
 }

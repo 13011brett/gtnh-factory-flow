@@ -41,13 +41,13 @@ describe("overlayInsets", () => {
   });
 
   it("plan layout leaves both columns bright", () => {
-    document.body.innerHTML = "<main data-items-side='right' data-left-px='234' data-right-px='256'></main>";
+    document.body.innerHTML = "<main data-plan-layout data-items-side='right' data-left-px='234' data-right-px='256'></main>";
     expect(overlayInsets(1, () => 999)).toEqual({ left: 234, right: 256 });
   });
 
   it("plan compact measures the open items drawer", () => {
     document.body.innerHTML =
-      "<main data-items-side='right' data-left-px='0' data-right-px='0' data-compact='true'></main><aside data-help-anchor='browser'></aside>";
+      "<main data-plan-layout data-items-side='right' data-left-px='0' data-right-px='0' data-compact='true'></main><aside data-help-anchor='browser'></aside>";
     const aside = document.querySelector("aside")!;
     aside.getBoundingClientRect = () => ({ width: 200 }) as DOMRect;
     expect(overlayInsets(2, () => 999)).toEqual({ left: 0, right: 100 });

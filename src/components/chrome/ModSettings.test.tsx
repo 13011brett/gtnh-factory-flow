@@ -30,7 +30,7 @@ describe("the settings box", () => {
     render(<ModSettings onClose={vi.fn()} />);
     expect(screen.getByRole("dialog", { name: "Settings" })).toBeTruthy();
     expect(sections()).toEqual(["Board", "Minimap", "Sound", "Controls"]);
-    expect(rowLabels()).toEqual(["Size", "Names when zoomed out", "Circuit as an input", "Font"]);
+    expect(rowLabels()).toEqual(["Size", "Names when zoomed out", "Circuit as an input", "Items list", "Font"]);
     expect(document.querySelector(".ms-preview .sp-board")).toBeTruthy();
   });
 

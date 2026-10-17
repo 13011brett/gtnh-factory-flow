@@ -119,6 +119,14 @@ export function ModSettings({ onClose }: { onClose: () => void }) {
           to: (index) => writeDeviceSettings({ circuitAsInput: index === 1 }),
         },
         {
+          label: "Items list",
+          about: "Puts the items list on the left or right. The overview takes the other side.",
+          kind: "choice",
+          names: ["Left", "Right"],
+          at: settings.itemsLeft ? 0 : 1,
+          to: (index) => writeDeviceSettings({ itemsLeft: index === 0 }),
+        },
+        {
           label: "Font",
           about: "Sets the font of the planner.",
           kind: "button",

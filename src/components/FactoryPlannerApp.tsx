@@ -315,8 +315,8 @@ export function FactoryPlannerApp() {
       <RecipeBookOpener />
       <PlacementRevealer />
       <SharedAddressSync />
-      {/* The mod's bar sits over the overview and the board only, the items list running the screen's height beside
-          it (like NEI beside the mod's board): on a desktop plan board the bar is a grid row of the workspace. */}
+      {/* On a desktop plan board the mod's bar is the workspace grid's first row, across the overview, the board and
+          the items list. */}
       {barInGrid ? null : <AppHeader onLoadDatasetVersion={loadDatasetVersion} />}
       {isCompact ? (
         <CompactWorkspace workspace={workspace} onLoadDatasetVersion={loadDatasetVersion} />
@@ -505,10 +505,10 @@ export function ColumnWorkspace({ workspace, onLoadDatasetVersion, header }: Wor
           ...(header ? { gridTemplateRows: "auto minmax(0,1fr)" } : {}),
         } as CSSProperties}
       >
-        {/* The bar over the board only; the overview and the items list beside it both run the screen's height, so
-            the bar has the width between them. Which side each takes is the settings' "Item browser". */}
+        {/* The bar across the whole width, over the overview, the board and the items list alike, so it has all of
+            it. Which side the overview and the items take is the settings' "Item browser". */}
         {header ? (
-          <div className="min-w-0" style={{ gridColumn: 2, gridRow: 1 }}>
+          <div className="min-w-0" style={{ gridColumn: "1 / 4", gridRow: 1 }}>
             {header}
           </div>
         ) : null}
@@ -516,13 +516,13 @@ export function ColumnWorkspace({ workspace, onLoadDatasetVersion, header }: Wor
             owns its header, so it stays a direct grid item with no wrapper. */}
         {header ? (
           <>
-            <div className="grid min-h-0 min-w-0" style={{ gridColumn: overviewColumn, gridRow: "1 / 3" }}>
+            <div className="grid min-h-0 min-w-0" style={{ gridColumn: overviewColumn, gridRow: 2 }}>
               {overview}
             </div>
             <div className="grid min-h-0 min-w-0" style={{ gridColumn: 2, gridRow: 2 }}>
               <BoardColumn />
             </div>
-            <div className="grid min-h-0 min-w-0" style={{ gridColumn: itemsColumn, gridRow: "1 / 3" }}>
+            <div className="grid min-h-0 min-w-0" style={{ gridColumn: itemsColumn, gridRow: 2 }}>
               {items}
             </div>
           </>

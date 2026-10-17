@@ -89,7 +89,7 @@ it("lists the plan's sections, lines and machines", () => {
   expect(screen.getAllByText("Split")).toHaveLength(2);
   // The machine group and its four lines.
   expect(container.querySelectorAll(".rail-machine")).toHaveLength(4);
-  expect(container.querySelector(".rail-tier")?.textContent).toBe("LV");
+  expect(container.querySelector(".rail-chips .cc-chip")?.textContent).toBe("LV");
 });
 
 it("opens with INTERNAL folded, as the mod does", () => {
@@ -401,7 +401,7 @@ it("shows what runs of what is set for an Up to card", () => {
   });
   const { container } = render(<OverviewRail />);
   const machine = container.querySelector(".rail-machine")!;
-  expect(machine.querySelector(".rail-count")?.textContent).toBe("×4.5 of");
+  expect(machine.querySelector(".rail-count")?.textContent).toBe("×4.5");
   expect(machine.querySelector(".rail-count")?.getAttribute("data-reason")).toBe("STARVED");
   expect(machine.querySelector(".rail-box")?.textContent).toContain("6");
 });
@@ -579,4 +579,15 @@ it("lets a wheel that is scrolling the list keep scrolling it past a box", () =>
   box.dispatchEvent(second);
   // Within 400 ms of a scroll the box does not take it: the event is left alone.
   expect(second.defaultPrevented).toBe(false);
+});
+
+it("steps a machine's tier from its line as the card does", () => {
+  load(mockUnneeded);
+  const { container } = render(<OverviewRail />);
+  const chip = container.querySelector('[data-rail-machine="comp"] .cc-chip') as HTMLElement;
+  expect(chip.textContent).toBe("LV");
+  const was = () =>
+    useFactoryStore.getState().project.nodes.find((n) => n.id === "comp")!.overclockTier;
+  fireEvent.click(chip);
+  expect(was()).not.toBe("LV");
 });

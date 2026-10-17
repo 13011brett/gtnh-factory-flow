@@ -232,7 +232,6 @@ export function buildRailModel(
   const machines: RailMachine[] = machineEntries
     // A fluid tank is free and instant: no machine to build (the mod lists none for it).
     .filter((entry) => !isFluidTankRecipe(recipes.get(nodesById.get(entry.nodeId)?.recipeId ?? "")))
-    .filter((entry) => entry.count > 1e-9 || (nodesById.get(entry.nodeId)?.solvePin ?? 0) > 0)
     .map((entry) => {
       const node = nodesById.get(entry.nodeId);
       const rule = node ? pinRuleOf(node) : "any";
@@ -268,15 +267,15 @@ export function buildRailModel(
   // are not flows of the plan, so nothing is counted until the plan has an answer.
   const answered = result.plan?.failure === undefined;
   for (const node of Object.values(result.nodes)) {
-    if (!node.enabled || !answered) continue;
+    if (!node.enabled) continue;
     const { cardId } = splitResultNodeId(node.nodeId);
     const projectNode = nodesById.get(cardId);
     const recipe = recipes.get(node.recipeId);
     if (!projectNode || isCustomRateRecipe(recipe)) continue;
     // A machine at zero keeps its nameplate rates in the result (its port rows are built from them) but makes and uses
-    // nothing: the mod sums solved flows only. A shared machine's unused recipe is one.
-    if (!((node.theoreticalMachinesRequired ?? 0) > 1e-9)) continue;
-    const running = Math.min(1, Math.max(0, node.utilization ?? 1));
+    // nothing: the mod sums solved flows only. Its ports are still listed, at 0, so they can be set from here.
+    const flowing = answered && (node.theoreticalMachinesRequired ?? 0) > 1e-9;
+    const running = flowing ? Math.min(1, Math.max(0, node.utilization ?? 1)) : 0;
     for (const side of ["output", "input"] as const) {
       const flows = side === "output" ? node.outputs : node.inputs;
       for (const flow of Object.values(flows)) {
@@ -406,6 +405,13 @@ export function buildRailModel(
   inputs.sort(byAmount);
   outputs.sort(byAmount);
   internal.sort(byAmount);
+  // A resource a card's unwired port takes or makes stays listed at 0, so it can be set from here.
+  for (const [lineKey] of openByLine) {
+    const key = lineKey.slice(2);
+    const list = lineKey.startsWith("o|") ? outputs : inputs;
+    if (!list.some((l) => l.key === key))
+      list.push(line(key, 0, lineKey.startsWith("o|") ? "o" : "i"));
+  }
   // A resource with a drawer stays listed at 0, so its rule and rate can be set from here.
   for (const key of sourceDrawers.keys()) {
     if (!inputs.some((l) => l.key === key)) inputs.push(line(key, 0, "i"));

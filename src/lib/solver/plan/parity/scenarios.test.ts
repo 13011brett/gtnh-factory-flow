@@ -47,9 +47,21 @@ interface ModScenario {
       targetOutputRates: Record<string, number>;
       targetInputRates: Record<string, number>;
     }>;
-    edges: Array<{ id: string; source: string; sourceOutput: number; target: string; targetInput: number }>;
+    edges: Array<{
+      id: string;
+      source: string;
+      sourceOutput: number;
+      target: string;
+      targetInput: number;
+    }>;
     pools: Array<{ machines: string[]; capacity: number; exact: boolean }>;
-    drawers: Array<{ id: string; kind: string; rule: string; rate: number; links: Array<{ node: string; port: number }> }>;
+    drawers: Array<{
+      id: string;
+      kind: string;
+      rule: string;
+      rate: number;
+      links: Array<{ node: string; port: number }>;
+    }>;
   };
   answer: {
     kind: "solved" | "failed";
@@ -64,7 +76,11 @@ interface ModScenario {
     unneeded?: string[];
     drawerRates?: Record<string, number>;
     unmet?: string[];
-    spares?: Array<{ key: string; importing: boolean; bearers: Array<{ anchor: string; max: number; share: number; solverPick: boolean }> }>;
+    spares?: Array<{
+      key: string;
+      importing: boolean;
+      bearers: Array<{ anchor: string; max: number; share: number; solverPick: boolean }>;
+    }>;
   };
   board: {
     nothingToSolveFor: boolean;
@@ -80,16 +96,19 @@ interface ModScenario {
   };
 }
 
-const spec = JSON.parse(readFileSync(new URL("./scenarios.json", import.meta.url), "utf8")) as { scenarios: Scenario[] };
-const mod = JSON.parse(readFileSync(new URL("./fixtures/mod-answers.json", import.meta.url), "utf8")) as Record<
-  string,
-  ModScenario
->;
+const spec = JSON.parse(readFileSync(new URL("./scenarios.json", import.meta.url), "utf8")) as {
+  scenarios: Scenario[];
+};
+const mod = JSON.parse(
+  readFileSync(new URL("./fixtures/mod-answers.json", import.meta.url), "utf8"),
+) as Record<string, ModScenario>;
 
 const TOL = 1e-6;
-const close = (a: number, b: number) => Math.abs(a - b) <= TOL * Math.max(1, Math.abs(a), Math.abs(b));
+const close = (a: number, b: number) =>
+  Math.abs(a - b) <= TOL * Math.max(1, Math.abs(a), Math.abs(b));
 /** The mod's card rates go through a float (`Balancer.buildResultFractional`). */
-const closeF = (a: number, b: number) => Math.abs(a - b) <= 1e-5 * Math.max(1, Math.abs(a), Math.abs(b));
+const closeF = (a: number, b: number) =>
+  Math.abs(a - b) <= 1e-5 * Math.max(1, Math.abs(a), Math.abs(b));
 
 beforeAll(async () => {
   await initLpEngine();
@@ -122,11 +141,16 @@ function compare(s: Scenario): Run {
   const toMod = new Map<string, number>();
   for (const [mid, at] of placement) toMod.set(at.resultId, mid);
   const modId = (webId: string) => uuid(toMod.get(webId) ?? -1);
-  const webOf = (modUuid: string): Placement | undefined => placement.get(parseInt(modUuid.slice(-12), 16));
+  const webOf = (modUuid: string): Placement | undefined =>
+    placement.get(parseInt(modUuid.slice(-12), 16));
 
   // ---- 1. the adapter's SolveInput against the mod's SolveInput.of ----
-  const perSecond = (mm: { durationTicks: number; throughputFactor: number }, p: { amount: number; chance: number; multiplier: number }) =>
-    (Math.max(0, p.amount) * Math.fround(p.chance) * p.multiplier * mm.throughputFactor * 20) / (mm.durationTicks > 0 ? mm.durationTicks : 1);
+  const perSecond = (
+    mm: { durationTicks: number; throughputFactor: number },
+    p: { amount: number; chance: number; multiplier: number },
+  ) =>
+    (Math.max(0, p.amount) * Math.fround(p.chance) * p.multiplier * mm.throughputFactor * 20) /
+    (mm.durationTicks > 0 ? mm.durationTicks : 1);
   const webMachines = new Map<string, MachineIn>(input.machines.map((mm) => [modId(mm.id), mm]));
   for (const mm of m.input.machines) {
     const w = webMachines.get(mm.id);
@@ -136,47 +160,87 @@ function compare(s: Scenario): Run {
     }
     const names = (ports: Array<{ name: string }>) => ports.map((p) => p.name).join(",");
     if (names(w.inputs) !== names(mm.inputs) || names(w.outputs) !== names(mm.outputs)) {
-      diffs.push(`input: ${mm.id} ports ${names(w.inputs)}>${names(w.outputs)} vs mod ${names(mm.inputs)}>${names(mm.outputs)}`);
+      diffs.push(
+        `input: ${mm.id} ports ${names(w.inputs)}>${names(w.outputs)} vs mod ${names(mm.inputs)}>${names(mm.outputs)}`,
+      );
       continue;
     }
     mm.inputs.forEach((p, i) => {
-      if (!close(perSecond(w, w.inputs[i]!), perSecond(mm, p))) diffs.push(`input: ${mm.id} in ${p.name} ${perSecond(w, w.inputs[i]!)}/s/machine vs mod ${perSecond(mm, p)}`);
+      if (!close(perSecond(w, w.inputs[i]!), perSecond(mm, p)))
+        diffs.push(
+          `input: ${mm.id} in ${p.name} ${perSecond(w, w.inputs[i]!)}/s/machine vs mod ${perSecond(mm, p)}`,
+        );
     });
     mm.outputs.forEach((p, i) => {
-      if (!close(perSecond(w, w.outputs[i]!), perSecond(mm, p))) diffs.push(`input: ${mm.id} out ${p.name} ${perSecond(w, w.outputs[i]!)}/s/machine vs mod ${perSecond(mm, p)}`);
+      if (!close(perSecond(w, w.outputs[i]!), perSecond(mm, p)))
+        diffs.push(
+          `input: ${mm.id} out ${p.name} ${perSecond(w, w.outputs[i]!)}/s/machine vs mod ${perSecond(mm, p)}`,
+        );
     });
-    if (w.countFixed !== mm.countFixed || (mm.countFixed && w.machineCount * 20 / w.durationTicks !== mm.machineCount * 20 / mm.durationTicks)) {
-      diffs.push(`input: ${mm.id} pin ${w.countFixed}/${w.machineCount} vs mod ${mm.countFixed}/${mm.machineCount}`);
+    if (
+      w.countFixed !== mm.countFixed ||
+      (mm.countFixed &&
+        (w.machineCount * 20) / w.durationTicks !== (mm.machineCount * 20) / mm.durationTicks)
+    ) {
+      diffs.push(
+        `input: ${mm.id} pin ${w.countFixed}/${w.machineCount} vs mod ${mm.countFixed}/${mm.machineCount}`,
+      );
     }
     for (const side of ["targetOutputRates", "targetInputRates"] as const) {
-      const a = JSON.stringify(Object.entries(w[side]).filter(([, r]) => r > 0).sort());
-      const b = JSON.stringify(Object.entries(mm[side]).filter(([, r]) => r > 0).sort());
+      const a = JSON.stringify(
+        Object.entries(w[side])
+          .filter(([, r]) => r > 0)
+          .sort(),
+      );
+      const b = JSON.stringify(
+        Object.entries(mm[side])
+          .filter(([, r]) => r > 0)
+          .sort(),
+      );
       if (a !== b) diffs.push(`input: ${mm.id} ${side} ${a} vs mod ${b}`);
     }
   }
-  if (input.machines.length !== m.input.machines.length) diffs.push(`input: ${input.machines.length} machines vs mod ${m.input.machines.length}`);
-  const edgeSig = (e: { id: string; source: string; sourceOutput: number; target: string; targetInput: number }, map: (id: string) => string) =>
-    `${e.id}:${map(e.source)}.${e.sourceOutput}>${map(e.target)}.${e.targetInput}`;
+  if (input.machines.length !== m.input.machines.length)
+    diffs.push(`input: ${input.machines.length} machines vs mod ${m.input.machines.length}`);
+  const edgeSig = (
+    e: { id: string; source: string; sourceOutput: number; target: string; targetInput: number },
+    map: (id: string) => string,
+  ) => `${e.id}:${map(e.source)}.${e.sourceOutput}>${map(e.target)}.${e.targetInput}`;
   const webEdges = input.edges.map((e) => edgeSig(e, modId)).sort();
   const modEdges = m.input.edges.map((e) => edgeSig(e, (x) => x)).sort();
-  if (JSON.stringify(webEdges) !== JSON.stringify(modEdges)) diffs.push(`input: edges ${webEdges} vs mod ${modEdges}`);
-  const poolSig = (p: { machines: string[]; capacity: number; exact: boolean }, map: (id: string) => string) =>
-    `${p.machines.map(map).sort()}=${p.capacity}${p.exact ? "!" : ""}`;
+  if (JSON.stringify(webEdges) !== JSON.stringify(modEdges))
+    diffs.push(`input: edges ${webEdges} vs mod ${modEdges}`);
+  const poolSig = (
+    p: { machines: string[]; capacity: number; exact: boolean },
+    map: (id: string) => string,
+  ) => `${p.machines.map(map).sort()}=${p.capacity}${p.exact ? "!" : ""}`;
   const webPools = input.pools.map((p) => poolSig(p, modId)).sort();
   const modPools = m.input.pools.map((p) => poolSig(p, (x) => x)).sort();
-  if (JSON.stringify(webPools) !== JSON.stringify(modPools)) diffs.push(`input: pools ${webPools} vs mod ${modPools}`);
-  const drawerSig = (d: { id: string; kind: string; rule: string; rate: number; links: Array<{ node: string; port: number }> }, map: (id: string) => string) =>
+  if (JSON.stringify(webPools) !== JSON.stringify(modPools))
+    diffs.push(`input: pools ${webPools} vs mod ${modPools}`);
+  const drawerSig = (
+    d: {
+      id: string;
+      kind: string;
+      rule: string;
+      rate: number;
+      links: Array<{ node: string; port: number }>;
+    },
+    map: (id: string) => string,
+  ) =>
     `${d.id}:${d.kind}/${d.rule}/${d.rule === "ANY" ? 0 : d.rate}/${d.links.map((l) => `${map(l.node)}.${l.port}`).sort()}`;
   const webDrawers = input.drawers.map((d) => drawerSig(d, modId)).sort();
   const modDrawers = m.input.drawers.map((d) => drawerSig(d, (x) => x)).sort();
-  if (JSON.stringify(webDrawers) !== JSON.stringify(modDrawers)) diffs.push(`input: drawers ${webDrawers} vs mod ${modDrawers}`);
+  if (JSON.stringify(webDrawers) !== JSON.stringify(modDrawers))
+    diffs.push(`input: drawers ${webDrawers} vs mod ${modDrawers}`);
 
   // ---- 2. the answer ----
   const ma = m.answer;
   if (answer.kind !== ma.kind) {
     diffs.push(`answer: ${answer.kind} vs mod ${ma.kind} ${ma.failure ?? ""}`);
   } else if (answer.kind === "failed") {
-    if (answer.failure.message !== ma.failure) diffs.push(`answer: failure ${answer.failure.message} vs mod ${ma.failure}`);
+    if (answer.failure.message !== ma.failure)
+      diffs.push(`answer: failure ${answer.failure.message} vs mod ${ma.failure}`);
   } else {
     const v = answer.solution;
     for (const [id, count] of Object.entries(v.machineCounts)) {
@@ -185,26 +249,45 @@ function compare(s: Scenario): Run {
     }
     for (const [id, flow] of Object.entries(v.edgeFlowsPerSecond)) {
       const want = ma.edgeFlows![id];
-      if (want === undefined || !close(flow, want)) diffs.push(`answer: edge ${id} ${flow} vs mod ${want}`);
+      if (want === undefined || !close(flow, want))
+        diffs.push(`answer: edge ${id} ${flow} vs mod ${want}`);
     }
-    const ext = (list: Array<{ port: { node: string; port: number; input: boolean }; ratePerSecond: number }>) =>
-      list.map((e) => `${modId(e.port.node)}:${e.port.input ? "i" : "o"}${e.port.port}=${+e.ratePerSecond.toFixed(6)}`).sort();
-    const modExt = (list: ModExternal[] = []) => list.map((e) => `${e.node}:${e.input ? "i" : "o"}${e.port}=${+e.rate.toFixed(6)}`).sort();
+    const ext = (
+      list: Array<{ port: { node: string; port: number; input: boolean }; ratePerSecond: number }>,
+    ) =>
+      list
+        .map(
+          (e) =>
+            `${modId(e.port.node)}:${e.port.input ? "i" : "o"}${e.port.port}=${+e.ratePerSecond.toFixed(6)}`,
+        )
+        .sort();
+    const modExt = (list: ModExternal[] = []) =>
+      list.map((e) => `${e.node}:${e.input ? "i" : "o"}${e.port}=${+e.rate.toFixed(6)}`).sort();
     for (const [name, web, want] of [
       ["gatedSources", ext(v.gatedSources), modExt(ma.gatedSources)],
       ["gatedSinks", ext(v.gatedSinks), modExt(ma.gatedSinks)],
       ["terminalInputs", ext(v.terminalInputs), modExt(ma.terminalInputs)],
       ["terminalOutputs", ext(v.terminalOutputs), modExt(ma.terminalOutputs)],
     ] as const) {
-      if (JSON.stringify(web) !== JSON.stringify(want)) diffs.push(`answer: ${name} ${web} vs mod ${want}`);
+      if (JSON.stringify(web) !== JSON.stringify(want))
+        diffs.push(`answer: ${name} ${web} vs mod ${want}`);
     }
     const unneeded = v.unneeded.map(modId).sort();
-    if (JSON.stringify(unneeded) !== JSON.stringify([...(ma.unneeded ?? [])].sort())) diffs.push(`answer: unneeded ${unneeded} vs mod ${ma.unneeded}`);
+    if (JSON.stringify(unneeded) !== JSON.stringify([...(ma.unneeded ?? [])].sort()))
+      diffs.push(`answer: unneeded ${unneeded} vs mod ${ma.unneeded}`);
     const notes = v.notes.map((n) => n.message);
-    if (JSON.stringify(notes) !== JSON.stringify(ma.notes)) diffs.push(`answer: notes ${notes} vs mod ${ma.notes}`);
-    const spares = v.spares.map((l) => `${l.importing ? "in" : "out"}:${l.bearers.map((b) => `${modId(b.anchor.node)}:${b.anchor.input ? "i" : "o"}:${b.anchor.port}@${+b.share.toFixed(6)}`)}`);
-    const modSpares = (ma.spares ?? []).map((l) => `${l.importing ? "in" : "out"}:${l.bearers.map((b) => `${b.anchor}@${+b.share.toFixed(6)}`)}`);
-    if (JSON.stringify(spares) !== JSON.stringify(modSpares)) diffs.push(`answer: spares ${spares} vs mod ${modSpares}`);
+    if (JSON.stringify(notes) !== JSON.stringify(ma.notes))
+      diffs.push(`answer: notes ${notes} vs mod ${ma.notes}`);
+    const spares = v.spares.map(
+      (l) =>
+        `${l.importing ? "in" : "out"}:${l.bearers.map((b) => `${modId(b.anchor.node)}:${b.anchor.input ? "i" : "o"}:${b.anchor.port}@${+b.share.toFixed(6)}`)}`,
+    );
+    const modSpares = (ma.spares ?? []).map(
+      (l) =>
+        `${l.importing ? "in" : "out"}:${l.bearers.map((b) => `${b.anchor}@${+b.share.toFixed(6)}`)}`,
+    );
+    if (JSON.stringify(spares) !== JSON.stringify(modSpares))
+      diffs.push(`answer: spares ${spares} vs mod ${modSpares}`);
   }
 
   // ---- 3. what the board shows ----
@@ -213,8 +296,10 @@ function compare(s: Scenario): Run {
     const want = m.board.cards[uuid(mid)];
     if (!want) continue;
     const who = `${s.machines.find((x) => x.id === mid)!.name}#${mid}`;
-    if (!want.countless && !close(card.count, want.count)) diffs.push(`board: ${who} count ${card.count} vs mod ${want.count}`);
-    if (!want.countless && card.unset !== want.unset) diffs.push(`board: ${who} set-count prompt ${card.unset} vs mod ${want.unset}`);
+    if (!want.countless && !close(card.count, want.count))
+      diffs.push(`board: ${who} count ${card.count} vs mod ${want.count}`);
+    if (!want.countless && card.unset !== want.unset)
+      diffs.push(`board: ${who} set-count prompt ${card.unset} vs mod ${want.unset}`);
     for (const side of ["inputs", "outputs"] as const) {
       const web = card[side];
       const mods = want[side];
@@ -224,21 +309,33 @@ function compare(s: Scenario): Run {
           diffs.push(`board: ${who} ${side} ${p.name} missing`);
           return;
         }
-        if (!closeF(w.shown, p.shown)) diffs.push(`board: ${who} ${side} ${p.name} reads ${w.shown} vs mod ${p.shown}`);
-        if (!closeF(w.extra, p.extra)) diffs.push(`board: ${who} ${side} ${p.name} forced ${w.extra} vs mod ${p.extra}`);
+        if (!closeF(w.shown, p.shown))
+          diffs.push(`board: ${who} ${side} ${p.name} reads ${w.shown} vs mod ${p.shown}`);
+        if (!closeF(w.extra, p.extra))
+          diffs.push(`board: ${who} ${side} ${p.name} forced ${w.extra} vs mod ${p.extra}`);
       });
     }
   }
   for (const [did, reading] of board.drawers) {
     const want = m.board.drawers[uuid(did)];
     if (!want) continue;
-    if (!closeF(reading.rate, want.rate)) diffs.push(`board: drawer ${did} rate ${reading.rate} vs mod ${want.rate}`);
-    if (reading.unset !== want.unset) diffs.push(`board: drawer ${did} set-rate prompt ${reading.unset} vs mod ${want.unset}`);
+    if (!closeF(reading.rate, want.rate))
+      diffs.push(`board: drawer ${did} rate ${reading.rate} vs mod ${want.rate}`);
+    if (reading.unset !== want.unset)
+      diffs.push(`board: drawer ${did} set-rate prompt ${reading.unset} vs mod ${want.unset}`);
   }
   for (const side of ["inputs", "outputs", "internal"] as const) {
-    const web = Object.entries(board.totals[side]).map(([k, v]) => `${k}=${+v.toFixed(5)}`).sort();
-    const want = Object.entries(m.board.totals[side]).map(([k, v]) => `${k}=${+v.toFixed(5)}`).sort();
-    if (JSON.stringify(web) !== JSON.stringify(want)) diffs.push(`board: rail ${side} ${web} vs mod ${want}`);
+    // The website's rail also lists lines and machines at zero (the mod follows): only what flows is compared.
+    const web = Object.entries(board.totals[side])
+      .filter(([, v]) => Math.abs(v) > 1e-9)
+      .map(([k, v]) => `${k}=${+v.toFixed(5)}`)
+      .sort();
+    const want = Object.entries(m.board.totals[side])
+      .filter(([, v]) => Math.abs(v) > 1e-9)
+      .map(([k, v]) => `${k}=${+v.toFixed(5)}`)
+      .sort();
+    if (JSON.stringify(web) !== JSON.stringify(want))
+      diffs.push(`board: rail ${side} ${web} vs mod ${want}`);
   }
   // Machine lines, by card (a shared machine's sections are one line on the website: summed on the mod's side).
   const modLines = new Map<string, number>();
@@ -247,13 +344,18 @@ function compare(s: Scenario): Run {
     modLines.set(card, (modLines.get(card) ?? 0) + count);
   }
   const lineSig = (entries: Iterable<[string, number]>) =>
-    [...entries].map(([id, count]) => `${id.slice(-3)}=${+count.toFixed(5)}`).sort();
+    [...entries]
+      .filter(([, count]) => count > 1e-9)
+      .map(([id, count]) => `${id.slice(-3)}=${+count.toFixed(5)}`)
+      .sort();
   const webLines = lineSig(Object.entries(board.totals.machines));
   const wantLines = lineSig(modLines);
-  if (JSON.stringify(webLines) !== JSON.stringify(wantLines)) diffs.push(`board: rail machines ${webLines} vs mod ${wantLines}`);
+  if (JSON.stringify(webLines) !== JSON.stringify(wantLines))
+    diffs.push(`board: rail machines ${webLines} vs mod ${wantLines}`);
   const notices = [...board.notices].sort();
   const wantNotices = [...m.board.notices].sort();
-  if (JSON.stringify(notices) !== JSON.stringify(wantNotices)) diffs.push(`board: notices ${notices} vs mod ${wantNotices}`);
+  if (JSON.stringify(notices) !== JSON.stringify(wantNotices))
+    diffs.push(`board: notices ${notices} vs mod ${wantNotices}`);
   return { input, answer, diffs };
 }
 

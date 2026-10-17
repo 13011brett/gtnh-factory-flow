@@ -8,7 +8,13 @@ describe("a conversion notice row", () => {
     const dismiss = vi.fn();
     render(
       <NoticeRow
-        notice={{ id: "conversion", severity: "info", text: "Converted from a Solve plan. Pins and drawer rates kept.", focus: [], dismiss }}
+        notice={{
+          id: "conversion",
+          severity: "info",
+          text: "Converted from a Solve plan. Pins and drawer rates kept.",
+          focus: [],
+          dismiss,
+        }}
         onShow={() => undefined}
       />,
     );

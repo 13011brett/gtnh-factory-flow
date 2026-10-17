@@ -48,12 +48,45 @@ describe("the rail's totals", () => {
     expect(iron.drawers[0]).toMatchObject({ rule: "at-most", ratePerSecond: 12, set: true });
   });
 
-  it("lists only machines that run or are pinned, with their whole count", () => {
+  it("lists every machine, at zero too, with its rule", () => {
     const rail = model(mockUnneeded);
-    // The compressor runs 6 pinned; the cutter and the sawmill sit at zero.
-    expect(rail.machines.map((m) => m.nodeId)).toEqual(["comp"]);
-    expect(rail.machines[0]).toMatchObject({ pinned: true, pin: 6 });
+    // The compressor runs 6 pinned; the cutter and the sawmill sit at zero and are listed all the same.
+    expect(rail.machines.map((m) => m.nodeId).sort()).toEqual(["comp", "cutter", "saw"]);
+    expect(rail.machines.find((m) => m.nodeId === "comp")).toMatchObject({ pinned: true, pin: 6 });
+    expect(rail.machines.find((m) => m.nodeId === "saw")).toMatchObject({
+      rule: "any",
+      pinned: false,
+      count: 0,
+    });
     expect(rail.wholeMachines).toBe(6);
+  });
+
+  it("keeps a machine listed when its card is set to Exactly", () => {
+    const project = structuredClone(mockUnneeded.project);
+    project.nodes.find((n) => n.id === "comp")!.solvePinExact = true;
+    const failed = {
+      ...mockUnneeded.result,
+      plan: { ...mockUnneeded.result.plan!, failure: { message: "NO_PIN", args: [] } },
+    };
+    for (const result of [mockUnneeded.result, failed as typeof mockUnneeded.result]) {
+      const rail = buildRailModel(project, result);
+      expect(rail.machines.find((m) => m.nodeId === "comp")).toMatchObject({
+        rule: "exact",
+        pin: 6,
+      });
+    }
+  });
+
+  it("lists the resource of an unwired port at zero when its card runs nothing", () => {
+    const project = structuredClone(mockUnneeded.project);
+    const cut = mockUnneeded.result.nodes.cutter!;
+    const out = Object.values(cut.outputs)[0]!;
+    // Nothing wired to the cutter's output: it has to be listed under Outputs although nothing flows.
+    project.edges = project.edges.filter((e) => !(e.source === "cutter"));
+    const rail = buildRailModel(project, mockUnneeded.result);
+    const line = rail.outputs.find((l) => l.resourceId === out.resourceId);
+    expect(line).toBeTruthy();
+    expect(line!.open.some((o) => o.nodeId === "cutter")).toBe(true);
   });
 
   it("reads the count rule and what an Up to card runs", () => {
@@ -77,8 +110,7 @@ describe("the rail's totals", () => {
     recipe.machineType = "Tank";
     recipe.source = { ...recipe.source, recipeMap: "Tank" } as typeof recipe.source;
     const rail = buildRailModel(project, mockUnneeded.result);
-    expect(rail.machines).toEqual([]);
-    expect(rail.wholeMachines).toBe(0);
+    expect(rail.machines.map((m) => m.nodeId)).not.toContain("comp");
   });
 
   it("adds up power from the machine list (peak and average)", () => {

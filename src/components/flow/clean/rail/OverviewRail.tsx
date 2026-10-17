@@ -32,6 +32,10 @@ import { getPowerMachineIcon } from "@/lib/power/planner-data";
 import { useFactoryStore, useRateDisplayUnits } from "@/store/factory-store";
 import { useWorkspaceView, writeWorkspaceView } from "@/lib/workspace-view";
 import { formatAmountWithSuffix, RULE_MARK, RULE_NAME, RULE_STEPS } from "../../rate-rule";
+import { AmpsChip, TierChip } from "../CleanCard";
+import { useCleanCardModel } from "../clean-model";
+import { powerPanelTip } from "../interaction/tips";
+import type { RecipeNodeData } from "../../RecipeNode";
 import { CC, tierChipColors } from "../tokens";
 import { UP_TO_COLOR, UP_TO_WORD, shownReason, upToSentence } from "../up-to-reason";
 import { PIN_RULE_LABEL } from "@/lib/model/pin-rule";
@@ -994,6 +998,52 @@ function GroupRow({ name, entries }: { name: string; entries: RailMachine[] }) {
   );
 }
 
+/**
+ * The line's tier and amps chips are the card's own (`TierChip`, `AmpsChip`) on the card's own model and actions, so a
+ * click, a wheel step or a typed amps value writes exactly what it does on the card.
+ */
+function MachineChips({ nodeId }: { nodeId: string }) {
+  const projectNode = useFactoryStore((s) => s.project.nodes.find((n) => n.id === nodeId));
+  const recipe = useFactoryStore((s) =>
+    s.project.recipes.find((r) => r.id === s.project.nodes.find((n) => n.id === nodeId)?.recipeId),
+  );
+  const result = useFactoryStore((s) => s.lastResult.nodes[nodeId]);
+  if (!projectNode || !recipe) return null;
+  return <MachineChipsFor data={{ projectNode, recipe, result }} />;
+}
+
+function MachineChipsFor({ data }: { data: RecipeNodeData }) {
+  const { view, actions } = useCleanCardModel(data, false);
+  const nodeId = view.nodeId;
+  const always = () => true;
+  return (
+    <span className="rail-chips" onClick={(event) => event.stopPropagation()}>
+      {view.amps ? (
+        <AmpsChip
+          amps={view.amps}
+          tier={view.tier?.label}
+          tip={powerPanelTip(view, "amps")}
+          onSet={actions.setAmps}
+          wasClick={always}
+        />
+      ) : null}
+      {view.tier ? (
+        <TierChip
+          label={view.tier.label}
+          tip={
+            view.amps
+              ? powerPanelTip(view, "tier")
+              : { id: `${nodeId}|tier`, title: view.tier.title }
+          }
+          fixed={view.tier.fixed}
+          onStep={actions.stepTier}
+          wasClick={always}
+        />
+      ) : null}
+    </span>
+  );
+}
+
 const MachineRow = memo(function MachineRow({
   entry,
   peak,
@@ -1021,7 +1071,7 @@ const MachineRow = memo(function MachineRow({
     : "";
   const upTo = entry.rule === "upTo";
   const reason = shownReason(entry.upTo);
-  const countText = `×${machinesText(entry.count)}${upTo ? " of" : ""}`;
+  const countText = `×${machinesText(entry.count)}`;
   const room =
     MACHINE_INNER -
     CONTROLS_W -
@@ -1101,15 +1151,7 @@ const MachineRow = memo(function MachineRow({
       })}
     >
       <div className="rail-row" style={{ top: 0, height: ROW_H, paddingLeft: 30 }}>
-        {colors ? (
-          <span
-            className="rail-tier"
-            data-underline={colors.underline ? "" : undefined}
-            style={{ background: colors.background, borderColor: colors.border, color: colors.ink }}
-          >
-            {tierLabel}
-          </span>
-        ) : null}
+        {colors ? <MachineChips nodeId={entry.nodeId} /> : null}
         <span
           className="rail-eu"
           data-make={made && made > 0 ? "" : undefined}

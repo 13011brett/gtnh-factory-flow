@@ -525,6 +525,21 @@ input.rail-box-edit {
 .rail-machine[data-hot] {
   background: var(--rail-hover);
 }
+.rail-chips {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+.rail-chips .cc-chip {
+  min-width: 0;
+  height: 16px;
+  line-height: 14px;
+  padding: 0 4px;
+}
+.rail-chips .cc-chip[style*="min-width"] {
+  min-width: 0 !important;
+}
 .rail-tier {
   flex: none;
   display: inline-flex;

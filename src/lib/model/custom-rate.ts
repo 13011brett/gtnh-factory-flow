@@ -1,5 +1,10 @@
 import type { CustomRateMode, FactoryNode, Recipe, ResourceAmount } from "./types";
-import { getFluidTankSlot, isFluidTankRecipe, releaseFluidTanks, unpinFluidTanks } from "./fluid-tank";
+import {
+  getFluidTankSlot,
+  isFluidTankRecipe,
+  releaseFluidTanks,
+  unpinFluidTanks,
+} from "./fluid-tank";
 
 /**
  * The custom rate node: a source/sink you dial by hand. Supply mode makes a

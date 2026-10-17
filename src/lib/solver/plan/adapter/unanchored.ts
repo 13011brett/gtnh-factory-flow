@@ -40,12 +40,17 @@ export function findUnanchored(model: PlanModel, storages: readonly FactoryStora
   for (const machine of input.machines) {
     add(machine.id);
   }
+  // A buffer counts as the mod's does: its rate can set its part, so it asks for one with the rest.
   const drawerIds = storages
     .filter((storage) => {
       const role = model.roles.get(storage.id);
       return (
         !model.hidden.has(storage.id) &&
-        (role === "source" || role === "product" || role === "byproduct" || role === "trash")
+        (role === "source" ||
+          role === "product" ||
+          role === "byproduct" ||
+          role === "trash" ||
+          role === "buffer")
       );
     })
     .map((storage) => storage.id);

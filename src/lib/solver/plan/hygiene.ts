@@ -246,7 +246,10 @@ function pruneSpareRows(
  */
 export function movePortRateToDrawer(
   project: FactoryProject,
-  edge: Pick<FactoryEdge, "source" | "target" | "sourceHandle" | "targetHandle" | "resourceKind" | "resourceId">,
+  edge: Pick<
+    FactoryEdge,
+    "source" | "target" | "sourceHandle" | "targetHandle" | "resourceKind" | "resourceId"
+  >,
 ): FactoryProject {
   const storages = project.storages ?? [];
   const into = storages.find((storage) => storage.id === edge.target);
@@ -261,7 +264,9 @@ export function movePortRateToDrawer(
     canonicalizeResourceHandleId(output ? edge.sourceHandle : edge.targetHandle) ??
     handleOf(output ? "output" : "input", edge.resourceKind, edge.resourceId);
   const rates = project.nodes.find((node) => node.id === cardId)?.portRates;
-  const key = Object.keys(rates ?? {}).find((handle) => canonicalizeResourceHandleId(handle) === wired);
+  const key = Object.keys(rates ?? {}).find(
+    (handle) => canonicalizeResourceHandleId(handle) === wired,
+  );
   if (!rates || key === undefined) {
     return project;
   }

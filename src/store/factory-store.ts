@@ -1,6 +1,11 @@
 "use client";
 
-import { isInputRate, type TargetMode } from "@/lib/model/storage-target";
+import {
+  hasStorageTarget,
+  isInputRate,
+  storageTargetMode,
+  type TargetMode,
+} from "@/lib/model/storage-target";
 
 import { dissolveProductionGroup, productionGroupDescendants } from "@/lib/model/production-groups";
 import type { ProductionGroup, PoolResourceRule } from "@/lib/model/types";
@@ -3577,8 +3582,25 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
         return state;
       }
 
+      // Each drawer going heals as deleting it alone does (removeStorageAndHeal), before the cards go: a wire it would
+      // heal onto a card also going goes with that card.
+      let healed: FactoryProject = {
+        ...state.project,
+        edges: state.project.edges.filter((edge) => !doomedEdges.has(edge.id)),
+      };
+      for (const storage of state.project.storages ?? []) {
+        if (doomedItems.has(storage.id)) healed = removeStorageAndHeal(healed, storage.id);
+      }
       const project = touchProject(
-        pruneOrphanStorages({ ...state.project, nodes, storages, annotations, pockets, edges }),
+        pruneOrphanStorages({
+          ...healed,
+          nodes: healed.nodes.filter((node) => !doomedItems.has(node.id)),
+          annotations,
+          pockets,
+          edges: healed.edges.filter(
+            (edge) => !doomedItems.has(edge.source) && !doomedItems.has(edge.target),
+          ),
+        }),
       );
       const pendingConnectionNodeId = state.pendingResourceConnection?.nodeId;
       return withProjectHistory(state, {
@@ -5752,6 +5774,8 @@ function applyEdgeInputOverrides(project: FactoryProject, edges: FactoryEdge[]):
  * - anything else is a real junction and heals nothing.
  * A wire is only added if `buildEdgeBetweenNodes` accepts it, so a drawer
  * bridging two things that cannot meet directly just goes.
+ * A source or product drawer on one port gives its rate back to that port
+ * instead (`giveRateBackToPort`).
  */
 function removeStorageAndHeal(project: FactoryProject, storageId: string): FactoryProject {
   const storage = (project.storages ?? []).find((entry) => entry.id === storageId);
@@ -5762,6 +5786,9 @@ function removeStorageAndHeal(project: FactoryProject, storageId: string): Facto
     storages: (project.storages ?? []).filter((entry) => entry.id !== storageId),
     edges: project.edges.filter((edge) => edge.source !== storageId && edge.target !== storageId),
   };
+  if (storage && (ins.length === 0) !== (outs.length === 0)) {
+    return giveRateBackToPort(next, project, storage, ins.length > 0 ? ins : outs);
+  }
   if (!storage || ins.length === 0 || outs.length === 0) {
     return next;
   }
@@ -5800,6 +5827,48 @@ function removeStorageAndHeal(project: FactoryProject, storageId: string): Facto
     next = applyEdgeInputOverride({ ...next, edges: [...next.edges, healed] }, healed, resource);
   }
   return next;
+}
+
+/**
+ * A source or product drawer taken off the one port it hung from: the rate it asked for goes back on that port, so the
+ * card runs to it again (the undo of dragging a set port off into a drawer, `movePortRateToDrawer`). Only a rate it was
+ * asking for (at least or exactly; at most is a cap, not a rate), and only onto a card with no pin or rate of its own.
+ */
+function giveRateBackToPort(
+  next: FactoryProject,
+  before: FactoryProject,
+  storage: FactoryStorage,
+  wires: FactoryEdge[],
+): FactoryProject {
+  const role = getStorageRoles(before).get(storage.id);
+  if (
+    wires.length !== 1 ||
+    (role !== "source" && role !== "product") ||
+    !hasStorageTarget(storage, role) ||
+    storageTargetMode(storage, role) === "at-most"
+  ) {
+    return next;
+  }
+  const wire = wires[0]!;
+  const output = wire.target === storage.id;
+  const cardId = output ? wire.source : wire.target;
+  const card = next.nodes.find((node) => node.id === cardId);
+  const rate = Math.abs(storage.targetPerSecond ?? 0);
+  if (!card || (card.solvePin ?? 0) > 0 || card.portRates || !(rate > 0)) {
+    return next;
+  }
+  const handle =
+    canonicalizeResourceHandleId(output ? wire.sourceHandle : wire.targetHandle) ??
+    makeResourceHandleId(output ? "output" : "input", {
+      kind: wire.resourceKind,
+      id: wire.resourceId,
+    });
+  return {
+    ...next,
+    nodes: next.nodes.map((node) =>
+      node.id === cardId ? { ...node, portRates: { [handle]: rate } } : node,
+    ),
+  };
 }
 
 function pruneOrphanStorages(project: FactoryProject): FactoryProject {

@@ -256,11 +256,16 @@ describe("a port's rate goes to the drawer wired to it", () => {
     }));
   });
 
-  it("an output dragged into space: the new product drawer holds it exactly and the port lets go", () => {
+  it("an output dragged into space: the new drawer holds it exactly and the port lets go", () => {
     useFactoryStore.getState().setProject(
-      project({ recipes, nodes: [node("n", "a", { portRates: { [handle("output", "y")]: 5000 } })] }),
+      project({
+        recipes,
+        nodes: [node("n", "a", { portRates: { [handle("output", "y")]: 5000 } })],
+      }),
     );
-    useFactoryStore.getState().addStorageForConnection(item("y"), "n", "output", { x: 300, y: 0 }, handle("output", "y"));
+    useFactoryStore
+      .getState()
+      .addStorageForConnection(item("y"), "n", "output", { x: 300, y: 0 }, handle("output", "y"));
     const { project: out } = useFactoryStore.getState();
     expect(out.nodes[0]!.portRates).toBeUndefined();
     expect(out.storages).toHaveLength(1);
@@ -271,7 +276,9 @@ describe("a port's rate goes to the drawer wired to it", () => {
     useFactoryStore.getState().setProject(
       project({ recipes, nodes: [node("n", "a", { portRates: { [handle("input", "x")]: 3 } })] }),
     );
-    useFactoryStore.getState().addStorageForConnection(item("x"), "n", "input", { x: -300, y: 0 }, handle("input", "x"));
+    useFactoryStore
+      .getState()
+      .addStorageForConnection(item("x"), "n", "input", { x: -300, y: 0 }, handle("input", "x"));
     const { project: out } = useFactoryStore.getState();
     expect(out.nodes[0]!.portRates).toBeUndefined();
     expect(out.storages![0]).toMatchObject({ targetMode: "exact", targetPerSecond: -3 });
@@ -281,13 +288,21 @@ describe("a port's rate goes to the drawer wired to it", () => {
     useFactoryStore.getState().setProject(
       shared({ [handle("output", "y")]: 1, [handle("output", "z", 1)]: 2 }),
     );
-    useFactoryStore.getState().addStorageForConnection(item("z"), "card", "output", { x: 300, y: 0 }, handle("output", "z", 1));
+    useFactoryStore
+      .getState()
+      .addStorageForConnection(
+        item("z"),
+        "card",
+        "output",
+        { x: 300, y: 0 },
+        handle("output", "z", 1),
+      );
     const { project: out } = useFactoryStore.getState();
     expect(out.nodes[0]!.portRates).toEqual({ [handle("output", "y")]: 1 });
     expect(out.storages![0]).toMatchObject({ targetMode: "exact", targetPerSecond: 2 });
   });
 
-  it("dropped on a drawer with its own rule: the drawer keeps its rule and the port lets go", () => {
+  it("dropped on a drawer with its own rule: the drawer keeps it and the port lets go", () => {
     useFactoryStore.getState().setProject(
       project({
         recipes,
@@ -297,7 +312,12 @@ describe("a port's rate goes to the drawer wired to it", () => {
     );
     useFactoryStore
       .getState()
-      .connectNodes("n", "d", { kind: "item", id: "y", displayName: "y", sourceHandle: handle("output", "y") });
+      .connectNodes("n", "d", {
+        kind: "item",
+        id: "y",
+        displayName: "y",
+        sourceHandle: handle("output", "y"),
+      });
     const { project: out } = useFactoryStore.getState();
     expect(out.edges).toHaveLength(1);
     expect(out.nodes[0]!.portRates).toBeUndefined();
@@ -311,5 +331,142 @@ describe("a port's rate goes to the drawer wired to it", () => {
       edges: [wire("e", "n", "m", "y")],
     });
     expect(movePortRateToDrawer(p, p.edges[0]!)).toBe(p);
+  });
+});
+
+describe("a drawer deleted off one port gives its rate back", () => {
+  const item = (id: string) => ({ kind: "item", id, amount: 1, displayName: id }) as never;
+  afterEach(() => setSolveCore(undefined));
+  beforeEach(() => {
+    setSolveCore(() => ({
+      kind: "failed",
+      failure: { message: "NO_PIN", args: [] },
+      notes: [],
+      drawers: { rates: {}, unmet: [], shortfalls: [], ports: {} },
+    }));
+  });
+  const madeDrawer = () => useFactoryStore.getState().project.storages![0]!;
+
+  it("dragged off and deleted: the port has its rate again", () => {
+    useFactoryStore.getState().setProject(
+      project({
+        recipes,
+        nodes: [node("n", "a", { portRates: { [handle("output", "y")]: 5000 } })],
+      }),
+    );
+    useFactoryStore
+      .getState()
+      .addStorageForConnection(item("y"), "n", "output", { x: 300, y: 0 }, handle("output", "y"));
+    useFactoryStore.getState().deleteStorage(madeDrawer().id);
+    const { project: out } = useFactoryStore.getState();
+    expect(out.storages).toHaveLength(0);
+    expect(out.nodes[0]!.portRates).toEqual({ [handle("output", "y")]: 5000 });
+  });
+
+  it("deleted with the Delete key (as a selection) too, a source's rate as a positive one", () => {
+    useFactoryStore.getState().setProject(
+      project({
+        recipes,
+        nodes: [node("n", "a")],
+        storages: [drawer("d", "x", { targetMode: "at-least", targetPerSecond: -4 })],
+        edges: [wire("e", "d", "n", "x", {}, { fromDrawer: true })],
+      }),
+    );
+    useFactoryStore.getState().deleteBoardSelection({ nodeIds: ["d"] });
+    expect(useFactoryStore.getState().project.nodes[0]!.portRates).toEqual({
+      [handle("input", "x")]: 4,
+    });
+  });
+
+  it("a cap, a pinned card or a card with a rate of its own takes nothing back", () => {
+    const setUp = (extra: Parameters<typeof node>[2], rule: "at-most" | "exactly") => {
+      useFactoryStore.getState().setProject(
+        project({
+          recipes,
+          nodes: [node("n", "a", extra)],
+          storages: [
+            drawer("d", "y", {
+              targetMode: rule === "at-most" ? "at-most" : "exact",
+              targetPerSecond: 3,
+            }),
+          ],
+          edges: [wire("e", "n", "d", "y", {}, { toDrawer: true })],
+        }),
+      );
+      useFactoryStore.getState().deleteStorage("d");
+      return useFactoryStore.getState().project.nodes[0]!;
+    };
+    expect(setUp({}, "at-most").portRates).toBeUndefined();
+    expect(setUp({ solvePin: 2 }, "exactly").portRates).toBeUndefined();
+    expect(setUp({ portRates: { [handle("input", "x")]: 1 } }, "exactly").portRates).toEqual({
+      [handle("input", "x")]: 1,
+    });
+  });
+});
+
+describe("deleting a middleman drawer with the Delete key heals as its own delete does", () => {
+  afterEach(() => setSolveCore(undefined));
+  beforeEach(() => {
+    setSolveCore(() => ({
+      kind: "failed",
+      failure: { message: "NO_PIN", args: [] },
+      notes: [],
+      drawers: { rates: {}, unmet: [], shortfalls: [], ports: {} },
+    }));
+  });
+
+  it("one maker, two users: the maker is wired to both", () => {
+    useFactoryStore.getState().setProject(
+      project({
+        recipes,
+        nodes: [node("n", "a"), node("m1", "b"), node("m2", "b")],
+        storages: [drawer("buf", "y")],
+        edges: [
+          wire("in", "n", "buf", "y", {}, { toDrawer: true }),
+          wire("o1", "buf", "m1", "y", {}, { fromDrawer: true }),
+          wire("o2", "buf", "m2", "y", {}, { fromDrawer: true }),
+        ],
+      }),
+    );
+    useFactoryStore.getState().deleteBoardSelection({ nodeIds: ["buf"] });
+    const { project: out } = useFactoryStore.getState();
+    expect(out.storages).toHaveLength(0);
+    expect(out.edges.map((e) => `${e.source}>${e.target}`).sort()).toEqual(["n>m1", "n>m2"]);
+  });
+
+  it("two makers and two users is a choice: the wires go", () => {
+    useFactoryStore.getState().setProject(
+      project({
+        recipes,
+        nodes: [node("n1", "a"), node("n2", "a"), node("m1", "b"), node("m2", "b")],
+        storages: [drawer("buf", "y")],
+        edges: [
+          wire("i1", "n1", "buf", "y", {}, { toDrawer: true }),
+          wire("i2", "n2", "buf", "y", {}, { toDrawer: true }),
+          wire("o1", "buf", "m1", "y", {}, { fromDrawer: true }),
+          wire("o2", "buf", "m2", "y", {}, { fromDrawer: true }),
+        ],
+      }),
+    );
+    useFactoryStore.getState().deleteBoardSelection({ nodeIds: ["buf"] });
+    expect(useFactoryStore.getState().project.edges).toEqual([]);
+  });
+
+  it("deleted with one of its cards: nothing is wired to the card that went", () => {
+    useFactoryStore.getState().setProject(
+      project({
+        recipes,
+        nodes: [node("n", "a"), node("m", "b")],
+        storages: [drawer("buf", "y")],
+        edges: [
+          wire("in", "n", "buf", "y", {}, { toDrawer: true }),
+          wire("out", "buf", "m", "y", {}, { fromDrawer: true }),
+        ],
+      }),
+    );
+    useFactoryStore.getState().deleteBoardSelection({ nodeIds: ["buf", "m"] });
+    const { project: out } = useFactoryStore.getState();
+    expect(out.nodes.map((n) => n.id)).toEqual(["n"]);
+    expect(out.edges).toEqual([]);
   });
 });

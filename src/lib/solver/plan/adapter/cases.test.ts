@@ -443,6 +443,19 @@ describe("unanchored", () => {
     });
     expect([...run(p).result.plan!.unanchored].sort()).toEqual(["in1", "n", "out1"]);
   });
+
+  it("a buffer in a part nothing sets asks for a number with the rest", () => {
+    const p = project({
+      recipes: [recipe("a", [["x", 1]], [["y", 1]]), recipe("b", [["y", 1]], [["z", 1]])],
+      nodes: [node("n", "a"), node("m", "b")],
+      storages: [drawer("buf", "y")],
+      edges: [
+        wire("in", "n", "buf", "y", {}, { toDrawer: true }),
+        wire("out", "buf", "m", "y", {}, { fromDrawer: true }),
+      ],
+    });
+    expect([...run(p).result.plan!.unanchored].sort()).toEqual(["buf", "m", "n"]);
+  });
 });
 
 describe("terminals", () => {

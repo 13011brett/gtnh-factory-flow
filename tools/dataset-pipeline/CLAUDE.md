@@ -34,6 +34,14 @@ reorder, re-minting ~37,000 ids. When an export only ADDS fields, graft them ont
 published export (`~/graft-sparge.js`, matching recipes by content key) and confirm with
 a shard diff (`~/cmp-field.js`). The 2.9 export in WSL is such a graft.
 
+A new pack (or any fresh export) keeps the previous dataset's recipe ids with
+`scripts/carry-recipe-ids.mjs <previous recipes.json.gz> <new recipes.json> [report]`, run
+after normalize and before the indexes: same map (GT++'s `gtpp.recipe.*` read as RC-2's
+`gt.recipe.*`), slots, amounts, chances, ticks and EU keep the old id (its old dataset
+prefix included); bees, crops, veins, mobs and underground fluids keep theirs by identity.
+`local-2.9.0-rc-2` carries beta-2's ids this way (`~/rebuild-rc2.sh` in WSL; the report is
+`oracle/recipe-id-carry.json`).
+
 ## Import principles
 
 - Prefer data exported from NEI or the runtime over hand-written tables and fallbacks.

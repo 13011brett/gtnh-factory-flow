@@ -237,6 +237,7 @@ import { TourBridge, TourHost, TourOffer } from "./clean/tour";
 import { GT_NODE_COLORS, GT_NODE_COLOR_PALETTE, flowRampColor } from "./node-colors";
 import {
   CANVAS_PATTERNS,
+  CANVAS_PATTERN_LABEL,
   readBoardViewSnapshot,
   useBoardView,
   writeBoardView,
@@ -495,14 +496,6 @@ const DEFAULT_FLUID_EDGE_COLOR = "#2f89c5";
 const BOARD_GRID_SIZE = BOARD_GRID;
 /** Stable identity: a fresh array each render would re-init React Flow's snap. */
 const BOARD_GRID_SNAP: [number, number] = [BOARD_GRID_SIZE, BOARD_GRID_SIZE];
-const CANVAS_PATTERN_LABEL: Record<CanvasPattern, string> = {
-  dots: "Dots",
-  lines: "Grid lines",
-  cross: "Crosses",
-  ruled: "Ruled lines",
-  graph: "Graph paper",
-  none: "Blank",
-};
 
 /** One glyph per background pattern, for the view menu's pattern row. */
 const CANVAS_PATTERN_ICON: Record<CanvasPattern, LucideIcon> = {
@@ -5516,6 +5509,18 @@ export function FactoryFlow() {
         arrange: () => void handleAutoArrange({ keepBoards: false }),
         cancelArrange,
         fit: handleFitView,
+        openBoardMenu: (at) => {
+          const instance = flowInstanceRef.current;
+          const rect = document.querySelector(".react-flow")?.getBoundingClientRect();
+          const flow =
+            instance && rect
+              ? instance.screenToFlowPosition({
+                  x: rect.left + rect.width / 2,
+                  y: rect.top + rect.height / 2,
+                })
+              : { x: 0, y: 0 };
+          setBoardMenu({ kind: "pane", x: at.x, y: at.y, flow });
+        },
       }),
     [handleAutoArrange, handleFitView],
   );

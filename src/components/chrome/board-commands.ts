@@ -13,6 +13,8 @@ export interface BoardCommands {
   arrange: () => void;
   cancelArrange: () => void;
   fit: () => void;
+  /** Opens the board's empty-board menu at a screen point, its new things landing in the middle of the view. */
+  openBoardMenu?: (at: { x: number; y: number }) => void;
 }
 
 export interface ArrangeState {

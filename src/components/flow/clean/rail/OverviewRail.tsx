@@ -1172,7 +1172,7 @@ const MachineRow = memo(function MachineRow({
         </span>
         <div className="rail-controls" onClick={(event) => event.stopPropagation()}>
           <RuleKey
-            mark={set ? (upTo ? "<" : "=") : "~"}
+            mark={set ? (upTo ? "≤" : "=") : "~"}
             tone={set ? "gold" : "muted"}
             label={`Pin the ${entry.label}`}
             onClick={(event) => {

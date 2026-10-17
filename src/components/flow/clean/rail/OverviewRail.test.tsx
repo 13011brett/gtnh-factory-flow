@@ -361,7 +361,7 @@ it("pins a machine's count from its line and lets it go again", () => {
   const machine = container.querySelector(".rail-machine")!;
   const comp = () => useFactoryStore.getState().project.nodes.find((n) => n.id === "comp")!;
   // A set count reads as Up to: the key steps to Exactly, then lets the plan decide.
-  expect(machine.querySelector(".rail-rule")?.textContent).toBe("<");
+  expect(machine.querySelector(".rail-rule")?.textContent).toBe("≤");
   fireEvent.click(machine.querySelector(".rail-rule")!);
   expect(comp()).toMatchObject({ solvePin: 6, solvePinExact: true });
   fireEvent.click(machine.querySelector(".rail-rule")!);

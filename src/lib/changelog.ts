@@ -41,7 +41,7 @@ export interface ChangelogEntry {
 export const CHANGELOG: ChangelogEntry[] = [
   {
     version: "4.1.0",
-    date: "2026-10-18",
+    date: "2026-10-17",
     headline: "Up to: a machine count is what you have",
     notes: [
       "A machine count is now Up to by default. The machines run as hard as the line lets them and never more.",

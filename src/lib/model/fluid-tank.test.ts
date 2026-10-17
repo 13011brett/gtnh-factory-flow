@@ -7,6 +7,7 @@ import {
   getFluidTankSlot,
   isFluidTankRecipe,
   releaseFluidTanks,
+  unpinFluidTanks,
 } from "./fluid-tank";
 import type { FactoryNode, Recipe } from "./types";
 
@@ -109,5 +110,21 @@ describe("the fluid tank card", () => {
     // Run through the custom rate's release, which every edit passes.
     expect(releaseCustomRates(project).nodes[0]!.recipeId).toBe(fluidTankEmptyRecipeId("held"));
     expect(releaseFluidTanks(released)).toBe(released);
+  });
+  it("never keeps a pin: it has no count to show or clear", () => {
+    const project = {
+      nodes: [
+        { ...node("tank", emptying.id), solvePin: 1 },
+        { ...node("other", "x"), solvePin: 3 },
+      ],
+      recipes: [emptying],
+      edges: [{ source: "tank", target: "other" }],
+    };
+    const unpinned = unpinFluidTanks(project);
+    expect("solvePin" in unpinned.nodes[0]!).toBe(false);
+    expect(unpinned.nodes[1]!.solvePin).toBe(3);
+    expect(unpinFluidTanks(unpinned)).toBe(unpinned);
+    // Every load and every edit passes the custom rate release.
+    expect("solvePin" in releaseCustomRates(project).nodes[0]!).toBe(false);
   });
 });

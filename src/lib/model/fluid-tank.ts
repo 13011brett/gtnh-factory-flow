@@ -113,3 +113,25 @@ export function releaseFluidTanks<
   });
   return nodes ? { ...project, nodes, recipes: recipes ?? project.recipes } : project;
 }
+
+/**
+ * Every fluid tank card's pin dropped. A tank has no count (it keeps up with the plan), so its card shows none and
+ * cannot clear one: a pin on it (a Build plan's count, which conversion makes every card's pin) would force its crafts
+ * through the plan with nothing shown as set, 20 cells a second for a count of 1 since a Tank craft is a tick. The
+ * same project when no tank carries one.
+ */
+export function unpinFluidTanks<Project extends { nodes: FactoryNode[]; recipes: Recipe[] }>(
+  project: Project,
+): Project {
+  if (!project.nodes.some((node) => node.solvePin !== undefined)) return project;
+  const byId = new Map(project.recipes.map((recipe) => [recipe.id, recipe] as const));
+  let nodes: FactoryNode[] | undefined;
+  project.nodes.forEach((node, index) => {
+    if (node.solvePin === undefined || !isFluidTankRecipe(byId.get(node.recipeId))) return;
+    const { solvePin: _pin, ...rest } = node;
+    void _pin;
+    nodes ??= [...project.nodes];
+    nodes[index] = rest;
+  });
+  return nodes ? { ...project, nodes } : project;
+}

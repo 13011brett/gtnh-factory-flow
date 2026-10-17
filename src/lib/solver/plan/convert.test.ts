@@ -134,6 +134,23 @@ describe("convertBuildToPlan", () => {
     ).toBe(2);
   });
 
+  it("never pins a fluid tank card in Build: it has no count", () => {
+    const tank: Recipe = {
+      ...recipe("tank", [["fuel_cell", 1]], [["empty_cell", 1]]),
+      machineType: "Tank",
+      durationTicks: 1,
+      source: { recipeMap: "Tank" },
+    };
+    const plan = convertBuildToPlan(
+      project({
+        recipes: [tank, recipe("use", [["empty_cell", 1]], [["kit", 1]])],
+        nodes: [node("t", "tank", 1), node("b", "use", 2)],
+        edges: [wire("e", "t", "b", "empty_cell")],
+      }),
+    );
+    expect(plan.nodes.map((n) => n.solvePin)).toEqual([undefined, 2]);
+  });
+
   describe("targets become port rates", () => {
     it("puts a card's targetOutput on its output row", () => {
       const plan = convertBuildToPlan(

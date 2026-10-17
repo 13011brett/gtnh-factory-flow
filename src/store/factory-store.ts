@@ -122,6 +122,7 @@ import { nearestFreeSpot, type PlacementRect } from "@/components/flow/board-pla
 import { getStorageRoles } from "@/lib/model/storage-role";
 import { edgeRatioWeight, setStorageRatioPercentage, equalizeStorageRatioPercentages } from "@/lib/model/storage-ratios";
 import {
+  movePortRateToDrawer,
   prunePlanFields,
   rehomeSectionFields,
   renumberAfterSectionRemoved,
@@ -2704,6 +2705,8 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
           edge,
           selectedResource,
         );
+        // A rate set on the port goes with it, to the new drawer.
+        project = movePortRateToDrawer(project, edge);
         wired += 1;
       }
 
@@ -4595,6 +4598,8 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
           edge,
           resource,
         );
+        // A port dropped on a drawer: its rate goes to a drawer with none.
+        project = movePortRateToDrawer(project, edge);
         changed = true;
       }
 

@@ -1,5 +1,5 @@
 import type { CustomRateMode, FactoryNode, Recipe, ResourceAmount } from "./types";
-import { getFluidTankSlot, isFluidTankRecipe, releaseFluidTanks } from "./fluid-tank";
+import { getFluidTankSlot, isFluidTankRecipe, releaseFluidTanks, unpinFluidTanks } from "./fluid-tank";
 
 /**
  * The custom rate node: a source/sink you dial by hand. Supply mode makes a
@@ -119,8 +119,8 @@ export function releaseCustomRates<
     edges: Array<{ source: string; target: string }>;
   },
 >(project: Project): Project {
-  // The fluid tank card is the same kind of holder: it lets go the same way.
-  return releaseFluidTanks(releaseCustomRateSlots(project));
+  // The fluid tank card is the same kind of holder: it lets go the same way, and never keeps a pin.
+  return unpinFluidTanks(releaseFluidTanks(releaseCustomRateSlots(project)));
 }
 
 function releaseCustomRateSlots<

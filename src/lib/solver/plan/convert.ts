@@ -1,5 +1,6 @@
 import { isCustomRateRecipe } from "../../model/custom-rate";
 import { dedupeEdgeWires } from "../../model/edge-identity";
+import { isFluidTankRecipe } from "../../model/fluid-tank";
 import { resourceMatchesInput } from "../../model/resources";
 import { sectionHandleId } from "../../model/shared-machine";
 import { getStorageRoles } from "../../model/storage-role";
@@ -66,6 +67,7 @@ export interface PlanConversion {
  *   of a Build plan comes over as Ignore (the number stays, no rule). A
  *   classic Solve plan's rates were live and stay live.
  * - A custom rate card is pinned at its dial (count 1 unless it has a count).
+ * - A fluid tank card is never pinned: it has no count.
  * - Pool mode is dropped (plan mode excludes it); groups stay stored, unread.
  */
 export function convertBuildToPlanWithReport(project: FactoryProject): PlanConversion {
@@ -147,7 +149,8 @@ function pinNode(
   report: PlanConversionReport,
 ): FactoryNode {
   if (build) {
-    if (!(node.machineCount > 0)) {
+    // A fluid tank has no count: it keeps up with the plan, so it is never pinned.
+    if (!(node.machineCount > 0) || isFluidTankRecipe(recipe)) {
       return node;
     }
     report.pinned += 1;

@@ -2,13 +2,14 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { useFactoryStore } from "@/store/factory-store";
 import { makeLeftoverKey, makePortKey } from "./port-key";
 import {
+  movePortRateToDrawer,
   prunePlanFields,
   rehomeSectionFields,
   renumberAfterSectionRemoved,
   renumberAfterSectionsSwapped,
 } from "./hygiene";
 import { setSolveCore } from "./adapter/engine";
-import { handle, node, project, recipe } from "./adapter/test-kit";
+import { drawer, handle, node, project, recipe, wire } from "./adapter/test-kit";
 import type { FactoryProject } from "../../model/types";
 
 const recipes = [
@@ -240,5 +241,75 @@ describe("the store keeps them true", () => {
   it("deleting the card drops the splits that named it", () => {
     useFactoryStore.getState().deleteNode("card");
     expect(useFactoryStore.getState().project.spareShares).toBeUndefined();
+  });
+});
+
+describe("a port's rate goes to the drawer wired to it", () => {
+  const item = (id: string) => ({ kind: "item", id, amount: 1, displayName: id }) as never;
+  afterEach(() => setSolveCore(undefined));
+  beforeEach(() => {
+    setSolveCore(() => ({
+      kind: "failed",
+      failure: { message: "NO_PIN", args: [] },
+      notes: [],
+      drawers: { rates: {}, unmet: [], shortfalls: [], ports: {} },
+    }));
+  });
+
+  it("an output dragged into space: the new product drawer holds it exactly and the port lets go", () => {
+    useFactoryStore.getState().setProject(
+      project({ recipes, nodes: [node("n", "a", { portRates: { [handle("output", "y")]: 5000 } })] }),
+    );
+    useFactoryStore.getState().addStorageForConnection(item("y"), "n", "output", { x: 300, y: 0 }, handle("output", "y"));
+    const { project: out } = useFactoryStore.getState();
+    expect(out.nodes[0]!.portRates).toBeUndefined();
+    expect(out.storages).toHaveLength(1);
+    expect(out.storages![0]).toMatchObject({ targetMode: "exact", targetPerSecond: 5000 });
+  });
+
+  it("an input dragged into space: the new source holds it, stored negative", () => {
+    useFactoryStore.getState().setProject(
+      project({ recipes, nodes: [node("n", "a", { portRates: { [handle("input", "x")]: 3 } })] }),
+    );
+    useFactoryStore.getState().addStorageForConnection(item("x"), "n", "input", { x: -300, y: 0 }, handle("input", "x"));
+    const { project: out } = useFactoryStore.getState();
+    expect(out.nodes[0]!.portRates).toBeUndefined();
+    expect(out.storages![0]).toMatchObject({ targetMode: "exact", targetPerSecond: -3 });
+  });
+
+  it("a section's port carries its own rate and leaves the card's others", () => {
+    useFactoryStore.getState().setProject(
+      shared({ [handle("output", "y")]: 1, [handle("output", "z", 1)]: 2 }),
+    );
+    useFactoryStore.getState().addStorageForConnection(item("z"), "card", "output", { x: 300, y: 0 }, handle("output", "z", 1));
+    const { project: out } = useFactoryStore.getState();
+    expect(out.nodes[0]!.portRates).toEqual({ [handle("output", "y")]: 1 });
+    expect(out.storages![0]).toMatchObject({ targetMode: "exact", targetPerSecond: 2 });
+  });
+
+  it("dropped on a drawer with its own rule: the drawer keeps its rule and the port lets go", () => {
+    useFactoryStore.getState().setProject(
+      project({
+        recipes,
+        nodes: [node("n", "a", { portRates: { [handle("output", "y")]: 5 } })],
+        storages: [drawer("d", "y", { targetMode: "at-least", targetPerSecond: 2 })],
+      }),
+    );
+    useFactoryStore
+      .getState()
+      .connectNodes("n", "d", { kind: "item", id: "y", displayName: "y", sourceHandle: handle("output", "y") });
+    const { project: out } = useFactoryStore.getState();
+    expect(out.edges).toHaveLength(1);
+    expect(out.nodes[0]!.portRates).toBeUndefined();
+    expect(out.storages![0]).toMatchObject({ targetMode: "at-least", targetPerSecond: 2 });
+  });
+
+  it("a wire between two cards leaves both ports' rates alone", () => {
+    const p = project({
+      recipes,
+      nodes: [node("n", "a", { portRates: { [handle("output", "y")]: 5 } }), node("m", "b")],
+      edges: [wire("e", "n", "m", "y")],
+    });
+    expect(movePortRateToDrawer(p, p.edges[0]!)).toBe(p);
   });
 });

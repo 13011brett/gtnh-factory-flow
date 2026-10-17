@@ -229,6 +229,23 @@ describe("the SolveInput the adapter builds", () => {
     expect(by.furn!.countFixed).toBe(false);
   });
 
+  it("a fluid tank's stored pin does not fix its count: the card has none to show or clear", () => {
+    const coal = mockForced.project.nodes.find((n) => n.id === "coal")!;
+    const tankMock: MockPlan = {
+      ...mockForced,
+      project: {
+        ...mockForced.project,
+        recipes: mockForced.project.recipes.map((r) =>
+          r.id === coal.recipeId ? { ...r, machineType: "Tank", source: { recipeMap: "Tank" } } : r,
+        ),
+      },
+    };
+    const by = Object.fromEntries(input(tankMock).machines.map((m) => [m.id, m]));
+    expect(coal.solvePin).toBe(0.5);
+    expect(by.coal!.countFixed).toBe(false);
+    expect([by.mac!.countFixed, by.mac!.machineCount]).toEqual([true, 3]);
+  });
+
   it("drawers: kind, effective rule, rate and the port each links to", () => {
     const i = input(mockForced);
     const ingots = i.drawers.find((d) => d.id === "ingots")!;

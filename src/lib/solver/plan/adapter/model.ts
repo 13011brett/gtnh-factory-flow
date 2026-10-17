@@ -1,4 +1,5 @@
 import { isCustomRateRecipe } from "../../../model/custom-rate";
+import { isFluidTankRecipe } from "../../../model/fluid-tank";
 import { resourceLabel } from "../../../model/resources";
 import {
   listSharedMachineGroups,
@@ -392,7 +393,9 @@ export function buildPlanModel(args: PlanSolveArgs): PlanModel {
   const machineIns: MachineIn[] = entries.map((entry) => {
     const rates = rateOf.get(entry.id);
     const power = Boolean(entry.recipe.power);
-    const pin = entry.node.solvePin;
+    // A fluid tank has no count (it keeps up with whatever the plan needs), so a pin it carries from an older plan,
+    // which its card neither shows nor can clear, must not fix its rate.
+    const pin = isFluidTankRecipe(entry.recipe) ? undefined : entry.node.solvePin;
     const custom = isCustomRateRecipe(entry.recipe);
     let countFixed = false;
     let machineCount = entry.builtCount;

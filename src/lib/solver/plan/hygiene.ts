@@ -1,6 +1,9 @@
+import { canonicalizeResourceHandleId } from "../../model/edge-identity";
 import { applyRecipeInputOverrides } from "../../model/recipe-input-overrides";
 import { applyMachineHandlerToRecipe } from "../../model/recipe-rules";
 import { isRecipeInputConsumed } from "../../model/resources";
+import { getStorageRoles } from "../../model/storage-role";
+import { hasStorageTarget } from "../../model/storage-target";
 import {
   listNodeSections,
   parseSectionNodeId,
@@ -8,7 +11,7 @@ import {
   sectionNodeId,
   splitSectionHandleId,
 } from "../../model/shared-machine";
-import type { FactoryNode, FactoryProject, Recipe } from "../../model/types";
+import type { FactoryEdge, FactoryNode, FactoryProject, Recipe } from "../../model/types";
 import { getRuntimeCalculationOutputs } from "../runtime-calculation";
 import { makeLeftoverKey, makePortKey, parsePortKey, splitLeftoverKey } from "./port-key";
 
@@ -233,6 +236,50 @@ function pruneSpareRows(
     next[makeLeftoverKey(live)] = split;
   }
   return dropped ? next : spare;
+}
+
+/**
+ * A card's port just wired to a drawer (`edge`, either way round, already in the project): the rate set on that port
+ * goes to the drawer, as the mod's placePortDrawer and dropPortOnDrawer carry it. A source or product drawer with no
+ * rule takes it exactly, the port's own rule; the port's own goes either way, since a wired port has no box to show or
+ * clear it and would hold the card to it unseen. The same project when the port has no rate.
+ */
+export function movePortRateToDrawer(
+  project: FactoryProject,
+  edge: Pick<FactoryEdge, "source" | "target" | "sourceHandle" | "targetHandle" | "resourceKind" | "resourceId">,
+): FactoryProject {
+  const storages = project.storages ?? [];
+  const into = storages.find((storage) => storage.id === edge.target);
+  const from = storages.find((storage) => storage.id === edge.source);
+  const drawer = into ?? from;
+  if (!drawer || (into && from)) {
+    return project;
+  }
+  const output = Boolean(into);
+  const cardId = output ? edge.source : edge.target;
+  const wired =
+    canonicalizeResourceHandleId(output ? edge.sourceHandle : edge.targetHandle) ??
+    handleOf(output ? "output" : "input", edge.resourceKind, edge.resourceId);
+  const rates = project.nodes.find((node) => node.id === cardId)?.portRates;
+  const key = Object.keys(rates ?? {}).find((handle) => canonicalizeResourceHandleId(handle) === wired);
+  if (!rates || key === undefined) {
+    return project;
+  }
+  const { [key]: rate, ...kept } = rates;
+  const next = updateCard(project, cardId, (node) => withPortRates(node, kept));
+  const role = getStorageRoles(next).get(drawer.id);
+  if (role !== (output ? "product" : "source") || hasStorageTarget(drawer, role) || !(rate! > 0)) {
+    return next;
+  }
+  return {
+    ...next,
+    storages: storages.map((storage) =>
+      // A source on the board keeps its rate negative.
+      storage.id === drawer.id
+        ? { ...storage, targetMode: "exact" as const, targetPerSecond: output ? rate : -rate! }
+        : storage,
+    ),
+  };
 }
 
 function updateCard(

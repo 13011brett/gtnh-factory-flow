@@ -41,8 +41,8 @@ Where things are:
       Hydrogen. A drawer for it frees them."), the ring's cards with a 2 px outline in its tone that dims in the off half
       of the prompts' clock (steady under reduced motion), and the wires along its rows lit in the tone. Dead loop amber
       `#E0A63A`, clog lock purple `#B49CF0`.
-- [ ] (in progress) A setting for the reason outlines: Settings, Board, "Problem outlines", on by default.
-- [ ] (in progress) The zoomed-out view kicks in sooner and shows the foot bar.
+- [ ] A setting for the reason outlines: Settings, Board, "Problem outlines" (`problemOutlines`), on by default, about line "Draws a card's edge in its bar's colour." Off keeps the normal edge; the bar, the lit port and the loops' outline stay.
+- [ ] The zoomed-out view starts at a zoom of 0.5 (back above 0.52; it was 0.42) and its face shows the Up to bar along the foot: fill and track in the reason's tone, a bottleneck filled against what the line wants, the reason word on the bar while it reads; the count moves up above the bar.
 
 ## Overview
 
@@ -51,7 +51,7 @@ Where things are:
 - [ ] Every input and output is always listed, at zero too: every resource an unwired port takes or makes, including a
       card at zero, and one card's output that another card's unwired input takes.
 - [ ] Each machine line has the card's own tier and amps chips (same menu, wheel and typed amps as the card).
-- [ ] (in progress) The Up to rule key shows "≤" (the mod already does).
+- [x] The Up to rule key shows "≤" (the mod already does).
 
 ## Board and top bar
 
@@ -61,7 +61,7 @@ Where things are:
 - [ ] (in progress) An annotations key in the board toolbar's top right, a pencil: Add sticky note, Add box, Add arrow,
       as the board's right-click menu, plus the board background where the website has one (the mod need not grow a
       background setting if it has none).
-- [ ] (in progress) The Peak/Avg key leaves the top toolbar; the overview's machine section keeps its own.
+- [ ] The Peak/Avg key leaves the top toolbar; the overview's machine section keeps its own.
 
 ## Done in both (for reference)
 

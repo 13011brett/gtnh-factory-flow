@@ -790,6 +790,7 @@ function PortControls({ pin, line, state }: { pin: RailPin; line: RailLine; stat
           event.stopPropagation();
           setPortRate(pin.nodeId, pin.handle, 0);
         }}
+        onMiddle={() => setPortRate(pin.nodeId, pin.handle, 0)}
         tip={() => ({
           title: `Set on the ${pin.machine}'s ${side}`,
           notes: [
@@ -798,7 +799,10 @@ function PortControls({ pin, line, state }: { pin: RailPin; line: RailLine; stat
               tone: "muted",
             },
           ],
-          actions: [{ input: "left", label: "Let the plan decide" }],
+          actions: [
+            { input: "left", label: "Let the plan decide" },
+            { input: "middle", label: "Clear" },
+          ],
         })}
       />
       <RateBox
@@ -1176,6 +1180,9 @@ const MachineRow = memo(function MachineRow({
               togglePin();
             }}
             onWheel={() => togglePin()}
+            onMiddle={() => {
+              if (entry.pinned) pinCount(entry.nodeId, 0);
+            }}
             tip={() =>
               entry.pinned
                 ? {
@@ -1190,6 +1197,7 @@ const MachineRow = memo(function MachineRow({
                     ],
                     actions: [
                       { input: "left", label: upTo ? "Make it exact" : "Let the plan decide" },
+                      { input: "middle", label: "Let the plan decide" },
                     ],
                   }
                 : {
@@ -1211,12 +1219,16 @@ const MachineRow = memo(function MachineRow({
               pinCount(entry.nodeId, value);
             }}
             onCancel={() => state.edit(null)}
+            onMiddle={() => {
+              if (entry.pinned) pinCount(entry.nodeId, 0);
+            }}
             onWheel={(direction) => wheelCount(direction)}
             tip={() => ({
               title: "Machine count",
               actions: [
                 { input: "left", label: "Type a pinned count" },
                 { input: "wheel", label: "One more or fewer (below one unpins)" },
+                { input: "middle", label: "Let the plan decide" },
               ],
             })}
           />

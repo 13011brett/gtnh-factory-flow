@@ -90,7 +90,10 @@ export function RuleKey({
       onAuxClick={(event) => {
         if (event.button !== 1) return;
         event.stopPropagation();
-        onMiddle?.(event);
+        if (!onMiddle) return;
+        // A clear: the board's unpin sound when a rule was in force, claimed so its change sound does not double it.
+        if (tone === "gold") playEditSfx("board.unpin");
+        onMiddle(event);
       }}
     >
       <span>{mark}</span>
@@ -172,7 +175,10 @@ export function RateBox({
       onAuxClick={(event) => {
         if (event.button !== 1) return;
         event.stopPropagation();
-        onMiddle?.();
+        if (!onMiddle) return;
+        // A clear: the board's unpin sound when a value was set, claimed so its change sound does not double it.
+        if (gold) playEditSfx("board.unpin");
+        onMiddle();
       }}
     >
       <span>{gold ? text : placeholder}</span>

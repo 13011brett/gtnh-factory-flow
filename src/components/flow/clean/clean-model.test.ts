@@ -5,6 +5,9 @@ import type { RailPort } from "../node-verdict";
 import type { PlanSolveExtras, PlanUpTo } from "@/lib/solver/plan/types";
 import { makePortKey } from "@/lib/solver/plan/port-key";
 import { mockUpTo } from "@/lib/solver/plan/__fixtures__/mock-extras";
+import { UP_TO_COLOR } from "./up-to-reason";
+import { mixHex } from "./colors";
+import { CC } from "./tokens";
 import {
   FOOT_TRACK,
   buildCountView,
@@ -14,6 +17,7 @@ import {
   frameTone,
   pinActions,
   pinPatch,
+  reasonStripes,
   stateFrameTone,
   wheelCount,
   withReasonPorts,
@@ -412,6 +416,26 @@ describe("the rows a reason names", () => {
       resourceKey: "item:Sulfur Dust",
     });
     expect(lit(starved)).toEqual(["Sulfur Dust=starved"]);
+  });
+});
+
+describe("the reason colours", () => {
+  it("are the overview's: CLOGGED purple, LIMITED pink", () => {
+    expect(UP_TO_COLOR.CLOGGED).toBe("#b49cf0");
+    expect(UP_TO_COLOR.LIMITED).toBe("#f472b6");
+  });
+
+  it("stripe a lit row as the free ends mix theirs: 7% body, 13% stripe into the surface", () => {
+    for (const tone of ["starved", "clogged", "unused"] as const) {
+      const hex = UP_TO_COLOR[tone.toUpperCase() as "STARVED" | "CLOGGED" | "UNUSED"];
+      expect(reasonStripes(tone)).toEqual({
+        body: mixHex(hex, CC.surface, 0.07),
+        stripe: mixHex(hex, CC.surface, 0.13),
+      });
+    }
+    // The free ends' own mixes, for comparison: the source's blue gives the input tile's stripe.
+    expect(mixHex(CC.source, CC.surface, 0.13)).toBe("#2E3844");
+    expect(reasonStripes("forced")).toBeUndefined();
   });
 });
 

@@ -77,13 +77,13 @@
   --cc-frame: #e0a63a;
 }
 .cc-card[data-tone="clogged"] {
-  --cc-frame: #6fb2d6;
+  --cc-frame: #b49cf0;
 }
 .cc-card[data-tone="unused"] {
   --cc-frame: #8a8e97;
 }
 .cc-card[data-tone="limited"] {
-  --cc-frame: #b49cf0;
+  --cc-frame: #f472b6;
 }
 .cc-card[data-tone="forced"] {
   --cc-frame: #94c3f3;
@@ -614,10 +614,28 @@
 }
 
 /* The row an Up to card's reason names (STARVED's short input, CLOGGED's or UNUSED's output, and the rows tied with
-   it): the tile's edge and its name in the reason's colour, the foot bar's tones (pass 2's data-why). After the free
-   ends' colours so it wins over them. */
+   it): striped in the reason's colour as a free end is in its own (body and stripe mixed in clean-model reasonStripes,
+   set inline), its edge and its name in that colour, the foot bar's tones. After the free ends' colours so it wins
+   over them; on a free end or a forced row its stripes replace theirs. */
 .cc-card .cc-row[data-why] {
   --cc-tile-edge: var(--cc-why);
+  background: repeating-linear-gradient(
+    135deg,
+    var(--cc-why-stripe) 0 3px,
+    var(--cc-why-body) 3px 8px
+  );
+}
+.cc-card .cc-row[data-why][data-forced] {
+  background: none;
+}
+.cc-card .cc-row[data-why] > .cc-line,
+.cc-card .cc-row[data-why] > .cc-forced {
+  --cc-forced-edge: var(--cc-why);
+  background: repeating-linear-gradient(
+    135deg,
+    var(--cc-why-stripe) 0 3px,
+    var(--cc-why-body) 3px 8px
+  );
 }
 .cc-card .cc-row[data-why] > .cc-pname,
 .cc-card .cc-row[data-why] > .cc-line > .cc-pname {
@@ -627,7 +645,7 @@
   --cc-why: #e0a63a;
 }
 .cc-row[data-why="clogged"] {
-  --cc-why: #6fb2d6;
+  --cc-why: #b49cf0;
 }
 .cc-row[data-why="unused"] {
   --cc-why: #8a8e97;
@@ -672,8 +690,8 @@
   filter: drop-shadow(4px 6px 5px rgba(0, 0, 0, 0.6));
   pointer-events: none;
 }
-/* The programmed circuit: a badge in the well's top-left corner, its own icon with its number on it where the game
-   prints a stack's size (bottom right, white, shadowed), in the card's font. Never dimmed; no words beside it. */
+/* The programmed circuit: a badge in the well's top-left corner, its own icon (which shows its number). Never dimmed;
+   no words beside it. */
 .cc-circuit {
   position: absolute;
   left: 3px;
@@ -688,17 +706,6 @@
   top: 0;
   width: 24px !important;
   height: 24px !important;
-  pointer-events: none;
-}
-.cc-circuit::after {
-  content: attr(data-n);
-  position: absolute;
-  right: 2px;
-  bottom: 2px;
-  font-size: 8px;
-  line-height: 10px;
-  color: var(--cc-ink);
-  text-shadow: 1px 1px 0 #3f3f3f;
   pointer-events: none;
 }
 
@@ -888,13 +895,13 @@
   --tone: #e0a63a;
 }
 .cc-foot[data-tone="clogged"] {
-  --tone: #6fb2d6;
+  --tone: #b49cf0;
 }
 .cc-foot[data-tone="unused"] {
   --tone: #8a8e97;
 }
 .cc-foot[data-tone="limited"] {
-  --tone: #b49cf0;
+  --tone: #f472b6;
 }
 .cc-foot[data-tone="forced"] {
   --tone: #94c3f3;

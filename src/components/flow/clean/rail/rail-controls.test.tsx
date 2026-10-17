@@ -53,6 +53,54 @@ it("the rate box clicks for itself and ticks before every wheel step", () => {
   ]);
 });
 
+it("a middle click clears a set box or key with the board's unpin sound, and never autoscrolls", () => {
+  const onMiddle = vi.fn();
+  const { container } = render(
+    <>
+      <RateBox
+        text="3"
+        gold
+        editing={false}
+        initial="3"
+        onStartEdit={vi.fn()}
+        onCommit={vi.fn()}
+        onCancel={vi.fn()}
+        onMiddle={onMiddle}
+        tip={tip}
+        label="Set"
+      />
+      <RateBox
+        text=""
+        gold={false}
+        editing={false}
+        initial=""
+        onStartEdit={vi.fn()}
+        onCommit={vi.fn()}
+        onCancel={vi.fn()}
+        onMiddle={onMiddle}
+        tip={tip}
+        label="Empty"
+      />
+      <RuleKey mark="=" tone="gold" tip={tip} onMiddle={onMiddle} label="Key" />
+    </>,
+  );
+  const [set, empty] = [...container.querySelectorAll(".rail-box")];
+  const down = new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 1 });
+  set!.dispatchEvent(down);
+  expect(down.defaultPrevented).toBe(true);
+  fireEvent(set!, new MouseEvent("auxclick", { bubbles: true, button: 1 }));
+  fireEvent(
+    container.querySelector(".rail-rule")!,
+    new MouseEvent("auxclick", { bubbles: true, button: 1 }),
+  );
+  expect(onMiddle).toHaveBeenCalledTimes(2);
+  expect(sfx.playEditSfx.mock.calls).toEqual([["board.unpin"], ["board.unpin"]]);
+  // Nothing set: the clear runs, quietly.
+  fireEvent(empty!, new MouseEvent("auxclick", { bubbles: true, button: 1 }));
+  expect(onMiddle).toHaveBeenCalledTimes(3);
+  expect(sfx.playEditSfx).toHaveBeenCalledTimes(2);
+});
+
 it("the rule key clicks for itself", () => {
   const onClick = vi.fn();
   const { container } = render(

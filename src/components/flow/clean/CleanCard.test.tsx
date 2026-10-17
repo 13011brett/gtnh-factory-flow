@@ -11,7 +11,7 @@ import type {
   CleanCardView,
   CleanPortView,
 } from "./clean-model";
-import { buildCountView, buildFootView, layoutStrip } from "./clean-model";
+import { buildCountView, buildFootView, layoutStrip, reasonStripes } from "./clean-model";
 
 vi.mock("@/lib/compact-view", () => ({ isCompactViewport: () => false }));
 
@@ -277,6 +277,10 @@ it("sounds for itself: a click that opens the editor or the rule menu clicks, ea
   ]);
   fireEvent.click(container.querySelector(".cc-rule")!);
   expect(sfx.sfxClick).toHaveBeenCalledTimes(1);
+  sfx.playEditSfx.mockClear();
+  fireEvent(block, new MouseEvent("auxclick", { bubbles: true, button: 1 }));
+  expect(sfx.playEditSfx.mock.calls).toEqual([["board.unpin"]]);
+  expect(actions.setCount).toHaveBeenLastCalledWith(undefined);
   cleanup();
   const again = renderCard(upToView(), actions);
   fireEvent.click(again.container.querySelector(".cc-count")!);
@@ -324,7 +328,7 @@ it("lights the row its reason names", () => {
     inputs: view.inputs.map((p, i) => (i === 0 ? { ...p, why: "starved" as const } : p)),
   };
   const { container } = renderCard(lit);
-  const rows = [...container.querySelectorAll(".cc-row[data-port]")];
+  const rows = [...container.querySelectorAll<HTMLElement>(".cc-row[data-port]")];
   expect(rows.map((row) => row.getAttribute("data-why"))).toEqual([
     "starved",
     null,
@@ -332,6 +336,10 @@ it("lights the row its reason names", () => {
     null,
     null,
   ]);
+  // Striped in the reason's own mixes, as a free end is in its own.
+  expect(rows[0]!.style.getPropertyValue("--cc-why-body")).toBe(reasonStripes("starved")!.body);
+  expect(rows[0]!.style.getPropertyValue("--cc-why-stripe")).toBe(reasonStripes("starved")!.stripe);
+  expect(rows[1]!.getAttribute("style")).toBeNull();
 });
 
 it("keeps each editor the size of what it replaces", () => {
@@ -351,10 +359,10 @@ it("keeps each editor the size of what it replaces", () => {
   expect(amps.querySelector("input")!.getAttribute("size")).toBe("1");
 });
 
-it("puts the circuit in the well's corner: its icon and number, no row", () => {
+it("puts the circuit in the well's corner: its own icon and its tip, no number drawn on it, no row", () => {
   const { container } = renderCard(referenceView());
   const badge = container.querySelector<HTMLElement>(".cc-pic > .cc-circuit")!;
-  expect(badge.getAttribute("data-n")).toBe("2");
+  expect(badge.hasAttribute("data-n")).toBe(false);
   expect(badge.querySelector(".cc-circuit-icon")).not.toBeNull();
   expect(JSON.parse(badge.getAttribute("data-tip")!).title).toBe("Circuit 2");
   expect(badge.textContent).toBe("");

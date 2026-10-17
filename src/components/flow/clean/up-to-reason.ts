@@ -21,9 +21,9 @@ export const UP_TO_COLOR: Record<Reason, string> = {
   FULL: "#5ee9b5",
   BOTTLENECK: "#f06262",
   STARVED: "#e0a63a",
-  CLOGGED: "#6fb2d6",
+  CLOGGED: "#b49cf0",
   UNUSED: "#8a8e97",
-  LIMITED: "#b49cf0",
+  LIMITED: "#f472b6",
 };
 
 /** The reason worth showing: none when the card is full or the solver gave none. */

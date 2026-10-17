@@ -45,7 +45,7 @@ import type {
   CleanFootView,
   CleanPortView,
 } from "./clean-model";
-import { circuitNumber, frameTone } from "./clean-model";
+import { circuitNumber, frameTone, reasonStripes } from "./clean-model";
 import type { PinRule } from "@/lib/model/pin-rule";
 import { CountRuleMenu } from "./menus/CountRuleMenu";
 import { tierChipColors } from "./tokens";
@@ -200,6 +200,7 @@ export function CleanPortRow({
       data-lit={lit ? "" : undefined}
       data-forced={p.forced ? "" : undefined}
       data-why={p.why}
+      style={whyStyle(p.why)}
       data-choice={p.choice ? "" : undefined}
       data-resource-edge-anchor="true"
       data-resource-node-id={p.nodeId}
@@ -297,6 +298,14 @@ export function CleanPortRow({
       {rowBrowse.menu}
     </div>
   );
+}
+
+/** A lit row's stripes in its reason's colour, as custom properties (clean.css `.cc-row[data-why]`). */
+function whyStyle(why: CleanPortView["why"]): CSSProperties | undefined {
+  const stripes = why ? reasonStripes(why) : undefined;
+  return stripes
+    ? ({ "--cc-why-body": stripes.body, "--cc-why-stripe": stripes.stripe } as CSSProperties)
+    : undefined;
 }
 
 /**
@@ -440,8 +449,10 @@ export function CountBox({
         if (event.button === 1) event.preventDefault();
       }}
       onAuxClick={(event) => {
-        if (event.button !== 1 || editing || !view.pinned) return;
+        if (event.button !== 1 || editing || !view.pinned || checklistLocked()) return;
         event.stopPropagation();
+        // The board's unpin sound, claimed so its change sound does not play it again.
+        playEditSfx("board.unpin");
         onSet(undefined);
       }}
     >
@@ -501,8 +512,8 @@ export function CountBox({
 }
 
 /**
- * The programmed circuit, a small badge in the well's top-left corner: the circuit's own icon with its number on it
- * (`::after`, from `data-n`, in the card's font), never dimmed. Its tip says "Circuit 24".
+ * The programmed circuit, a small badge in the well's top-left corner: the circuit's own icon, which already shows
+ * its number, never dimmed. Its tip says "Circuit 24".
  */
 export function CircuitBadge({
   nodeId,
@@ -512,11 +523,10 @@ export function CircuitBadge({
   circuit: NonNullable<CleanCardView["circuit"]>;
 }) {
   const number = circuitNumber(circuit);
-  if (!circuit.resource && number === undefined) return null;
+  if (!circuit.resource) return null;
   return (
     <span
       className="cc-circuit"
-      data-n={number}
       {...tipAttrs({ id: `${nodeId}|circuit`, title: number ? `Circuit ${number}` : "Circuit" })}
     >
       {circuit.resource ? (

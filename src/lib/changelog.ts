@@ -52,6 +52,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       "A drawer that falls short names the machine that holds it back.",
       "A card with a problem is outlined in its bar's colour.",
       "The port that holds a card back is lit in its bar's colour.",
+      "A middle click clears any count or rate you set.",
       "The circuit sits on the machine with its number.",
     ],
   },

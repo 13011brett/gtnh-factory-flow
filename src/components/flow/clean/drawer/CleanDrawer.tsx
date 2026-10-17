@@ -38,6 +38,7 @@ import { BoardMenu, MenuLine, MenuRow } from "../menus/BoardMenu";
 import { ensureInteractionHost, tipAttrs } from "../interaction";
 import { startPromptClock } from "../../virtual/prompt-phase";
 import type { TargetMode } from "@/lib/model/storage-target";
+import { playEditSfx } from "@/lib/sound/sfx";
 
 /** A press that moved this far (screen px) before release is a drag, not a click. */
 const CLICK_SLOP = 3;
@@ -227,7 +228,12 @@ export function CleanDrawer({
     }
     promote();
     // The mod's step: the shown figure rounded, plus 1, 10 with Ctrl or 100 with Shift.
-    rule.stepRate(up, { shiftKey: event.shiftKey, ctrlKey: event.ctrlKey, metaKey: event.metaKey, add: true });
+    rule.stepRate(up, {
+      shiftKey: event.shiftKey,
+      ctrlKey: event.ctrlKey,
+      metaKey: event.metaKey,
+      add: true,
+    });
   });
 
   const middle = (event: MouseEvent) => {
@@ -236,6 +242,8 @@ export function CleanDrawer({
     event.stopPropagation();
     if (!locked) {
       promote();
+      // The board's unpin sound when there was a rate to clear, claimed so its change sound does not double it.
+      if (!rule.any) playEditSfx("board.unpin");
       rule.clear(event);
     }
   };
@@ -528,7 +536,13 @@ export function CleanDrawer({
         {rowBrowse.menu}
       </div>
       {menu ? (
-        <BoardMenu x={menu.left} y={menu.bottom + 2} label="Rule" width={210} onClose={() => rule.setOpen(false)}>
+        <BoardMenu
+          x={menu.left}
+          y={menu.bottom + 2}
+          label="Rule"
+          width={210}
+          onClose={() => rule.setOpen(false)}
+        >
           {ruleRows(() => rule.setOpen(false))}
         </BoardMenu>
       ) : null}
@@ -573,7 +587,10 @@ function RateField({ rule, onCommit }: { rule: RateRule; onCommit: () => void })
       onMouseDown={(event) => {
         if (event.button === 1) event.preventDefault();
       }}
-      onAuxClick={rule.clear}
+      onAuxClick={(event) => {
+        if (event.button === 1 && !rule.any && !rule.locked) playEditSfx("board.unpin");
+        rule.clear(event);
+      }}
     />
   );
 }

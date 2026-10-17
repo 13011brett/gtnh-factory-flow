@@ -15,6 +15,12 @@ vi.mock("@/store/factory-store", () => ({
   useRateDisplayUnits: () => undefined,
 }));
 
+const sfx = vi.hoisted(() => ({ playEditSfx: vi.fn() }));
+vi.mock("@/lib/sound/sfx", async (original) => ({
+  ...(await original<typeof import("@/lib/sound/sfx")>()),
+  playEditSfx: sfx.playEditSfx,
+}));
+
 import { PortRateControls } from "./PortRateControls";
 
 function port(over: Partial<CleanPortView> = {}): CleanPortView {
@@ -83,7 +89,9 @@ it("the key pins the port at the rate it runs at now, and clears it again", () =
 });
 
 it("does nothing on a press that moved (a drag carries the card)", () => {
-  const { container } = render(<PortRateControls p={port()} unset={false} wasClick={() => false} />);
+  const { container } = render(
+    <PortRateControls p={port()} unset={false} wasClick={() => false} />,
+  );
   fireEvent.click(container.querySelector(".cc-prk")!);
   fireEvent.click(container.querySelector(".cc-prb")!);
   expect(updateNode).not.toHaveBeenCalled();
@@ -109,7 +117,9 @@ it("the box types a rate, shorthand and fractions included, and Escape cancels",
 
 it("an empty box commits Any (clears a set rate)", () => {
   state.project.nodes[0]!.portRates = { "input:item:iron": 4 };
-  const { container } = render(<PortRateControls p={port({ rate: 4 })} unset={false} wasClick={yes} />);
+  const { container } = render(
+    <PortRateControls p={port({ rate: 4 })} unset={false} wasClick={yes} />,
+  );
   fireEvent.click(container.querySelector(".cc-prb")!);
   const input = container.querySelector("input")!;
   fireEvent.change(input, { target: { value: "" } });
@@ -119,15 +129,44 @@ it("an empty box commits Any (clears a set rate)", () => {
 
 it("the wheel steps the rate by 1 (Ctrl 10) and clears below 1; a middle click clears", () => {
   state.project.nodes[0]!.portRates = { "input:item:iron": 5 };
-  const { container } = render(<PortRateControls p={port({ rate: 5 })} unset={false} wasClick={yes} />);
+  const { container } = render(
+    <PortRateControls p={port({ rate: 5 })} unset={false} wasClick={yes} />,
+  );
   const box = container.querySelector(".cc-prb")!;
   fireEvent.wheel(box, { deltaY: -100 });
   expect(updateNode).toHaveBeenLastCalledWith("n1", { portRates: { "input:item:iron": 6 } });
   fireEvent.wheel(box, { deltaY: 100, ctrlKey: true });
   expect(updateNode).toHaveBeenLastCalledWith("n1", { portRates: undefined });
   updateNode.mockReset();
-  fireEvent.mouseDown(box, { button: 1 });
+  sfx.playEditSfx.mockClear();
+  // The middle button never starts the browser's autoscroll, and its click clears with the board's unpin sound.
+  const down = new MouseEvent("mousedown", { bubbles: true, cancelable: true, button: 1 });
+  box.dispatchEvent(down);
+  expect(down.defaultPrevented).toBe(true);
+  expect(updateNode).not.toHaveBeenCalled();
+  fireEvent(box, new MouseEvent("auxclick", { bubbles: true, cancelable: true, button: 1 }));
   expect(updateNode).toHaveBeenLastCalledWith("n1", { portRates: undefined });
+  expect(sfx.playEditSfx).toHaveBeenCalledWith("board.unpin");
+});
+
+it("the rule key clears on the middle button too, and nothing sounds when nothing was set", () => {
+  state.project.nodes[0]!.portRates = { "input:item:iron": 5 };
+  const set = render(<PortRateControls p={port({ rate: 5 })} unset={false} wasClick={yes} />);
+  fireEvent(
+    set.container.querySelector(".cc-prk")!,
+    new MouseEvent("auxclick", { bubbles: true, button: 1 }),
+  );
+  expect(updateNode).toHaveBeenLastCalledWith("n1", { portRates: undefined });
+  cleanup();
+  updateNode.mockReset();
+  sfx.playEditSfx.mockClear();
+  const empty = render(<PortRateControls p={port()} unset={false} wasClick={yes} />);
+  fireEvent(
+    empty.container.querySelector(".cc-prb")!,
+    new MouseEvent("auxclick", { bubbles: true, button: 1 }),
+  );
+  expect(updateNode).not.toHaveBeenCalled();
+  expect(sfx.playEditSfx).not.toHaveBeenCalled();
 });
 
 it("changes nothing in a read-only plan", () => {

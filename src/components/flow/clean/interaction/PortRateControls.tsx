@@ -10,6 +10,7 @@ import type { CleanPortView } from "../clean-model";
 import { parseRateText, portRatePatch, stepShownRate } from "./port-rate";
 import { openBoxTip, openKeyTip } from "./tips";
 import { tipAttrs } from "./tip-spec";
+import { playEditSfx } from "@/lib/sound/sfx";
 
 function locked(): boolean {
   const state = useFactoryStore.getState();
@@ -76,15 +77,24 @@ export function PortRateControls({
   const toggle = () => {
     if (locked()) return;
     if (pinned) setPortRate(p.nodeId, p.handleId, undefined);
-    else if (now > 0) setPortRate(p.nodeId, p.handleId, Number((now).toPrecision(6)));
+    else if (now > 0) setPortRate(p.nodeId, p.handleId, Number(now.toPrecision(6)));
     else beginEdit();
   };
+  // The middle button clears the rate. On the click itself: the board's own pointerdown can swallow the mousedown.
   const clearOnMiddle = (event: MouseEvent) => {
     if (event.button !== 1) return;
     event.preventDefault();
     event.stopPropagation();
     setDraft(undefined);
-    if (pinned) setPortRate(p.nodeId, p.handleId, undefined);
+    if (pinned && !locked()) {
+      // The board's unpin sound, claimed so its change sound does not play it again.
+      playEditSfx("board.unpin");
+      setPortRate(p.nodeId, p.handleId, undefined);
+    }
+  };
+  // Never the browser's autoscroll.
+  const noAutoscroll = (event: MouseEvent) => {
+    if (event.button === 1) event.preventDefault();
   };
   const wheelBox = (event: WheelEvent) => {
     if (locked()) return;
@@ -110,8 +120,8 @@ export function PortRateControls({
           event.stopPropagation();
           if (wasClick(event)) toggle();
         }}
-        onMouseDown={clearOnMiddle}
-        onAuxClick={(event) => event.preventDefault()}
+        onMouseDown={noAutoscroll}
+        onAuxClick={clearOnMiddle}
         onWheel={(event) => {
           event.stopPropagation();
           if (!locked() && event.deltaY !== 0) toggle();
@@ -131,8 +141,8 @@ export function PortRateControls({
           event.stopPropagation();
           if (draft === undefined && wasClick(event)) beginEdit();
         }}
-        onMouseDown={clearOnMiddle}
-        onAuxClick={(event) => event.preventDefault()}
+        onMouseDown={noAutoscroll}
+        onAuxClick={clearOnMiddle}
         onWheel={wheelBox}
       >
         {draft !== undefined ? (

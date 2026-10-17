@@ -56,7 +56,9 @@ import {
 } from "../machine-icons";
 import { orderMachineHandlers } from "../MachinePicker";
 import type { RecipeNodeData } from "../RecipeNode";
-import { CC_GEOMETRY } from "./tokens";
+import { CC, CC_GEOMETRY } from "./tokens";
+import { mixHex } from "./colors";
+import { UP_TO_COLOR } from "./up-to-reason";
 import { isPinned, pinMachineKey, settingControls } from "./menus/settings-model";
 import { mcTextWidth, measureClean, useFontEpoch } from "./text-measure";
 
@@ -833,6 +835,16 @@ export function withReasonPorts(
       (upTo.portKey === undefined && port.side === side && port.resourceKey === upTo.resourceKey);
     return lit && !port.port.free ? { ...port, why: tone } : port;
   });
+}
+
+/**
+ * A lit row's stripes: its reason's colour (the overview's and the bar's, `UP_TO_COLOR`) mixed into the card's surface
+ * as the free ends mix theirs (`drawerMixes`: body 7%, stripe 13%), so each reason has its own.
+ */
+export function reasonStripes(tone: FootTone): { body: string; stripe: string } | undefined {
+  const hex = (UP_TO_COLOR as Record<string, string | undefined>)[tone.toUpperCase()];
+  if (!hex) return undefined;
+  return { body: mixHex(hex, CC.surface, 0.07), stripe: mixHex(hex, CC.surface, 0.13) };
 }
 
 /** A card's name by id, for the bar's tip (the full cards upstream of a starved one). */

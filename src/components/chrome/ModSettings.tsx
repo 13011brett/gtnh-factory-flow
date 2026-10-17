@@ -108,6 +108,14 @@ export function ModSettings({ onClose }: { onClose: () => void }) {
           to: (index) => writeDeviceSettings({ zoomedOutNames: index === 1 }),
         },
         {
+          label: "Item browser",
+          about: "The side it sits on.",
+          kind: "choice",
+          names: ["Left", "Right"],
+          at: settings.itemsLeft ? 0 : 1,
+          to: (index) => writeDeviceSettings({ itemsLeft: index === 0 }),
+        },
+        {
           label: "Font",
           about: "Sets the font of the planner.",
           kind: "button",

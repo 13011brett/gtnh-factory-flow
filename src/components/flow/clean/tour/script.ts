@@ -753,15 +753,15 @@ const stickyNote: Step = {
 
 // region Your plans, plans together, task boards
 
-const inviteKey: Target = barKey("invite");
+const shareKey: Target = barKey("share");
 const plansKey: Target = barKey("plans");
 
 const inviteStep: Step = {
   id: "invite",
   actions: [closeMenus, A.wait(300)],
   note: {
-    text: "Sign in and your plans save as you edit, on any computer and in the game. *Invite* someone and you build the plan together, live.",
-    at: inviteKey,
+    text: "Sign in and your plans save as you edit, on any computer and in the game. *Share* invites someone to build the plan with you, live.",
+    at: shareKey,
   },
 };
 
@@ -804,15 +804,18 @@ const taskStep: Step = {
 
 // endregion
 
-const libraryTab: Target = libraryKey;
+// The Community shelf, in the library Plans opens.
+const libraryTab: Target = textOf(".ml-tab", /^COMMUNITY/);
 
 const libraryStep: Step = {
   id: "library",
-  actions: [A.click(libraryTab, { label: "Community" }), A.wait(1200)],
-  note: {
-    text: "*Community* is where people post their plans. You can browse them here.",
-    at: libraryTab,
-  },
+  actions: [
+    A.when(() => libraryTab() === null, A.click(libraryKey, { label: "Plans" })),
+    A.until(() => libraryTab() !== null, "the library"),
+    A.click(libraryTab, { label: "Community" }),
+    A.wait(1200),
+  ],
+  note: { text: "*Community* is where people post their plans. You can browse them here.", at: libraryTab },
 };
 
 const newPlan: Step = {

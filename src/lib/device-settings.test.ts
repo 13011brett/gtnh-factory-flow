@@ -2,9 +2,10 @@ import { describe, expect, it } from "vitest";
 import { DEFAULT_DEVICE_SETTINGS, parseDeviceSettings } from "./device-settings";
 
 describe("device settings", () => {
-  it("starts at the defaults: names on, Board section", () => {
+  it("starts at the mod's defaults: names on, items on the right, Board section", () => {
     expect(DEFAULT_DEVICE_SETTINGS).toEqual({
       zoomedOutNames: true,
+      itemsLeft: false,
       settingsSection: "Board",
     });
     expect(parseDeviceSettings(null)).toBe(DEFAULT_DEVICE_SETTINGS);
@@ -28,6 +29,6 @@ describe("device settings", () => {
     const read = parseDeviceSettings(
       JSON.stringify({ circuitAsInput: false, zoomedOutNames: false }),
     );
-    expect(read).toEqual({ zoomedOutNames: false, settingsSection: "Board" });
+    expect(read).toEqual({ zoomedOutNames: false, itemsLeft: false, settingsSection: "Board" });
   });
 });

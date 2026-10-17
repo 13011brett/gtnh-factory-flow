@@ -7,6 +7,7 @@ import {
   resolveProjectRecipes,
 } from "@/lib/datasets/refresh-project-recipes";
 import type { Recipe } from "@/lib/model/types";
+import { useDeviceSettings } from "@/lib/device-settings";
 import { useCallback, useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import {
   DEFAULT_DATASET_MANIFEST_URL,
@@ -314,8 +315,8 @@ export function FactoryPlannerApp() {
       <RecipeBookOpener />
       <PlacementRevealer />
       <SharedAddressSync />
-      {/* The mod's bar sits over the overview and the board only, the items list running the screen's height beside
-          it (like NEI beside the mod's board): on a desktop plan board the bar is a grid row of the workspace. */}
+      {/* On a desktop plan board the mod's bar is the workspace grid's first row, across the overview, the board and
+          the items list. */}
       {barInGrid ? null : <AppHeader onLoadDatasetVersion={loadDatasetVersion} />}
       {isCompact ? (
         <CompactWorkspace workspace={workspace} onLoadDatasetVersion={loadDatasetVersion} />
@@ -462,19 +463,26 @@ export function ColumnWorkspace({ workspace, onLoadDatasetVersion, header }: Wor
   const worksheet = poolMode;
   // A task board has no overview (the game's): its columns take the overview's room too.
   const taskBoard = useFactoryStore((state) => TASKS_ENABLED && state.project.primaryView === "tasks");
+  const itemsLeft = useDeviceSettings().itemsLeft;
   const columns = workspaceColumns({
     planLayout,
     itemsOpen: workspace.leftPanelOpen,
     inspectorOpen: workspace.rightPanelOpen,
     hideBoardPanels: Boolean(covering) || worksheet || (taskBoard && planLayout),
     overviewWidth,
+    itemsLeft,
   });
+  // Plan boards: which grid column the overview and the items take (the board is always the middle one).
+  const overviewColumn = columns.itemsSide === "left" ? 3 : 1;
+  const itemsColumn = columns.itemsSide === "left" ? 1 : 3;
 
   const items = workspace.leftPanelOpen ? (
     <ViewerAwareBrowser onLoadDatasetVersion={onLoadDatasetVersion} />
   ) : (
     <PanelRail side={columns.itemsSide} label="Items" />
   );
+  const overview =
+    covering || taskBoard ? <div /> : <PlanOverview side={columns.itemsSide === "left" ? "right" : "left"} />;
 
   return (
     <>
@@ -484,6 +492,7 @@ export function ColumnWorkspace({ workspace, onLoadDatasetVersion, header }: Wor
           and the board never has to give the width back to a hover target. */}
       <main
         data-items-side={columns.itemsSide}
+        data-plan-layout={planLayout ? "" : undefined}
         data-left-px={columns.leftPx}
         data-right-px={columns.rightPx}
         className="grid min-h-0 flex-1 grid-cols-1 overflow-hidden"
@@ -496,9 +505,10 @@ export function ColumnWorkspace({ workspace, onLoadDatasetVersion, header }: Wor
           ...(header ? { gridTemplateRows: "auto minmax(0,1fr)" } : {}),
         } as CSSProperties}
       >
-        {/* The bar over the first two columns; the items column beside it runs both rows. */}
+        {/* The bar across the whole width, over the overview, the board and the items list alike, so it has all of
+            it. Which side the overview and the items take is the settings' "Item browser". */}
         {header ? (
-          <div className="min-w-0" style={{ gridColumn: "1 / 3", gridRow: 1 }}>
+          <div className="min-w-0" style={{ gridColumn: "1 / 4", gridRow: 1 }}>
             {header}
           </div>
         ) : null}
@@ -506,21 +516,21 @@ export function ColumnWorkspace({ workspace, onLoadDatasetVersion, header }: Wor
             owns its header, so it stays a direct grid item with no wrapper. */}
         {header ? (
           <>
-            <div className="grid min-h-0 min-w-0" style={{ gridColumn: 1, gridRow: 2 }}>
-              {covering || taskBoard ? <div /> : <PlanOverview />}
+            <div className="grid min-h-0 min-w-0" style={{ gridColumn: overviewColumn, gridRow: 2 }}>
+              {overview}
             </div>
             <div className="grid min-h-0 min-w-0" style={{ gridColumn: 2, gridRow: 2 }}>
               <BoardColumn />
             </div>
-            <div className="grid min-h-0 min-w-0" style={{ gridColumn: 3, gridRow: "1 / 3" }}>
+            <div className="grid min-h-0 min-w-0" style={{ gridColumn: itemsColumn, gridRow: 2 }}>
               {items}
             </div>
           </>
         ) : null}
-        {header ? null : planLayout ? covering || taskBoard ? <div /> : <PlanOverview /> : items}
+        {header ? null : planLayout ? (columns.itemsSide === "left" ? items : overview) : items}
         {header ? null : <BoardColumn />}
         {header ? null : planLayout ? (
-          items
+          columns.itemsSide === "left" ? overview : items
         ) : columns.inspectorShown ? (
           <InspectorPanel />
         ) : covering || worksheet ? null : (
@@ -554,6 +564,7 @@ export function CompactWorkspace({ workspace, onLoadDatasetVersion }: WorkspaceP
   return (
     <main
       data-items-side={planLayout ? "right" : "left"}
+      data-plan-layout={planLayout ? "" : undefined}
       data-left-px={0}
       data-right-px={0}
       data-compact="true"

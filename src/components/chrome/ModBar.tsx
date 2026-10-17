@@ -76,9 +76,11 @@ export interface ModBarProps {
 }
 
 /**
- * The top bar holds the account's things only: the plan tabs and +, the live state and faces, then Invite, Share, Plans and Community,
- * the account key, and feedback, settings and help. What edits or views the board (Non-recipe, undo and redo, Arrange,
- * Fit, the rate unit, EU/t, Avg) is the board's own toolbar (BoardToolbar), along the top of the board.
+ * The top bar holds the account's things only: the plan tabs and +, the live state and faces, then Plans (the library
+ * on My plans; Shared with me and Community are its shelves) and Share (Invite people first, then the copies), the
+ * account key, and feedback, settings and help, all on one row. Its keys are flat like the tabs and + (chrome.css), the
+ * picture keys and the face bare until hovered. What edits or views the board (Non-recipe, undo and redo, Arrange, Fit,
+ * the rate unit, EU/t, Avg) is the board's own toolbar (BoardToolbar), along the top of the board.
  */
 export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMenu, unreadNotes }: ModBarProps) {
   useHistoryShortcuts();
@@ -101,8 +103,7 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
   const sideOpen = workspace.rightPanelOpen && !bothOpen;
   const library = useLibraryTab();
   const isReadOnly = useFactoryStore((state) => state.isReadOnly);
-  const onCommunity = library.view.kind === "public" || library.view.kind === "saved";
-  const onPlans = !onCommunity;
+  const folded = fit === "folded" && !compact;
   const feedbackOpen = useFeedbackOpen();
   const [menu, setMenu] = useState<{ kind: "share" | "help"; anchor: ChromeAnchor }>();
   const [pasting, setPasting] = useState(false);
@@ -138,15 +139,15 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
   // Whether a game with the mod is listening, asked each time the menu opens.
   const modReach = useModReach(menu?.kind === "share");
 
-  // The mod's Share menu has the same rows, in the same words: copies only. Labels only. People are invited with
-  // the Invite key; a copy posted to Community is the last row (never for a task board).
+  // The mod's Share menu has the same rows, in the same words. Labels only. People first, then the copies; a copy
+  // posted to Community is the last row (never for a task board).
   const shareEntries: MenuEntry[] = [
     ...(LIVE
       ? [
           {
-            label: "Share with people...",
+            label: "Invite people...",
             disabled: !signedIn,
-            tip: signedIn ? undefined : "Sign in to share with people",
+            tip: signedIn ? undefined : "Sign in to invite people",
             onSelect: () => setInviting(true),
           } satisfies MenuEntry,
         ]
@@ -172,7 +173,6 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
       <header ref={barRef} className="mb" data-mod-bar="" data-fit={fit} data-help-anchor="plan-actions">
       <ModTabs onPaste={() => setPasting(true)} onShare={onShare} />
       {LIVE ? <LivePresence tight={tight} /> : null}
-      <span className="mb-break" aria-hidden />
       {compact ? (
         <>
           <BarKey
@@ -195,43 +195,33 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
           />
         </>
       ) : null}
-      {LIVE ? (
-        <BarKey
-          id="invite"
-          gap
-          label="Invite"
-          width={44}
-          off={!signedIn}
-          tip={signedIn ? "Invite people to edit this plan with you" : "Sign in to invite"}
-          onClick={() => setInviting(true)}
-        />
-      ) : null}
+      <BarKey
+        id="plans"
+        gap
+        label={folded ? undefined : "Plans"}
+        icon={folded}
+        ariaLabel="Plans"
+        width={folded ? undefined : 42}
+        open={library.active}
+        tip="Your plans, the ones shared with you, and Community"
+        // Opens the library on My plans, and shuts it again; its shelves are along its top.
+        onClick={() => (library.active ? leaveLibrary() : openLibrary({ kind: "all" }))}
+      >
+        {folded ? <PixelIcon name="plans" /> : undefined}
+      </BarKey>
       <BarKey
         id="share"
-        gap={!LIVE}
-        label="Share"
-        width={42}
-        tip="Share this plan with people, or as a copy: a link, a code, a file or a picture, to the game, or post it to Community"
+        label={folded ? undefined : "Share"}
+        icon={folded}
+        ariaLabel="Share"
+        width={folded ? undefined : 42}
+        tip="Share this plan: invite people to edit it with you, or send a copy"
         open={menu?.kind === "share"}
         onClick={(event) => openMenuFrom("share", event)}
         menuAnchor
-      />
-      <BarKey
-        id="plans"
-        label="Plans"
-        width={42}
-        open={library.active && onPlans}
-        tip="Plans: every plan you have, and the plans shared with you"
-        onClick={() => (library.active && library.view.kind === "all" ? leaveLibrary() : openLibrary({ kind: "all" }))}
-      />
-      <BarKey
-        id="community"
-        label="Community"
-        width={66}
-        open={library.active && onCommunity}
-        tip="Community: plans other players posted"
-        onClick={() => (library.active && onCommunity ? leaveLibrary() : openLibrary({ kind: "public" }))}
-      />
+      >
+        {folded ? <PixelIcon name="share" /> : undefined}
+      </BarKey>
       <AccountKey />
       <BarKey
         id="feedback"

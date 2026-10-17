@@ -39,7 +39,7 @@ import {
   type IndexedResource,
 } from "./ResourceIndexPane";
 import { FoldGlyph } from "./flow/clean/fold/FoldKey";
-import { usePlanLayout } from "./use-plan-layout";
+import { useItemsOnRight } from "./use-plan-layout";
 import {
   MAP_SELECTION_CHANGED_EVENT,
   MAP_SELECTION_STORAGE_KEY,
@@ -71,7 +71,7 @@ interface RecipeBrowserProps {
 
 export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
   // Plan boards seat the items on the right: its edge, fold key and arrow face the other way.
-  const itemsOnRight = usePlanLayout();
+  const itemsOnRight = useItemsOnRight();
   const isCompact = useIsCompactViewport();
   const boardCovered = useBoardCovered();
   const datasetManifest = useFactoryStore((state) => state.datasetManifest);

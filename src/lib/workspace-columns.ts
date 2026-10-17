@@ -4,8 +4,8 @@
  *
  * Classic boards: items browser left, board, resource inspector right.
  * Plan-mode boards (`project.planMode`, not Pool): the overview rail left, the
- * board, the items browser right, like NEI beside the mod's board. There is no
- * inspector on those.
+ * board, the items browser right, like NEI beside the mod's board, or the other
+ * way round (the settings' "Item browser"). There is no inspector on those.
  *
  * All lengths are SHELL px.
  */
@@ -26,6 +26,8 @@ export interface WorkspaceColumnsInput {
   hideBoardPanels: boolean;
   /** Plan layout only: the overview's own width (open or folded to its strip). */
   overviewWidth: number;
+  /** Plan layout only: the items browser on the left and the overview on the right. */
+  itemsLeft?: boolean;
 }
 
 export interface WorkspaceColumns {
@@ -41,13 +43,15 @@ export function workspaceColumns(input: WorkspaceColumnsInput): WorkspaceColumns
   const itemsPx = input.itemsOpen ? ITEMS_WIDTH : PANEL_RAIL_WIDTH;
   if (input.planLayout) {
     // With a page over the board the overview is GONE, not folded.
-    const leftPx = input.hideBoardPanels ? 0 : input.overviewWidth;
+    const overviewPx = input.hideBoardPanels ? 0 : input.overviewWidth;
+    const leftPx = input.itemsLeft ? itemsPx : overviewPx;
+    const rightPx = input.itemsLeft ? overviewPx : itemsPx;
     return {
-      itemsSide: "right",
+      itemsSide: input.itemsLeft ? "left" : "right",
       leftPx,
-      rightPx: itemsPx,
+      rightPx,
       inspectorShown: false,
-      template: `${leftPx}px minmax(0,1fr) ${itemsPx}px`,
+      template: `${leftPx}px minmax(0,1fr) ${rightPx}px`,
     };
   }
   const inspectorShown = input.inspectorOpen && !input.hideBoardPanels;
@@ -75,7 +79,7 @@ export function overlayInsets(
   classicLeft: () => number,
   root: ParentNode = document,
 ): { left: number; right: number } {
-  const main = root.querySelector<HTMLElement>("main[data-items-side='right']");
+  const main = root.querySelector<HTMLElement>("main[data-plan-layout]");
   if (!main) {
     return { left: classicLeft(), right: 0 };
   }

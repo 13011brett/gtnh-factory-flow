@@ -7,7 +7,7 @@ import { writeWorkspaceView } from "@/lib/workspace-view";
 import { OPEN_FEEDBACK_EVENT } from "./chrome-events";
 import { ModBar } from "./ModBar";
 import { useCommunityAuthStore } from "@/store/community-auth-store";
-import { readLibraryTabState } from "@/lib/library/library-tab";
+import { openLibrary, readLibraryTabState } from "@/lib/library/library-tab";
 
 vi.mock("@/lib/compact-view", () => ({ isCompactViewport: () => false, useIsCompactViewport: () => false }));
 const modLink = vi.hoisted(() => ({
@@ -58,7 +58,7 @@ afterEach(() => cleanup());
 describe("the mod's top bar", () => {
   it("every key is in the Tab order and Enter or Space presses it", () => {
     renderBar();
-    for (const id of ["share", "plans", "community", "account", "feedback", "settings", "help"]) {
+    for (const id of ["plans", "share", "account", "feedback", "settings", "help"]) {
       expect(key(id).getAttribute("tabindex"), id).toBe("0");
     }
     key("plans").focus();
@@ -68,12 +68,23 @@ describe("the mod's top bar", () => {
     expect(readLibraryTabState().active).toBe(false);
   });
 
-  it("holds the account's keys only, in order: Share, Plans, Community, the account, feedback, settings, help", () => {
+  it("holds the account's keys only, in order: Plans, Share, the account, feedback, settings, help", () => {
     renderBar();
     const order = [...document.querySelectorAll("[data-mb]")].map((element) => element.getAttribute("data-mb"));
-    expect(order).toEqual(["share", "plans", "community", "account", "feedback", "settings", "help"]);
+    expect(order).toEqual(["plans", "share", "account", "feedback", "settings", "help"]);
     expect(key("plans").textContent).toBe("Plans");
     expect(key("account").textContent).toBe("Sign in");
+  });
+
+  it("Plans opens the library on My plans, stays open on any shelf, and shuts it from there", () => {
+    renderBar();
+    fireEvent.click(key("plans"));
+    expect(readLibraryTabState().view.kind).toBe("all");
+    act(() => openLibrary({ kind: "public" }));
+    expect(key("plans").hasAttribute("data-open")).toBe(true);
+    fireEvent.click(key("plans"));
+    expect(readLibraryTabState().active).toBe(false);
+    expect(key("plans").hasAttribute("data-open")).toBe(false);
   });
 
   it("the account key is the account's face once signed in, with a menu of the username and Sign out", () => {
@@ -239,7 +250,7 @@ describe("the mod's top bar", () => {
 
   it("every key carries a tip for the tip host", () => {
     renderBar();
-    for (const id of ["share", "plans", "community", "account", "feedback", "settings", "help"]) {
+    for (const id of ["plans", "share", "account", "feedback", "settings", "help"]) {
       expect(key(id).getAttribute("data-tip-id"), id).toBe(`bar|${id}`);
       expect(JSON.parse(key(id).getAttribute("data-tip")!).title.length).toBeGreaterThan(3);
     }

@@ -93,16 +93,17 @@ export function BarKey({
 
 /**
  * How much room the bar has, in its own pixels. Roomy is the full bar; tight drops what can go without a new picture
- * (Non-recipe to its bolt, Arrange to its label's width, the faces to two and a +N, tighter keys); wrapped puts the
- * keys on a second row under the tabs, as a phone does. The widths are what the keys need beside a tab and the dot.
+ * (Non-recipe to its bolt, Arrange to its label's width, the faces to two and a +N, tighter keys); folded shows Plans
+ * and Share as their pictures. The bar never takes a second row (a phone's does: html[data-compact]); past folded the
+ * tabs give way. The widths leave the tabs room beside the keys and the faces.
  */
-export type BarFit = "roomy" | "tight" | "wrapped";
+export type BarFit = "roomy" | "tight" | "folded";
 /** The top bar's widths; the board toolbar has fewer keys and its own (BoardToolbar). */
-export const BAR_FIT_TOP = { tightBelow: 760, wrappedBelow: 500 } as const;
+export const BAR_FIT_TOP = { tightBelow: 560, foldedBelow: 400 } as const;
 
 export function useBarFit(
   ref: { current: HTMLElement | null },
-  { tightBelow, wrappedBelow }: { tightBelow: number; wrappedBelow: number } = BAR_FIT_TOP,
+  { tightBelow, foldedBelow }: { tightBelow: number; foldedBelow: number } = BAR_FIT_TOP,
 ): BarFit {
   const [fit, setFit] = useState<BarFit>("roomy");
   useEffect(() => {
@@ -111,13 +112,13 @@ export function useBarFit(
     const read = () => {
       // clientWidth is the bar's own px (the shell's zoom and the bar's are outside it).
       const width = bar.clientWidth;
-      setFit(width === 0 ? "roomy" : width < wrappedBelow ? "wrapped" : width < tightBelow ? "tight" : "roomy");
+      setFit(width === 0 ? "roomy" : width < foldedBelow ? "folded" : width < tightBelow ? "tight" : "roomy");
     };
     read();
     const observer = new ResizeObserver(read);
     observer.observe(bar);
     return () => observer.disconnect();
-  }, [ref, tightBelow, wrappedBelow]);
+  }, [ref, tightBelow, foldedBelow]);
   return fit;
 }
 

@@ -26,6 +26,7 @@ vi.stubGlobal("ResizeObserver", ResizeObserverStub);
 import { resetRailViewForTests, writeRailView } from "./flow/clean/rail/rail-view";
 import { ColumnWorkspace, CompactWorkspace } from "./FactoryPlannerApp";
 import { DEFAULT_WORKSPACE_VIEW, readWorkspaceViewSnapshot, writeWorkspaceView } from "@/lib/workspace-view";
+import { writeDeviceSettings } from "@/lib/device-settings";
 import { leaveWelcomeTab } from "@/lib/welcome/welcome-tab";
 import { useDesignStore } from "@/store/design-store";
 import { useFactoryStore } from "@/store/factory-store";
@@ -79,6 +80,22 @@ describe("workspace layout", () => {
     const main = container.querySelector("main")!;
     expect(main.getAttribute("data-items-side")).toBe("right");
     expect(main.style.gridTemplateColumns).toBe("336px minmax(0,1fr) 256px");
+  });
+
+  it("puts the items left and the overview right when the settings say so, each strip folding to its own side", () => {
+    setProject({ planMode: true });
+    act(() => writeDeviceSettings({ itemsLeft: true }));
+    try {
+      const { container } = renderColumns();
+      expect(order(container)).toEqual(["items", "board", "plan-overview"]);
+      const main = container.querySelector("main")!;
+      expect(main.getAttribute("data-items-side")).toBe("left");
+      expect(main.style.gridTemplateColumns).toBe("256px minmax(0,1fr) 336px");
+      act(() => writeRailView({ open: false }));
+      expect(screen.getByRole("button", { name: "Open the overview" }).getAttribute("data-side")).toBe("right");
+    } finally {
+      act(() => writeDeviceSettings({ itemsLeft: false }));
+    }
   });
 
   it("folds the overview to a strip that survives a reload", () => {

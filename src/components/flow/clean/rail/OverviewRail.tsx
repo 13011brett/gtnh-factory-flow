@@ -183,18 +183,21 @@ interface RailState {
 }
 
 /** The whole rail. */
-export function OverviewRail({ forceOpen = false }: { forceOpen?: boolean } = {}) {
+export function OverviewRail({
+  forceOpen = false,
+  side = "left",
+}: { forceOpen?: boolean; side?: "left" | "right" } = {}) {
   const view = useRailView();
-  if (!view.open && !forceOpen) return <FoldedStrip />;
-  return <OpenRail />;
+  if (!view.open && !forceOpen) return <FoldedStrip side={side} />;
+  return <OpenRail side={side} />;
 }
 
-function FoldedStrip() {
+function FoldedStrip({ side }: { side: "left" | "right" }) {
   return (
     <ColumnStrip
       label="OVERVIEW"
       open="Open the overview"
-      side="left"
+      side={side}
       helpAnchor="overview-rail"
       onOpen={() => writeRailView({ open: true })}
     />
@@ -240,7 +243,7 @@ export function ColumnStrip({
   );
 }
 
-function OpenRail() {
+function OpenRail({ side }: { side: "left" | "right" }) {
   useRateDisplayUnits();
   const view = useRailView();
   const { rail, spares } = useRailData();
@@ -360,6 +363,7 @@ function OpenRail() {
   return (
     <div
       className="rail-root"
+      data-side={side}
       data-help-anchor="overview-rail"
       onPointerDownCapture={(event) => {
         // A press anywhere on the rail sets what was being typed.
@@ -376,7 +380,7 @@ function OpenRail() {
           onClick={() => writeRailView({ open: false })}
           tip={() => ({ title: "Fold the overview" })}
         >
-          <FoldGlyph direction="left" />
+          <FoldGlyph direction={side} />
         </RailKey>
       </div>
       <input

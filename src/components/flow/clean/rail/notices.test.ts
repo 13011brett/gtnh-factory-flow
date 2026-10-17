@@ -60,6 +60,45 @@ describe("the notices' sentences", () => {
     );
   });
 
+  it("names what holds a short drawer back", () => {
+    const machine = mockUnneeded.project.recipes.find(
+      (r) => r.id === mockUnneeded.project.nodes.find((n) => n.id === "comp")!.recipeId,
+    )!.machineType;
+    const full = withExtras(mockUnneeded, {
+      shortfalls: [
+        {
+          drawerId: "steel",
+          rule: "AT_LEAST",
+          target: 10,
+          reachable: 6,
+          limitingCards: ["comp"],
+          limitingDrawers: [],
+        },
+      ],
+      upTo: { comp: { capacity: 6, reached: 6, reason: "FULL" } },
+    });
+    expect(buildNotices(mockUnneeded.project, full)[0]).toMatchObject({
+      text: `The Steel Plate drawer gets 6 /s of 10 /s. The ${machine} is full.`,
+      focus: ["steel", "comp"],
+    });
+    const starved = withExtras(mockUnneeded, {
+      shortfalls: [
+        {
+          drawerId: "steel",
+          rule: "AT_LEAST",
+          target: 10,
+          reachable: 6,
+          limitingCards: ["comp"],
+          limitingDrawers: ["iron"],
+        },
+      ],
+      upTo: { comp: { capacity: 8, reached: 6, reason: "STARVED" } },
+    });
+    expect(buildNotices(mockUnneeded.project, starved)[0]!.text).toBe(
+      `The Steel Plate drawer gets 6 /s of 10 /s. The ${machine} is starved. The Iron Ingot drawer's rate holds it back.`,
+    );
+  });
+
   it("says a drawer with a rate that does nothing", () => {
     const result = withExtras(mockUnneeded, {
       unmetDrawers: [],

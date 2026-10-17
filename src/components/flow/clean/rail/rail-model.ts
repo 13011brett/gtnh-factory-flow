@@ -1,6 +1,8 @@
 import { isCustomRateRecipe } from "@/lib/model/custom-rate";
 import { isFluidTankRecipe } from "@/lib/model/fluid-tank";
 import { buildMachineList, type MachineListEntry } from "@/lib/model/machine-list";
+import { pinRuleOf, type PinRule } from "@/lib/model/pin-rule";
+import type { PlanUpTo } from "@/lib/solver/plan/types";
 import { makeResourceKey } from "@/lib/model/resources";
 import { getStorageRoles, type StorageRole } from "@/lib/model/storage-role";
 import { hasStorageTarget, storageTargetMode, type TargetMode } from "@/lib/model/storage-target";
@@ -83,9 +85,14 @@ export interface RailLine {
 }
 
 export interface RailMachine extends MachineListEntry {
+  /** A count is set (Up to or Exactly). */
   pinned: boolean;
-  /** The pinned count when pinned. */
+  /** The count rule: Any, Up to or Exactly. */
+  rule: PinRule;
+  /** The set count when pinned. */
   pin?: number;
+  /** The solver's read-out for an Up to card, when it gave one. */
+  upTo?: PlanUpTo;
 }
 
 export interface RailModel {
@@ -227,9 +234,21 @@ export function buildRailModel(
     .filter((entry) => !isFluidTankRecipe(recipes.get(nodesById.get(entry.nodeId)?.recipeId ?? "")))
     .filter((entry) => entry.count > 1e-9 || (nodesById.get(entry.nodeId)?.solvePin ?? 0) > 0)
     .map((entry) => {
-      const pin = nodesById.get(entry.nodeId)?.solvePin;
-      const pinned = pin !== undefined && pin > 0;
-      return { ...entry, pinned, ...(pinned ? { pin } : {}) };
+      const node = nodesById.get(entry.nodeId);
+      const rule = node ? pinRuleOf(node) : "any";
+      const pin = node?.solvePin;
+      const pinned = rule !== "any" && pin !== undefined && pin > 0;
+      const upTo = rule === "upTo" ? result.plan?.upTo?.[entry.nodeId] : undefined;
+      // An Up to card lists what runs, not what is set.
+      const count = upTo ? Math.max(0, upTo.reached) : entry.count;
+      return {
+        ...entry,
+        count,
+        pinned,
+        rule,
+        ...(pinned ? { pin } : {}),
+        ...(upTo ? { upTo } : {}),
+      };
     });
   const machineName = new Map(machineEntries.map((entry) => [entry.nodeId, entry.label]));
   const nameOf = (cardId: string): string => {

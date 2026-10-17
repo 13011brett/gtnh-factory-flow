@@ -10,6 +10,7 @@ import type { FactoryProject, ThroughputResult } from "@/lib/model/types";
 import type { PlanNote } from "@/lib/solver/plan/types";
 import { useFactoryStore } from "@/store/factory-store";
 import { OverviewRail } from "./OverviewRail";
+import { pinCount } from "./rail-actions";
 import { PlanNoticeStack } from "./NoticeBar";
 import { RAIL_VIEW_STORAGE_KEY, resetRailViewForTests, writeRailView } from "./rail-view";
 import { SparePopupHost, closeSparePopup, openSparePopupForPort } from "./SparePopup";
@@ -358,12 +359,51 @@ it("pins a machine's count from its line and lets it go again", () => {
   load(mockUnneeded);
   const { container } = render(<OverviewRail />);
   const machine = container.querySelector(".rail-machine")!;
-  expect(machine.querySelector(".rail-rule")?.textContent).toBe("=");
-  // Pinned at 6: the key lets the plan decide.
+  const comp = () => useFactoryStore.getState().project.nodes.find((n) => n.id === "comp")!;
+  // A set count reads as Up to: the key steps to Exactly, then lets the plan decide.
+  expect(machine.querySelector(".rail-rule")?.textContent).toBe("<");
   fireEvent.click(machine.querySelector(".rail-rule")!);
-  expect(
-    useFactoryStore.getState().project.nodes.find((n) => n.id === "comp")!.solvePin,
-  ).toBeUndefined();
+  expect(comp()).toMatchObject({ solvePin: 6, solvePinExact: true });
+  fireEvent.click(machine.querySelector(".rail-rule")!);
+  expect(comp().solvePin).toBeUndefined();
+  expect(comp().solvePinExact).toBeUndefined();
+});
+
+it("writes a typed machine count through the card's rule", () => {
+  load(mockUnneeded);
+  pinCount("comp", 9);
+  const comp = () => useFactoryStore.getState().project.nodes.find((n) => n.id === "comp")!;
+  expect(comp()).toMatchObject({ solvePin: 9 });
+  expect(comp().solvePinExact).toBeUndefined();
+  useFactoryStore.getState().updateNode("comp", { solvePinExact: true });
+  pinCount("comp", 4);
+  expect(comp()).toMatchObject({ solvePin: 4, solvePinExact: true });
+  pinCount("comp", 0);
+  expect(comp().solvePin).toBeUndefined();
+  expect(comp().solvePinExact).toBeUndefined();
+  // Any becomes Up to.
+  pinCount("comp", 5);
+  expect(comp().solvePinExact).toBeUndefined();
+  expect(comp().solvePin).toBe(5);
+});
+
+it("shows what runs of what is set for an Up to card", () => {
+  load(mockUnneeded);
+  const result = {
+    ...mockUnneeded.result,
+    plan: {
+      ...mockUnneeded.result.plan!,
+      upTo: { comp: { capacity: 6, reached: 4.5, reason: "STARVED" as const } },
+    },
+  };
+  act(() => {
+    useFactoryStore.setState({ lastResult: result });
+  });
+  const { container } = render(<OverviewRail />);
+  const machine = container.querySelector(".rail-machine")!;
+  expect(machine.querySelector(".rail-count")?.textContent).toBe("×4.5 of");
+  expect(machine.querySelector(".rail-count")?.getAttribute("data-reason")).toBe("STARVED");
+  expect(machine.querySelector(".rail-box")?.textContent).toContain("6");
 });
 
 it("steps a drawer's rule with a right click and picks one from its menu", () => {

@@ -2,7 +2,9 @@ import { formatCompact } from "@/lib/model/resources";
 import { getStorageRoles } from "@/lib/model/storage-role";
 import type { FactoryProject, ResourceKind, ThroughputResult } from "@/lib/model/types";
 import { rateMultiplierForKind, rateSuffixForKind } from "@/lib/model/rate-unit";
-import type { Note, NoteArg, PlanNote } from "@/lib/solver/plan/types";
+import { pinRuleOf } from "@/lib/model/pin-rule";
+import { UP_TO_WORD } from "../up-to-reason";
+import type { Note, NoteArg, PlanNote, PlanShortfall } from "@/lib/solver/plan/types";
 import { splitResultNodeId } from "./rail-model";
 
 /**
@@ -106,6 +108,33 @@ export function buildNotices(
     }
   }
 
+  // The cards and drawers that hold a drawer's rate back, as short sentences.
+  const recipeOf = new Map(project.recipes.map((r) => [r.id, r]));
+  const cardName = (id: string): string => {
+    const node = project.nodes.find((n) => n.id === id);
+    return recipeOf.get(node?.recipeId ?? "")?.machineType ?? "machine";
+  };
+  const holdersOf = (s: PlanShortfall): string => {
+    const parts: string[] = [];
+    for (const id of s.limitingCards) {
+      const node = project.nodes.find((n) => n.id === id);
+      const reason = extras.upTo?.[id]?.reason;
+      const name = cardName(id);
+      if (node && pinRuleOf(node) === "exact") parts.push(`The ${name} is set exactly.`);
+      else if (reason && reason !== "FULL" && reason !== "BOTTLENECK")
+        parts.push(`The ${name} is ${UP_TO_WORD[reason].toLowerCase()}.`);
+      else parts.push(`The ${name} is full.`);
+    }
+    for (const id of s.limitingDrawers) {
+      const other = storages.find((o) => o.id === id);
+      parts.push(
+        `The ${other?.displayName ?? other?.resourceId ?? "other"} drawer's rate holds it back.`,
+      );
+    }
+    return parts.length > 0 ? ` ${parts.join(" ")}` : "";
+  };
+  const holdingIds = (s: PlanShortfall): string[] => [...s.limitingCards, ...s.limitingDrawers];
+
   // A drawer whose rule the answer does not keep: what it asks and what the plan does instead.
   const roles = getStorageRoles(project);
   const unmet = (extras.unmetDrawers ?? [])
@@ -126,15 +155,20 @@ export function buildNotices(
     const who = `The ${label} ${supply ? "supply" : "drawer"}`;
     const target = rate(asked, kind);
     const reach = rate(reached, kind);
-    const sentence =
-      reached > asked
+    const shortfall = storage
+      ? extras.shortfalls?.find((s) => s.drawerId === storage.id && s.reachable < s.target)
+      : undefined;
+    const holders = shortfall ? holdersOf(shortfall) : "";
+    const sentence = shortfall
+      ? `The ${label} ${supply ? "supply" : "drawer"} gets ${reach} of ${target}.${holders}`
+      : reached > asked
         ? `${who} allows at most ${target}, but the plan ${supply ? "needs" : "makes"} ${reach}`
         : `${who} ${supply ? "should give" : "wants"} ${rule === "exact" ? "exactly " : ""}${target}, but the plan can only ${supply ? "use" : "make"} ${reach}`;
     out.push({
       id: `unmet:${storage?.id ?? label}`,
       severity: "warn",
       text: sentence,
-      focus: storage ? [storage.id] : [],
+      focus: storage ? [storage.id, ...(shortfall ? holdingIds(shortfall) : [])] : [],
     });
   }
 

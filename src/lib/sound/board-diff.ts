@@ -1,4 +1,5 @@
 import type { FactoryProject, ResourceKind } from "@/lib/model/types";
+import { pinRuleOf } from "@/lib/model/pin-rule";
 import { GT_VOLTAGE_TIERS } from "@/lib/model/tiers";
 import type { SfxName } from "./sfx";
 
@@ -18,6 +19,8 @@ export interface DiffSound {
 
 interface CardShot {
   pin: number;
+  /** Exactly rather than Up to (a change of the rule is a pin change too). */
+  exact: boolean;
   ports: string;
   tier: string;
   hatchTier: string;
@@ -59,6 +62,7 @@ const SKIP = new Set([
   "displayName",
   "colorTag",
   "solvePin",
+  "solvePinExact",
   "portRates",
   "overclockTier",
   "hatchVoltageTier",
@@ -80,6 +84,7 @@ export function snapshotBoard(project: FactoryProject): BoardShot {
     const config = node.machineConfigTiers ?? {};
     cards.set(node.id, {
       pin: node.solvePin ?? 0,
+      exact: pinRuleOf(node) === "exact",
       ports: JSON.stringify(node.portRates ?? {}),
       tier: String(node.overclockTier ?? ""),
       hatchTier: String(node.hatchVoltageTier ?? ""),
@@ -103,7 +108,10 @@ export function snapshotBoard(project: FactoryProject): BoardShot {
   for (const edge of project.edges) edges.set(edge.id, edge.resourceKind);
   const notes = new Map<string, NoteShot>();
   for (const annotation of project.annotations ?? []) {
-    notes.set(annotation.id, { color: String(annotation.colorTag ?? ""), font: Number(annotation.fontSize ?? 0) });
+    notes.set(annotation.id, {
+      color: String(annotation.colorTag ?? ""),
+      font: Number(annotation.fontSize ?? 0),
+    });
   }
   const openBoards = new Set<string>();
   for (const pocket of project.pockets ?? []) if (pocket.expanded) openBoards.add(pocket.id);
@@ -147,7 +155,8 @@ export const cutSound = (kind: ResourceKind | undefined): SfxName =>
 
 /** The tier dial's pitch (`Sfx.tier`). */
 export const tierPitch = (tier: number) => 0.62 * Math.pow(1.085, Math.max(0, tier));
-const step = (rung: number, base: number, ratio: number) => base * Math.pow(ratio, Math.max(0, rung));
+const step = (rung: number, base: number, ratio: number) =>
+  base * Math.pow(ratio, Math.max(0, rung));
 
 /** The sound one edit makes, or undefined when nothing the player would hear changed. */
 export function soundForDiff(prev: BoardShot, next: BoardShot): DiffSound | undefined {
@@ -189,34 +198,52 @@ export function soundForDiff(prev: BoardShot, next: BoardShot): DiffSound | unde
   for (const [id, card] of next.cards) {
     const was = prev.cards.get(id);
     if (!was) continue;
-    if (card.pin !== was.pin) return { name: card.pin > 0 ? "board.pin" : "board.unpin", settles: true };
+    if (card.pin !== was.pin)
+      return { name: card.pin > 0 ? "board.pin" : "board.unpin", settles: true };
+    if (card.exact !== was.exact) return { name: "board.pin", settles: true };
     if (card.ports !== was.ports) {
       const now = JSON.parse(card.ports) as Record<string, number>;
       const before = JSON.parse(was.ports) as Record<string, number>;
-      const key = [...new Set([...Object.keys(now), ...Object.keys(before)])].find((k) => now[k] !== before[k]);
-      return { name: key !== undefined && (now[key] ?? 0) > 0 ? "board.pin" : "board.unpin", settles: true };
+      const key = [...new Set([...Object.keys(now), ...Object.keys(before)])].find(
+        (k) => now[k] !== before[k],
+      );
+      return {
+        name: key !== undefined && (now[key] ?? 0) > 0 ? "board.pin" : "board.unpin",
+        settles: true,
+      };
     }
-    if (card.tier !== was.tier && tierIndex(card.tier) >= 0) return { name: "dial.tier", pitch: tierPitch(tierIndex(card.tier)) };
+    if (card.tier !== was.tier && tierIndex(card.tier) >= 0)
+      return { name: "dial.tier", pitch: tierPitch(tierIndex(card.tier)) };
     if (card.hatchTier !== was.hatchTier && tierIndex(card.hatchTier) >= 0) {
       return { name: "dial.tier", pitch: tierPitch(tierIndex(card.hatchTier)) };
     }
-    if (card.coil !== was.coil) return { name: "board.adjust", pitch: step(COILS.indexOf(card.coil), 0.8, 1.05) };
-    if (card.rest !== was.rest || card.tier !== was.tier || card.sections !== was.sections) return { name: "board.adjust" };
+    if (card.coil !== was.coil)
+      return { name: "board.adjust", pitch: step(COILS.indexOf(card.coil), 0.8, 1.05) };
+    if (card.rest !== was.rest || card.tier !== was.tier || card.sections !== was.sections)
+      return { name: "board.adjust" };
   }
   for (const [id, drawer] of next.drawers) {
     const was = prev.drawers.get(id);
     if (!was) continue;
-    if (drawer.rule !== was.rule) return { name: "board.adjust", pitch: step(RULES.indexOf(drawer.rule || "ignore"), 0.9, 1.12) };
-    if (drawer.rate !== was.rate) return { name: drawer.rate > 0 ? "board.pin" : "board.unpin", settles: true };
-    if (drawer.role !== was.role) return { name: "board.adjust", pitch: step(drawer.role === "" ? 0 : 1, 0.9, 1.12) };
-    if (drawer.buffer !== was.buffer) return { name: "board.adjust", pitch: step(BUFFERS.indexOf(drawer.buffer), 0.9, 1.12) };
+    if (drawer.rule !== was.rule)
+      return {
+        name: "board.adjust",
+        pitch: step(RULES.indexOf(drawer.rule || "ignore"), 0.9, 1.12),
+      };
+    if (drawer.rate !== was.rate)
+      return { name: drawer.rate > 0 ? "board.pin" : "board.unpin", settles: true };
+    if (drawer.role !== was.role)
+      return { name: "board.adjust", pitch: step(drawer.role === "" ? 0 : 1, 0.9, 1.12) };
+    if (drawer.buffer !== was.buffer)
+      return { name: "board.adjust", pitch: step(BUFFERS.indexOf(drawer.buffer), 0.9, 1.12) };
     if (drawer.rest !== was.rest) return { name: "board.adjust" };
   }
   for (const [id, note] of next.notes) {
     const was = prev.notes.get(id);
     if (!was) continue;
     if (note.color !== was.color) return { name: "board.adjust" };
-    if (note.font !== was.font) return { name: "ui.tick", pitch: note.font > was.font ? 1.12 : 0.9 };
+    if (note.font !== was.font)
+      return { name: "ui.tick", pitch: note.font > was.font ? 1.12 : 0.9 };
   }
   return undefined;
 }
@@ -224,7 +251,17 @@ export function soundForDiff(prev: BoardShot, next: BoardShot): DiffSound | unde
 /** What the ear would call "the plan changed", as one comparable string (a refused drop commits an equal plan). */
 export function boardFingerprint(project: FactoryProject): string {
   const shot = snapshotBoard(project);
-  const cards = [...shot.cards].map(([id, c]) => `${id}:${c.pin}:${c.ports}:${c.tier}:${c.hatchTier}:${c.coil}:${c.sections}:${c.rest}`);
-  const drawers = [...shot.drawers].map(([id, d]) => `${id}:${d.rate}:${d.rule}:${d.role}:${d.buffer}:${d.rest}`);
-  return [cards.sort().join("\n"), drawers.sort().join("\n"), [...shot.edges.keys()].sort().join(","), [...shot.openBoards].sort().join(",")].join("|");
+  const cards = [...shot.cards].map(
+    ([id, c]) =>
+      `${id}:${c.pin}:${c.exact}:${c.ports}:${c.tier}:${c.hatchTier}:${c.coil}:${c.sections}:${c.rest}`,
+  );
+  const drawers = [...shot.drawers].map(
+    ([id, d]) => `${id}:${d.rate}:${d.rule}:${d.role}:${d.buffer}:${d.rest}`,
+  );
+  return [
+    cards.sort().join("\n"),
+    drawers.sort().join("\n"),
+    [...shot.edges.keys()].sort().join(","),
+    [...shot.openBoards].sort().join(","),
+  ].join("|");
 }

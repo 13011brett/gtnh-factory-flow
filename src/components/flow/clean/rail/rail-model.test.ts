@@ -56,6 +56,20 @@ describe("the rail's totals", () => {
     expect(rail.wholeMachines).toBe(6);
   });
 
+  it("reads the count rule and what an Up to card runs", () => {
+    const plan = {
+      ...mockUnneeded.result.plan!,
+      upTo: { comp: { capacity: 6, reached: 4.5, reason: "BOTTLENECK" as const } },
+    };
+    const upTo = buildRailModel(mockUnneeded.project, { ...mockUnneeded.result, plan });
+    expect(upTo.machines[0]).toMatchObject({ rule: "upTo", pinned: true, pin: 6, count: 4.5 });
+    const project = structuredClone(mockUnneeded.project);
+    project.nodes.find((n) => n.id === "comp")!.solvePinExact = true;
+    const exact = buildRailModel(project, { ...mockUnneeded.result, plan });
+    expect(exact.machines[0]).toMatchObject({ rule: "exact", pinned: true, pin: 6 });
+    expect(exact.machines[0]!.upTo).toBeUndefined();
+  });
+
   it("lists no machine for a fluid tank: it is free and instant (the mod lists none)", () => {
     const project = structuredClone(mockUnneeded.project);
     const comp = project.nodes.find((n) => n.id === "comp")!;

@@ -1,7 +1,13 @@
 import { isCustomRateRecipe } from "@/lib/model/custom-rate";
+import { pinRuleOf } from "@/lib/model/pin-rule";
 import { isFluidTankRecipe } from "@/lib/model/fluid-tank";
 import { buildMachineList } from "@/lib/model/machine-list";
-import type { FactoryPocket, FactoryProject, ResourceKind, ThroughputResult } from "@/lib/model/types";
+import type {
+  FactoryPocket,
+  FactoryProject,
+  ResourceKind,
+  ThroughputResult,
+} from "@/lib/model/types";
 import { buildResourceLookup, splitResultNodeId, type RailResource } from "../rail/rail-model";
 
 /**
@@ -40,7 +46,11 @@ export function groupFamily(pockets: readonly FactoryPocket[], pocketId: string)
   while (grew) {
     grew = false;
     for (const pocket of pockets) {
-      if (pocket.parentPocketId !== undefined && family.has(pocket.parentPocketId) && !family.has(pocket.id)) {
+      if (
+        pocket.parentPocketId !== undefined &&
+        family.has(pocket.parentPocketId) &&
+        !family.has(pocket.id)
+      ) {
         family.add(pocket.id);
         grew = true;
       }
@@ -79,13 +89,19 @@ export function computeGroupSummaries(
       const node = nodesById.get(entry.nodeId);
       if (isFluidTankRecipe(recipes.get(node?.recipeId ?? ""))) continue;
       const pin = node?.solvePin;
-      const pinned = pin !== undefined && pin > 0;
+      const rule = node ? pinRuleOf(node) : "any";
+      const pinned = rule !== "any" && pin !== undefined && pin > 0;
+      // An Up to card builds what runs (the solver's read-out), an Exactly card its set count.
+      const running = rule === "upTo" ? result?.plan?.upTo?.[entry.nodeId]?.reached : undefined;
       if (!pinned && !(entry.count > 1e-9)) continue;
-      machines += Math.ceil((pinned ? pin : entry.count) - 1e-9);
+      machines += Math.ceil((running ?? (pinned ? pin : entry.count)) - 1e-9);
       euT += (peak ? entry.euT : entry.avgEuT) ?? 0;
     }
 
-    const net = new Map<string, { kind: ResourceKind; resourceId: string; label?: string; value: number; order: number }>();
+    const net = new Map<
+      string,
+      { kind: ResourceKind; resourceId: string; label?: string; value: number; order: number }
+    >();
     if (answered) {
       for (const node of Object.values(result!.nodes)) {
         if (!node.enabled) continue;
@@ -125,7 +141,13 @@ export function computeGroupSummaries(
         ...(known ?? { kind: entry.kind, id: entry.resourceId }),
         displayName: known?.displayName ?? entry.label ?? entry.resourceId,
       };
-      const flow = { key, kind: entry.kind, resourceId: entry.resourceId, resource, perSecond: Math.abs(entry.value) };
+      const flow = {
+        key,
+        kind: entry.kind,
+        resourceId: entry.resourceId,
+        resource,
+        perSecond: Math.abs(entry.value),
+      };
       (entry.value > 0 ? inputs : outputs).push(flow);
     }
     // Busiest first; ties keep the order the members met them in (the sort is stable).

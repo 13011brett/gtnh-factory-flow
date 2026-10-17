@@ -2,6 +2,7 @@ import { GT_NODE_COLORS } from "../../node-colors";
 import type { MinimapRoute } from "./minimap-feed";
 import type { FactoryPocket } from "@/lib/model/types";
 import { groupColorTag, groupColors } from "../group/group-model";
+import { pinRuleOf } from "@/lib/model/pin-rule";
 
 /**
  * What the minimap draws, as plain data: the tiles (cards, drawers, notes, boards), the routed wires, the
@@ -99,7 +100,10 @@ export function formatCount(value: number): string {
 }
 
 function tintOf(tag: unknown): string {
-  const entry = typeof tag === "string" ? (GT_NODE_COLORS as Record<string, { swatch: string }>)[tag] : undefined;
+  const entry =
+    typeof tag === "string"
+      ? (GT_NODE_COLORS as Record<string, { swatch: string }>)[tag]
+      : undefined;
   return entry?.swatch ?? NEUTRAL_TINT;
 }
 
@@ -108,13 +112,18 @@ export function wireColor(hex: string | undefined): string {
   if (!hex || !/^#[0-9a-f]{6}$/i.test(hex)) return "#9aa1b0";
   const n = parseInt(hex.slice(1), 16);
   const lift = (c: number) => Math.round(c + (255 - c) * 0.2);
-  const r = lift((n >> 16) & 255), g = lift((n >> 8) & 255), b = lift(n & 255);
+  const r = lift((n >> 16) & 255),
+    g = lift((n >> 8) & 255),
+    b = lift(n & 255);
   return `#${((1 << 24) | (r << 16) | (g << 8) | b).toString(16).slice(1)}`;
 }
 
 export function buildScene(input: SceneInput): Scene {
   const tiles: Tile[] = [];
-  let x0 = Infinity, y0 = Infinity, x1 = -Infinity, y1 = -Infinity;
+  let x0 = Infinity,
+    y0 = Infinity,
+    x1 = -Infinity,
+    y1 = -Infinity;
   for (const node of input.nodes) {
     if (node.hidden || !(node.w > 0) || !(node.h > 0)) continue;
     const data = (node.data ?? {}) as Loose;
@@ -124,7 +133,18 @@ export function buildScene(input: SceneInput): Scene {
       const pn = (data.projectNode ?? {}) as Loose;
       const pinned = typeof pn.solvePin === "number" && pn.solvePin > 0;
       const needed = Number(data.result?.theoreticalMachinesRequired ?? 0);
-      const value = pinned ? pn.solvePin * Math.max(1, Number(pn.parallel ?? 1)) : needed;
+      const parallel = Math.max(1, Number(pn.parallel ?? 1));
+      // An Up to card shows what runs (the solver's read-out, else its result) and an Exactly card its set count.
+      const running =
+        pinRuleOf(pn) === "upTo"
+          ? (data.upTo?.reached ?? data.result?.theoreticalMachinesRequired)
+          : undefined;
+      const value =
+        running !== undefined && Number.isFinite(Number(running))
+          ? Number(running) * parallel
+          : pinned
+            ? pn.solvePin * parallel
+            : needed;
       tile = {
         id: node.id,
         kind: "card",
@@ -178,12 +198,30 @@ export function buildScene(input: SceneInput): Scene {
       // An open group (docs/groups.md): its frame in its colour.
       const pocket = data.pocket as FactoryPocket | undefined;
       const tint = pocket ? groupColors(groupColorTag(pocket)).c : NEUTRAL_TINT;
-      tile = { id: node.id, kind: "board", x: node.x, y: node.y, w: node.w, h: node.h, tint, label: "" };
+      tile = {
+        id: node.id,
+        kind: "board",
+        x: node.x,
+        y: node.y,
+        w: node.w,
+        h: node.h,
+        tint,
+        label: "",
+      };
     } else if (node.type === "pocketNode") {
       // A collapsed group: its summary card's box.
       const pocket = data.pocket as FactoryPocket | undefined;
       const tint = pocket ? groupColors(groupColorTag(pocket)).c : NEUTRAL_TINT;
-      tile = { id: node.id, kind: "group", x: node.x, y: node.y, w: node.w, h: node.h, tint, label: "" };
+      tile = {
+        id: node.id,
+        kind: "group",
+        x: node.x,
+        y: node.y,
+        w: node.w,
+        h: node.h,
+        tint,
+        label: "",
+      };
     }
     if (!tile) continue;
     tile.selected = node.selected === true;

@@ -18,7 +18,6 @@ import {
   getCropsNhStats,
 } from "@/lib/model/passive-production";
 
-
 function formatNumber(value: number, digits = 2): string {
   return value.toLocaleString(undefined, { maximumFractionDigits: digits });
 }
@@ -58,7 +57,10 @@ function CropSourceStatsContent({
     stats.minSeedBedTier,
     stats.subSoil !== undefined,
   );
-  const env = cropsNhHarvesterEnvironment(setup, cropsNhEnvironmentFromTiers(node?.machineConfigTiers));
+  const env = cropsNhHarvesterEnvironment(
+    setup,
+    cropsNhEnvironmentFromTiers(node?.machineConfigTiers),
+  );
   const supply = cropsNhNutrientScore(env) * 5;
   const demand = stats.tier * 10;
   const speedPercent =
@@ -73,10 +75,24 @@ function CropSourceStatsContent({
   const perSeed = harvestSeconds > 0 ? perHarvest / harvestSeconds : 0;
   const rows = [
     { label: "Growth speed", value: `${formatNumber(speedPercent, 0)}%` },
-    { label: "Harvest every", value: Number.isFinite(harvestSeconds) && harvestSeconds > 0 ? `${formatNumber(harvestSeconds, 1)} s` : "Never" },
+    {
+      label: "Harvest every",
+      value:
+        Number.isFinite(harvestSeconds) && harvestSeconds > 0
+          ? `${formatNumber(harvestSeconds, 1)} s`
+          : "Never",
+    },
     ...(drops.length > 1
-      ? drops.map((drop) => ({ label: drop.name, value: `${formatNumber(drop.expected, 2)} per harvest` }))
-      : [{ label: "Per harvest", value: `${formatNumber(perHarvest, 2)} ${drops[0]?.name ?? "items"}` }]),
+      ? drops.map((drop) => ({
+          label: drop.name,
+          value: `${formatNumber(drop.expected, 2)} per harvest`,
+        }))
+      : [
+          {
+            label: "Per harvest",
+            value: `${formatNumber(perHarvest, 2)} ${drops[0]?.name ?? "items"}`,
+          },
+        ]),
     { label: "Per seed", value: `${formatNumber(perSeed, 3)}/s` },
     { label: "Crops per machine", value: cropsNhCropsPerMachine(setup).toLocaleString() },
   ];
@@ -97,14 +113,26 @@ function CropSourceStatsContent({
  * already show: what this exact machine changes (speed, power discount,
  * parallels, structure tuning) and how the simulator overclocks it.
  */
-export function MachineStatsContent({ recipe, handler, node, result, title }: {
-  recipe: Recipe; handler: MachineHandler; node: FactoryNode; result?: NodeThroughputResult;
+export function MachineStatsContent({
+  recipe,
+  handler,
+  node,
+  result,
+  title,
+}: {
+  recipe: Recipe;
+  handler: MachineHandler;
+  node: FactoryNode;
+  result?: NodeThroughputResult;
   /** The machine's real name at the card's tier, when it differs from the family label. */
   title?: string;
 }) {
   const mode = useFactoryStore((state) => tooltipMode(state.project));
+  const upTo = useFactoryStore((state) => state.lastResult.plan?.upTo?.[node.id]);
   if (getCropsNhStats(recipe)) {
     return <CropSourceStatsContent recipe={recipe} handler={handler} node={node} title={title} />;
   }
-  return <RecipeTooltip view={buildMachineTooltip(recipe, handler, node, mode, result, title)} />;
+  return (
+    <RecipeTooltip view={buildMachineTooltip(recipe, handler, node, mode, result, title, upTo)} />
+  );
 }

@@ -22,9 +22,16 @@ describe("minimap settings", () => {
 
   it("falls back to the defaults for anything stored badly", () => {
     expect(normalizeMinimap(undefined)).toEqual(DEFAULT_MINIMAP);
-    expect(normalizeMinimap({ size: "gigantic", shape: 3, corner: "middle", zoom: 99, fit: false, fade: 1000 })).toEqual(
-      DEFAULT_MINIMAP,
-    );
+    expect(
+      normalizeMinimap({
+        size: "gigantic",
+        shape: 3,
+        corner: "middle",
+        zoom: 99,
+        fit: false,
+        fade: 1000,
+      }),
+    ).toEqual(DEFAULT_MINIMAP);
   });
 
   it("opens small, with no zoom or see-through of its own", () => {
@@ -35,7 +42,16 @@ describe("minimap settings", () => {
   });
 
   it("ignores a zoom stored by an earlier version and keeps the rest", () => {
-    const old = { show: true, size: "medium", shape: "circle", corner: "top-left", zoom: 5, fit: false, follow: true, fade: 30 };
+    const old = {
+      show: true,
+      size: "medium",
+      shape: "circle",
+      corner: "top-left",
+      zoom: 5,
+      fit: false,
+      follow: true,
+      fade: 30,
+    };
     expect(normalizeMinimap(old)).toEqual({
       show: true,
       size: "medium",
@@ -51,27 +67,70 @@ describe("minimap settings", () => {
 
   it("writes to the browser", () => {
     setMinimap({ shape: "circle" });
-    expect(JSON.parse(window.localStorage.getItem(MINIMAP_KEY)!)).toMatchObject({ shape: "circle" });
+    expect(JSON.parse(window.localStorage.getItem(MINIMAP_KEY)!)).toMatchObject({
+      shape: "circle",
+    });
     expect(getMinimap().shape).toBe("circle");
   });
 });
 
 describe("minimap scene", () => {
-  const node = (id: string, type: string, x: number, data: unknown) => ({ id, type, x, y: 0, w: 320, h: 200, data });
+  const node = (id: string, type: string, x: number, data: unknown) => ({
+    id,
+    type,
+    x,
+    y: 0,
+    w: 320,
+    h: 200,
+    data,
+  });
 
   it("builds a card tile with its tint and the pinned count", () => {
     const scene = buildScene({
       name: "Plan",
       nodes: [
-        node("a", "recipeNode", 0, { projectNode: { colorTag: "orange", solvePin: 3, parallel: 2 }, recipe: { machineType: "Bender" } }),
-        node("b", "recipeNode", 400, { projectNode: {}, result: { theoreticalMachinesRequired: 0 }, recipe: { machineType: "X" } }),
+        node("a", "recipeNode", 0, {
+          projectNode: { colorTag: "orange", solvePin: 3, parallel: 2 },
+          recipe: { machineType: "Bender" },
+        }),
+        node("b", "recipeNode", 400, {
+          projectNode: {},
+          result: { theoreticalMachinesRequired: 0 },
+          recipe: { machineType: "X" },
+        }),
       ],
       edges: [],
     });
     expect(scene.tiles).toHaveLength(2);
-    expect(scene.tiles[0]).toMatchObject({ kind: "card", pinned: true, count: "x6", tint: "#f9801d" });
+    expect(scene.tiles[0]).toMatchObject({
+      kind: "card",
+      pinned: true,
+      count: "x6",
+      tint: "#f9801d",
+    });
     expect(scene.tiles[1]).toMatchObject({ zero: true, count: "x0", tint: "#8A93A6" });
     expect(scene.bounds).toEqual({ x0: 0, y0: 0, x1: 720, y1: 200 });
+  });
+
+  it("counts what an Up to card runs and the set count of an Exactly card", () => {
+    const card = (pn: object, extra: object = {}) =>
+      buildScene({
+        name: "P",
+        nodes: [
+          node("a", "recipeNode", 0, {
+            projectNode: { solvePin: 4, ...pn },
+            recipe: { machineType: "X" },
+            ...extra,
+          }),
+        ],
+        edges: [],
+      }).tiles[0]!;
+    expect(card({}, { upTo: { reached: 2.5 } })).toMatchObject({ count: "x2.5", pinned: true });
+    expect(card({}, { result: { theoreticalMachinesRequired: 3 } })).toMatchObject({ count: "x3" });
+    expect(card({}, {})).toMatchObject({ count: "x4" });
+    expect(card({ solvePinExact: true }, { upTo: { reached: 2.5 } })).toMatchObject({
+      count: "x4",
+    });
   });
 
   it("keeps text notes, drops other markup, and hides hidden nodes", () => {
@@ -96,9 +155,28 @@ describe("minimap scene", () => {
         { id: "e2", data: { color: "#336699" } },
       ],
       routes: [
-        { edgeId: "e1", points: [{ x: 0, y: 0 }, { x: 10, y: 0 }], width: 4 },
-        { edgeId: "e2", points: [{ x: 0, y: 0 }, { x: 10, y: 0 }] },
-        { edgeId: "gone", points: [{ x: 0, y: 0 }, { x: 1, y: 1 }] },
+        {
+          edgeId: "e1",
+          points: [
+            { x: 0, y: 0 },
+            { x: 10, y: 0 },
+          ],
+          width: 4,
+        },
+        {
+          edgeId: "e2",
+          points: [
+            { x: 0, y: 0 },
+            { x: 10, y: 0 },
+          ],
+        },
+        {
+          edgeId: "gone",
+          points: [
+            { x: 0, y: 0 },
+            { x: 1, y: 1 },
+          ],
+        },
       ],
     });
     expect(scene.wires.map((w) => [w.id, w.flowing, w.width])).toEqual([
@@ -126,7 +204,16 @@ describe("minimap drawing", () => {
   });
 
   it("skips tiles outside the map", () => {
-    const tile = { id: "t", kind: "card" as const, x: 5000, y: 0, w: 100, h: 100, tint: "#888888", label: "" };
+    const tile = {
+      id: "t",
+      kind: "card" as const,
+      x: 5000,
+      y: 0,
+      w: 100,
+      h: 100,
+      tint: "#888888",
+      label: "",
+    };
     expect(tileVisible(view, tile)).toBe(false);
     expect(tileVisible(view, { ...tile, x: 100 })).toBe(true);
   });
@@ -148,13 +235,42 @@ describe("minimap drawing", () => {
     const scene = buildScene({
       name: "P",
       nodes: [
-        { id: "a", type: "recipeNode", x: 0, y: 0, w: 380, h: 200, data: { projectNode: { solvePin: 2 }, recipe: {} } },
-        { id: "b", type: "recipeNode", x: 9000, y: 0, w: 380, h: 200, data: { projectNode: {}, recipe: {} } },
+        {
+          id: "a",
+          type: "recipeNode",
+          x: 0,
+          y: 0,
+          w: 380,
+          h: 200,
+          data: { projectNode: { solvePin: 2 }, recipe: {} },
+        },
+        {
+          id: "b",
+          type: "recipeNode",
+          x: 9000,
+          y: 0,
+          w: 380,
+          h: 200,
+          data: { projectNode: {}, recipe: {} },
+        },
       ],
       edges: [{ id: "e", data: {} }],
-      routes: [{ edgeId: "e", points: [{ x: 0, y: 0 }, { x: 50, y: 50 }] }],
+      routes: [
+        {
+          edgeId: "e",
+          points: [
+            { x: 0, y: 0 },
+            { x: 50, y: 50 },
+          ],
+        },
+      ],
     });
-    drawMinimap(ctx, scene, { ...view, cx: 190, cy: 100, zoom: 0.5 }, { font: "monospace", image: () => undefined });
+    drawMinimap(
+      ctx,
+      scene,
+      { ...view, cx: 190, cy: 100, zoom: 0.5 },
+      { font: "monospace", image: () => undefined },
+    );
     expect(calls.indexOf("stroke")).toBeLessThan(calls.indexOf("fillRect"));
     // One visible card: its two tile rects and its count pill's backing, nothing for the card far away.
     expect(calls.filter((c) => c === "fillRect")).toHaveLength(3);
@@ -163,7 +279,16 @@ describe("minimap drawing", () => {
 
 describe("minimap camera", () => {
   const bounds = { x0: 0, y0: 0, x1: 2000, y1: 1000 };
-  const base = { fit: true, zoom: 0.09, side: 130, circle: false, bounds, anchor: undefined, frozen: undefined, selected: undefined };
+  const base = {
+    fit: true,
+    zoom: 0.09,
+    side: 130,
+    circle: false,
+    bounds,
+    anchor: undefined,
+    frozen: undefined,
+    selected: undefined,
+  };
 
   it("fits the whole plan, centred, and holds still however the board pans or zooms", () => {
     const a = mapCamera({ ...base, viewRect: { x: 0, y: 0, w: 800, h: 600 } });
@@ -174,7 +299,10 @@ describe("minimap camera", () => {
     expect(a.zoom).toBeCloseTo((130 - 12) / 2000);
     // Every corner of the plan lands inside the map.
     const view = { cx: a.cx, cy: a.cy, zoom: a.zoom, size: 130, circle: false };
-    for (const [x, y] of [[0, 0], [2000, 1000]]) {
+    for (const [x, y] of [
+      [0, 0],
+      [2000, 1000],
+    ]) {
       const m = toMap(view, x, y);
       expect(m.x).toBeGreaterThanOrEqual(0);
       expect(m.x).toBeLessThanOrEqual(130);
@@ -193,9 +321,17 @@ describe("minimap camera", () => {
     const hand = { ...base, fit: false, zoom: 0.25 };
     const first = mapCamera({ ...hand, viewRect: { x: 900, y: 400, w: 200, h: 200 } });
     expect([first.cx, first.cy]).toEqual([1000, 500]);
-    const near = mapCamera({ ...hand, anchor: first.anchor, viewRect: { x: 1000, y: 500, w: 200, h: 200 } });
+    const near = mapCamera({
+      ...hand,
+      anchor: first.anchor,
+      viewRect: { x: 1000, y: 500, w: 200, h: 200 },
+    });
     expect([near.cx, near.cy]).toEqual([1000, 500]);
-    const far = mapCamera({ ...hand, anchor: near.anchor, viewRect: { x: 4000, y: 500, w: 200, h: 200 } });
+    const far = mapCamera({
+      ...hand,
+      anchor: near.anchor,
+      viewRect: { x: 4000, y: 500, w: 200, h: 200 },
+    });
     expect([far.cx, far.cy]).toEqual([4100, 600]);
   });
 });
@@ -203,14 +339,38 @@ describe("minimap camera", () => {
 describe("search field beside the map", () => {
   it("stays centred while it clears the map, and steps aside just enough when it would not", () => {
     // A 1920 window, field 360 wide (780..1140), map in the bottom right at 1450..1605: clear already.
-    expect(dockPadding({ windowWidth: 1920, fieldWidth: 360, map: { left: 1450, right: 1605 }, corner: "bottom-right" })).toEqual({ left: 0, right: 0 });
+    expect(
+      dockPadding({
+        windowWidth: 1920,
+        fieldWidth: 360,
+        map: { left: 1450, right: 1605 },
+        corner: "bottom-right",
+      }),
+    ).toEqual({ left: 0, right: 0 });
     // A 1100 window: the centred field (370..730) would meet a map at 700.
-    const pad = dockPadding({ windowWidth: 1100, fieldWidth: 360, map: { left: 700, right: 855 }, corner: "bottom-right" });
+    const pad = dockPadding({
+      windowWidth: 1100,
+      fieldWidth: 360,
+      map: { left: 700, right: 855 },
+      corner: "bottom-right",
+    });
     const right = (1100 - pad.right) / 2 + 180;
     expect(right).toBeLessThanOrEqual(700 - 10 + 0.5);
     expect(right).toBeGreaterThan(700 - 12);
-    const padL = dockPadding({ windowWidth: 1100, fieldWidth: 360, map: { left: 300, right: 455 }, corner: "bottom-left" });
+    const padL = dockPadding({
+      windowWidth: 1100,
+      fieldWidth: 360,
+      map: { left: 300, right: 455 },
+      corner: "bottom-left",
+    });
     expect((1100 + padL.left) / 2 - 180).toBeGreaterThanOrEqual(455 + 10 - 0.5);
-    expect(dockPadding({ windowWidth: 1100, fieldWidth: 360, map: { left: 700, right: 855 }, corner: "top-right" })).toEqual({ left: 0, right: 0 });
+    expect(
+      dockPadding({
+        windowWidth: 1100,
+        fieldWidth: 360,
+        map: { left: 700, right: 855 },
+        corner: "top-right",
+      }),
+    ).toEqual({ left: 0, right: 0 });
   });
 });

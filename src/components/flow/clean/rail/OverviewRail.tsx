@@ -33,6 +33,8 @@ import { useFactoryStore, useRateDisplayUnits } from "@/store/factory-store";
 import { useWorkspaceView, writeWorkspaceView } from "@/lib/workspace-view";
 import { formatAmountWithSuffix, RULE_MARK, RULE_NAME, RULE_STEPS } from "../../rate-rule";
 import { CC, tierChipColors } from "../tokens";
+import { UP_TO_COLOR, UP_TO_WORD, shownReason, upToSentence } from "../up-to-reason";
+import { PIN_RULE_LABEL } from "@/lib/model/pin-rule";
 import {
   pinCount,
   setDrawerRate,
@@ -41,6 +43,7 @@ import {
   setPortRate,
   showSetupsMaking,
   stepDrawerRule,
+  stepPinRule,
   walkCards,
   walkResource,
   frameCards,
@@ -1012,7 +1015,9 @@ const MachineRow = memo(function MachineRow({
   const tierLabel = entry.tier
     ? `${entry.tier}${entry.isMultiblock && (entry.amps ?? 0) > 1 ? ` ${entry.amps}A` : ""}`
     : "";
-  const countText = `×${machinesText(entry.count)}`;
+  const upTo = entry.rule === "upTo";
+  const reason = shownReason(entry.upTo);
+  const countText = `×${machinesText(entry.count)}${upTo ? " of" : ""}`;
   const room =
     MACHINE_INNER -
     CONTROLS_W -
@@ -1029,7 +1034,7 @@ const MachineRow = memo(function MachineRow({
   else if (steam !== undefined) eu = withUnit(formatCompact(steam), "L/s");
   else if (used !== undefined)
     eu = withUnit(formatCompact(powerDisplayFromEuT(used)), powerDisplaySuffix());
-  const togglePin = () => pinCount(entry.nodeId, entry.pinned ? 0 : base);
+  const togglePin = () => stepPinRule(entry.nodeId, base);
   const go = () => frameCards([entry.nodeId]);
   const wheelCount = (direction: 1 | -1) => {
     const now = wheeled ?? (entry.pinned ? entry.pin! : base);
@@ -1038,10 +1043,27 @@ const MachineRow = memo(function MachineRow({
   };
   const lines: TipContent = {
     title: entry.label,
-    sub: `${machinesText(entry.count)} machines${entry.pinned ? " (pinned)" : ""}`,
-    notes: eu
-      ? [{ text: `${eu} ${peak ? "peak" : "average"}`, tone: tooLow ? "red" : "muted" }]
-      : undefined,
+    sub: upTo
+      ? `${machinesText(entry.count)} of ${machinesText(entry.pin!)} machines`
+      : `${machinesText(entry.count)} machines${entry.pinned ? " (exactly)" : ""}`,
+    notes: [
+      ...(upTo && entry.upTo?.reason
+        ? [
+            {
+              text: `${UP_TO_WORD[entry.upTo.reason]}. ${upToSentence(entry.upTo) ?? ""}`.trim(),
+              tone: "muted" as const,
+            },
+          ]
+        : []),
+      ...(eu
+        ? [
+            {
+              text: `${eu} ${peak ? "peak" : "average"}`,
+              tone: tooLow ? ("red" as const) : ("muted" as const),
+            },
+          ]
+        : []),
+    ],
     actions: [
       { input: "left", label: "Go to the card" },
       ...(TASKS_ENABLED ? [{ input: "right" as const, label: "Add to a task" }] : []),
@@ -1091,10 +1113,16 @@ const MachineRow = memo(function MachineRow({
         >
           {eu}
         </span>
-        <span className="rail-count">{countText}</span>
+        <span
+          className="rail-count"
+          data-reason={reason}
+          style={reason ? { color: UP_TO_COLOR[reason] } : undefined}
+        >
+          {countText}
+        </span>
         <div className="rail-controls" onClick={(event) => event.stopPropagation()}>
           <RuleKey
-            mark={set ? "=" : "~"}
+            mark={set ? (upTo ? "<" : "=") : "~"}
             tone={set ? "gold" : "muted"}
             label={`Pin the ${entry.label}`}
             onClick={(event) => {
@@ -1105,9 +1133,18 @@ const MachineRow = memo(function MachineRow({
             tip={() =>
               entry.pinned
                 ? {
-                    title: "Exactly",
-                    notes: [{ text: `Pinned at ${machinesText(entry.pin!)}.`, tone: "muted" }],
-                    actions: [{ input: "left", label: "Let the plan decide" }],
+                    title: PIN_RULE_LABEL[entry.rule],
+                    notes: [
+                      {
+                        text: upTo
+                          ? `Never more than ${machinesText(entry.pin!)}.`
+                          : `Exactly ${machinesText(entry.pin!)}.`,
+                        tone: "muted",
+                      },
+                    ],
+                    actions: [
+                      { input: "left", label: upTo ? "Make it exact" : "Let the plan decide" },
+                    ],
                   }
                 : {
                     title: "Any",

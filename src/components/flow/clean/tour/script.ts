@@ -70,9 +70,14 @@ function setNode(index: number, patch: Record<string, unknown>) {
   if (id) store().updateNode(id, patch);
 }
 
+/** Sets a card's count rule to Exactly: an Up to count makes no forced flow, and these steps show forced flows. */
+function pinExactly(index: number) {
+  setNode(index, { solvePinExact: true });
+}
+
 /** Clears a card's port pins and count pin through the store: the way a step puts the plan back to a known state. */
 function unpin(index: number) {
-  setNode(index, { portRates: undefined, solvePin: undefined });
+  setNode(index, { portRates: undefined, solvePin: undefined, solvePinExact: undefined });
 }
 
 // Fit, then back in to where the cards show their parts: a narrow board fits a plan down to the glance view.
@@ -105,7 +110,7 @@ function electrolyzersForExcess(): number {
   const nodes = store().project.nodes;
   const flows = (index: number, side: "inputs" | "outputs") => {
     const id = nodes[index]?.id;
-    return id ? store().lastResult.nodes[id]?.[side]?.["fluid:oxygen"]?.amountPerSecond ?? 0 : 0;
+    return id ? (store().lastResult.nodes[id]?.[side]?.["fluid:oxygen"]?.amountPerSecond ?? 0) : 0;
   };
   const each = flows(1, "outputs") / Math.max(1, machines(1));
   const needed = flows(0, "inputs");
@@ -170,8 +175,7 @@ const mouseAround: Step = {
     fit,
   ],
   note: {
-    text:
-      "{M} *Middle mouse* to pan.\n{W} *Scroll* to zoom.\n{L} *Left click* to pan, or drag things around.",
+    text: "{M} *Middle mouse* to pan.\n{W} *Scroll* to zoom.\n{L} *Left click* to pan, or drag things around.",
     nothing: true,
   },
 };
@@ -188,8 +192,7 @@ const keysAround: Step = {
     fit,
   ],
   note: {
-    text:
-      "{K} *W A S D* or the *arrow keys* to pan.\n{K} *Page Up* and *Page Down*, or *+* and *-*, to zoom.",
+    text: "{K} *W A S D* or the *arrow keys* to pan.\n{K} *Page Up* and *Page Down*, or *+* and *-*, to zoom.",
     nothing: true,
   },
 };
@@ -202,7 +205,10 @@ const pinNumber: Step = {
   id: "number",
   actions: [
     fit,
-    A.type(portBox(0, "Output", "Iron Plate"), "10", { enter: true, label: "the plates' rate box" }),
+    A.type(portBox(0, "Output", "Iron Plate"), "10", {
+      enter: true,
+      label: "the plates' rate box",
+    }),
     A.until(() => machines(0) > 0, "the card's count"),
     A.until(solved, "the solve"),
     A.wait(300),
@@ -289,7 +295,9 @@ const cloneStep: Step = {
     A.until(() => nodeCount() === 2, "the clone"),
     A.wait(300),
     // The clone lands beside its card; a hand moves it under.
-    A.drag(cardPart(1, "head"), underCard(card(0), card(1), cardPart(1, "head")), { label: "move the clone" }),
+    A.drag(cardPart(1, "head"), underCard(card(0), card(1), cardPart(1, "head")), {
+      label: "move the clone",
+    }),
     A.wait(300),
     fit,
     A.wait(500),
@@ -300,11 +308,16 @@ const cloneStep: Step = {
 const drawerFromPort: Step = {
   id: "drawer-port",
   actions: [
-    A.drag(portHandle(0, "Output", "Iron Plate"), clearBeside(card(0), 90), { label: "the plates" }),
+    A.drag(portHandle(0, "Output", "Iron Plate"), clearBeside(card(0), 90), {
+      label: "the plates",
+    }),
     A.until(() => storageCount() >= 1, "the drawer"),
     A.wait(300),
   ],
-  note: { text: "Drag an *input* or an *output* to make it a *drawer*.", at: drawerOf("Iron Plate") },
+  note: {
+    text: "Drag an *input* or an *output* to make it a *drawer*.",
+    at: drawerOf("Iron Plate"),
+  },
 };
 
 const drawerFromItems: Step = {
@@ -322,13 +335,22 @@ const drawerFromItems: Step = {
 const wiring: Step = {
   id: "wiring",
   actions: [
-    A.drag(portHandle(1, "Output", "Iron Plate"), drawerPart("Iron Plate", "body"), { label: "second plates wire" }),
+    A.drag(portHandle(1, "Output", "Iron Plate"), drawerPart("Iron Plate", "body"), {
+      label: "second plates wire",
+    }),
     A.wait(300),
-    A.drag(drawerPart("Iron Ingot", "body"), portHandle(0, "Input", "Iron Ingot"), { label: "ingot wire" }),
+    A.drag(drawerPart("Iron Ingot", "body"), portHandle(0, "Input", "Iron Ingot"), {
+      label: "ingot wire",
+    }),
     A.wait(300),
-    A.drag(drawerPart("Iron Ingot", "body"), portHandle(1, "Input", "Iron Ingot"), { label: "second ingot wire" }),
+    A.drag(drawerPart("Iron Ingot", "body"), portHandle(1, "Input", "Iron Ingot"), {
+      label: "second ingot wire",
+    }),
     A.wait(300),
-    A.type(drawerPart("Iron Plate", "rate"), "20", { enter: true, label: "the plates drawer's rate" }),
+    A.type(drawerPart("Iron Plate", "rate"), "20", {
+      enter: true,
+      label: "the plates drawer's rate",
+    }),
     A.until(solved, "the solve"),
     A.type(cardPart(0, "count"), "7", { enter: true, label: "the first count" }),
     A.until(() => pinnedCount(0) === 7, "the pinned count"),
@@ -344,7 +366,10 @@ const wiring: Step = {
 const arrange: Step = {
   id: "arrange",
   actions: [
-    A.when(() => topKey(/^Arrange/)() === null, A.click(topKey(/^View options/), { label: "View options" })),
+    A.when(
+      () => topKey(/^Arrange/)() === null,
+      A.click(topKey(/^View options/), { label: "View options" }),
+    ),
     A.click(topKey(/^Arrange/), { label: "Arrange" }),
     A.wait(1500),
     fit,
@@ -373,16 +398,23 @@ const colours: Step = {
   id: "colours",
   actions: [A.wait(200)],
   note: {
-    text:
-      "{b:Blue} is always something coming into your plan, and {o:Orange} is always something leaving it. Nothing else is shown in those colours.",
-    at: around(railSection(/INPUTS/), railLine(/Iron Ingot/), railSection(/OUTPUTS/), railLine(/Iron Plate/)),
+    text: "{b:Blue} is always something coming into your plan, and {o:Orange} is always something leaving it. Nothing else is shown in those colours.",
+    at: around(
+      railSection(/INPUTS/),
+      railLine(/Iron Ingot/),
+      railSection(/OUTPUTS/),
+      railLine(/Iron Plate/),
+    ),
   },
 };
 
 const machinesStep: Step = {
   id: "machines",
   actions: [A.wait(200)],
-  note: { text: "Your *machines* are here too: set how many from here, as on their cards.", at: railSection(/MACHINES/) },
+  note: {
+    text: "Your *machines* are here too: set how many from here, as on their cards.",
+    at: railSection(/MACHINES/),
+  },
 };
 
 // endregion
@@ -394,8 +426,16 @@ const combine: Step = {
   actions: [
     A.click(cardPart(0, "picture"), { label: "first card" }),
     A.wait(150),
-    A.withKey("Shift", [A.click(cardPart(1, "picture"), { mods: { shift: true }, label: "second card" })], { caps: ["Shift"] }),
-    A.until(() => textOf("button, [role=button]", /^Combine\s*2/i)() !== null, "the Combine key", 2500),
+    A.withKey(
+      "Shift",
+      [A.click(cardPart(1, "picture"), { mods: { shift: true }, label: "second card" })],
+      { caps: ["Shift"] },
+    ),
+    A.until(
+      () => textOf("button, [role=button]", /^Combine\s*2/i)() !== null,
+      "the Combine key",
+      2500,
+    ),
     A.click(textOf("button, [role=button]", /^Combine\s*2/i), { label: "Combine" }),
     A.until(() => nodeCount() === 1, "the combined card", 3000),
     A.wait(300),
@@ -431,11 +471,13 @@ const units: Step = {
     A.wait(250),
     A.click(powerUnitKey, { label: "power key" }),
   ],
-  note: { text: "These buttons change *the way numbers are shown*.", at: around(rateUnitKey, powerUnitKey) },
+  note: {
+    text: "These buttons change *the way numbers are shown*.",
+    at: around(rateUnitKey, powerUnitKey),
+  },
 };
 
 // endregion
-
 
 // region Forced inputs and outputs
 
@@ -464,7 +506,10 @@ const forcedAdd: Step = {
     A.wait(500),
     A.click(itemTile("Sulfuric Acid"), { label: "Sulfuric Acid" }),
     A.wait(1200),
-    A.when(() => recipeOverlay() === null, A.click(itemTile("Sulfuric Acid"), { label: "Sulfuric Acid" })),
+    A.when(
+      () => recipeOverlay() === null,
+      A.click(itemTile("Sulfuric Acid"), { label: "Sulfuric Acid" }),
+    ),
     A.until(() => recipeOverlay() !== null, "recipe search"),
     A.until(() => addRecipe(LARGE_REACTOR, ACID_RECIPE)() !== null, "the reactor's recipe", 20000),
     A.show(addRecipe(LARGE_REACTOR, ACID_RECIPE)),
@@ -472,7 +517,10 @@ const forcedAdd: Step = {
     A.until(() => nodeCount() === 1, "the card"),
     A.until(solved, "the solve"),
     fit,
-    A.type(portBox(0, "Output", "Sulfuric Acid"), "20", { enter: true, label: "the acid's rate box" }),
+    A.type(portBox(0, "Output", "Sulfuric Acid"), "20", {
+      enter: true,
+      label: "the acid's rate box",
+    }),
     A.until(() => machines(0) > 0, "the reactor's count"),
     A.until(solved, "the solve"),
     A.wait(300),
@@ -484,7 +532,11 @@ const forcedWired: Step = {
   id: "forced-wired",
   actions: [
     ...searchFromPort(portRow(0, "Input", "Oxygen"), 0, "the oxygen input"),
-    A.until(() => addRecipe(ELECTROLYZER, WATER_TO_OXYGEN)() !== null, "the electrolyzer's recipe", 20000),
+    A.until(
+      () => addRecipe(ELECTROLYZER, WATER_TO_OXYGEN)() !== null,
+      "the electrolyzer's recipe",
+      20000,
+    ),
     A.show(addRecipe(ELECTROLYZER, WATER_TO_OXYGEN)),
     A.click(addRecipe(ELECTROLYZER, WATER_TO_OXYGEN), { label: "add the electrolyzer's recipe" }),
     A.until(() => nodeCount() === 2, "the second card"),
@@ -503,13 +555,13 @@ const forcedInput: Step = {
   actions: [
     A.type(cardPart(1, "count"), "1", { enter: true, label: "the electrolyzer's count" }),
     A.until(() => pinnedCount(1) === 1, "the electrolyzer's pin"),
+    A.run(() => pinExactly(1)),
     A.until(solved, "the solve"),
     A.until(() => forcedRow(0, "Input", "Oxygen")() !== null, "the reactor's Forced row"),
     A.wait(400),
   ],
   note: {
-    text:
-      "The acid is set and one electrolyzer is pinned, but it can't keep up. The plan has to bring in the rest of the oxygen anyway: a *forced input*.",
+    text: "The acid is set and one electrolyzer is pinned *exactly*, but it can't keep up. The plan has to bring in the rest of the oxygen anyway: a *forced input*.",
     at: forcedRow(0, "Input", "Oxygen"),
   },
 };
@@ -520,7 +572,9 @@ const forcedUses: Step = {
     ...searchFromPort(portRow(0, "Output", "Sulfuric Acid"), 2, "the acid output"),
     // Far down the list, and a group's rows are drawn only once it is in view: bring the mixers up.
     A.until(() => mixers() !== null, "the mixers' group", 20000),
-    A.run(() => mixers()?.scrollIntoView({ block: "start", behavior: "instant" as ScrollBehavior })),
+    A.run(() =>
+      mixers()?.scrollIntoView({ block: "start", behavior: "instant" as ScrollBehavior }),
+    ),
     A.wait(300),
     A.until(() => addRecipe(/^Mixer/, SUGAR_MIXER)() !== null, "the mixer's recipe", 20000),
     A.show(addRecipe(/^Mixer/, SUGAR_MIXER)),
@@ -538,19 +592,24 @@ const forcedOutput: Step = {
   actions: [
     A.type(cardPart(2, "count"), "1", { enter: true, label: "the mixer's count" }),
     A.until(() => pinnedCount(2) === 1, "the mixer's pin"),
+    A.run(() => pinExactly(2)),
     // The acid's own rate goes (the mod drops a port's rate once it is wired): the reactor is free to make more than the mixer takes.
     A.run(() => setNode(0, { portRates: undefined })),
     A.until(solved, "the solve"),
     A.wait(600),
-    (c) => A.type(cardPart(1, "count"), String(electrolyzersForExcess()), { enter: true, label: "the electrolyzer's count" })(c),
+    (c) =>
+      A.type(cardPart(1, "count"), String(electrolyzersForExcess()), {
+        enter: true,
+        label: "the electrolyzer's count",
+      })(c),
     A.until(() => (pinnedCount(1) ?? 0) > 1, "the electrolyzer's pin"),
+    A.run(() => pinExactly(1)),
     A.until(() => spareBlock("Oxygen")() !== null, "the spare oxygen block", 6000),
     A.until(solved, "the solve"),
     A.wait(400),
   ],
   note: {
-    text:
-      "Electrolyzer pinned high, mixer pinned low: more oxygen is made than used. The excess leaves the plan as a *forced output*.",
+    text: "Electrolyzer pinned *exactly* high, mixer pinned *exactly* low: more oxygen is made than used. The excess leaves the plan as a *forced output*.",
     at: spareBlock("Oxygen"),
   },
 };
@@ -571,8 +630,7 @@ const forcedSplit: Step = {
     A.wait(400),
   ],
   note: {
-    text:
-      "The excess can leave at more than one machine. The *slider* sets the split: oxygen out of the electrolyzer, or extra acid out of the reactor. *Auto* hands it back to the solver.",
+    text: "The excess can leave at more than one machine. The *slider* sets the split: oxygen out of the electrolyzer, or extra acid out of the reactor. *Auto* hands it back to the solver.",
     at: spareBlock("Oxygen"),
   },
 };
@@ -584,7 +642,9 @@ const forcedSplit: Step = {
 const trashStep: Step = {
   id: "trash",
   actions: [
-    A.drag(portHandle(2, "Output", "Charcoal"), clearBeside(card(2), 130), { label: "the charcoal" }),
+    A.drag(portHandle(2, "Output", "Charcoal"), clearBeside(card(2), 130), {
+      label: "the charcoal",
+    }),
     A.until(() => drawerOf("Charcoal")() !== null, "the charcoal drawer"),
     A.wait(300),
     // The new drawer can land against the card at the board's edge: Arrange gives it room.
@@ -607,10 +667,13 @@ const trashStep: Step = {
 const productStep: Step = {
   id: "product",
   actions: [
-    A.when(() => !drawerIs("Charcoal", "Product"), A.seq(
-      A.click(drawerPart("Charcoal", "rule"), { label: "the drawer's rule key" }),
-      A.click(menuRow(/^Keep it/), { label: "Keep it" }),
-    )),
+    A.when(
+      () => !drawerIs("Charcoal", "Product"),
+      A.seq(
+        A.click(drawerPart("Charcoal", "rule"), { label: "the drawer's rule key" }),
+        A.click(menuRow(/^Keep it/), { label: "Keep it" }),
+      ),
+    ),
     A.until(() => drawerIs("Charcoal", "Product"), "the product drawer"),
     A.until(solved, "the solve"),
     A.wait(400),
@@ -639,13 +702,26 @@ const minimapStep: Step = {
   actions: [
     A.run(() => setMinimap({ show: true, size: "small", shape: "square", corner: "bottom-right" })),
     A.wait(300),
-    A.drag(() => { const m = document.querySelector("[data-minimap]"); if (!m) return null; const r = m.getBoundingClientRect(); return { x: r.left + r.width / 2, y: r.top + r.height / 2 }; }, () => { const m = document.querySelector("[data-minimap]"); if (!m) return null; const r = m.getBoundingClientRect(); return { x: r.left + r.width / 2 + 24, y: r.top + r.height / 2 + 12 }; }, { label: "the map" }),
+    A.drag(
+      () => {
+        const m = document.querySelector("[data-minimap]");
+        if (!m) return null;
+        const r = m.getBoundingClientRect();
+        return { x: r.left + r.width / 2, y: r.top + r.height / 2 };
+      },
+      () => {
+        const m = document.querySelector("[data-minimap]");
+        if (!m) return null;
+        const r = m.getBoundingClientRect();
+        return { x: r.left + r.width / 2 + 24, y: r.top + r.height / 2 + 12 };
+      },
+      { label: "the map" },
+    ),
     A.wait(300),
     fit,
   ],
   note: {
-    text:
-      "The *minimap* shows your whole plan. Drag on it to move the board, and *N* hides it. Its gear sets its size and corner.",
+    text: "The *minimap* shows your whole plan. Drag on it to move the board, and *N* hides it. Its gear sets its size and corner.",
     at: () => document.querySelector("[data-minimap]"),
   },
 };
@@ -656,10 +732,15 @@ const stickyNote: Step = {
     closeMenus,
     fit,
     A.right(boardSpot(0.16, 0.2), { label: "free board" }),
-    A.click(textOf("button, [role=menuitem], [role=button], li", /^Add (a )?sticky note$/), { label: "Add sticky note" }),
+    A.click(textOf("button, [role=menuitem], [role=button], li", /^Add (a )?sticky note$/), {
+      label: "Add sticky note",
+    }),
     A.until(() => css(".sn")() !== null, "the note"),
     A.wait(300),
-    A.type(css(".sn-area"), "Hydrogen comes from the electrolyzers by the door.", { keep: true, label: "the note's text" }),
+    A.type(css(".sn-area"), "Hydrogen comes from the electrolyzers by the door.", {
+      keep: true,
+      label: "the note's text",
+    }),
     A.wait(300),
     A.click(boardSpot(0.5, 0.92), { label: "free board" }),
     A.wait(300),
@@ -728,7 +809,10 @@ const libraryTab: Target = libraryKey;
 const libraryStep: Step = {
   id: "library",
   actions: [A.click(libraryTab, { label: "Community" }), A.wait(1200)],
-  note: { text: "*Community* is where people post their plans. You can browse them here.", at: libraryTab },
+  note: {
+    text: "*Community* is where people post their plans. You can browse them here.",
+    at: libraryTab,
+  },
 };
 
 const newPlan: Step = {
@@ -747,8 +831,7 @@ const feedback: Step = {
   id: "feedback",
   actions: [closeMenus, A.wait(200)],
   note: {
-    text:
-      "That's everything! Found a bug, or have an idea? *Feedback* sends it from here. Questions about your own setup do well in GTNH Planner's thread on the *GT New Horizons Discord*.",
+    text: "That's everything! Found a bug, or have an idea? *Feedback* sends it from here. Questions about your own setup do well in GTNH Planner's thread on the *GT New Horizons Discord*.",
     at: feedbackKey,
   },
 };

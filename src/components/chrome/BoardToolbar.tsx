@@ -9,7 +9,6 @@ import type { RateUnit } from "@/lib/model/rate-unit";
 import { requestNewTask, setTaskView, useTaskView } from "@/lib/tasks/task-board-ui";
 import { tipAttrs } from "@/components/flow/clean/interaction";
 import "@/components/tasks/tasks.css";
-import { useWorkspaceView, writeWorkspaceView } from "@/lib/workspace-view";
 import { useDesignStore } from "@/store/design-store";
 import { useFactoryStore } from "@/store/factory-store";
 import { arrangeLabel, getBoardCommands, pressArrange, useArrangeState } from "./board-commands";
@@ -116,7 +115,6 @@ function BoardKeys({ tight }: { tight: boolean }) {
   const openPowerMenu = useFactoryStore((state) => state.openPowerMenu);
   const closePowerMenu = useFactoryStore((state) => state.closePowerMenu);
   const isReadOnly = useFactoryStore((state) => state.isReadOnly);
-  const workspace = useWorkspaceView();
   const arrange = useArrangeState();
 
   const rateIndex = Math.max(0, RATE_ORDER.indexOf(rateUnit === "eu" ? "second" : rateUnit));
@@ -128,9 +126,6 @@ function BoardKeys({ tight }: { tight: boolean }) {
   const isAmps = powerDisplayUnit !== "eu";
   // The mod's Amps: every card counts in its own machine's tier.
   const togglePower = () => setPowerDisplayUnit(isAmps ? "eu" : "amps");
-
-  const peak = !workspace.averageMachineDraw;
-  const togglePeak = () => writeWorkspaceView({ averageMachineDraw: peak });
 
   return (
     <>
@@ -208,14 +203,20 @@ function BoardKeys({ tight }: { tight: boolean }) {
         onWheel={togglePower}
       />
       <BarKey
-        id="peak"
-        label={peak ? "Peak" : "Avg"}
-        width={35}
-        tip="Average or peak power use (peak: every machine running at once)"
-        onClick={togglePeak}
-        onContext={togglePeak}
-        onWheel={togglePeak}
-      />
+        id="annotate"
+        gap
+        icon
+        off={isReadOnly}
+        ariaLabel="Annotations"
+        tip="Add a sticky note, box or arrow, or change the background"
+        menuAnchor
+        onClick={(event) => {
+          const rect = event.currentTarget.getBoundingClientRect();
+          getBoardCommands()?.openBoardMenu?.({ x: rect.left, y: rect.bottom + 2 });
+        }}
+      >
+        <PixelIcon name="pencil" />
+      </BarKey>
       </div>
     </>
   );

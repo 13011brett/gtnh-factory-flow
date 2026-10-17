@@ -33,17 +33,17 @@ describe("the board's toolbar", () => {
   it("has the keys in the mod's order, in its words", () => {
     renderStrip();
     const order = [...document.querySelectorAll("[data-mb]")].map((element) => element.getAttribute("data-mb"));
-    expect(order).toEqual(["nonrecipe", "undo", "redo", "arrange", "fit", "rate", "power", "peak"]);
+    expect(order).toEqual(["nonrecipe", "undo", "redo", "arrange", "fit", "rate", "power", "annotate"]);
     expect(key("arrange").textContent).toBe("Arrange");
     expect(key("rate").textContent).toBe("/s");
     expect(key("power").textContent).toBe("EU/t");
-    expect(key("peak").textContent).toBe("Avg");
+    expect(document.querySelector('[data-mb="peak"]')).toBeNull();
     expect(key("nonrecipe").textContent).toBe("Non-recipe");
   });
 
   it("every key is in the Tab order (a disabled one is not) and Enter or Space presses it", () => {
     renderStrip();
-    for (const id of ["nonrecipe", "arrange", "fit", "rate", "power", "peak"]) {
+    for (const id of ["nonrecipe", "arrange", "fit", "rate", "power", "annotate"]) {
       expect(key(id).getAttribute("tabindex"), id).toBe("0");
     }
     expect(key("undo").getAttribute("tabindex")).toBe("-1");
@@ -80,12 +80,16 @@ describe("the board's toolbar", () => {
     fireEvent.click(key("power"));
     expect(key("power").textContent).toBe("EU/t");
     expect(useFactoryStore.getState().powerDisplayUnit).toBe("eu");
+  });
 
-    expect(key("peak").textContent).toBe("Avg");
-    fireEvent.click(key("peak"));
-    expect(key("peak").textContent).toBe("Peak");
-    fireEvent.contextMenu(key("peak"));
-    expect(key("peak").textContent).toBe("Avg");
+  it("the pencil key asks the board for its empty-board menu under the key", () => {
+    const at: Array<{ x: number; y: number }> = [];
+    const off = registerBoardCommands({ arrange: () => {}, cancelArrange: () => {}, fit: () => {}, openBoardMenu: (p) => at.push(p) });
+    renderStrip();
+    fireEvent.click(key("annotate"));
+    off();
+    expect(at).toHaveLength(1);
+    expect(key("annotate").getAttribute("aria-label")).toBe("Annotations");
   });
 
   it("Arrange and Fit call the board, and Arrange says what it is doing", () => {
@@ -140,7 +144,7 @@ describe("the board's toolbar", () => {
 
   it("every key carries a tip for the tip host", () => {
     renderStrip();
-    for (const id of ["nonrecipe", "undo", "redo", "arrange", "fit", "rate", "power", "peak"]) {
+    for (const id of ["nonrecipe", "undo", "redo", "arrange", "fit", "rate", "power", "annotate"]) {
       expect(key(id).getAttribute("data-tip-id"), id).toBe(`bar|${id}`);
       expect(JSON.parse(key(id).getAttribute("data-tip")!).title.length).toBeGreaterThan(3);
     }

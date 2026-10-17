@@ -27,6 +27,15 @@ import {
  */
 export type CanvasPattern = "dots" | "lines" | "cross" | "ruled" | "graph" | "none";
 
+export const CANVAS_PATTERN_LABEL: Record<CanvasPattern, string> = {
+  dots: "Dots",
+  lines: "Grid lines",
+  cross: "Crosses",
+  ruled: "Ruled lines",
+  graph: "Graph paper",
+  none: "Blank",
+};
+
 export const CANVAS_PATTERNS: CanvasPattern[] = [
   "dots",
   "lines",

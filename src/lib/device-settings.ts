@@ -12,15 +12,12 @@ import { useSyncExternalStore } from "react";
 export interface DeviceSettings {
   /** "Names when zoomed out": the glance cards carry their names. */
   zoomedOutNames: boolean;
-  /** "Circuit as an input": a programmed circuit counts as an input of its card. */
-  circuitAsInput: boolean;
   /** The settings box's open section, kept so it opens where it was left. */
   settingsSection: string;
 }
 
 export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   zoomedOutNames: true,
-  circuitAsInput: true,
   settingsSection: "Board",
 };
 
@@ -40,10 +37,6 @@ export function parseDeviceSettings(raw: string | null): DeviceSettings {
         typeof parsed.zoomedOutNames === "boolean"
           ? parsed.zoomedOutNames
           : DEFAULT_DEVICE_SETTINGS.zoomedOutNames,
-      circuitAsInput:
-        typeof parsed.circuitAsInput === "boolean"
-          ? parsed.circuitAsInput
-          : DEFAULT_DEVICE_SETTINGS.circuitAsInput,
       settingsSection:
         typeof parsed.settingsSection === "string"
           ? parsed.settingsSection

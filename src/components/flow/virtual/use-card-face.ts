@@ -9,6 +9,7 @@ import {
   cardPicture,
   deriveCardFace,
   formatSolvedMachines,
+  stateFrameTone,
 } from "../clean/clean-model";
 import { CC_GEOMETRY } from "../clean/tokens";
 import { estimateRecipeCardHeight } from "./card-shell";
@@ -29,6 +30,8 @@ export interface ShellFace {
   selected: boolean;
   cannotRun: boolean;
   unset: boolean;
+  /** A problem card's frame tone (clean-model `stateFrameTone`), as the card wears it. */
+  tone?: string;
   /** The count the glance face prints. */
   count: string;
   /** The picture the glance face draws. */
@@ -129,6 +132,7 @@ export function useCardFace(
     selected,
     cannotRun: derived.powerReport !== undefined && derived.powerReport.state !== "ok",
     unset: count.unset,
+    tone: stateFrameTone(count, plan, projectNode.id),
     count: `×${formatSolvedMachines(count.value)}`,
     art: art ?? machineIcon?.iconPath,
     fallbackWidth: CC_GEOMETRY.cardWidth,

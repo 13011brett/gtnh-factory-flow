@@ -147,7 +147,16 @@
   width: 22px;
   height: 12px;
   background: var(--ms-track);
-  clip-path: polygon(1px 0, calc(100% - 1px) 0, 100% 1px, 100% calc(100% - 1px), calc(100% - 1px) 100%, 1px 100%, 0 calc(100% - 1px), 0 1px);
+  clip-path: polygon(
+    1px 0,
+    calc(100% - 1px) 0,
+    100% 1px,
+    100% calc(100% - 1px),
+    calc(100% - 1px) 100%,
+    1px 100%,
+    0 calc(100% - 1px),
+    0 1px
+  );
   cursor: pointer;
 }
 .ms-row:hover .ms-switch {
@@ -342,22 +351,6 @@
 }
 .spv-pic[data-tone="blue"] {
   background: #4c6fb0;
-}
-.spv-circ {
-  display: none;
-  position: absolute;
-  right: 3px;
-  bottom: 4px;
-  width: 11px;
-  height: 11px;
-  background: #36383f;
-  color: var(--mc-gold);
-  font-size: 7px;
-  line-height: 11px;
-  text-align: center;
-}
-.sp-board[data-circuit] .spv-circ {
-  display: block;
 }
 .sp-name {
   display: none;

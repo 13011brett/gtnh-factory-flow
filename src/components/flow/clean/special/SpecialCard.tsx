@@ -23,7 +23,7 @@ import {
   AmpsChip,
   glyph,
 } from "../CleanCard";
-import type { CleanCardView, CleanChipView } from "../clean-model";
+import { frameTone, type CleanCardView, type CleanChipView } from "../clean-model";
 import { ensureInteractionHost, tipAttrs, useClickSlop, type TipSpec } from "../interaction";
 import { menuTip, powerPanelTip } from "../interaction/tips";
 import { syncPromptPhase } from "../../virtual/prompt-phase";
@@ -486,6 +486,7 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
       data-cannot-run={view.cannotRun ? "" : undefined}
       data-unset={view.unset ? "" : undefined}
       data-empty={view.sockets ? "" : undefined}
+      data-tone={frameTone(view.foot)}
       onPointerDownCapture={onPointerDownCapture}
     >
       <div className="cc-head">

@@ -50,7 +50,8 @@ export const CHANGELOG: ChangelogEntry[] = [
       "Click the word under the count to pick Any, Up to or Exactly. Exactly works as before and fills gaps with forced flows.",
       "Old Build plans open with their counts as Up to, so they read like they used to.",
       "A drawer that falls short names the machine that holds it back.",
-      "Circuit as an input is on by default.",
+      "A card with a problem is outlined in its bar's colour.",
+      "The circuit sits on the machine with its number.",
     ],
   },
   {

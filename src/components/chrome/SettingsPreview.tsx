@@ -9,39 +9,29 @@ const CARD_SCALE = [0.78, 0.9, 1, 1.14];
 /**
  * The settings' pictures of what they change, beside the section's rows, drawn from the settings as they are now so a
  * switch shows its effect at once (the mod's SettingsPreview): Board shows two cards on a board over a little world,
- * names under the cards when zoomed out, a circuit among a card's inputs, the
+ * names under the cards when zoomed out, the
  * cards bigger or smaller with Size; Sound shows a speaker at its loudness; Controls the mouse and what each button does.
  */
 export function SettingsPreview({
   section,
   names,
-  circuit,
   sizeIndex,
   soundIndex,
 }: {
   section: string;
   names: boolean;
-  circuit: boolean;
   sizeIndex: number;
   soundIndex: number;
 }) {
   if (section === "Sound") return <SoundPicture level={soundIndex} />;
   if (section === "Controls") return <ControlsPicture />;
-  return <BoardPicture names={names} circuit={circuit} scale={CARD_SCALE[sizeIndex < 0 ? 2 : sizeIndex]} />;
+  return <BoardPicture names={names} scale={CARD_SCALE[sizeIndex < 0 ? 2 : sizeIndex]} />;
 }
 
-function BoardPicture({
-  names,
-  circuit,
-  scale,
-}: {
-  names: boolean;
-  circuit: boolean;
-  scale: number;
-}) {
+function BoardPicture({ names, scale }: { names: boolean; scale: number }) {
   const paper = { "--sp-scale": String(scale) } as CSSProperties;
   return (
-    <div className="sp-board" style={paper} data-names={names ? "" : undefined} data-circuit={circuit ? "" : undefined}>
+    <div className="sp-board" style={paper} data-names={names ? "" : undefined}>
       <div className="sp-world" />
       <div className="sp-paper" />
       <div className="sp-rail">
@@ -55,7 +45,6 @@ function BoardPicture({
       <div className="spv-card" style={{ left: 54, top: 36 }}>
         <span className="sp-chip" />
         <span className="spv-pic" />
-        <span className="spv-circ">C</span>
         <span className="sp-name">Electric Blast Furnace</span>
       </div>
       <div className="spv-card" style={{ left: 146, top: 80 }}>
@@ -71,7 +60,13 @@ function SoundPicture({ level }: { level: number }) {
   const bars = [10, 18, 26];
   return (
     <div className="sp-sound" aria-hidden>
-      <svg width="44" height="44" viewBox="0 0 11 11" shapeRendering="crispEdges" fill="currentColor">
+      <svg
+        width="44"
+        height="44"
+        viewBox="0 0 11 11"
+        shapeRendering="crispEdges"
+        fill="currentColor"
+      >
         <path d="M0 4h2l3-3v9l-3-3h-2z" />
       </svg>
       <div className="sp-bars">

@@ -53,6 +53,8 @@ interface MockRecipe {
   id: string;
   inputs: Slot[];
   outputs: Slot[];
+  /** A GregTech recipe dialled to this programmed circuit (the card's badge in the well). */
+  circuit?: string;
 }
 
 interface MockNode {
@@ -124,8 +126,22 @@ function build(spec: MockSpec): MockPlan {
     minimumTier: "LV",
     durationTicks: 20,
     eut: 30,
-    inputs: r.inputs.map(([id, amount]) => ({ kind: "item", id, amount, displayName: id })),
+    inputs: [
+      ...r.inputs.map(([id, amount]) => ({ kind: "item" as const, id, amount, displayName: id })),
+      ...(r.circuit
+        ? [
+            {
+              kind: "item" as const,
+              id: `gregtech:gt.integrated_circuit@${r.circuit}`,
+              amount: 0,
+              consumed: false,
+              displayName: "Programmed Circuit",
+            },
+          ]
+        : []),
+    ],
     outputs: r.outputs.map(([id, amount]) => ({ kind: "item", id, amount, displayName: id })),
+    ...(r.circuit ? { kind: "gregtech_machine" as const, programmedCircuit: r.circuit } : {}),
   }));
   const recipeById = new Map(spec.recipes.map((r) => [r.id, r]));
 
@@ -582,6 +598,7 @@ export const mockUpTo: MockPlan = build({
         ["Creosote", 4],
         ["Benzene", 2],
       ],
+      circuit: "24",
     },
     { id: "Mixer", inputs: [["Dust", 1]], outputs: [["Mix", 1]] },
     { id: "Packer", inputs: [["Mix", 2]], outputs: [["Pack", 1]] },

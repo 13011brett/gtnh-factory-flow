@@ -5,26 +5,23 @@ import "./settings.css";
 
 import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import {
-  APP_FONTS,
-  getStoredAppFont,
-  setAppFont,
-  type AppFontId,
-} from "@/lib/app-font";
+import { APP_FONTS, getStoredAppFont, setAppFont, type AppFontId } from "@/lib/app-font";
 import { resetMeasuredFont } from "@/components/flow/clean/text-measure";
 import { useDeviceSettings, writeDeviceSettings } from "@/lib/device-settings";
 import { MinimapSettingsRows } from "@/components/flow/clean/minimap/MinimapSettingsPanel";
-import { getSoundLevel, playSfx, setSoundLevel, sfxClick, sfxTick, sfxToggle } from "@/lib/sound/sfx";
+import {
+  getSoundLevel,
+  playSfx,
+  setSoundLevel,
+  sfxClick,
+  sfxTick,
+  sfxToggle,
+} from "@/lib/sound/sfx";
 import { setUiScalePercent, useUiScalePercent } from "@/lib/ui-scale";
 import { ChromeMenu, chromeAnchorOf, MENU_ANCHOR_ATTR, type ChromeAnchor } from "./ChromeMenu";
 import { knock, OPEN_CONTROLS_EVENT, OPEN_TOUR_EVENT } from "./chrome-events";
 import { SettingsPreview } from "./SettingsPreview";
-import {
-  SIZE_NAMES,
-  SOUND_NAMES,
-  sizeIndexOf,
-  sizePercentOf,
-} from "./settings-model";
+import { SIZE_NAMES, SOUND_NAMES, sizeIndexOf, sizePercentOf } from "./settings-model";
 
 type Kind = "switch" | "choice" | "slider" | "button";
 
@@ -111,14 +108,6 @@ export function ModSettings({ onClose }: { onClose: () => void }) {
           to: (index) => writeDeviceSettings({ zoomedOutNames: index === 1 }),
         },
         {
-          label: "Circuit as an input",
-          about: "Shows a circuit as an input.",
-          kind: "switch",
-          names: ["Off", "On"],
-          at: settings.circuitAsInput ? 1 : 0,
-          to: (index) => writeDeviceSettings({ circuitAsInput: index === 1 }),
-        },
-        {
           label: "Font",
           about: "Sets the font of the planner.",
           kind: "button",
@@ -171,7 +160,10 @@ export function ModSettings({ onClose }: { onClose: () => void }) {
     },
   ];
 
-  const sectionIndex = Math.max(0, sections.findIndex((section) => section.name === settings.settingsSection));
+  const sectionIndex = Math.max(
+    0,
+    sections.findIndex((section) => section.name === settings.settingsSection),
+  );
   const section = sections[sectionIndex];
   const pick = (index: number, wheel?: boolean) => {
     if (index === sectionIndex) return;
@@ -187,7 +179,8 @@ export function ModSettings({ onClose }: { onClose: () => void }) {
     row.to(index, anchor);
     // The sound of what changed, as the mod's SettingsPanel.set; the Sounds row clicks at its new loudness.
     if (row.kind === "switch") sfxToggle(index === 1);
-    else if (row.kind === "slider") playSfx("ui.tick", 1, 0.85 + (0.4 * index) / Math.max(1, row.names.length - 1));
+    else if (row.kind === "slider")
+      playSfx("ui.tick", 1, 0.85 + (0.4 * index) / Math.max(1, row.names.length - 1));
     else if (row.kind === "button" || row.label === "Sounds") sfxClick();
     else sfxTick(up);
   };
@@ -210,14 +203,24 @@ export function ModSettings({ onClose }: { onClose: () => void }) {
           // Over the sections, the wheel goes through them.
           const target = event.target as HTMLElement;
           if (!target.closest(".ms-side")) return;
-          const next = Math.max(0, Math.min(sections.length - 1, sectionIndex + (event.deltaY > 0 ? 1 : -1)));
+          const next = Math.max(
+            0,
+            Math.min(sections.length - 1, sectionIndex + (event.deltaY > 0 ? 1 : -1)),
+          );
           pick(next, true);
         }}
       >
         <div className="ms-title">
           <span>Settings</span>
           <div className="ms-close" role="button" aria-label="Close" onClick={close}>
-            <svg width="14" height="14" viewBox="0 0 14 14" shapeRendering="crispEdges" aria-hidden fill="currentColor">
+            <svg
+              width="14"
+              height="14"
+              viewBox="0 0 14 14"
+              shapeRendering="crispEdges"
+              aria-hidden
+              fill="currentColor"
+            >
               <path d={crossPath()} />
             </svg>
           </div>
@@ -240,13 +243,14 @@ export function ModSettings({ onClose }: { onClose: () => void }) {
           <div className="ms-rows" data-sfx-own="">
             {section.intro ? <div className="ms-intro">{section.intro}</div> : null}
             {section.body ??
-              section.rows.map((row) => <SettingRow key={row.label} row={row} onSet={set} dragRef={dragRef} />)}
+              section.rows.map((row) => (
+                <SettingRow key={row.label} row={row} onSet={set} dragRef={dragRef} />
+              ))}
           </div>
           <div className="ms-preview" aria-hidden>
             <SettingsPreview
               section={section.name}
               names={settings.zoomedOutNames}
-              circuit={settings.circuitAsInput}
               sizeIndex={sizeIndexOf(uiPercent)}
               soundIndex={soundIndex}
             />
@@ -299,7 +303,13 @@ function SettingRow({
   let control: ReactNode;
   if (row.kind === "switch") {
     control = (
-      <span className="ms-switch" role="switch" aria-checked={row.at === 1} aria-label={row.label} data-on={row.at === 1 ? "" : undefined}>
+      <span
+        className="ms-switch"
+        role="switch"
+        aria-checked={row.at === 1}
+        aria-label={row.label}
+        data-on={row.at === 1 ? "" : undefined}
+      >
         <span className="ms-knob" />
       </span>
     );
@@ -326,7 +336,11 @@ function SettingRow({
     );
   } else {
     control = (
-      <span className="ms-choices" role={row.kind === "choice" ? "radiogroup" : "group"} aria-label={row.label}>
+      <span
+        className="ms-choices"
+        role={row.kind === "choice" ? "radiogroup" : "group"}
+        aria-label={row.label}
+      >
         {row.names.map((name, index) => (
           <span
             key={name}

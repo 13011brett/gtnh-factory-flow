@@ -10,8 +10,11 @@ import {
   buildCountView,
   buildFootView,
   cardCountState,
+  circuitNumber,
+  frameTone,
   pinActions,
   pinPatch,
+  stateFrameTone,
   wheelCount,
   type CleanPortView,
 } from "./clean-model";
@@ -326,6 +329,46 @@ describe("the bar along the foot", () => {
     expect(buildFootView({ rule: "any" }, undefined, fed)).toBeUndefined();
     // An Up to card's bar comes from its read-out alone; with none yet there is no bar.
     expect(buildFootView(upToCount, undefined, fed)).toBeUndefined();
+  });
+});
+
+describe("the frame", () => {
+  it("takes a problem's tone; full, plain and no bar keep the edge", () => {
+    expect(frameTone({ tone: "bottleneck" })).toBe("bottleneck");
+    expect(frameTone({ tone: "forced" })).toBe("forced");
+    expect(frameTone({ tone: "full" })).toBeUndefined();
+    expect(frameTone({ tone: "plain" })).toBeUndefined();
+    expect(frameTone(undefined)).toBeUndefined();
+  });
+
+  it("is the same on a shell, from the count and the plan alone", () => {
+    const starved = plan({ n: { capacity: 3, reached: 1, reason: "STARVED" } });
+    expect(stateFrameTone(cardCountState(result(1), node(3), starved), starved, "n")).toBe(
+      "starved",
+    );
+    const full = plan({ n: { capacity: 3, reached: 3, reason: "FULL" } });
+    expect(stateFrameTone(cardCountState(result(3), node(3), full), full, "n")).toBeUndefined();
+    const forced = plan(undefined, {
+      forced: [
+        { nodeId: "n#r1", portKey: "n#r1|i|x", side: "in", resourceKey: "item:x", perSecond: 1 },
+      ],
+    });
+    expect(stateFrameTone(cardCountState(result(2), node(2, true), forced), forced, "n")).toBe(
+      "forced",
+    );
+    expect(stateFrameTone(cardCountState(result(2), node(), forced), forced, "n")).toBeUndefined();
+  });
+});
+
+describe("the circuit", () => {
+  it("is numbered by the recipe's setting, else by the item's own", () => {
+    expect(circuitNumber({ setting: "24" })).toBe("24");
+    expect(
+      circuitNumber({
+        resource: { kind: "item", id: "gregtech:gt.integrated_circuit@7", amount: 0 } as never,
+      }),
+    ).toBe("7");
+    expect(circuitNumber({})).toBeUndefined();
   });
 });
 

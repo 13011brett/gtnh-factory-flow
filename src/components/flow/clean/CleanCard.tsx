@@ -45,6 +45,7 @@ import type {
   CleanFootView,
   CleanPortView,
 } from "./clean-model";
+import { circuitNumber, frameTone } from "./clean-model";
 import type { PinRule } from "@/lib/model/pin-rule";
 import { CountRuleMenu } from "./menus/CountRuleMenu";
 import { tierChipColors } from "./tokens";
@@ -61,7 +62,7 @@ import { OptionListMenu } from "./menus/OptionListMenu";
 import { SettingsSheet } from "./menus/SettingsSheet";
 import { useDeviceSettings } from "@/lib/device-settings";
 import { anchorOf, type MenuAnchor } from "./menus/MenuPortal";
-import { cloneWithSound } from "@/lib/sound/sfx";
+import { cloneWithSound, playEditSfx, sfxClick } from "@/lib/sound/sfx";
 import {
   countRowsTip,
   footTip,
@@ -415,17 +416,23 @@ export function CountBox({
       data-zero={view.zero ? "" : undefined}
       data-prompt={view.prompt ? "" : undefined}
       data-editing={editing ? "" : undefined}
+      // The count sounds for itself: the page's click would miss the wheel and double the rule word's click.
+      data-sfx-own=""
       {...tipAttrs(tip)}
       onClick={(event) => {
         glyph(event);
         if (!editing && wasClick(event) && !checklistLocked()) {
+          sfxClick();
           setDraft(view.set !== undefined ? view.setText : "");
         }
       }}
       onWheel={(event: WheelEvent) => {
         if (checklistLocked()) return;
         event.stopPropagation();
-        onStep(event.deltaY < 0 ? 1 : -1);
+        const up = event.deltaY < 0;
+        // Each step ticks and claims the edit, so the board's change sound does not play on top.
+        playEditSfx("ui.tick", 1, up ? 1.12 : 0.9);
+        onStep(up ? 1 : -1);
       }}
       // The middle button goes back to Any: the plan decides the count again.
       onMouseDown={(event) => {
@@ -451,6 +458,7 @@ export function CountBox({
           onClick={(event) => {
             glyph(event);
             if (view.ruleFixed || !wasClick(event) || checklistLocked()) return;
+            sfxClick();
             setRuleMenu(ruleMenu ? undefined : anchorOf(event.currentTarget));
           }}
         >
@@ -485,6 +493,40 @@ export function CountBox({
         />
       ) : null}
     </div>
+  );
+}
+
+/**
+ * The programmed circuit, a small badge in the well's top-left corner: the circuit's own icon with its number on it
+ * (`::after`, from `data-n`, in the card's font), never dimmed. Its tip says "Circuit 24".
+ */
+export function CircuitBadge({
+  nodeId,
+  circuit,
+}: {
+  nodeId: string;
+  circuit: NonNullable<CleanCardView["circuit"]>;
+}) {
+  const number = circuitNumber(circuit);
+  if (!circuit.resource && number === undefined) return null;
+  return (
+    <span
+      className="cc-circuit"
+      data-n={number}
+      {...tipAttrs({ id: `${nodeId}|circuit`, title: number ? `Circuit ${number}` : "Circuit" })}
+    >
+      {circuit.resource ? (
+        <ResourceIcon
+          itemZoom={1.5}
+          resource={{ ...circuit.resource, amount: 1, chance: undefined }}
+          bare
+          tooltip={false}
+          showAmount={false}
+          showConsumedState={false}
+          className="cc-circuit-icon"
+        />
+      ) : null}
+    </span>
   );
 }
 
@@ -804,6 +846,7 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
       data-selected={view.selected ? "" : undefined}
       data-cannot-run={view.cannotRun ? "" : undefined}
       data-unset={view.unset ? "" : undefined}
+      data-tone={frameTone(view.foot)}
       onPointerDownCapture={onPointerDownCapture}
     >
       <div className="cc-head">
@@ -960,19 +1003,7 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
             className="cc-machine"
           />
         ) : null}
-        {view.circuit ? (
-          view.circuit.resource ? (
-            <ResourceIcon
-              itemZoom={1.5}
-              resource={{ ...view.circuit.resource, amount: 1, chance: undefined }}
-              bare
-              tooltip={false}
-              showAmount={false}
-              showConsumedState={false}
-              className="cc-circuit"
-            />
-          ) : null
-        ) : null}
+        {view.circuit ? <CircuitBadge nodeId={view.nodeId} circuit={view.circuit} /> : null}
         <CountBox
           view={view.count}
           tip={countRowsTip(view, tipFacts.shared)}

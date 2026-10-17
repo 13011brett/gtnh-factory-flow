@@ -18,9 +18,11 @@ import type {
   PlanSolveExtras,
   PlanTerminal,
   PlanUpTo,
+  PlanUpToLoop,
   PortKey,
   PortRef,
   Shortfall,
+  UpToLoop,
   UpToReadout,
 } from "../types";
 import type { PlanModel } from "./model";
@@ -182,6 +184,7 @@ export function readAnswer(model: PlanModel, answer: Answer): PlanReading {
   }
 
   const upTo = readUpTo(model, solution.upTo ?? []);
+  const loops = readLoops(model, solution.upToLoops ?? []);
   const shortfalls = readShortfalls(model, (solution.drawers ?? EMPTY_DRAWERS).shortfalls);
   const unneeded = solution.unneeded.filter((id) => model.machines.has(id) && !model.hidden.has(id));
   const notes: Note[] = [...solution.notes, ...alternatives.notes];
@@ -198,6 +201,7 @@ export function readAnswer(model: PlanModel, answer: Answer): PlanReading {
     edgeFlows,
     extras: {
       ...(Object.keys(upTo).length > 0 ? { upTo } : {}),
+      ...(loops.length > 0 ? { loops } : {}),
       ...(shortfalls.length > 0 ? { shortfalls } : {}),
       forced,
       leftovers,
@@ -238,6 +242,23 @@ export function readUpTo(model: PlanModel, readouts: readonly UpToReadout[]): Re
     };
   }
   return out;
+}
+
+/** The Up to rings with cards for nodes (once each), rows for ports and their resources (once each). */
+export function readLoops(model: PlanModel, loops: readonly UpToLoop[]): PlanUpToLoop[] {
+  const cardOf = (id: Id): Id => model.machines.get(id)?.owner ?? sectionOwnerId(id);
+  return loops.map((loop) => {
+    const rows = loop.ports.flatMap((ref) => {
+      const row = model.row(ref);
+      return row ? [row] : [];
+    });
+    return {
+      kind: loop.kind,
+      cards: [...new Set(loop.nodes.map(cardOf))],
+      portKeys: rows.map((row) => row.portKey),
+      resourceKeys: [...new Set(rows.map((row) => row.key))],
+    };
+  });
 }
 
 /** Drawers the answer falls short of, with the limiting machines turned into cards (first seen first, once each). */

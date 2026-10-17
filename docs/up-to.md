@@ -133,11 +133,27 @@ The pools below their capacity are read first, in pool order, then those at it.
 
 Islands: each island's read-out is its own; `solvePlan` concatenates them, sorted by `node`.
 
-## What the board shows (`PlanSolveExtras.upTo`, `shortfalls`)
+### Loops (`SolutionView.upToLoops`)
+
+Old Build's dead loop and clog lock (`death-spiral.ts`, `clog-lock.ts`), found once every pool's reason is known, a pure
+graph over the read-out and the model's networks (no LP, no budget). A pool blames the Up to pools on the wire network of
+its `port` and `tied` ports: a STARVED pool those that make what it is short of, a CLOGGED or UNUSED pool those that take
+what it cannot get rid of. A ring is a strongly connected part of that relation (a pool blaming itself counts):
+
+- **DEAD_LOOP**: every member STARVED. A recycling loop nothing feeds; the fix is to feed it.
+- **CLOG_LOCK**: every member CLOGGED or UNUSED. Frozen by its own surplus; the fix is a drawer.
+
+Each is `UpToLoop { kind, nodes, ports }`: `nodes` the members' `node` in pool order, `ports` the members' blaming ports
+that lie on the ring's edges, member by member. Rings are sorted by their first member's `node` (`compareIds`), merged
+across islands the same way, and absent when there are none. The board reads them as `PlanSolveExtras.loops`
+(`PlanUpToLoop { kind, cards, portKeys, resourceKeys }`: card ids once each, the rows, their resources once each).
+
+## What the board shows (`PlanSolveExtras.upTo`, `loops`, `shortfalls`)
 
 The adapter maps each read-out to the card's id (`PlanUpTo`: rows as `PortKey`, the resource as `kind:id`, upstream as
-card ids), and every shortfall to `PlanShortfall` with the limiting cards. `NodeThroughputResult.utilization` is
-reached / capacity for an Up to card; `status` is `bottleneck` for BOTTLENECK, `underutilized` below the count.
+card ids), each ring to `PlanUpToLoop`, and every shortfall to `PlanShortfall` with the limiting cards.
+`NodeThroughputResult.utilization` is reached / capacity for an Up to card; `status` is `bottleneck` for BOTTLENECK,
+`underutilized` below the count.
 
 The card (pass 3): under the machine what runs, big and white ("×18.2"), and what you set, small, the number gold ("up
 to 24"; click the number to type, the wheel steps it, click the rule word for Any, Up to, Exactly). Along the foot one

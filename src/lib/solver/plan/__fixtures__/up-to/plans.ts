@@ -438,6 +438,63 @@ export const twoFullOutputs = (): SolveInput =>
     [upTo(["n"], 2)],
   );
 
+/**
+ * A recycling ring of `n` Up to 1 machines nothing feeds (`${prefix}0`: x0 -> x1, ..., the last back to x0 at half a
+ * craft's worth): every member starved by the one before it, a dead loop (with `n` 1, a machine fed by its own output).
+ */
+export const deadRing = (n: number, prefix = "r"): SolveInput => {
+  const ids = Array.from({ length: n }, (_, k) => `${prefix}${k}`);
+  return plan(
+    ids.map((id, k) =>
+      machine(
+        id,
+        [port(k, `x${k}`)],
+        [port((k + 1) % n, `x${(k + 1) % n}`, k === n - 1 ? 0.5 : 1)],
+      ),
+    ),
+    ids.map((id, k) => edge(`${prefix}w${k}`, id, 0, ids[(k + 1) % n]!, 0)),
+    ids.map((id) => upTo([id], 1)),
+  );
+};
+
+/**
+ * a (x and free ore -> y) and b (y -> 2 x), both Up to 1, in a ring: b makes twice the x a takes, with nowhere for the
+ * rest to go, so neither runs: a clog lock (the fix is a drawer on b's x).
+ */
+export const clogRing = (): SolveInput =>
+  plan(
+    [
+      machine("a", [port(1, "x"), port(9, "ore")], [port(2, "y")]),
+      machine("b", [port(2, "y")], [port(1, "x", 2)]),
+    ],
+    [edge("y", "a", 0, "b", 0), edge("x", "b", 0, "a", 0)],
+    [upTo(["a"], 1), upTo(["b"], 1)],
+  );
+
+/** e (Exactly 1) -> a (Up to 2) -> b (Up to 2): both starved, b by a, a by e; no ring. */
+export const starvedChain = (): SolveInput =>
+  plan(
+    [
+      machine("a", [port(1, "x")], [port(2, "y")]),
+      machine("b", [port(2, "y")], [port(3, "z")]),
+      machine("e", [], [port(1, "x")], 1),
+    ],
+    [edge("x", "e", 0, "a", 0), edge("y", "a", 0, "b", 0)],
+    [upTo(["a"], 2), upTo(["b"], 2)],
+  );
+
+/** A dead ring of two (a0, a1) and one of three (b0, b1, b2), two islands. */
+export const twoRings = (): SolveInput => {
+  const one = deadRing(2, "a");
+  const two = deadRing(3, "b");
+  return {
+    ...one,
+    machines: [...one.machines, ...two.machines],
+    edges: [...one.edges, ...two.edges],
+    pools: [...one.pools, ...two.pools],
+  };
+};
+
 export const FIXTURES: Record<string, () => SolveInput> = {
   "chain, second slower": () => chain(2, 1),
   "chain, first slower": () => chain(2, 3),
@@ -468,6 +525,12 @@ export const FIXTURES: Record<string, () => SolveInput> = {
   "two producers": twoProducers,
   "two short inputs": twoShortInputs,
   "two full outputs": twoFullOutputs,
+  "dead ring of one": () => deadRing(1),
+  "dead ring of two": () => deadRing(2),
+  "dead ring of three": () => deadRing(3),
+  "clog ring": clogRing,
+  "starved chain": starvedChain,
+  "two rings": twoRings,
 };
 
 /** e (Exactly 1) and p (Up to 2) feed c; a drawer asks 5 of c's output; f (Exactly 1) is a second pin on the island. */

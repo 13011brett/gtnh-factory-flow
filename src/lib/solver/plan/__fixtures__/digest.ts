@@ -99,6 +99,16 @@ export function solutionDigest(s: SolutionView): Record<string, unknown> {
     spares: s.spares.map(leftover),
     // The Up to read-out only when the plan has Up to pools: every golden before it reads the same.
     ...(s.upTo !== undefined ? { upTo: s.upTo.map(upToReadout) } : {}),
+    // Its rings only when there are some: every golden before them reads the same.
+    ...(s.upToLoops !== undefined
+      ? {
+          upToLoops: s.upToLoops.map((l) => ({
+            kind: l.kind,
+            nodes: l.nodes,
+            ports: l.ports.map(port),
+          })),
+        }
+      : {}),
   };
 }
 

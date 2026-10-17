@@ -255,9 +255,26 @@ export interface UpToReadout {
   upstream?: Id[];
 }
 
+/**
+ * A ring of Up to pools that blame each other (docs/up-to.md, "Loops"; old Build's dead loop and clog lock):
+ * - DEAD_LOOP: every member is STARVED, and each one's short input is made by the next (a recycling loop that nothing
+ *   feeds; the fix is to feed it).
+ * - CLOG_LOCK: every member is CLOGGED or UNUSED, and each one's full output is taken by the next (frozen by its own
+ *   surplus; the fix is a drawer).
+ */
+export interface UpToLoop {
+  kind: "DEAD_LOOP" | "CLOG_LOCK";
+  /** The members' `node`, in pool order. */
+  nodes: Id[];
+  /** The members' blaming ports (`port`, `tied`) that lie on the ring's edges, member by member. */
+  ports: PortRef[];
+}
+
 export interface SolutionView {
   /** Up to pools only, by `node` (`compareIds`). Absent when the plan has none. */
   upTo?: UpToReadout[];
+  /** The Up to rings, by their first member's `node` (`compareIds`). Absent when there are none. */
+  upToLoops?: UpToLoop[];
   /** Crafts/s, every machine (0 for idle). */
   extentsPerSecond: Record<Id, number>;
   /** extent * durTicks / 20, fractional. */
@@ -451,6 +468,17 @@ export interface PlanUpTo {
   upstream?: Id[];
 }
 
+/** An Up to ring as the board shows it (`UpToLoop` in the website's words). */
+export interface PlanUpToLoop {
+  kind: "DEAD_LOOP" | "CLOG_LOCK";
+  /** The members' card ids, once each, in the ring's member order. */
+  cards: Id[];
+  /** The rows on the ring that hold its members back (the members' blaming ports). */
+  portKeys: PortKey[];
+  /** `kind:id` of those rows' resources, once each, in row order. */
+  resourceKeys: string[];
+}
+
 /** A drawer whose rule the answer cannot keep, and what holds it back, in card ids. */
 export interface PlanShortfall {
   drawerId: Id;
@@ -466,6 +494,8 @@ export interface PlanShortfall {
 export interface PlanSolveExtras {
   /** Every Up to card, by card id (a shared card's whole pool under the card's id). Absent when none. */
   upTo?: Record<Id, PlanUpTo>;
+  /** The Up to rings (dead loops and clog locks), in the engine's order. Absent when none. */
+  loops?: PlanUpToLoop[];
   /** Drawers the answer falls short of, with what holds each back. Absent when none. */
   shortfalls?: PlanShortfall[];
   forced: PlanForced[];

@@ -24,7 +24,7 @@ const RATE_ORDER: RateUnit[] = ["tick", "second", "minute", "hour"];
 const RATE_LABEL: Record<string, string> = { tick: "/t", second: "/s", minute: "/min", hour: "/hr", eu: "/s" };
 
 /** This strip has fewer keys than the top bar: it tightens at its own width (its own px); its two groups wrap by themselves. */
-const STRIP_FIT = { tightBelow: 390, wrappedBelow: 0 } as const;
+const STRIP_FIT = { tightBelow: 390, foldedBelow: 0 } as const;
 
 /**
  * The board's toolbar, along the top of the board between the overview and the items list: what edits or views the

@@ -559,45 +559,77 @@
   margin-left: 4px;
 }
 
+/* ---- The top bar's keys (ModBar) ------------------------------------------- */
+/* Flat, as the plan tabs and + are (the bevelled keys are the board's: its toolbar, the library's drops): the tab's
+   ground, muted ink going white when hovered; raised as the open tab is while open. The picture keys and the account's
+   face sit bare on the bar until hovered. Not on a phone, whose bar keeps its bigger keys. */
+:root:not([data-compact]) .mb[data-mod-bar] {
+  gap: 2px;
+}
+:root:not([data-compact]) .mb[data-mod-bar] > .mb-key {
+  height: 15px;
+  margin-top: 1px;
+  background: #1c1e22;
+  color: var(--mc-muted);
+  box-shadow: none;
+}
+:root:not([data-compact]) .mb[data-mod-bar] > .mb-key[data-icon] {
+  background: none;
+}
+:root:not([data-compact]) .mb[data-mod-bar] > .mb-key:hover {
+  background: #2d2f35;
+  color: #fff;
+}
+:root:not([data-compact]) .mb[data-mod-bar] > .mb-key[data-open] {
+  height: 16px;
+  margin-top: 0;
+  padding-top: 1px;
+  background: linear-gradient(#52545c 0 1px, #5a5c65 1px 2px, var(--mc-frame) 2px);
+  color: #fff;
+  box-shadow:
+    inset 1px 0 0 var(--mc-ring),
+    inset -1px 0 0 var(--mc-ring);
+}
+:root:not([data-compact]) .mb[data-mod-bar] > .mb-key[data-off] {
+  color: var(--mc-off);
+}
+:root:not([data-compact]) .mb[data-mod-bar] > .mb-key[data-off]:hover {
+  background: #1c1e22;
+}
+:root:not([data-compact]) .mb[data-mod-bar] > .mb-key.mb-gap {
+  margin-left: 8px;
+}
+:root:not([data-compact]) .mb[data-mod-bar]:not([data-fit="roomy"]) > .mb-key.mb-gap {
+  margin-left: 4px;
+}
+
 /* ---- A narrow bar (data-fit, set by ModBar's useBarFit) ------------------- */
-/* The tab strip always keeps room for its active tab and the +; the rest gives way. Tight: keys sit closer (Non-recipe
-   is its bolt, Arrange its label's width, the faces two and a +N: ModBar). Wrapped: the keys take a second row under the
-   tabs, as on a phone. */
+/* Always one row. Tight: keys sit closer (Non-recipe is its bolt, Arrange its label's width, the faces two and a +N:
+   ModBar). Folded: Plans and Share are their pictures. The tabs give way past that: they scroll, down to their +. */
 .mt {
   min-width: 68px;
 }
-.mb-break {
-  display: none;
-}
 .mb[data-fit="tight"],
-.mb[data-fit="wrapped"] {
+.mb[data-fit="folded"] {
   gap: 2px;
 }
 .mb[data-fit="tight"] .mb-key:not([data-icon]),
-.mb[data-fit="wrapped"] .mb-key:not([data-icon]) {
+.mb[data-fit="folded"] .mb-key:not([data-icon]) {
   padding: 0 4px;
 }
 .mb[data-fit="tight"] .mb-key.mb-gap,
-.mb[data-fit="wrapped"] .mb-key.mb-gap {
-  margin-left: 3px;
+.mb[data-fit="folded"] .mb-key.mb-gap {
+  margin-left: 4px;
 }
 .mb[data-fit="tight"] .mb-key[data-glyph="bolt"],
-.mb[data-fit="wrapped"] .mb-key[data-glyph="bolt"] {
+.mb[data-fit="folded"] .mb-key[data-glyph="bolt"] {
   padding: 0 6px;
 }
-.mb[data-fit="wrapped"] {
-  height: auto;
-  flex-wrap: wrap;
-  row-gap: 1px;
-  padding: 2px 4px 3px;
+:root:not([data-compact]) .mb[data-mod-bar][data-fit="folded"] > .mt {
+  min-width: 18px;
 }
-.mb[data-fit="wrapped"] .mb-break {
-  display: block;
-  flex: 0 0 100%;
-  height: 0;
-}
-:root[data-compact] .mb-break {
-  display: none !important;
+:root:not([data-compact]) .mb[data-mod-bar][data-fit="folded"] > .mb-key[data-icon] {
+  width: 16px;
 }
 
 /* The account key: the account's face, initials in its colour, square and flat as the live faces. */

@@ -59,6 +59,8 @@ interface MockNode {
   count: number;
   /** A pin (`solvePin`) the player set. */
   pin?: number;
+  /** The pin is Exactly (forced flows make up its gaps); without it, Up to. */
+  exact?: boolean;
   portRates?: Record<string, number>;
   x: number;
   y: number;
@@ -127,7 +129,7 @@ function build(spec: MockSpec): MockPlan {
     overclockTier: "LV",
     enabled: true,
     position: { x: n.x, y: n.y },
-    ...(n.pin !== undefined ? { solvePin: n.pin, solvePinExact: true } : {}),
+    ...(n.pin !== undefined ? { solvePin: n.pin, ...(n.exact ? { solvePinExact: true } : {}) } : {}),
     ...(n.portRates ? { portRates: n.portRates } : {}),
   }));
   const storages: FactoryStorage[] = spec.drawers.map((d) => ({
@@ -309,10 +311,10 @@ export const mockForced: MockPlan = build({
     { id: "Coal Maker", inputs: [["Wood", 1]], outputs: [["Coal", 1]] },
   ],
   nodes: [
-    { id: "mac", recipe: "Macerator", count: 3, pin: 3, x: 0, y: 0 },
+    { id: "mac", recipe: "Macerator", count: 3, pin: 3, exact: true, x: 0, y: 0 },
     { id: "furn", recipe: "Furnace", count: 1, x: 480, y: 0 },
     { id: "wash", recipe: "Slag Washer", count: 0.5, x: 960, y: 120 },
-    { id: "coal", recipe: "Coal Maker", count: 0.5, pin: 0.5, x: 0, y: 300 },
+    { id: "coal", recipe: "Coal Maker", count: 0.5, pin: 0.5, exact: true, x: 0, y: 300 },
   ],
   drawers: [
     { id: "ore", item: "Iron Ore", kind: "source", x: -240, y: 0 },
@@ -417,10 +419,10 @@ export const mockLeftovers: MockPlan = build({
     { id: "Crusher", inputs: [["Tin Ore", 1]], outputs: [["Tin Dust", 2]] },
   ],
   nodes: [
-    { id: "alloy", recipe: "Alloy Smelter", count: 1, pin: 1, x: 480, y: 0 },
-    { id: "alloy2", recipe: "Alloy Smelter", count: 1, pin: 1, x: 480, y: 300 },
-    { id: "crush", recipe: "Crusher", count: 1, pin: 1, x: 0, y: 600 },
-    { id: "crush2", recipe: "Crusher", count: 1, pin: 1, x: 480, y: 600 },
+    { id: "alloy", recipe: "Alloy Smelter", count: 1, pin: 1, exact: true, x: 480, y: 0 },
+    { id: "alloy2", recipe: "Alloy Smelter", count: 1, pin: 1, exact: true, x: 480, y: 300 },
+    { id: "crush", recipe: "Crusher", count: 1, pin: 1, exact: true, x: 0, y: 600 },
+    { id: "crush2", recipe: "Crusher", count: 1, pin: 1, exact: true, x: 480, y: 600 },
   ],
   drawers: [
     { id: "bronze", item: "Bronze Ingot", kind: "product", x: 960, y: 150 },

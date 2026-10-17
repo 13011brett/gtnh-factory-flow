@@ -29,12 +29,13 @@
  * who is starved.
  */
 import type { SolveContext } from "./context";
+import { loopsOf } from "./gates";
 import { compareIds } from "./ids";
 import { levelTerms, priceLevel, runModel, type ModelLp, type SolveResult } from "./lp";
 import { portKey } from "./model";
 import { keptUpTo, levelOf } from "./push";
 import { tradeModel, type Trades } from "./trade";
-import type { Id, PortRef, UpToReadout, UpToReason } from "./types";
+import type { Id, PortRef, UpToLoop, UpToReadout, UpToReason } from "./types";
 import { NUMERICS } from "./validate";
 
 /** The read-out's models per island, at the least... */
@@ -67,8 +68,13 @@ class Budget {
 
 type Why = { reason: UpToReason; port?: PortRef; tied?: PortRef[]; wants?: number };
 
-/** The read-out of every Up to pool, by `node`; undefined when the context has none. */
-export function readUpTo(ctx: SolveContext): UpToReadout[] | undefined {
+/**
+ * The read-out of every Up to pool, by `node`, and the rings they blame each other round (`findLoops`); undefined when
+ * the context has none.
+ */
+export function readUpTo(
+  ctx: SolveContext,
+): { readouts: UpToReadout[]; loops: UpToLoop[] } | undefined {
   const pools = ctx.upToPools;
   if (pools.length === 0) return undefined;
   const point = ctx.point!;
@@ -105,7 +111,82 @@ export function readUpTo(ctx: SolveContext): UpToReadout[] | undefined {
     const upstream = upstreamOf(ctx, p, readout.port, read);
     if (upstream.length > 0) readout.upstream = upstream;
   }
-  return [...read.values()].sort((a, b) => compareIds(a.node, b.node));
+  return {
+    readouts: [...read.values()].sort((a, b) => compareIds(a.node, b.node)),
+    loops: findLoops(ctx, read),
+  };
+}
+
+// ---------------------------------------------------------------------------
+// Loops: dead loops and clog locks
+// ---------------------------------------------------------------------------
+
+/**
+ * The rings of Up to pools that blame each other (old Build's dead loop and clog lock: `death-spiral.ts`,
+ * `clog-lock.ts`). A pool blames the Up to pools on the wire network of its `port` and `tied` ports: for a STARVED
+ * pool those that make what it is short of, for a CLOGGED or UNUSED one those that take what it cannot get rid of.
+ * A ring is a strongly connected part of that relation (a pool blaming itself counts) whose members all read STARVED
+ * (DEAD_LOOP) or all CLOGGED or UNUSED (CLOG_LOCK). Members in pool order, rings by their first member's `node`. A pure
+ * graph over the read-out and the model's networks: no model runs.
+ */
+export function findLoops(ctx: SolveContext, read: ReadonlyMap<number, UpToReadout>): UpToLoop[] {
+  const model = ctx.model;
+  const loops: UpToLoop[] = [];
+  for (const kind of ["DEAD_LOOP", "CLOG_LOCK"] as const) {
+    const starving = kind === "DEAD_LOOP";
+    const isMember = (r: UpToReadout) =>
+      starving ? r.reason === "STARVED" : r.reason === "CLOGGED" || r.reason === "UNUSED";
+    const members = ctx.upToPools.filter((p) => isMember(read.get(p)!));
+    if (members.length === 0) continue;
+    // What each member blames (its short inputs, or its full outputs), and the networks it makes on or takes from.
+    const blames = members.map((p) => {
+      const r = read.get(p)!;
+      const out: Array<{ ref: PortRef; network: number }> = [];
+      for (const ref of [r.port!, ...(r.tied ?? [])]) {
+        const m = model.machineIndex.get(ref.node);
+        const q =
+          m === undefined ? undefined : model.portLookup.get(portKey(m, ref.port, ref.input));
+        if (q !== undefined) out.push({ ref, network: model.portComponent[q]! });
+      }
+      return out;
+    });
+    const touches = members.map((p) => {
+      const own = new Set(model.pools[p]!.machines);
+      const networks = new Set<number>();
+      // A starved pool is fed by those that make there; a clogged one is held by those that take there.
+      model.connectedPorts.forEach((cp, q) => {
+        if (own.has(cp.machine) && cp.input !== starving) networks.add(model.portComponent[q]!);
+      });
+      return networks;
+    });
+    const next = members.map((_, k) => {
+      const to: number[] = [];
+      for (const { network } of blames[k]!) {
+        touches.forEach((networks, j) => {
+          if (networks.has(network) && !to.includes(j)) to.push(j);
+        });
+      }
+      return to.sort((a, b) => a - b);
+    });
+    const ring = loopsOf(next);
+    const byRing = new Map<number, number[]>();
+    members.forEach((_, k) => {
+      const list = byRing.get(ring[k]!) ?? [];
+      byRing.set(ring[k]!, list);
+      list.push(k);
+    });
+    for (const group of byRing.values()) {
+      if (group.length === 1 && !next[group[0]!]!.includes(group[0]!)) continue;
+      const ports: PortRef[] = [];
+      for (const k of group) {
+        for (const { ref, network } of blames[k]!) {
+          if (group.some((j) => touches[j]!.has(network))) ports.push(ref);
+        }
+      }
+      loops.push({ kind, nodes: group.map((k) => read.get(members[k]!)!.node), ports });
+    }
+  }
+  return loops.sort((a, b) => compareIds(a.nodes[0]!, b.nodes[0]!));
 }
 
 /** A STARVED pool's short port (its `port` or a `tied` one), as a connected port: unwired ones have no network. */

@@ -23,6 +23,7 @@ import type {
   PortRef,
   SolutionView,
   SolveInput,
+  UpToLoop,
   UpToReadout,
 } from "./types";
 import { NUMERICS } from "./validate";
@@ -275,12 +276,13 @@ function wiringDiagnostics(ctx: SolveContext, tol: number, terminalIn: External[
 
 /**
  * The view over the committed point (`SolutionView.of`). `upTo` is the Up to read-out (`readout.ts`, or the islands'
- * read-outs merged), absent when the plan has no Up to pool.
+ * read-outs merged), absent when the plan has no Up to pool; `upToLoops` its rings, absent when there are none.
  */
 export function buildSolutionView(
   ctx: SolveContext,
   spares: Leftover[] = [],
   upTo?: UpToReadout[],
+  upToLoops?: UpToLoop[],
 ): SolutionView {
   const model = ctx.model;
   const point = ctx.point!;
@@ -331,6 +333,7 @@ export function buildSolutionView(
   for (const f of point.flows) totalInternalFlow += f;
   return {
     ...(upTo !== undefined ? { upTo } : {}),
+    ...(upToLoops !== undefined && upToLoops.length > 0 ? { upToLoops } : {}),
     extentsPerSecond,
     machineCounts,
     edgeFlowsPerSecond,
@@ -393,7 +396,8 @@ export function solvePiece(input: SolveInput, ext: CoreExtensions = {}): Piece {
     complete: true,
     notes: [],
   };
-  const solution = buildSolutionView(ctx, finished?.spares ?? [], readUpTo(ctx));
+  const read = readUpTo(ctx);
+  const solution = buildSolutionView(ctx, finished?.spares ?? [], read?.readouts, read?.loops);
   return { ctx, answer: { kind: "solved", solution, alternatives } };
 }
 

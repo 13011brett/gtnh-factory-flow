@@ -23,6 +23,8 @@ import {
   cappedDrawers,
   chain,
   chain3,
+  clogRing,
+  deadRing,
   CORPUS_UP_TO,
   everyCountUpTo,
   exactConsumer,
@@ -33,11 +35,13 @@ import {
   pinDiagnosis,
   sharedPool,
   sharedProducer,
+  starvedChain,
   toppedLoop,
   toppedLoopTrading,
   twoFullOutputs,
   twoIslands,
   twoProducers,
+  twoRings,
   twoShortInputs,
   twoSided,
   unreachableDrawer,
@@ -430,6 +434,43 @@ describe("Up to: the reasons weigh the inputs against the outputs, as old Build 
     for (const p of ["p1", "p2"]) {
       expect(readoutOf(s, p)).toMatchObject({ reason: "BOTTLENECK", wants: expect.closeTo(2, 9) });
     }
+  });
+});
+
+describe("Up to: rings that blame each other (dead loops and clog locks)", () => {
+  it("a recycling ring nothing feeds is a DEAD_LOOP, two and three long, and a machine fed by itself", () => {
+    for (const n of [1, 2, 3]) {
+      const s = solved(deadRing(n)).solution;
+      const ids = Array.from({ length: n }, (_, k) => `r${k}`);
+      for (const id of ids) expect(readoutOf(s, id).reason).toBe("STARVED");
+      expect(s.upToLoops).toEqual([
+        { kind: "DEAD_LOOP", nodes: ids, ports: ids.map((id) => ref(id, 0, true)) },
+      ]);
+    }
+  });
+
+  it("a byproduct ring that fills its own way out is a CLOG_LOCK of its full outputs", () => {
+    const s = solved(clogRing()).solution;
+    expect(readoutOf(s, "a").reason).toBe("UNUSED");
+    expect(readoutOf(s, "b").reason).toBe("UNUSED");
+    expect(s.upToLoops).toEqual([
+      { kind: "CLOG_LOCK", nodes: ["a", "b"], ports: [ref("a", 0, false), ref("b", 0, false)] },
+    ]);
+  });
+
+  it("a starved chain is no ring: no `upToLoops`", () => {
+    const s = solved(starvedChain()).solution;
+    expect(readoutOf(s, "a").reason).toBe("STARVED");
+    expect(readoutOf(s, "b").reason).toBe("STARVED");
+    expect("upToLoops" in s).toBe(false);
+  });
+
+  it("two islands: each island's rings, merged by their first member", () => {
+    const s = solved(twoRings()).solution;
+    expect(s.upToLoops!.map((l) => [l.kind, l.nodes])).toEqual([
+      ["DEAD_LOOP", ["a0", "a1"]],
+      ["DEAD_LOOP", ["b0", "b1", "b2"]],
+    ]);
   });
 });
 

@@ -21,6 +21,7 @@ import type {
   Note,
   PortRef,
   SolveInput,
+  UpToLoop,
   UpToReadout,
 } from "./types";
 
@@ -86,6 +87,7 @@ export function solvePlan(
   const choiceNotes: Note[] = [];
   const spares: Leftover[] = [];
   const upTo: UpToReadout[] = [];
+  const upToLoops: UpToLoop[] = [];
   let complete = true;
   for (const piece of pieces) {
     const c = piece.ctx;
@@ -122,6 +124,7 @@ export function solvePlan(
     complete &&= answer.alternatives.complete;
     spares.push(...answer.solution.spares);
     upTo.push(...(answer.solution.upTo ?? []));
+    upToLoops.push(...(answer.solution.upToLoops ?? []));
   }
   whole.commit(whole.outcome(extents, flows, externals, support));
   // Each option keeps its island's key: a stored choice applies to the islands its anchors sit on.
@@ -135,7 +138,8 @@ export function solvePlan(
     );
   spares.sort((a, b) => comparePortRef(decisionOf(a), decisionOf(b)));
   upTo.sort((a, b) => compareIds(a.node, b.node));
-  const solution = buildSolutionView(whole, spares, upTo.length > 0 ? upTo : undefined);
+  upToLoops.sort((a, b) => compareIds(a.nodes[0]!, b.nodes[0]!));
+  const solution = buildSolutionView(whole, spares, upTo.length > 0 ? upTo : undefined, upToLoops);
   return {
     kind: "solved",
     solution,

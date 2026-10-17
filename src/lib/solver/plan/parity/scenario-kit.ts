@@ -124,7 +124,8 @@ export function buildScenario(s: Scenario): { project: FactoryProject; placement
       overclockTier: custom || m.kind === "tank" ? "NONE" : "LV",
       enabled: true,
       position: { x: 0, y: 0 },
-      ...(pin !== undefined ? { solvePin: pin } : {}),
+      // The recorded answers are the mod's, which still pins exactly (docs/up-to.md: until both sides agree).
+      ...(pin !== undefined ? { solvePin: pin, solvePinExact: true } : {}),
       ...(Object.keys(portRates).length > 0 ? { portRates } : {}),
       ...(group ? { extraRecipes: group.sections.slice(1).map((id) => ({ recipeId: `r${id}` })) } : {}),
       ...(custom

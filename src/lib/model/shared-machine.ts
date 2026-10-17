@@ -95,9 +95,10 @@ export function sectionNodeView(node: FactoryNode, section: number): FactoryNode
   if (!extra) {
     return node;
   }
-  const { extraRecipes: _extras, solvePin: _pin, targetOutput: _target, ...rest } = node;
+  const { extraRecipes: _extras, solvePin: _pin, solvePinExact: _exact, targetOutput: _target, ...rest } = node;
   void _extras;
   void _pin;
+  void _exact;
   void _target;
   return {
     ...rest,

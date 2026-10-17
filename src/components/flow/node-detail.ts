@@ -28,14 +28,14 @@ export const NODE_DETAIL_GLANCE = 1;
 export type NodeDetailLevel = typeof NODE_DETAIL_FULL | typeof NODE_DETAIL_GLANCE;
 
 /**
- * Below this the board drops to the glance view: where a card's names fall to about five pixels and stop being
- * readable (0.5 of a 1:1 interface; the default interface's 1.17 puts it near a 0.59 board zoom). It was the mod's
- * own threshold (RecipeCard.GLANCE_ZOOM, 0.42); the website steps sooner now, since the glance face shows the Up to
- * bar, and the mod follows (docs/up-to-mod-port.md).
+ * Below this the board drops to the glance view: well before a card's names get hard to read (0.65 of a 1:1
+ * interface; the default interface's 1.17 puts it near a 0.76 board zoom), since the glance face says what matters
+ * from further out (the machine, its count, the Up to bar). It was the mod's own threshold (RecipeCard.GLANCE_ZOOM,
+ * 0.42); the mod follows (docs/up-to-mod-port.md).
  */
-export const NODE_GLANCE_ENTER_ZOOM = 0.5;
+export const NODE_GLANCE_ENTER_ZOOM = 0.65;
 /** And above this it comes back. The gap is the anti-flicker dead zone. */
-export const NODE_GLANCE_LEAVE_ZOOM = 0.52;
+export const NODE_GLANCE_LEAVE_ZOOM = 0.67;
 
 /**
  * The level for this zoom, given the level currently in force.

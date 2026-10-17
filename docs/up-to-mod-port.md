@@ -42,7 +42,7 @@ Where things are:
       of the prompts' clock (steady under reduced motion), and the wires along its rows lit in the tone. Dead loop amber
       `#E0A63A`, clog lock purple `#B49CF0`.
 - [ ] A setting for the reason outlines: Settings, Board, "Problem outlines" (`problemOutlines`), on by default, about line "Draws a card's edge in its bar's colour." Off keeps the normal edge; the bar, the lit port and the loops' outline stay.
-- [ ] The zoomed-out view starts at a zoom of 0.5 (back above 0.52; it was 0.42) and its face shows the Up to bar along the foot: fill and track in the reason's tone, a bottleneck filled against what the line wants, the reason word on the bar while it reads; the count moves up above the bar.
+- [ ] The zoomed-out view starts at a zoom of 0.65 (back above 0.67; it was 0.42) and its face shows the Up to bar along the foot: fill and track in the reason's tone, a bottleneck filled against what the line wants, the reason word on the bar while it reads; the count moves up above the bar.
 
 ## Overview
 

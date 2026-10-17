@@ -317,6 +317,40 @@ it("outlines a problem card in its bar's tone, and leaves Any and a full card al
   expect(forced.getAttribute("data-tone")).toBe("forced");
 });
 
+it("lights the row its reason names", () => {
+  const view = upToView();
+  const lit = {
+    ...view,
+    inputs: view.inputs.map((p, i) => (i === 0 ? { ...p, why: "starved" as const } : p)),
+  };
+  const { container } = renderCard(lit);
+  const rows = [...container.querySelectorAll(".cc-row[data-port]")];
+  expect(rows.map((row) => row.getAttribute("data-why"))).toEqual([
+    "starved",
+    null,
+    null,
+    null,
+    null,
+  ]);
+});
+
+it("keeps each editor the size of what it replaces", () => {
+  const { container } = renderCard(upToView());
+  fireEvent.click(container.querySelector(".cc-count")!);
+  const count = container.querySelector<HTMLInputElement>(".cc-count input")!;
+  // "24": three characters and the box's padding, not the input's own wide default.
+  expect(count.style.width).toBe("calc(3ch + 8px)");
+  fireEvent.change(count, { target: { value: "1250" } });
+  expect(count.style.width).toBe("calc(5ch + 8px)");
+  fireEvent.blur(count);
+  const amps = container.querySelector<HTMLElement>('.cc-head .cc-chip:not([aria-label^="Tier"])')!;
+  Object.defineProperty(amps, "offsetWidth", { configurable: true, value: 48 });
+  fireEvent.click(amps);
+  expect(amps.hasAttribute("data-editing")).toBe(true);
+  expect(amps.style.width).toBe("48px");
+  expect(amps.querySelector("input")!.getAttribute("size")).toBe("1");
+});
+
 it("puts the circuit in the well's corner: its icon and number, no row", () => {
   const { container } = renderCard(referenceView());
   const badge = container.querySelector<HTMLElement>(".cc-pic > .cc-circuit")!;
@@ -339,8 +373,6 @@ it("draws the bar as one element: tone, word, line and fraction", () => {
   expect(foot.textContent).toBe("short of Resource input 1");
   expect(foot.style.getPropertyValue("--fill")).toMatch(/^\d+px$/);
   expect(foot.hasAttribute("data-tip")).toBe(true);
-  // The short port is not lit.
-  expect(container.querySelector(".cc-row[data-lit]")).toBeNull();
 });
 
 it("marks an unwired port and a card that cannot run", () => {

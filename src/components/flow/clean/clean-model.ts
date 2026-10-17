@@ -40,6 +40,7 @@ import { energyHatchTypeExistsAtTier } from "@/lib/machines/energy-hatches";
 import { carryMachineVoltage } from "@/lib/solver/hatch-input";
 import { getVoltageTierMaxEuT } from "@/lib/model/tiers";
 import { makePortKey, parsePortKey } from "@/lib/solver/plan/port-key";
+import { parseSectionNodeId, sectionHandleId } from "@/lib/model/shared-machine";
 import type { PlanUpTo, UpToReason } from "@/lib/solver/plan/types";
 import { PIN_RULE_LABEL, pinRuleOf, withPinRule, type PinRule } from "@/lib/model/pin-rule";
 import { getMachineStructureArt } from "@/lib/power/structure-art";
@@ -89,6 +90,8 @@ export interface CleanPortView {
   resourceKey: string;
   /** What the solve sends out of / brings into the plan at this port with no drawer. */
   forced?: { number: string; unit: string };
+  /** The row an Up to card's reason names (STARVED, CLOGGED, UNUSED): lit in the reason's colour. */
+  why?: FootTone;
 }
 
 export interface CleanChipView {
@@ -801,6 +804,37 @@ export function stateFrameTone(
   return undefined;
 }
 
+/**
+ * The rows an Up to card's reason names (docs/up-to.md): STARVED's short input, CLOGGED's or UNUSED's output, and the
+ * rows tied with it, each lit in the reason's colour (the bar's tone). FULL, BOTTLENECK, LIMITED and no reason light
+ * nothing. A row is matched by its port key, a shared machine's recipe by its handle's section prefix; a read-out
+ * with no port key falls back to the row of its resource on the reason's side.
+ */
+export function withReasonPorts(
+  ports: readonly CleanPortView[],
+  upTo: PlanUpTo | undefined,
+): CleanPortView[] {
+  const reason = upTo?.reason;
+  if (!upTo || (reason !== "STARVED" && reason !== "CLOGGED" && reason !== "UNUSED")) {
+    return [...ports];
+  }
+  const tone = FOOT_TONE[reason];
+  const side = reason === "STARVED" ? "input" : "output";
+  const named = new Set<string>();
+  for (const key of [upTo.portKey, ...(upTo.tied ?? [])]) {
+    const at = key ? parsePortKey(key) : undefined;
+    if (!at) continue;
+    const section = parseSectionNodeId(at.nodeId).section;
+    named.add(`${at.side === "i" ? "input" : "output"}|${sectionHandleId(section, at.handle)}`);
+  }
+  return ports.map((port) => {
+    const lit =
+      named.has(`${port.side}|${port.handleId}`) ||
+      (upTo.portKey === undefined && port.side === side && port.resourceKey === upTo.resourceKey);
+    return lit && !port.port.free ? { ...port, why: tone } : port;
+  });
+}
+
 /** A card's name by id, for the bar's tip (the full cards upstream of a starved one). */
 export function cardNameIn(
   project: { nodes: readonly FactoryNode[]; recipes: readonly Recipe[] },
@@ -985,11 +1019,14 @@ export function useCleanCardModel(
   }
   const strip = layoutStrip(rawChips);
 
-  const inputs = rails.inputs.map((port) =>
-    buildPortView(projectNode.id, port, projectNode, forcedAt),
+  // The rows an Up to card's reason names are lit in its colour (only while the card is Up to: `upTo` is its own).
+  const inputs = withReasonPorts(
+    rails.inputs.map((port) => buildPortView(projectNode.id, port, projectNode, forcedAt)),
+    countState.upTo,
   );
-  const outputs = rails.outputs.map((port) =>
-    buildPortView(projectNode.id, port, projectNode, forcedAt),
+  const outputs = withReasonPorts(
+    rails.outputs.map((port) => buildPortView(projectNode.id, port, projectNode, forcedAt)),
+    countState.upTo,
   );
   const foot = buildFootView(count, countState.upTo, { inputs, outputs }, (id) =>
     cardNameIn(liveProject, id),

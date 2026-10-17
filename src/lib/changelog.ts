@@ -51,6 +51,7 @@ export const CHANGELOG: ChangelogEntry[] = [
       "Old Build plans open with their counts as Up to, so they read like they used to.",
       "A drawer that falls short names the machine that holds it back.",
       "A card with a problem is outlined in its bar's colour.",
+      "The port that holds a card back is lit in its bar's colour.",
       "The circuit sits on the machine with its number.",
     ],
   },

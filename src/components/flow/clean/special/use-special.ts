@@ -70,6 +70,7 @@ import {
   layoutStrip,
   pinActions,
   useCleanCardModel,
+  withReasonPorts,
   type CleanCardContext,
   type CleanCardActions,
   type CleanCardView,
@@ -313,6 +314,11 @@ export function useSharedCardModel(data: RecipeNodeData, selected: boolean): Spe
   // The card's count and bar are its whole pool's, under the card's id; the bar reads every recipe's rows.
   const needed = machinesBySection.reduce((sum, n) => sum + n, 0);
   const { count, unset, upTo } = countView(projectNode, needed, plan);
+  // The rows its reason names, on every recipe (section 0's are the plain card's, lit already).
+  for (const entry of sections) {
+    entry.inputs = withReasonPorts(entry.inputs, upTo);
+    entry.outputs = withReasonPorts(entry.outputs, upTo);
+  }
   const foot = buildFootView(
     count,
     upTo,

@@ -237,7 +237,8 @@
   transform: rotate(180deg);
 }
 
-/* Flat tier and amps chips: tier colours, black or white label, no shadow. */
+/* Tier and amps chips are buttons: the tier's colours and a black or white label, raised by the old card's bevel (light
+   top-left, dark bottom-right); pressed, the bevel turns over and the label sinks a pixel. 20 px tall either way. */
 .cc-chip {
   flex: none;
   box-sizing: border-box;
@@ -255,12 +256,25 @@
   cursor: pointer;
   user-select: none;
   text-shadow: none;
+  box-shadow:
+    inset 2px 2px 0 rgba(255, 255, 255, 0.55),
+    inset -2px -2px 0 rgba(0, 0, 0, 0.45);
 }
 .cc-chip:hover {
   background: var(--chip-hover);
 }
-.cc-chip:active {
+.cc-chip:active:not([data-fixed]):not([data-editing]) {
   background: var(--chip-pressed);
+  line-height: 20px;
+  box-shadow:
+    inset 2px 2px 0 rgba(0, 0, 0, 0.45),
+    inset -2px -2px 0 rgba(255, 255, 255, 0.55);
+}
+/* Typing an amp count: the chip keeps its width (set as it opens) and sinks while the box is open. */
+.cc-chip[data-editing] {
+  box-shadow:
+    inset 2px 2px 0 rgba(0, 0, 0, 0.45),
+    inset -2px -2px 0 rgba(255, 255, 255, 0.3);
 }
 .cc-chip[data-underline] {
   text-decoration: underline;
@@ -599,6 +613,26 @@
   color: #c39b84;
 }
 
+/* The row an Up to card's reason names (STARVED's short input, CLOGGED's or UNUSED's output, and the rows tied with
+   it): the tile's edge and its name in the reason's colour, the foot bar's tones (pass 2's data-why). After the free
+   ends' colours so it wins over them. */
+.cc-card .cc-row[data-why] {
+  --cc-tile-edge: var(--cc-why);
+}
+.cc-card .cc-row[data-why] > .cc-pname,
+.cc-card .cc-row[data-why] > .cc-line > .cc-pname {
+  color: var(--cc-why);
+}
+.cc-row[data-why="starved"] {
+  --cc-why: #e0a63a;
+}
+.cc-row[data-why="clogged"] {
+  --cc-why: #6fb2d6;
+}
+.cc-row[data-why="unused"] {
+  --cc-why: #8a8e97;
+}
+
 /* ---- The machine's well ------------------------------------------------------ */
 
 /* The machine sits in a sunk well between the rails (pass 3), its picture over the count. At least six cells tall
@@ -741,9 +775,11 @@
   border-bottom-color: transparent;
   cursor: text;
 }
+/* The count's box: as wide as the number it replaces (set inline in ch), never wider than the well. */
 .cc-count input {
   box-sizing: border-box;
-  width: 48px;
+  min-width: 0;
+  max-width: 100%;
   height: 12px;
   margin: 0;
   padding: 0 3px;

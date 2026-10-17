@@ -7,12 +7,13 @@ import { calculatePlanBoardThroughput, projectForPlanBoard } from "./open";
 
 afterEach(() => setSolveCore(undefined));
 
-/** A stand-in core: every pinned machine at its pin, nothing flows. */
+/** A stand-in core: every pinned machine at its pin (an Up to pool at its capacity), nothing flows. */
 function pinsOnly(input: SolveInput): Answer {
   const machineCounts: Record<string, number> = {};
   const extentsPerSecond: Record<string, number> = {};
+  const upTo = new Map(input.pools.filter((p) => p.upTo && p.machines.length === 1).map((p) => [p.machines[0]!, p.capacity]));
   for (const m of input.machines) {
-    machineCounts[m.id] = m.countFixed ? m.machineCount : 0;
+    machineCounts[m.id] = m.countFixed ? m.machineCount : (upTo.get(m.id) ?? 0);
     extentsPerSecond[m.id] = (machineCounts[m.id]! * 20) / m.durationTicks;
   }
   return {
@@ -58,7 +59,7 @@ describe("a Build plan on the plan board", () => {
     expect(JSON.stringify(stored)).toBe(before);
     expect(stored.planMode).toBeUndefined();
     expect(result.plan).toBeDefined();
-    // every card's built count became its pin: the stand-in core runs each one
+    // every card's built count became an Up to pin: the stand-in core runs each one
     for (const node of stored.nodes) {
       if (node.enabled) {
         expect(result.nodes[node.id]!.theoreticalMachinesRequired).toBe(node.machineCount);

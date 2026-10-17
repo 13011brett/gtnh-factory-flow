@@ -74,7 +74,7 @@ export function openAsPlan(project: FactoryProject): PlanOpening {
   const details: string[] = [];
   const plural = (count: number, one: string, many = `${one}s`) => `${count} ${count === 1 ? one : many}`;
   if (origin === "build" && report.pinned > 0) {
-    details.push(`${plural(report.pinned, "card")} pinned at ${report.pinned === 1 ? "its count" : "their counts"}.`);
+    details.push(`${plural(report.pinned, "card")} set to up to ${report.pinned === 1 ? "its count" : "their counts"}.`);
   }
   if (report.portRates > 0) {
     details.push(`${plural(report.portRates, "rate")} set from ${report.portRates === 1 ? "a target" : "targets"}.`);

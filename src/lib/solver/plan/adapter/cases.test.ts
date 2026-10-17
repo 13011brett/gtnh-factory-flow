@@ -64,10 +64,10 @@ describe("shared machines", () => {
   const card = (extra = {}) => node("card", "a", { extraRecipes: [{ recipeId: "b" }], ...extra });
   const wires = [wire("e1", "card", "card", "y", { from: 0, to: 1 })];
 
-  it("a pinned card is one exact pool of its sections, none of them pinned alone", () => {
-    const { input } = run(project({ recipes, nodes: [card({ solvePin: 2 })], edges: wires }));
+  it("an Exactly card is one exact pool of its sections, none of them pinned alone", () => {
+    const { input } = run(project({ recipes, nodes: [card({ solvePin: 2, solvePinExact: true })], edges: wires }));
     expect(input.machines.map((m) => m.id)).toEqual(["card", "card#r1"]);
-    expect(input.pools).toEqual([{ machines: ["card", "card#r1"], capacity: 2, exact: true }]);
+    expect(input.pools).toEqual([{ machines: ["card", "card#r1"], capacity: 2, exact: true, upTo: false }]);
     expect(input.machines.every((m) => !m.countFixed)).toBe(true);
     // the wire joins the card's section 0 output to section 1's input
     expect(input.edges).toEqual([
@@ -117,11 +117,11 @@ describe("pins, custom rate, disabled cards", () => {
     createCustomRatePlaceholderRecipe("empty"),
   ];
 
-  it("a pin is a fixed fractional count; zero is not a pin", () => {
+  it("an Exactly pin is a fixed fractional count; zero is not a pin", () => {
     const { input } = run(
       project({
         recipes,
-        nodes: [node("p", "a", { solvePin: 2.5 }), node("z", "a", { solvePin: 0 })],
+        nodes: [node("p", "a", { solvePin: 2.5, solvePinExact: true }), node("z", "a", { solvePin: 0 })],
       }),
     );
     const p = input.machines.find((m) => m.id === "p")!;

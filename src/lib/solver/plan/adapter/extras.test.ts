@@ -11,7 +11,7 @@ afterEach(() => setSolveCore(undefined));
 function shortChain(extra: Parameters<typeof project>[0]["extra"] = {}) {
   return project({
     recipes: [recipe("rq", [], [["W", 1]]), recipe("rp", [["W", 1]], [["X", 1]]), recipe("rc", [["X", 1]], [["Y", 1]])],
-    nodes: [node("q", "rq", { solvePin: 1 }), node("p", "rp"), node("c", "rc", { solvePin: 2 })],
+    nodes: [node("q", "rq", { solvePin: 1, solvePinExact: true }), node("p", "rp"), node("c", "rc", { solvePin: 2, solvePinExact: true })],
     edges: [wire("w1", "q", "p", "W"), wire("w2", "p", "c", "X")],
     extra,
   });

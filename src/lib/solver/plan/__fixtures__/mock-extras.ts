@@ -127,7 +127,7 @@ function build(spec: MockSpec): MockPlan {
     overclockTier: "LV",
     enabled: true,
     position: { x: n.x, y: n.y },
-    ...(n.pin !== undefined ? { solvePin: n.pin } : {}),
+    ...(n.pin !== undefined ? { solvePin: n.pin, solvePinExact: true } : {}),
     ...(n.portRates ? { portRates: n.portRates } : {}),
   }));
   const storages: FactoryStorage[] = spec.drawers.map((d) => ({

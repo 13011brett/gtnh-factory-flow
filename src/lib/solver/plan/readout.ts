@@ -10,11 +10,13 @@
  *   pool's CLOGGED, not this one's BOTTLENECK (old Build's rule: a bottleneck has someone waiting on its output). An
  *   Exactly card on one of its output networks that a forced input still feeds wants more too: that input over its
  *   per-machine rate.
- * - Below it, with every other pool held at least at its level (free to rise, never to give way): a free supply at an
- *   input that raises it is STARVED, else a free sink at an output that does is CLOGGED (UNUSED at zero), else
- *   LIMITED. Inputs (then outputs) are tried all together first, and one by one only when that raises it. Others are
- *   held from below only: held at their levels from above too, a pool in a chain would be pinned from both sides (its
- *   feeder could not send more, its taker could not take more) and no single port could ever explain it.
+ * - Below it, with every other pool held at least at its level (free to rise, never to give way): free supply at its
+ *   inputs that raises it is STARVED, else a free sink at its outputs that does is CLOGGED (UNUSED at zero), else
+ *   LIMITED. Inputs (then outputs) are tried all together first, and one by one only when that raises it: `port` is
+ *   the first that raises it alone and `tied` the others that do; when only several together do, `port` is the first
+ *   of them in machine, then port order and `tied` the rest. Others are held from below only: held at their levels
+ *   from above too, a pool in a chain would be pinned from both sides (its feeder could not send more, its taker could
+ *   not take more) and no port could ever explain it.
  */
 import type { SolveContext } from "./context";
 import { compareIds } from "./ids";
@@ -224,8 +226,7 @@ function forcedDemand(ctx: SolveContext, pool: number): number {
   const model = ctx.model;
   const point = ctx.point!;
   const dust = NUMERICS.dust * ctx.solutionScaleOf(point);
-  const drawn = new Set<number>();
-  for (const row of model.drawers) for (const p of row.externalPorts) drawn.add(p);
+  const drawn = ctx.drawnPorts;
   const counted = new Set<number>();
   let demand = 0;
   for (const m of model.pools[pool]!.machines) {
@@ -383,7 +384,8 @@ function shortAt(
     if (port === null) port = f.ref;
     else tied.push(f.ref);
   }
-  if (port === null) return null;
+  // Only several together raise it: every one of them is short.
+  if (port === null) return { port: feeds[0]!.ref, tied: feeds.slice(1).map((f) => f.ref) };
   return tied.length > 0 ? { port, tied } : { port };
 }
 

@@ -3,6 +3,12 @@
  * as it can and sells as far downstream as it can: level by level, buying first (most steps first), then selling (most
  * steps first), it trades as little as it can at each level, holding every level before. What is held rides on
  * `Trades`, with the Up to push's bands (docs/up-to.md, `push.ts`), so every model of a support keeps all of it.
+ *
+ * With Up to pools a drawer on a wired port is the player's own end (a source drawer is supply, a product, byproduct or
+ * trash drawer a sink), as in old Build: its ports are no trade level, so the trades settle and hold only forced flow
+ * and the push may use the drawers freely; after the push the drawer stages (`settleDrawers`) draw from the sources as
+ * little as they can, then bank in the sinks as little as they can (old Build's "recycle before importing", "ship
+ * before banking"), each held like a trade level.
  */
 import type { SolveContext } from "./context";
 import {
@@ -35,11 +41,16 @@ export function measureLevel(
   return total;
 }
 
-/** The levels in the order AUTO settles them. */
+/**
+ * The levels in the order AUTO settles them (and the alternatives rank by). With Up to pools, a drawer's ports are none
+ * of them: what crosses there is not a trade.
+ */
 export function levels(ctx: SolveContext): Level[] {
   const byKey = new Map<number, number[]>();
   const model = ctx.model;
+  const drawerEnds = ctx.upToPools.length > 0;
   for (let p = 0; p < model.connectedPorts.length; p++) {
+    if (drawerEnds && ctx.drawnPorts.has(p)) continue;
     const buying = model.connectedPorts[p]!.input;
     // ascending key order = buying (0) before selling (1), then steps descending
     const key = (buying ? 0 : 1) * 4294967296 - model.portSteps[p]!;
@@ -149,4 +160,47 @@ export function settleTrades(
     );
   }
   return { ok: true, held };
+}
+
+/** The drawer stages' levels: the source drawers' wired ports, then the sinks', each only when there are any. */
+function drawerLevels(ctx: SolveContext): Level[] {
+  const sources = new Set<number>();
+  const sinks = new Set<number>();
+  for (const row of ctx.model.drawers) {
+    for (const p of row.externalPorts) (row.kind === "SOURCE" ? sources : sinks).add(p);
+  }
+  const out: Level[] = [];
+  for (const [buying, ports] of [
+    [true, sources],
+    [false, sinks],
+  ] as const) {
+    if (ports.size > 0) out.push({ buying, steps: 0, ports: [...ports].sort((a, b) => a - b) });
+  }
+  return out;
+}
+
+/**
+ * After the push (docs/up-to.md): the least the plan draws from its source drawers, then the least it banks in its sink
+ * drawers, with everything before held, each held where it was reached like a trade level. Returns `pushed` itself
+ * without Up to pools or wired drawers. A stage that finds nothing (numerics) stops where it is.
+ */
+export function settleDrawers(ctx: SolveContext, pushed: Trades): Trades {
+  if (ctx.upToPools.length === 0) return pushed;
+  let held = pushed;
+  for (const level of drawerLevels(ctx)) {
+    const lp = tradeModel(ctx, held);
+    for (const p of level.ports) lp.setExtCost(p, ctx.externalWeight(p));
+    const least = runModel(
+      ctx,
+      lp,
+      level.buying ? "least from source drawers" : "least into sink drawers",
+    );
+    if (!least.ok) return held;
+    held = holding(
+      held,
+      level,
+      heldAt(measureLevel(ctx, level, least.point.externals), least.point.extents),
+    );
+  }
+  return held;
 }

@@ -56,14 +56,18 @@ export function solutionScale(
   return Math.max(max, MIN_NORMAL);
 }
 
-/** Null when the point conserves, else the offending row as text. */
+/**
+ * Null when the point conserves, else the offending row as text. A negative counts once it is past dust of the point's
+ * scale, or of 1 when the point is smaller (as the conservation rows below): a point that is all but zero (every Up to
+ * card idle, solved by an engine without exact vertices) is all noise, and its noise is no negative.
+ */
 export function validatePoint(
   model: ModelData,
   extents: ArrayLike<number>,
   flows: ArrayLike<number>,
   externals: ArrayLike<number>,
 ): string | null {
-  const floor = -NUMERICS.dust * solutionScale(model, extents, flows, externals);
+  const floor = -NUMERICS.dust * Math.max(1, solutionScale(model, extents, flows, externals));
   for (let i = 0; i < extents.length; i++)
     if (!(extents[i]! >= floor)) return `negative extent ${extents[i]}`;
   for (let i = 0; i < flows.length; i++)

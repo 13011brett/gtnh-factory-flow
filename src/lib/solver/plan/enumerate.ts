@@ -12,7 +12,7 @@ import { comparePortRef } from "./ids";
 import { portKey } from "./model";
 import { fixedQuantity, gatesThatMayHelp } from "./probes";
 import { pushUpTo } from "./push";
-import { levels, measureLevel, settleTrades, type Trades } from "./trade";
+import { levels, measureLevel, settleDrawers, settleTrades, type Trades } from "./trade";
 import type { Alternative, Alternatives, ChoiceKey, External, Note, PortRef, Rank } from "./types";
 import { NUMERICS, scaleOf } from "./validate";
 
@@ -126,8 +126,8 @@ function rankOf(
 
 /**
  * The canonical point with exactly `open`'s gates allowed, settled as AUTO settles a plan: trades level by level, the
- * Up to push (docs/up-to.md), then least flow and the canonical tie-break; with the trading (and bands) it was settled
- * under. Null when they do not balance. Commits nothing.
+ * Up to push and the drawer stages (docs/up-to.md), then least flow and the canonical tie-break; with the trading and
+ * bands it was pushed under (`SolveContext.committedTrades`). Null when they do not balance. Commits nothing.
  */
 export function evaluateSupportWith(
   ctx: SolveContext,
@@ -137,9 +137,10 @@ export function evaluateSupportWith(
   const settled = settleTrades(ctx, open);
   if (!settled.ok) return null;
   const trades = pushUpTo(ctx, settled.held);
-  const s3 = leastFlowHolding(ctx, trades);
+  const drawn = settleDrawers(ctx, trades);
+  const s3 = leastFlowHolding(ctx, drawn);
   if (!s3.ok) return null;
-  return { point: canonicalHolding(ctx, trades, s3.point), trades };
+  return { point: canonicalHolding(ctx, drawn, s3.point), trades };
 }
 
 /** `evaluateSupportWith`'s point only. */

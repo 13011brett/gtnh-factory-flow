@@ -6,8 +6,9 @@
  *   somewhere to put its output never idles).
  * - Stage B, fairness: progressive max-min over the levels with their sum held at S (old Build's round-robin split).
  *   Each round lifts the least level z of the pools not yet frozen. A pool is frozen at z only when a probe proves it
- *   cannot go higher (its own level maximised with every unfrozen pool at least z); a pool some feasible point of the
- *   round already shows above z is a certificate that it can, and is not probed.
+ *   cannot go higher (its own level maximised with every unfrozen pool at least z; the round's candidates are first
+ *   asked all at once, and freeze together when even their sum cannot rise); a pool some feasible point of the round
+ *   already shows above z is a certificate that it can, and is not probed.
  * - Hold: each level is held in a narrow band (`Trades.floors`: from the level to `bandAbove` over it) through least
  *   flow, the canonical point and every later model of the support.
  *
@@ -37,12 +38,20 @@ function atLeast(ctx: SolveContext, lp: ModelLp, pool: number, at: number): void
   lp.addRow(cols, vals, at, Infinity);
 }
 
-/** A pool held from its level to a little over it, within 0..1. */
+/**
+ * A pool held from its level to a little over it, within 0..1. A pool that cannot rise past `pushTol` is held at nothing
+ * (as `heldAt` closes a trade level at rounding): a sliver over zero is no level, and an engine without exact vertices
+ * can lose its way in one.
+ */
 export function bandAt(pool: number, level: number): Band {
-  return { pool, lo: Math.max(0, level), hi: Math.min(1, level + NUMERICS.bandAbove) };
+  if (level <= NUMERICS.pushTol) return { pool, lo: 0, hi: 0 };
+  return { pool, lo: level, hi: Math.min(1, level + NUMERICS.bandAbove) };
 }
 
-/** Stage B's region: the held trading, stage A's sum (less its room), and the frozen pools at their levels. */
+/**
+ * Stage B's region: the held trading, stage A's sum (less its room), and the frozen pools at least at their levels (the
+ * ones frozen at nothing held there, as their bands will hold them).
+ */
 function fairRegion(
   ctx: SolveContext,
   held: Trades,
@@ -59,7 +68,14 @@ function fairRegion(
     vals.push(...terms.vals);
   }
   lp.addRow(cols, vals, sum - NUMERICS.pushTol * Math.max(1, sum), Infinity);
-  for (const [p, level] of frozen) atLeast(ctx, lp, p, level);
+  for (const [p, level] of frozen) {
+    const band = bandAt(p, level);
+    if (band.hi > 0) atLeast(ctx, lp, p, level);
+    else {
+      const { cols: at, vals: by } = levelTerms(ctx, lp, p);
+      lp.addRow(at, by, 0, 0);
+    }
+  }
   return lp;
 }
 
@@ -103,14 +119,33 @@ export function pushUpTo(ctx: SolveContext, held: Trades): Trades {
       break;
     }
     const candidates = active.filter((p) => levelOf(ctx, p, lifted.point.extents) <= least + tol);
+    const probeOf = (lift: readonly number[], label: string) => {
+      const probe = fairRegion(ctx, held, pools, sum, levels);
+      for (const q of active) atLeast(ctx, probe, q, least);
+      for (const q of lift) priceLevel(ctx, probe, q, -1);
+      return runModel(ctx, probe, label);
+    };
     const rises = new Set<number>();
+    if (candidates.length > 1) {
+      // All of them at once first: each is at least the level, so if their sum cannot pass k levels by the tolerance,
+      // none of them can rise (one model where k would do, the common case of cards that all sit still).
+      const together = probeOf(candidates, "push: can any rise");
+      if (together.ok) {
+        let reached = 0;
+        for (const q of candidates) reached += levelOf(ctx, q, together.point.extents);
+        if (reached <= least * candidates.length + tol) {
+          for (const q of candidates) levels.set(q, least);
+          active = active.filter((q) => !levels.has(q));
+          continue;
+        }
+        for (const q of candidates)
+          if (levelOf(ctx, q, together.point.extents) > least + tol) rises.add(q);
+      }
+    }
     const stuck: number[] = [];
     for (const p of candidates) {
       if (rises.has(p)) continue;
-      const probe = fairRegion(ctx, held, pools, sum, levels);
-      for (const q of active) atLeast(ctx, probe, q, least);
-      priceLevel(ctx, probe, p, -1);
-      const highest = runModel(ctx, probe, "push: can it rise");
+      const highest = probeOf([p], "push: can it rise");
       if (!highest.ok) {
         stuck.push(p);
         continue;

@@ -213,6 +213,12 @@ export interface DrawerReadout {
    * first, in link order: what each of its wires carries. Empty for a plan with no buffer.
    */
   ports: Record<Id, External[]>;
+  /**
+   * Up to plans only (docs/up-to.md, "Buffers"): per BUFFER with rule ANY, what it banks, units/s: what its makers put
+   * into it beyond what its takers take (old Build's overflow). Never in the forced flows. Absent when the plan has no
+   * Up to pool or no such buffer.
+   */
+  banked?: Record<Id, number>;
 }
 
 /**

@@ -13,7 +13,7 @@ export function externalsLp(ctx: SolveContext, open: ReadonlySet<number> | null)
   const lp = baseModel(ctx);
   for (let p = 0; p < lp.nPorts; p++) {
     const gate = ctx.model.portGate[p]!;
-    if (open !== null && !open.has(gate)) lp.closeExt(p);
+    if (open !== null && !open.has(gate) && !ctx.bankPorts.has(p)) lp.closeExt(p);
     else lp.setExtCost(p, ctx.importTilt(gate));
   }
   return runModel(ctx, lp, "externals");
@@ -23,6 +23,8 @@ export function externalsLp(ctx: SolveContext, open: ReadonlySet<number> | null)
 export function fixedQuantity(ctx: SolveContext, open: ReadonlySet<number>): SolveResult {
   const lp = baseModel(ctx);
   for (let p = 0; p < lp.nPorts; p++) {
+    // What a buffer banks is no gate and no trade (docs/up-to.md): never closed, never counted.
+    if (ctx.bankPorts.has(p)) continue;
     if (!open.has(ctx.model.portGate[p]!)) lp.closeExt(p);
     else lp.setExtCost(p, ctx.externalWeight(p));
   }
@@ -44,14 +46,18 @@ const ZERO_DUAL = 1e-9;
  * still proves the optimum of the plan with that row gone). A shortfall that stays is a plan that does not balance, so
  * that gate cannot be the one to open. Gates whose row has a dual may help and are kept.
  */
-export function gatesThatMayHelp(ctx: SolveContext, base: ReadonlySet<number>, candidates: readonly number[]): number[] {
+export function gatesThatMayHelp(
+  ctx: SolveContext,
+  base: ReadonlySet<number>,
+  candidates: readonly number[],
+): number[] {
   if (candidates.length === 0) return [];
   const lp = baseModel(ctx);
   const model = ctx.model;
   const isCandidate = new Set(candidates);
   for (let p = 0; p < lp.nPorts; p++) {
     const gate = model.portGate[p]!;
-    if (!base.has(gate) && !isCandidate.has(gate)) lp.closeExt(p);
+    if (!base.has(gate) && !isCandidate.has(gate) && !ctx.bankPorts.has(p)) lp.closeExt(p);
   }
   // Every row may be broken, at a price: the shortfall.
   const slacks: number[] = [];

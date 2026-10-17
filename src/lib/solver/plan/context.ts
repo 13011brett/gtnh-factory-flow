@@ -3,7 +3,7 @@
  * the committed point and the notes. Stages mutate it in place; the next stage reads the result.
  */
 import { comparePortRef } from "./ids";
-import { buildModel, TICKS_PER_SECOND, type ModelData } from "./model";
+import { buildModel, portKey, TICKS_PER_SECOND, type ModelData } from "./model";
 import type { Trades } from "./trade";
 import { NUMERICS, scaleOf, solutionScale, validatePoint } from "./validate";
 import type {
@@ -66,8 +66,17 @@ export class SolveContext {
   readonly droppedPools = new Set<number>();
   /** The Up to pools' indices, in pool order (docs/up-to.md). */
   readonly upToPools: number[];
-  /** Connected ports a drawer is linked to (every drawer's `externalPorts`): the player's own supply or sink. */
+  /**
+   * Connected ports a drawer is linked to (every drawer's `externalPorts`, and with Up to pools the bank ports): the
+   * player's own supply or sink.
+   */
   readonly drawnPorts: Set<number>;
+  /**
+   * With Up to pools only (docs/up-to.md, "Buffers"): each maker port of a BUFFER drawer with rule ANY, and that drawer.
+   * The buffer banks what its takers do not take: the port's external is the buffer's, never a forced flow and never a
+   * gate. Empty without Up to pools, where a buffer is wiring only.
+   */
+  readonly bankPorts: Map<number, number>;
   /** The guard every model this context builds applies; null when none applies (`guard.ts` sets it). */
   guard: Guard | null = null;
   /** The guard has been worked out (once per context, before the first pass). */
@@ -156,6 +165,20 @@ export class SolveContext {
     });
     this.drawnPorts = new Set<number>();
     for (const row of this.model.drawers) for (const p of row.externalPorts) this.drawnPorts.add(p);
+    this.bankPorts = new Map<number, number>();
+    if (this.upToPools.length > 0) {
+      this.model.drawers.forEach((row, d) => {
+        if (row.kind !== "BUFFER" || row.rule !== "ANY") return;
+        for (const link of row.links) {
+          if (link.input) continue;
+          const m = this.model.machineIndex.get(link.node);
+          const p =
+            m === undefined ? undefined : this.model.portLookup.get(portKey(m, link.port, false));
+          if (p !== undefined && !this.bankPorts.has(p)) this.bankPorts.set(p, d);
+        }
+      });
+      for (const p of this.bankPorts.keys()) this.drawnPorts.add(p);
+    }
     this.constructionNotes = this.notes.length;
   }
 
@@ -232,19 +255,20 @@ export class SolveContext {
     return solutionScale(this.model, p.extents, p.flows, p.externals);
   }
 
-  /** Every gate the point puts flow through, however little. */
+  /** Every gate the point puts flow through, however little. What a buffer banks opens no gate. */
   carryingGates(externals: ArrayLike<number>, fallback: Iterable<number> = []): Set<number> {
     const carrying = new Set<number>(fallback);
     const dust = NUMERICS.dust * scaleOf(externals);
     for (let p = 0; p < externals.length; p++)
-      if (externals[p]! > dust) carrying.add(this.model.portGate[p]!);
+      if (externals[p]! > dust && !this.bankPorts.has(p)) carrying.add(this.model.portGate[p]!);
     return carrying;
   }
 
-  /** The gates carrying more than `zero` of the largest gate's flow. */
+  /** The gates carrying more than `zero` of the largest gate's flow. What a buffer banks opens no gate. */
   gateSupport(externals: ArrayLike<number>): Set<number> {
     const gateFlow = new Array<number>(this.model.gates.length).fill(0);
-    for (let p = 0; p < externals.length; p++) gateFlow[this.model.portGate[p]!]! += externals[p]!;
+    for (let p = 0; p < externals.length; p++)
+      if (!this.bankPorts.has(p)) gateFlow[this.model.portGate[p]!]! += externals[p]!;
     const tol = this.zeroTolerance(gateFlow);
     const support = new Set<number>();
     for (let g = 0; g < gateFlow.length; g++) if (gateFlow[g]! > tol) support.add(g);

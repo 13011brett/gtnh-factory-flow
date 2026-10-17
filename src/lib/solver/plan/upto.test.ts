@@ -417,6 +417,27 @@ const banked = (taker: "any" | "upTo"): SolveInput =>
     },
   );
 
+/** m (Up to 2, ore -> x) puts its x into a buffer (`rule`, `rate`) that t (x -> y; Up to 1 or any count) draws from. */
+const buffered = (taker: "upTo" | "any", rule: DrawerRule = "ANY", rate = 0): SolveInput =>
+  plan(
+    [machine("m", [port(9, "ore")], [port(1, "x")]), machine("t", [port(1, "x")], [port(2, "y")])],
+    [],
+    taker === "upTo" ? [upTo(["m"], 2), upTo(["t"], 1)] : [upTo(["m"], 2)],
+    {
+      drawers: [
+        {
+          id: "buf",
+          label: "x",
+          kind: "BUFFER",
+          rule,
+          rate,
+          links: [{ node: "m", port: 0 }],
+          takers: [{ node: "t", port: 0 }],
+        },
+      ],
+    },
+  );
+
 /** m (Up to 2) takes x and w, 1 a craft each, from e1 and e2 (Exactly 1, 1/s each): both inputs short at once. */
 const twoShortInputs = (): SolveInput =>
   plan(
@@ -463,6 +484,9 @@ const FIXTURES: Record<string, () => SolveInput> = {
   "topped loop, trading": toppedLoopTrading,
   "banked, any taker": () => banked("any"),
   "banked, Up to taker": () => banked("upTo"),
+  "buffer, Up to taker": () => buffered("upTo"),
+  "buffer, any taker": () => buffered("any"),
+  "buffer with a rule": () => buffered("upTo", "AT_MOST", 0.5),
   "two short inputs": twoShortInputs,
   "two full outputs": twoFullOutputs,
 };
@@ -735,6 +759,51 @@ describe("Up to: a drawer on a wired port is the player's own end", () => {
       pools: exact.pools.map((p) => ({ ...p, exact: true, upTo: false })),
     });
     for (const p of plain.drawn) expect(plain.ports).toContain(p);
+  });
+});
+
+describe("Up to: a buffer of any rule banks what its takers do not take", () => {
+  it("a slower Up to taker: the maker runs full, the taker full, the buffer banks the rest, nothing forced", () => {
+    const s = solved(buffered("upTo")).solution;
+    expect(s.machineCounts["m"]).toBeCloseTo(2, 9);
+    expect(s.machineCounts["t"]).toBeCloseTo(1, 9);
+    expect(s.drawers.banked).toEqual({ buf: expect.closeTo(1, 9) });
+    expect(s.drawers.rates["buf"]).toBeCloseTo(1, 9);
+    expect(s.drawers.ports["buf"]).toEqual([
+      { port: ref("m", 0, false), ratePerSecond: expect.closeTo(1, 9) },
+      { port: ref("t", 0, true), ratePerSecond: expect.closeTo(1, 9) },
+    ]);
+    expect(s.gatedSinks).toEqual([]);
+    expect(s.gatedSources).toEqual([]);
+    expect(s.openGates).toBe(0);
+    expect(readoutOf(s, "m").reason).toBe("FULL");
+    expect(readoutOf(s, "t").reason).toBe("FULL");
+  });
+
+  it("a taker of any count takes all of it first (ship before banking): nothing banked", () => {
+    const s = solved(buffered("any")).solution;
+    expect(s.machineCounts["m"]).toBeCloseTo(2, 9);
+    expect(s.machineCounts["t"]).toBeCloseTo(2, 9);
+    expect(s.drawers.banked).toEqual({ buf: 0 });
+    expect(s.gatedSinks).toEqual([]);
+  });
+
+  it("a buffer with a rule keeps it over what passes through, and banks nothing", () => {
+    const s = solved(buffered("upTo", "AT_MOST", 0.5)).solution;
+    expect(s.machineCounts["m"]).toBeCloseTo(0.5, 9);
+    expect(s.machineCounts["t"]).toBeCloseTo(0.5, 9);
+    expect(s.drawers.banked).toBeUndefined();
+    expect(s.gatedSinks).toEqual([]);
+    expect(readoutOf(s, "m").reason).toBe("CLOGGED");
+  });
+
+  it("without Up to pools a buffer is wiring only: no bank", () => {
+    const i = buffered("upTo");
+    const ctx = new SolveContext({
+      ...i,
+      pools: i.pools.map((p) => ({ ...p, exact: true, upTo: false })),
+    });
+    expect(ctx.bankPorts.size).toBe(0);
   });
 });
 

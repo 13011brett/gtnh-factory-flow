@@ -74,7 +74,28 @@ convex set is unique, and every freeze is decided by a value (a probe's optimum)
 returns. So HiGHS and ojAlgo, and the reversed column order of the path test, give the same answer.
 
 The push runs wherever a support is settled: the fast path, the chain's pass, and `evaluateSupport` (alternatives and
-the stored choice). The levels ride on `Trades` (`floors`), so `tradeModel` applies them everywhere it is used.
+the stored choice). The levels ride on `Trades` (`floors`), so `tradeModel` applies them everywhere it is used. A pool
+that cannot rise past rounding is held at exactly nothing (as `heldAt` closes a trade level), never in a sliver above it.
+
+### Drawers and buffers: the player's own end
+
+With Up to pools a drawer on a wired port is the player's own end, as in old Build: a source drawer is supply, a
+product, byproduct or trash drawer a sink. Its ports are no trade level (`levels()`, which the alternatives also rank
+by), so the trades settle and hold only forced flow, and the push uses the drawers freely. After the push, two held
+stages pick among the pushed points (`settleDrawers`): the least drawn from source drawers (old Build's "recycle before
+importing"), then the least put into sink drawers ("ship before banking"). The read-out probes the trades and bands
+without these stages (`committedTrades`): they are tie-breaks, not limits. On the fast path only the forced crossings
+are closed.
+
+### Buffers
+
+With Up to pools a BUFFER drawer with rule ANY is a bank, as old Build's overflow buffer was: each maker port linked to it
+may put into it what its takers do not take (`SolveContext.bankPorts`). That crossing is the buffer's: never a forced
+flow (`gatedSinks`), never a gate for the trades or the alternatives' swaps, outside the guard, and as little as it can
+be in the sink stage, after the push has shipped all it can to the takers. `DrawerReadout.banked` gives each such
+buffer's banked rate (absent without Up to pools or such buffers). A buffer with a rule keeps today's meaning: its rule
+is a row over what passes through, and it banks nothing (a maker whose takers are full slows down). Without Up to pools
+a buffer is wiring only, as before.
 
 ### The read-out (`SolutionView.upTo`)
 

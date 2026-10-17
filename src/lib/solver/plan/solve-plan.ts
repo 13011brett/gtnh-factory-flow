@@ -35,14 +35,20 @@ function decisionOf(leftover: Leftover): PortRef {
 }
 
 function portOf(whole: SolveContext, ref: PortRef): number {
-  return whole.model.portLookup.get(portKey(whole.model.machineIndex.get(ref.node)!, ref.port, ref.input))!;
+  return whole.model.portLookup.get(
+    portKey(whole.model.machineIndex.get(ref.node)!, ref.port, ref.input),
+  )!;
 }
 
 /**
  * The plan's answer: every island solved by itself, read together as one plan's. With a `cache` an island whose input
  * was solved before (by value) is read back, not solved again; the answer is the same either way.
  */
-export function solvePlan(input: SolveInput, ext: CoreExtensions = planExtensions, cache?: PieceCache): Answer {
+export function solvePlan(
+  input: SolveInput,
+  ext: CoreExtensions = planExtensions,
+  cache?: PieceCache,
+): Answer {
   const solveIsland = (island: SolveInput): Piece => {
     if (!cache) return solvePiece(island, ext);
     const key = inputDigest(island);
@@ -78,7 +84,9 @@ export function solvePlan(input: SolveInput, ext: CoreExtensions = planExtension
       // An island with nothing to size is idle, not broken; any other stands unsolved, and says why.
       if (answer.failure.message !== "NO_PIN") {
         whole.stageNotes.push(answer.failure);
-        whole.stageNotes.push(...answer.notes.slice(Math.min(c.constructionNotes, answer.notes.length)));
+        whole.stageNotes.push(
+          ...answer.notes.slice(Math.min(c.constructionNotes, answer.notes.length)),
+        );
       }
       continue;
     }
@@ -89,13 +97,15 @@ export function solvePlan(input: SolveInput, ext: CoreExtensions = planExtension
     c.model.edges.forEach((e, i) => {
       flows[edgeIndex.get(e.id)!] = point.flows[i]!;
     });
-    for (let q = 0; q < c.model.connectedPorts.length; q++) externals[portOf(whole, c.refOf(q))] = point.externals[q]!;
+    for (let q = 0; q < c.model.connectedPorts.length; q++)
+      externals[portOf(whole, c.refOf(q))] = point.externals[q]!;
     for (const g of point.support) {
       support.add(model.portGate[portOf(whole, c.refOf(c.model.gates[g]!.ports[0]!))]!);
     }
     whole.stageNotes.push(...c.notes.slice(c.constructionNotes));
     whole.stageNotes.push(...c.stageNotes);
-    for (const id of c.unmetDrawers) if (!whole.unmetDrawers.includes(id)) whole.unmetDrawers.push(id);
+    for (const id of c.unmetDrawers)
+      if (!whole.unmetDrawers.includes(id)) whole.unmetDrawers.push(id);
     whole.shortfalls.push(...c.shortfalls);
     options.push(...answer.alternatives.options);
     choiceNotes.push(...answer.alternatives.notes);
@@ -117,7 +127,11 @@ export function solvePlan(input: SolveInput, ext: CoreExtensions = planExtension
   return {
     kind: "solved",
     solution,
-    alternatives: { chosen: whole.keyOf(support), options: planOptions, complete, notes: choiceNotes },
+    alternatives: {
+      chosen: whole.keyOf(support),
+      options: planOptions,
+      complete,
+      notes: choiceNotes,
+    },
   };
 }
-

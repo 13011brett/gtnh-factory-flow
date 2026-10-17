@@ -69,7 +69,8 @@ export function drawerReadout(ctx: SolveContext, point: StageOutcome): DrawerRea
         for (const e of drawer.flowEdges) {
           const edge = ctx.model.edges[e]!;
           const at = ctx.refOf(ref.input ? edge.dstPort : edge.srcPort);
-          if (at.node === ref.node && at.port === ref.port && at.input === ref.input) rate += point.flows[e]!;
+          if (at.node === ref.node && at.port === ref.port && at.input === ref.input)
+            rate += point.flows[e]!;
         }
         return { port: ref, ratePerSecond: rate };
       });
@@ -84,9 +85,12 @@ export function drawerReadout(ctx: SolveContext, point: StageOutcome): DrawerRea
  */
 export function diagnosePins(ctx: SolveContext): Note | null {
   const pinned: number[] = [];
-  for (let m = 0; m < ctx.model.machines.length; m++) if (!Number.isNaN(ctx.pinnedExtent[m]!)) pinned.push(m);
+  for (let m = 0; m < ctx.model.machines.length; m++)
+    if (!Number.isNaN(ctx.pinnedExtent[m]!)) pinned.push(m);
   if (pinned.length < 2) return null;
-  pinned.sort((a, b) => PIN_STRENGTH.indexOf(ctx.pinKind[a]!) - PIN_STRENGTH.indexOf(ctx.pinKind[b]!));
+  pinned.sort(
+    (a, b) => PIN_STRENGTH.indexOf(ctx.pinKind[a]!) - PIN_STRENGTH.indexOf(ctx.pinKind[b]!),
+  );
   const saved = new Map<number, number>();
   const dropped: Note[] = [];
   try {
@@ -95,7 +99,14 @@ export function diagnosePins(ctx: SolveContext): Note | null {
       if (saved.size === pinned.length - 1) return null; // one pin left: not a conflict
       saved.set(m, ctx.pinnedExtent[m]!);
       ctx.pinnedExtent[m] = Number.NaN;
-      dropped.push(note("PIN_DROPPED", ctx.model.machines[m]!.spec.name, note(ctx.pinKind[m]!), ctx.model.machines[m]!.spec.id));
+      dropped.push(
+        note(
+          "PIN_DROPPED",
+          ctx.model.machines[m]!.spec.name,
+          note(ctx.pinKind[m]!),
+          ctx.model.machines[m]!.spec.id,
+        ),
+      );
     }
   } finally {
     for (const [m, value] of saved) ctx.pinnedExtent[m] = value;
@@ -110,9 +121,11 @@ function pass(ctx: SolveContext): Settlement {
   runFastPath(ctx);
   if (ctx.shortCircuit) return { kind: "solved" };
   const trades = settleTrades(ctx);
-  if (!trades.ok) return { kind: "stalled", reason: note("STAGE_FAILED", "trades", trades.rejection) };
+  if (!trades.ok)
+    return { kind: "stalled", reason: note("STAGE_FAILED", "trades", trades.rejection) };
   const flow = runFlowMin(ctx, trades.held);
-  if (!flow.ok) return { kind: "stalled", reason: note("STAGE_FAILED", "internal flow", flow.rejection) };
+  if (!flow.ok)
+    return { kind: "stalled", reason: note("STAGE_FAILED", "internal flow", flow.rejection) };
   return ctx.point === null
     ? { kind: "stalled", reason: note("BALANCE_FAILED", ctx.rejection) }
     : { kind: "solved" };
@@ -139,7 +152,8 @@ export function settle(
   ext: CoreExtensions,
 ): { ctx: SolveContext; settlement: Settlement } {
   const first = runChain(ctx);
-  if (first.kind === "solved" || !ctx.hasDrawerBounds() || !ext.relax) return { ctx, settlement: first };
+  if (first.kind === "solved" || !ctx.hasDrawerBounds() || !ext.relax)
+    return { ctx, settlement: first };
   const apply = ext.relax(ctx);
   if (apply === null) return { ctx, settlement: first };
   const retry = new SolveContext(input);
@@ -159,7 +173,8 @@ function wiringDiagnostics(ctx: SolveContext, tol: number, terminalIn: External[
   const point = ctx.point!;
   const refKey = (r: PortRef) => `${r.node}|${r.input ? 1 : 0}|${r.port}`;
   const supplied = new Set<string>();
-  for (const row of model.drawers) if (row.kind === "SOURCE") for (const l of row.links) supplied.add(refKey(l));
+  for (const row of model.drawers)
+    if (row.kind === "SOURCE") for (const l of row.links) supplied.add(refKey(l));
 
   const connected = new Map<number, number[]>();
   const loose = new Map<number, number>();
@@ -200,7 +215,16 @@ function wiringDiagnostics(ctx: SolveContext, tol: number, terminalIn: External[
     const match = find(ingredient.resource, -1);
     if (match !== null) {
       const producer = model.machines[match]!.spec;
-      add(note("WIRING_IMPORT", md.spec.name, ingredient.name, producer.name, ext.port.node, producer.id));
+      add(
+        note(
+          "WIRING_IMPORT",
+          md.spec.name,
+          ingredient.name,
+          producer.name,
+          ext.port.node,
+          producer.id,
+        ),
+      );
     }
   }
   model.connectedPorts.forEach((port, p) => {
@@ -213,7 +237,16 @@ function wiringDiagnostics(ctx: SolveContext, tol: number, terminalIn: External[
     const match = find(ingredient.resource, model.portComponent[p]!);
     if (match !== null) {
       const producer = model.machines[match]!.spec;
-      add(note("WIRING_UNLINKED", md.spec.name, ingredient.name, producer.name, ref.node, producer.id));
+      add(
+        note(
+          "WIRING_UNLINKED",
+          md.spec.name,
+          ingredient.name,
+          producer.name,
+          ref.node,
+          producer.id,
+        ),
+      );
     }
   });
   return [...result.values()];
@@ -234,7 +267,8 @@ export function buildSolutionView(ctx: SolveContext, spares: Leftover[] = []): S
     if (Number.isNaN(ctx.pinnedExtent[m]!) && point.extents[m]! <= tol) unneeded.push(md.spec.id);
   });
   // The plan's own wires only: a buffer's edges are the solver's, read out per port on the drawer.
-  for (let e = 0; e < model.drawnEdges; e++) edgeFlowsPerSecond[model.edges[e]!.id] = point.flows[e]!;
+  for (let e = 0; e < model.drawnEdges; e++)
+    edgeFlowsPerSecond[model.edges[e]!.id] = point.flows[e]!;
   const gatedSources: External[] = [];
   const gatedSinks: External[] = [];
   let externalQuantity = 0;
@@ -284,12 +318,22 @@ export function buildSolutionView(ctx: SolveContext, spares: Leftover[] = []): S
 /** One island solved, with the context that solved it. */
 export function solvePiece(input: SolveInput, ext: CoreExtensions = {}): Piece {
   const first = new SolveContext(input);
-  const failed = (ctx: SolveContext, failure: Note, notes: Note[], drawers: DrawerReadout): Piece => ({
+  const failed = (
+    ctx: SolveContext,
+    failure: Note,
+    notes: Note[],
+    drawers: DrawerReadout,
+  ): Piece => ({
     ctx,
     answer: { kind: "failed", failure, notes: [...notes], drawers },
   });
   if (first.model.machines.length === 0) {
-    return failed(first, note("EMPTY_GRAPH"), [], { rates: {}, unmet: [], shortfalls: [], ports: {} });
+    return failed(first, note("EMPTY_GRAPH"), [], {
+      rates: {},
+      unmet: [],
+      shortfalls: [],
+      ports: {},
+    });
   }
   if (!first.anchored) {
     // Idle, not broken: wiring, nothing sets the plan's size.
@@ -307,14 +351,22 @@ export function solvePiece(input: SolveInput, ext: CoreExtensions = {}): Piece {
   }
   const finished = ext.finish?.(ctx);
   const residual = ctx.validate(ctx.point.extents, ctx.point.flows, ctx.point.externals);
-  if (residual !== null) return failed(ctx, note("VALIDATION_FAILED", residual), ctx.notes, unsolvedReadout(ctx));
+  if (residual !== null)
+    return failed(ctx, note("VALIDATION_FAILED", residual), ctx.notes, unsolvedReadout(ctx));
   const alternatives: Alternatives = finished?.alternatives ?? {
     chosen: ctx.keyOf(ctx.point.support),
     options: [],
     complete: true,
     notes: [],
   };
-  return { ctx, answer: { kind: "solved", solution: buildSolutionView(ctx, finished?.spares ?? []), alternatives } };
+  return {
+    ctx,
+    answer: {
+      kind: "solved",
+      solution: buildSolutionView(ctx, finished?.spares ?? []),
+      alternatives,
+    },
+  };
 }
 
 /** The answer for a plan solved as ONE model (no island split: that is WP1c's `islands.ts`). */

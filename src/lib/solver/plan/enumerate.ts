@@ -94,7 +94,12 @@ export function displayOrder(): Rank[] {
 export const DISPLAY_ORDER = displayOrder();
 
 /** Why `alt` is not the default: the earliest rule that separates the two. */
-function rankOf(prefs: Preference[], alt: StageOutcome, incumbent: number[][], tolerance: number): Rank {
+function rankOf(
+  prefs: Preference[],
+  alt: StageOutcome,
+  incumbent: number[][],
+  tolerance: number,
+): Rank {
   for (let i = 0; i < Math.min(prefs.length, incumbent.length); i++) {
     const preference = prefs[i]!;
     const mine = preference.measure(alt.externals, alt.flows);
@@ -188,7 +193,8 @@ export function enumerate(
   let flowStar = 0;
   for (const f of point.flows) flowStar += f;
   let qtyStar = 0;
-  for (let p = 0; p < point.externals.length; p++) qtyStar += point.externals[p]! * ctx.externalWeight(p);
+  for (let p = 0; p < point.externals.length; p++)
+    qtyStar += point.externals[p]! * ctx.externalWeight(p);
   const prefs = preferences(ctx);
   const incumbentCost = prefs.map((pref) => pref.measure(point.externals, point.flows));
   const tol = NUMERICS.tieRel * Math.max(Math.max(flowStar, qtyStar), ctx.solutionScaleOf(point));
@@ -204,7 +210,8 @@ export function enumerate(
   const swaps: Array<[number, number]> = [];
   decisions.forEach((out, i) => {
     if (!movable[i]) return;
-    for (let into = 0; into < ctx.model.gates.length; into++) if (!open.has(into)) swaps.push([out, into]);
+    for (let into = 0; into < ctx.model.gates.length; into++)
+      if (!open.has(into)) swaps.push([out, into]);
   });
   const cap = Math.min(swaps.length, effort(MAX_ALT_SWAPS));
   const tried = swaps.slice(0, cap);
@@ -231,7 +238,13 @@ export function enumerate(
     trial.delete(out);
     trial.add(into);
     const alt = evaluateSupport(ctx, trial);
-    if (alt === null || alt.support.size !== incumbent.size || !alt.support.has(into) || alt.support.has(out)) continue;
+    if (
+      alt === null ||
+      alt.support.size !== incumbent.size ||
+      !alt.support.has(into) ||
+      alt.support.has(out)
+    )
+      continue;
     const key = ctx.keyOf(alt.support);
     const text = keyString(key);
     if (seen.has(text)) continue;
@@ -239,7 +252,16 @@ export function enumerate(
     points.set(text, alt);
     const list = byDecision.get(out) ?? [];
     byDecision.set(out, list);
-    list.push(asAlternative(ctx, alt.externals, alt.support, out, into, rankOf(prefs, alt, incumbentCost, tol)));
+    list.push(
+      asAlternative(
+        ctx,
+        alt.externals,
+        alt.support,
+        out,
+        into,
+        rankOf(prefs, alt, incumbentCost, tol),
+      ),
+    );
   }
 
   const best = (a: Alternative, b: Alternative): number =>
@@ -261,7 +283,14 @@ export function enumerate(
   options.sort((a, b) => comparePortRef(a.replaces, b.replaces) || best(a, b));
   if (shown < found) notes.push(note("SHOWING_CLOSEST", shown, found));
   if (cap < swaps.length) notes.push(note("STOPPED_EARLY", cap, swaps.length - cap));
-  if (stats) Object.assign(stats, { decisions: decisions.length, swaps: swaps.length, tried: cap, found, shown });
+  if (stats)
+    Object.assign(stats, {
+      decisions: decisions.length,
+      swaps: swaps.length,
+      tried: cap,
+      found,
+      shown,
+    });
   return { chosen, options, complete, notes };
 }
 

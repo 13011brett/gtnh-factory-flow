@@ -147,7 +147,12 @@ export function addDrawerRows(ctx: SolveContext, lp: ModelLp, relaxed: boolean):
         vals.push(-scale);
       }
     }
-    lp.addRow(cols, vals, Number.isNaN(lower) ? -Infinity : lower * scale, Number.isNaN(upper) ? Infinity : upper * scale);
+    lp.addRow(
+      cols,
+      vals,
+      Number.isNaN(lower) ? -Infinity : lower * scale,
+      Number.isNaN(upper) ? Infinity : upper * scale,
+    );
   });
 }
 

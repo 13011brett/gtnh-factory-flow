@@ -55,9 +55,12 @@ export function validatePoint(
   externals: ArrayLike<number>,
 ): string | null {
   const floor = -NUMERICS.dust * solutionScale(model, extents, flows, externals);
-  for (let i = 0; i < extents.length; i++) if (!(extents[i]! >= floor)) return `negative extent ${extents[i]}`;
-  for (let i = 0; i < flows.length; i++) if (!(flows[i]! >= floor)) return `negative edge flow ${flows[i]}`;
-  for (let i = 0; i < externals.length; i++) if (!(externals[i]! >= floor)) return `negative external ${externals[i]}`;
+  for (let i = 0; i < extents.length; i++)
+    if (!(extents[i]! >= floor)) return `negative extent ${extents[i]}`;
+  for (let i = 0; i < flows.length; i++)
+    if (!(flows[i]! >= floor)) return `negative edge flow ${flows[i]}`;
+  for (let i = 0; i < externals.length; i++)
+    if (!(externals[i]! >= floor)) return `negative external ${externals[i]}`;
   for (let p = 0; p < model.connectedPorts.length; p++) {
     const port = model.connectedPorts[p]!;
     let flowsSum = 0;

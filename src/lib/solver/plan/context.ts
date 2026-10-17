@@ -5,7 +5,16 @@
 import { comparePortRef } from "./ids";
 import { buildModel, TICKS_PER_SECOND, type ModelData } from "./model";
 import { NUMERICS, scaleOf, solutionScale, validatePoint } from "./validate";
-import type { ChoiceKey, DrawerRule, Id, Note, PortRef, Shortfall, SolveInput, SolverMessage } from "./types";
+import type {
+  ChoiceKey,
+  DrawerRule,
+  Id,
+  Note,
+  PortRef,
+  Shortfall,
+  SolveInput,
+  SolverMessage,
+} from "./types";
 
 export type PinKind = "PIN_COUNT" | "PIN_TARGET" | "PIN_EXTENT";
 
@@ -91,13 +100,18 @@ export class SolveContext {
       const row = this.model.drawers[i]!;
       if (row.rule === "ANY") continue;
       const asksForFlow = row.rule !== "AT_MOST" && row.rate > 0;
-      const hasTerms = row.extentMachines.length > 0 || row.flowEdges.length > 0 || row.externalPorts.length > 0;
+      const hasTerms =
+        row.extentMachines.length > 0 || row.flowEdges.length > 0 || row.externalPorts.length > 0;
       if (!hasTerms) {
         // Nothing reaches it: a rule asking for flow cannot be met and would only break the plan.
         if (asksForFlow) {
           this.unmetDrawers.push(row.id);
           this.notes.push(
-            note(row.externalPorts.length > 0 ? "DRAWER_WIRED_IGNORED" : "DRAWER_NOT_CONNECTED", row.label, row.id),
+            note(
+              row.externalPorts.length > 0 ? "DRAWER_WIRED_IGNORED" : "DRAWER_NOT_CONNECTED",
+              row.label,
+              row.id,
+            ),
           );
         }
         continue;
@@ -119,7 +133,16 @@ export class SolveContext {
       if (!Number.isInteger(i) || i < 0 || i >= md.outQty.length || !(md.outQty[i]! > 0)) continue;
       const actual = chosenExtent * md.outQty[i]!;
       if (actual > rate * (1 + NUMERICS.tieRel)) {
-        this.notes.push(note("OVERSHOOTS_TARGET", md.spec.name, md.spec.outputs[i]!.name, actual, rate, md.spec.id));
+        this.notes.push(
+          note(
+            "OVERSHOOTS_TARGET",
+            md.spec.name,
+            md.spec.outputs[i]!.name,
+            actual,
+            rate,
+            md.spec.id,
+          ),
+        );
       }
     }
   }
@@ -140,7 +163,8 @@ export class SolveContext {
   ): number {
     const row = this.model.drawers[drawer]!;
     let total = 0;
-    for (let i = 0; i < row.extentMachines.length; i++) total += extents[row.extentMachines[i]!]! * row.extentQty[i]!;
+    for (let i = 0; i < row.extentMachines.length; i++)
+      total += extents[row.extentMachines[i]!]! * row.extentQty[i]!;
     for (const e of row.flowEdges) total += flows[e]!;
     for (const p of row.externalPorts) total += externals[p]!;
     return total;
@@ -177,7 +201,8 @@ export class SolveContext {
   carryingGates(externals: ArrayLike<number>, fallback: Iterable<number> = []): Set<number> {
     const carrying = new Set<number>(fallback);
     const dust = NUMERICS.dust * scaleOf(externals);
-    for (let p = 0; p < externals.length; p++) if (externals[p]! > dust) carrying.add(this.model.portGate[p]!);
+    for (let p = 0; p < externals.length; p++)
+      if (externals[p]! > dust) carrying.add(this.model.portGate[p]!);
     return carrying;
   }
 
@@ -192,7 +217,12 @@ export class SolveContext {
   }
 
   /** The point a fresh solve holds, with its derived metrics. `support` overrides the one read off the externals. */
-  outcome(extents: number[], flows: number[], externals: number[], support?: Set<number>): StageOutcome {
+  outcome(
+    extents: number[],
+    flows: number[],
+    externals: number[],
+    support?: Set<number>,
+  ): StageOutcome {
     let qty = 0;
     for (let p = 0; p < externals.length; p++) qty += externals[p]! * this.externalWeight(p);
     let flowSum = 0;
@@ -259,7 +289,11 @@ export class SolveContext {
     this.point = snapped ? this.outcome(extents, flows, externals, committed.support) : committed;
   }
 
-  validate(extents: ArrayLike<number>, flows: ArrayLike<number>, externals: ArrayLike<number>): string | null {
+  validate(
+    extents: ArrayLike<number>,
+    flows: ArrayLike<number>,
+    externals: ArrayLike<number>,
+  ): string | null {
     return validatePoint(this.model, extents, flows, externals);
   }
 

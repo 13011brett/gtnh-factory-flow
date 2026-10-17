@@ -89,7 +89,11 @@ export function drawerLinksInputs(kind: DrawerKind): boolean {
  * A buffer edge's id: the text the Java hashes into a UUID (`ModelData.bufferEdgeId`). Only the island merge reads
  * it, and only within one language, so the text itself serves.
  */
-export function bufferEdgeId(drawer: Id, from: { node: Id; port: number }, to: { node: Id; port: number }): Id {
+export function bufferEdgeId(
+  drawer: Id,
+  from: { node: Id; port: number },
+  to: { node: Id; port: number },
+): Id {
   return `buffer:${drawer}:${from.node}#${from.port}>${to.node}#${to.port}`;
 }
 
@@ -111,7 +115,10 @@ function machineData(spec: MachineIn): MachineData {
     Math.max(0, p.amount) * p.chance * p.multiplier * tf;
   const inQty = spec.inputs.map(qty);
   const outQty = spec.outputs.map(qty);
-  const target = Math.max(extentFor(spec.targetOutputRates, outQty), extentFor(spec.targetInputRates, inQty));
+  const target = Math.max(
+    extentFor(spec.targetOutputRates, outQty),
+    extentFor(spec.targetInputRates, inQty),
+  );
   return {
     spec,
     durTicks,
@@ -123,7 +130,11 @@ function machineData(spec: MachineIn): MachineData {
 }
 
 export function hasPort(m: MachineData, portIndex: number, input: boolean): boolean {
-  return Number.isInteger(portIndex) && portIndex >= 0 && portIndex < (input ? m.inQty.length : m.outQty.length);
+  return (
+    Number.isInteger(portIndex) &&
+    portIndex >= 0 &&
+    portIndex < (input ? m.inQty.length : m.outQty.length)
+  );
 }
 
 export function buildModel(input: SolveInput): ModelData {
@@ -147,7 +158,9 @@ export function buildModel(input: SolveInput): ModelData {
         machine,
         portIndex,
         input: isInput,
-        qtyPerCraft: isInput ? machines[machine]!.inQty[portIndex]! : machines[machine]!.outQty[portIndex]!,
+        qtyPerCraft: isInput
+          ? machines[machine]!.inQty[portIndex]!
+          : machines[machine]!.outQty[portIndex]!,
         edges: [],
       });
       portLookup.set(key, p);
@@ -158,7 +171,10 @@ export function buildModel(input: SolveInput): ModelData {
     const src = machineIndex.get(edge.source);
     const dst = machineIndex.get(edge.target);
     if (src === undefined || dst === undefined) continue;
-    if (!hasPort(machines[src]!, edge.sourceOutput, false) || !hasPort(machines[dst]!, edge.targetInput, true)) {
+    if (
+      !hasPort(machines[src]!, edge.sourceOutput, false) ||
+      !hasPort(machines[dst]!, edge.targetInput, true)
+    ) {
       continue;
     }
     const srcPort = intern(src, edge.sourceOutput, false);
@@ -191,7 +207,11 @@ export function buildModel(input: SolveInput): ModelData {
       for (const to of drawer.takers ?? []) {
         const dst = usable(to, true);
         if (dst === undefined) continue;
-        if (machines[src]!.spec.outputs[from.port]!.resource !== machines[dst]!.spec.inputs[to.port]!.resource) continue;
+        if (
+          machines[src]!.spec.outputs[from.port]!.resource !==
+          machines[dst]!.spec.inputs[to.port]!.resource
+        )
+          continue;
         const srcPort = intern(src, from.port, false);
         const dstPort = intern(dst, to.port, true);
         const e = edges.length;
@@ -220,10 +240,12 @@ export function buildModel(input: SolveInput): ModelData {
     if (drawer.kind === "BUFFER") {
       const refs: PortRef[] = [];
       for (const link of drawer.links) {
-        if (usable(link, false) !== undefined) refs.push({ node: link.node, port: link.port, input: false });
+        if (usable(link, false) !== undefined)
+          refs.push({ node: link.node, port: link.port, input: false });
       }
       for (const link of drawer.takers ?? []) {
-        if (usable(link, true) !== undefined) refs.push({ node: link.node, port: link.port, input: true });
+        if (usable(link, true) !== undefined)
+          refs.push({ node: link.node, port: link.port, input: true });
       }
       drawers.push({
         id: drawer.id,

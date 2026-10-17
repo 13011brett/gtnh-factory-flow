@@ -17,7 +17,11 @@ export interface Level {
 }
 
 /** What a level trades at a point, in crafts. */
-export function measureLevel(ctx: SolveContext, level: Level, externals: ArrayLike<number>): number {
+export function measureLevel(
+  ctx: SolveContext,
+  level: Level,
+  externals: ArrayLike<number>,
+): number {
   let total = 0;
   for (const p of level.ports) total += externals[p]! * ctx.externalWeight(p);
   return total;
@@ -93,18 +97,29 @@ export function tradeModel(ctx: SolveContext, held: Trades): ModelLp {
 export function leastAt(ctx: SolveContext, held: Trades, level: Level): SolveResult {
   const lp = tradeModel(ctx, held);
   for (const p of level.ports) lp.setExtCost(p, ctx.externalWeight(p));
-  return runModel(ctx, lp, (level.buying ? "least buying at " : "least selling at ") + level.steps + " steps");
+  return runModel(
+    ctx,
+    lp,
+    (level.buying ? "least buying at " : "least selling at ") + level.steps + " steps",
+  );
 }
 
 export type TradeOutcome = { ok: true; held: Trades } | { ok: false; rejection: Note };
 
 /** The plan's trading settled level by level, trading only at `open`'s gates (every gate when null). */
-export function settleTrades(ctx: SolveContext, open: ReadonlySet<number> | null = null): TradeOutcome {
+export function settleTrades(
+  ctx: SolveContext,
+  open: ReadonlySet<number> | null = null,
+): TradeOutcome {
   let held = tradesWithin(open);
   for (const level of levels(ctx)) {
     const least = leastAt(ctx, held, level);
     if (!least.ok) return { ok: false, rejection: least.rejection };
-    held = holding(held, level, heldAt(measureLevel(ctx, level, least.point.externals), least.point.extents));
+    held = holding(
+      held,
+      level,
+      heldAt(measureLevel(ctx, level, least.point.externals), least.point.extents),
+    );
   }
   return { ok: true, held };
 }

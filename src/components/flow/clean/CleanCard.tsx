@@ -199,6 +199,7 @@ export function CleanPortRow({
       data-open={!p.wired && !p.zero ? "" : undefined}
       data-lit={lit ? "" : undefined}
       data-forced={p.forced ? "" : undefined}
+      data-why={p.why}
       data-choice={p.choice ? "" : undefined}
       data-resource-edge-anchor="true"
       data-resource-node-id={p.nodeId}
@@ -471,7 +472,10 @@ export function CountBox({
           value={draft}
           inputMode="decimal"
           aria-label="Machine count"
+          size={1}
           className="nodrag"
+          // As wide as the number it replaces, a few characters, growing with what is typed.
+          style={{ width: `calc(${Math.max(3, draft.length + 1)}ch + 8px)` }}
           onChange={(event) => setDraft(event.target.value)}
           onBlur={commit}
           onFocus={(event) => event.currentTarget.select()}
@@ -638,6 +642,8 @@ export function AmpsChip({
   wasClick: (event: MouseEvent) => boolean;
 }) {
   const [draft, setDraft] = useState<string>();
+  // The chip's width as the box opens: the box fills exactly that, so typing never widens the head.
+  const [openWidth, setOpenWidth] = useState<number>();
   const colors = tier ? tierChipColors(tier) : undefined;
   const style = colors
     ? ({
@@ -669,11 +675,19 @@ export function AmpsChip({
       role="button"
       tabIndex={0}
       className="cc-chip nowheel"
-      style={{ ...style, minWidth: 48, width: "max-content" }}
+      data-editing={draft !== undefined ? "" : undefined}
+      style={{
+        ...style,
+        minWidth: 48,
+        width: draft !== undefined && openWidth ? openWidth : "max-content",
+      }}
       {...tipAttrs(tip)}
       onClick={(event) => {
         glyph(event);
-        if (draft === undefined && wasClick(event)) setDraft(String(amps.value));
+        if (draft === undefined && wasClick(event)) {
+          setOpenWidth(event.currentTarget.offsetWidth || undefined);
+          setDraft(String(amps.value));
+        }
       }}
       onContextMenu={(event) => {
         event.preventDefault();
@@ -690,6 +704,7 @@ export function AmpsChip({
           value={draft}
           inputMode="numeric"
           aria-label="Amps"
+          size={1}
           className="nodrag"
           onChange={(event) => setDraft(event.target.value)}
           onBlur={commit}

@@ -16,6 +16,7 @@ import {
   pinPatch,
   stateFrameTone,
   wheelCount,
+  withReasonPorts,
   type CleanPortView,
 } from "./clean-model";
 
@@ -357,6 +358,60 @@ describe("the frame", () => {
       "forced",
     );
     expect(stateFrameTone(cardCountState(result(2), node(), forced), forced, "n")).toBeUndefined();
+  });
+});
+
+describe("the rows a reason names", () => {
+  const lit = (ports: CleanPortView[]) =>
+    ports.filter((port) => port.why).map((port) => `${port.name}=${port.why}`);
+
+  it("lights STARVED's short input and its ties in the reason's colour", () => {
+    const starved = withReasonPorts(ports.inputs, {
+      capacity: 24,
+      reached: 12,
+      reason: "STARVED",
+      portKey: makePortKey("n", "i", "input:item:Oxygen"),
+      resourceKey: "item:Oxygen",
+      tied: [makePortKey("n", "i", "input:item:Sulfur%20Dust")],
+    });
+    expect(lit(starved)).toEqual(["Oxygen=starved", "Sulfur Dust=starved"]);
+  });
+
+  it("lights CLOGGED's and UNUSED's output, and nothing for FULL, BOTTLENECK or no reason", () => {
+    const key = makePortKey("n", "o", "output:item:Sulfuric%20Acid");
+    const clogged = { capacity: 24, reached: 12, reason: "CLOGGED" as const, portKey: key };
+    expect(lit(withReasonPorts(ports.outputs, clogged))).toEqual(["Sulfuric Acid=clogged"]);
+    expect(
+      lit(withReasonPorts(ports.outputs, { ...clogged, reason: "UNUSED", reached: 0 })),
+    ).toEqual(["Sulfuric Acid=unused"]);
+    for (const reason of ["FULL", "BOTTLENECK", "LIMITED", null] as const) {
+      expect(
+        lit(withReasonPorts([...ports.inputs, ...ports.outputs], { ...clogged, reason })),
+      ).toEqual([]);
+    }
+    expect(lit(withReasonPorts(ports.outputs, undefined))).toEqual([]);
+  });
+
+  it("finds a shared machine's row by its recipe's prefix, and only the card's own rows", () => {
+    const section = { ...port("input", "Mix"), handleId: "r1:input:item:Mix" };
+    const plain = port("input", "Mix");
+    const starved = withReasonPorts([plain, section], {
+      capacity: 3,
+      reached: 1,
+      reason: "STARVED",
+      portKey: makePortKey("n#r1", "i", "input:item:Mix"),
+    });
+    expect(starved.map((p) => p.why)).toEqual([undefined, "starved"]);
+  });
+
+  it("falls back to the row of its resource when the read-out names no port", () => {
+    const starved = withReasonPorts(ports.inputs, {
+      capacity: 3,
+      reached: 1,
+      reason: "STARVED",
+      resourceKey: "item:Sulfur Dust",
+    });
+    expect(lit(starved)).toEqual(["Sulfur Dust=starved"]);
   });
 });
 

@@ -15,6 +15,13 @@ import { buildCountView, buildFootView, layoutStrip } from "./clean-model";
 
 vi.mock("@/lib/compact-view", () => ({ isCompactViewport: () => false }));
 
+const sfx = vi.hoisted(() => ({ sfxClick: vi.fn(), playEditSfx: vi.fn() }));
+vi.mock("@/lib/sound/sfx", async (original) => ({
+  ...(await original<typeof import("@/lib/sound/sfx")>()),
+  sfxClick: sfx.sfxClick,
+  playEditSfx: sfx.playEditSfx,
+}));
+
 beforeAll(() => {
   // jsdom has no ResizeObserver; React Flow's provider asks for one.
   globalThis.ResizeObserver ??= class {
@@ -26,8 +33,8 @@ beforeAll(() => {
 afterEach(cleanup);
 
 /**
- * The most elements one reference card may cost: 3 inputs + power + 2 outputs + 2 chips + 3 strip chips. An Up to
- * card with its bar along the foot costs two more (the rule word and the bar) and stays inside it.
+ * The most elements one reference card may cost: 3 inputs + power + 2 outputs + 2 chips + 3 strip chips + the circuit
+ * badge in the well (68). An Up to card with its bar along the foot costs two more (the rule word and the bar): 70.
  */
 const BUDGET = 70;
 
@@ -252,6 +259,74 @@ it("types a count on a click, steps it on the wheel and goes back to Any on a mi
   fireEvent.change(input, { target: { value: "30" } });
   fireEvent.blur(input);
   expect(actions.setCount).toHaveBeenLastCalledWith(30);
+});
+
+it("sounds for itself: a click that opens the editor or the rule menu clicks, each wheel step ticks", () => {
+  sfx.sfxClick.mockClear();
+  sfx.playEditSfx.mockClear();
+  const actions = actionsSpy();
+  const { container } = renderCard(upToView(), actions);
+  const block = container.querySelector(".cc-count")!;
+  // The page's own click stands down for it.
+  expect(block.hasAttribute("data-sfx-own")).toBe(true);
+  fireEvent.wheel(block, { deltaY: -100 });
+  fireEvent.wheel(block, { deltaY: 100 });
+  expect(sfx.playEditSfx.mock.calls).toEqual([
+    ["ui.tick", 1, 1.12],
+    ["ui.tick", 1, 0.9],
+  ]);
+  fireEvent.click(container.querySelector(".cc-rule")!);
+  expect(sfx.sfxClick).toHaveBeenCalledTimes(1);
+  cleanup();
+  const again = renderCard(upToView(), actions);
+  fireEvent.click(again.container.querySelector(".cc-count")!);
+  expect(sfx.sfxClick).toHaveBeenCalledTimes(2);
+});
+
+it("outlines a problem card in its bar's tone, and leaves Any and a full card alone", () => {
+  const starved = renderCard(upToView()).container.querySelector(".cc-card")!;
+  expect(starved.getAttribute("data-tone")).toBe("starved");
+  cleanup();
+  const any = renderCard(referenceView()).container.querySelector(".cc-card")!;
+  expect(any.hasAttribute("data-tone")).toBe(false);
+  cleanup();
+  const view = referenceView();
+  const fullCount = count("upTo", 24, 24);
+  const full = renderCard({
+    ...view,
+    count: fullCount,
+    foot: buildFootView(
+      fullCount,
+      { capacity: 24, reached: 24, reason: "FULL" },
+      { inputs: view.inputs, outputs: view.outputs },
+    ),
+  }).container.querySelector(".cc-card")!;
+  expect(full.hasAttribute("data-tone")).toBe(false);
+  cleanup();
+  const exactCount = count("exact", 24, 24);
+  const fed = [
+    { ...view.inputs[0]!, forced: { number: "720", unit: "L/s" } },
+    ...view.inputs.slice(1),
+  ];
+  const forced = renderCard({
+    ...view,
+    inputs: fed,
+    count: exactCount,
+    foot: buildFootView(exactCount, undefined, { inputs: fed, outputs: view.outputs }),
+  }).container.querySelector(".cc-card")!;
+  expect(forced.getAttribute("data-tone")).toBe("forced");
+});
+
+it("puts the circuit in the well's corner: its icon and number, no row", () => {
+  const { container } = renderCard(referenceView());
+  const badge = container.querySelector<HTMLElement>(".cc-pic > .cc-circuit")!;
+  expect(badge.getAttribute("data-n")).toBe("2");
+  expect(badge.querySelector(".cc-circuit-icon")).not.toBeNull();
+  expect(JSON.parse(badge.getAttribute("data-tip")!).title).toBe("Circuit 2");
+  expect(badge.textContent).toBe("");
+  expect([...container.querySelectorAll(".cc-pname")].map((el) => el.textContent)).not.toContain(
+    "Circuit",
+  );
 });
 
 it("draws the bar as one element: tone, word, line and fraction", () => {

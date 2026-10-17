@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { parseRateInput } from "./rail-math";
 import { tipProps, type TipContent } from "./rail-tip";
+import { playEditSfx, sfxClick } from "@/lib/sound/sfx";
 
 /**
  * The small controls every rail row shares: the rule key (`~ = >= <=`) and the
@@ -23,9 +24,17 @@ export function wheelHandlerFor(target: EventTarget | null): WheelHandler | unde
   return control ? wheelHandlers.get(control) : undefined;
 }
 
+/**
+ * Keeps a control's wheel handler for the rail's one wheel listener. Every step ticks first (up a little higher, down
+ * a little lower) and claims the edit, so the board's change sound does not play on top.
+ */
 function wheelRef(handler: WheelHandler | undefined) {
   return (element: HTMLElement | null) => {
-    if (element && handler) wheelHandlers.set(element, handler);
+    if (!element || !handler) return;
+    wheelHandlers.set(element, (direction, ctrl, shift) => {
+      playEditSfx("ui.tick", 1, direction > 0 ? 1.12 : 0.9);
+      handler(direction, ctrl, shift);
+    });
   };
 }
 
@@ -62,12 +71,15 @@ export function RuleKey({
       className="rail-rule"
       data-tone={tone}
       data-wheel={onWheel ? "" : undefined}
+      // Sounds for itself: its click here, its wheel steps in wheelRef.
+      data-sfx-own=""
       ref={wheelRef(onWheel)}
       {...tipProps(`rule|${label}`, tip)}
       onMouseDown={noAutoscroll}
       onClick={(event) => {
         // A control on a row is its own thing: the row's click (walk the cards) is not for it.
         event.stopPropagation();
+        if (onClick) sfxClick();
         onClick?.(event);
       }}
       onContextMenu={(event) => {
@@ -142,12 +154,15 @@ export function RateBox({
       data-set={gold ? "" : undefined}
       data-unmet={unmet ? "" : undefined}
       data-wheel={onWheel ? "" : undefined}
+      // Sounds for itself: its click here, its wheel steps in wheelRef.
+      data-sfx-own=""
       style={style}
       ref={wheelRef(onWheel)}
       {...tipProps(`box|${label}`, tip)}
       onMouseDown={noAutoscroll}
       onClick={(event) => {
         event.stopPropagation();
+        sfxClick();
         onStartEdit();
       }}
       onContextMenu={(event) => {

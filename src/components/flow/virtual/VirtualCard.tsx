@@ -1,6 +1,14 @@
 "use client";
 
-import { useCallback, useEffect, useLayoutEffect, useRef, useState, useSyncExternalStore, type CSSProperties } from "react";
+import {
+  useCallback,
+  useEffect,
+  useLayoutEffect,
+  useRef,
+  useState,
+  useSyncExternalStore,
+  type CSSProperties,
+} from "react";
 import { useStoreApi, useUpdateNodeInternals } from "@xyflow/react";
 import "./virtual.css";
 import { applyZoomTo } from "./zoom-var";
@@ -22,7 +30,14 @@ export const FAR_ATTRIBUTE = "data-vfar";
  * The card counts as drawn (and may then be released to its shell) only once React Flow holds its handle boxes:
  * React Flow measures a frame after it is asked, and a shell measured by then has no handles to give.
  */
-type StoreLike = { getState: () => { nodeLookup: Map<string, { internals: { handleBounds?: { source?: unknown[]; target?: unknown[] } } }> } };
+type StoreLike = {
+  getState: () => {
+    nodeLookup: Map<
+      string,
+      { internals: { handleBounds?: { source?: unknown[]; target?: unknown[] } } }
+    >;
+  };
+};
 const measureQueue = new Map<string, { attempts: number; asked: boolean }>();
 let measureFrame = 0;
 let measureWith: { update: (ids: string[]) => void; store: StoreLike } | undefined;
@@ -78,7 +93,10 @@ function queueMeasure(update: (ids: string[]) => void, store: StoreLike, id: str
  */
 export function useVirtualPhase(nodeId: string, selected: boolean): 0 | 1 | 2 {
   const enabled = virtualizationEnabled();
-  const subscribe = useCallback((listener: () => void) => boardVirtualizer.subscribe(nodeId, listener), [nodeId]);
+  const subscribe = useCallback(
+    (listener: () => void) => boardVirtualizer.subscribe(nodeId, listener),
+    [nodeId],
+  );
   const phase = useSyncExternalStore(
     subscribe,
     () => boardVirtualizer.phase(nodeId),
@@ -108,7 +126,8 @@ export function DrawnSync({ nodeId, layoutKey }: { nodeId: string; layoutKey: st
     const before = boardVirtualizer.drawnKeyOf(nodeId);
     boardVirtualizer.setDrawnKey(nodeId, layoutKey);
     if (before !== undefined && before !== layoutKey) boardVirtualizer.markUndrawn(nodeId);
-    if (!boardVirtualizer.isDrawn(nodeId)) queueMeasure(updateNodeInternals, storeApi as unknown as StoreLike, nodeId);
+    if (!boardVirtualizer.isDrawn(nodeId))
+      queueMeasure(updateNodeInternals, storeApi as unknown as StoreLike, nodeId);
   }, [layoutKey, nodeId, updateNodeInternals, storeApi]);
   return null;
 }
@@ -191,7 +210,17 @@ export function CardShell({
     width: measured?.width ?? face.fallbackWidth,
     height: measured?.height ?? face.fallbackHeight,
   };
-  const marker = (type: "source" | "target", h: { id?: string | null; position: string; x: number; y: number; width: number; height: number }) => (
+  const marker = (
+    type: "source" | "target",
+    h: {
+      id?: string | null;
+      position: string;
+      x: number;
+      y: number;
+      width: number;
+      height: number;
+    },
+  ) => (
     <div
       key={`${type}:${h.id ?? ""}`}
       className={type}
@@ -210,6 +239,7 @@ export function CardShell({
       data-selected={face.selected ? "" : undefined}
       data-cannot-run={face.cannotRun ? "" : undefined}
       data-unset={face.unset ? "" : undefined}
+      data-tone={face.tone}
       style={style}
     >
       <div

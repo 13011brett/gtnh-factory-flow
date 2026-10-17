@@ -1,8 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import type { FactoryNode, MachineConfigTierOption, Recipe, RecipeInput } from "@/lib/model/types";
-import { makeResourceHandleId } from "../resource-handles";
+import type { FactoryNode, MachineConfigTierOption, Recipe } from "@/lib/model/types";
 import {
   GT_OVERCLOCK_TIERS,
   applyMachineHandlerToRecipe,
@@ -23,7 +22,6 @@ import {
 } from "@/lib/model";
 import { powerDisplayFromEuT, powerDisplaySuffix, rateSuffixForKind } from "@/lib/model/rate-unit";
 import { isCustomRateRecipe } from "@/lib/model/custom-rate";
-import { useDeviceSettings } from "@/lib/device-settings";
 import {
   getRecipeProgrammedCircuit,
   type RecipeProgrammedCircuit,
@@ -209,6 +207,7 @@ export interface CleanCardView {
   count: CleanCountView;
   /** The bar along the foot; absent when there is nothing to say (Any, or Exactly with nothing forced). */
   foot?: CleanFootView;
+  /** The programmed circuit: a badge in the well's top-left corner, its icon with its number on it. */
   circuit?: RecipeProgrammedCircuit;
   chips: CleanChipView[];
   stripHeight: number;
@@ -320,36 +319,9 @@ function isLocked(): boolean {
 
 const WORDS = CC_GEOMETRY.wordsWidth;
 
-/**
- * The programmed circuit as an input row ("Circuit as an input"): an inert row like the other free inputs, named for
- * its setting when the recipe dials one. Nothing to wire, no rate.
- */
-export function circuitInputPort(
-  resource: RecipeInput,
-  existing: readonly RailPort[],
-): RailPort | undefined {
-  const key = makeResourceKey(resource.kind, resource.id);
-  if (existing.some((port) => port.key === key)) return undefined;
-  return {
-    side: "input",
-    key,
-    kind: resource.kind,
-    resourceId: resource.id,
-    displayName: resource.displayName ?? resource.id,
-    handleId: makeResourceHandleId("input", { kind: resource.kind, id: resource.id }),
-    resource,
-    connected: false,
-    unsupplied: false,
-    boundaryFree: true,
-    currentPerSecond: 0,
-    nameplatePerSecond: 0,
-    wantedPerSecond: 0,
-    couldPerSecond: 0,
-    fillFraction: 0,
-    tone: "calm",
-    showNameplate: false,
-    free: true,
-  };
+/** The number a circuit is dialled to: the recipe's setting, else the item's own (`...integrated_circuit@24`). */
+export function circuitNumber(circuit: RecipeProgrammedCircuit): string | undefined {
+  return circuit.setting ?? circuit.resource?.id.match(/@(\d{1,2})$/)?.[1];
 }
 
 /**
@@ -799,6 +771,36 @@ export function buildFootView(
   return undefined;
 }
 
+/**
+ * The tone a card's frame takes (`data-tone` on `.cc-card`): a problem's, the bar's own colour. FULL, an Up to card
+ * with no reason, Any and no read-out keep the normal edge.
+ */
+export function frameTone(foot: Pick<CleanFootView, "tone"> | undefined): FootTone | undefined {
+  return foot && foot.tone !== "full" && foot.tone !== "plain" ? foot.tone : undefined;
+}
+
+/**
+ * The same frame tone without the card's rows (a shell, virtual/use-card-face.ts): an Up to card's reason, or an
+ * Exactly card with a forced input on any of its recipes' rows.
+ */
+export function stateFrameTone(
+  state: Pick<ReturnType<typeof cardCountState>, "rule" | "upTo">,
+  plan: { forced: ReadonlyArray<{ nodeId: string; side: string }> } | undefined,
+  nodeId: string,
+): FootTone | undefined {
+  if (state.rule === "upTo") {
+    const reason = state.upTo?.reason;
+    return reason ? frameTone({ tone: FOOT_TONE[reason] }) : undefined;
+  }
+  if (state.rule === "exact") {
+    const fed = plan?.forced.some(
+      (entry) => entry.side === "in" && entry.nodeId.split("#r")[0] === nodeId,
+    );
+    return fed ? "forced" : undefined;
+  }
+  return undefined;
+}
+
 /** A card's name by id, for the bar's tip (the full cards upstream of a starved one). */
 export function cardNameIn(
   project: { nodes: readonly FactoryNode[]; recipes: readonly Recipe[] },
@@ -826,8 +828,6 @@ export function useCleanCardModel(
   const updateNode = useFactoryStore((state) => state.updateNode);
   const averageDraw = useWorkspaceView().averageMachineDraw;
   useRateDisplayUnits();
-  // "Circuit as an input": the programmed circuit is a row among the inputs instead of the badge on the picture.
-  const circuitAsInput = useDeviceSettings().circuitAsInput;
   // Pins live on the project, not the node: re-render when they move.
   useFactoryStore((state) => state.project.settingPins);
   const machineIcons = useMachineHandlerIconEntries();
@@ -985,10 +985,7 @@ export function useCleanCardModel(
   }
   const strip = layoutStrip(rawChips);
 
-  const circuitResource = derived.circuit?.resource;
-  const circuitPort: RailPort | undefined =
-    circuitAsInput && circuitResource ? circuitInputPort(circuitResource, rails.inputs) : undefined;
-  const inputs = (circuitPort ? [...rails.inputs, circuitPort] : rails.inputs).map((port) =>
+  const inputs = rails.inputs.map((port) =>
     buildPortView(projectNode.id, port, projectNode, forcedAt),
   );
   const outputs = rails.outputs.map((port) =>
@@ -1023,7 +1020,7 @@ export function useCleanCardModel(
     glanceArt: art ?? machineIcon?.iconPath,
     count,
     foot,
-    circuit: circuitPort ? undefined : derived.circuit,
+    circuit: derived.circuit,
     chips: strip.chips,
     stripHeight: strip.height,
     selected,

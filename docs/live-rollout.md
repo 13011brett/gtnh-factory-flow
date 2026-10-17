@@ -13,6 +13,12 @@ data of its own: Caddy sends its `/api/datasets/*` to 3000. The droplet has room
 two, so staging cannot try the RC-2 data while the old site runs beta-2. `/opt/deploy.sh` builds `main` of
 `jackwrichards/gtnh-factory-flow` into `/opt/gtnh-flow`. The Supabase migration is already in production.
 
+### Where it stands (2026-10-17)
+
+- **Phase B done** about 02:29 UTC. Right after it the new site hung for minutes: a Community plan's stats refresh solved on the request thread with the homegrown simplex, because the bundled build looked for `highs.wasm` under `/ROOT/node_modules/highs/build`. Fixed live with a symlink there (`/ROOT/node_modules/highs/build` to a release's `node_modules/highs/build`) and in code (fe7cbfe7). Keep the symlink until a release built from fe7cbfe7 or later runs.
+- **Phase C done** about 04:55 UTC, a little differently from the steps below: `gtnh-flow-rc2` (port 3003) runs `/opt/releases/live-backport-rc2`, a hard-linked copy of the release whose `public/datasets/gtnh` points at `/opt/shared/gtnh-datasets-rc2`: its own manifest (RC-2 default, beta-2 kept) with links to both datasets in `/opt/shared/gtnh-datasets`. The shared manifest was left alone so the old site never tried to load RC-2. Caddy sends everything but `@live` to 3003 in every block (`Caddyfile.pre-rc2` is the one before). `gtnh-flow` and `gtnh-flow-next` are stopped and disabled; the extra swap is gone.
+- **Phase D** is next: back to the usual names and `/opt/deploy.sh`. Until then a deploy must not restart `gtnh-flow` into port 3000 expecting traffic: nothing points there.
+
 ### Phase A. Before the day (nothing players can see)
 
 1. **RC-2 recipe data.** Export from the RC-2 pack with the oracle mod and rebuild as `local-2.9.0-rc-2`

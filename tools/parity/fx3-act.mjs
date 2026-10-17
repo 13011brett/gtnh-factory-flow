@@ -89,7 +89,8 @@ const tests = {
     // pin the count and read the power row
     await st(page, (id) => window.__ccStore.getState().updateNode(id, { solvePin: 3 }), ids.nb);
     await wait(page, 1200);
-    const count = await page.locator(`${sel} .cc-count`).innerText();
+    // The count shows what runs and what is set from its attributes (docs/up-to.md), not as text.
+    const count = await page.locator(`${sel} .cc-count`).getAttribute("aria-label");
     check("pinned count shows", /3/.test(count), JSON.stringify(count));
     const power = await page
       .locator(`${sel} .cc-row[data-power] .cc-num`)

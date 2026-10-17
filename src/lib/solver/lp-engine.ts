@@ -57,9 +57,11 @@ export function initLpEngine(
 /** Tests and any node-side solve: the package loads its own wasm from disk. */
 async function loadNodeHighs(wasmUrl?: string): Promise<HighsInstance> {
   const factory = (await import("highs")).default;
-  return (await factory(
-    wasmUrl ? { locateFile: () => wasmUrl } : undefined,
-  )) as unknown as HighsInstance;
+  // A bundled server build rewrites the package's own directory to "/ROOT/...", where the wasm is not, and the
+  // homegrown simplex then solves plan-mode plans on the request thread (it held the live site for minutes on
+  // 2026-10-17). The package's files sit under the app's node_modules wherever it runs.
+  const located = wasmUrl ?? `${process.cwd()}/node_modules/highs/build/highs.wasm`;
+  return (await factory({ locateFile: () => located })) as unknown as HighsInstance;
 }
 
 /**

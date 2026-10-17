@@ -48,6 +48,7 @@ website at `docs/cross-repo-features.md`; change both together.
 | Colours | `ui/theme/Hyb`, `DrawerPaint.tint` (Java ints, `Hyb.mix` in float32) | `clean/tokens.ts` (`CC`, `drawerMixes`), `colors.ts` (`mixHex`, the same float32), hex in CSS |
 | Wires | `ui/canvas/WireLayer` (routes card wires and drawer links) | React Flow edges; flows from `adapter/answer.ts` |
 | Hover lighting | `ui/HoverScope` | `components/flow/flow-scope.ts` (`buildStorageFlowScope`...) |
+| Count rule (Any, Up to, Exactly) | `data/flowchart/PinRule`, `Node.machineCountExact`, `MachineGroup.exact`; `docs/design/up-to.md` | `lib/model/pin-rule.ts`, `solvePinExact`; `docs/up-to.md` |
 | Overview rail | `ui/OverviewRail`, `BoardSession.buildTotals` | `clean/rail/rail-model.ts`, `OverviewRail.tsx` |
 | Minimap | `ui/world/Minimap`, `PlanSnapshot` (draws through `DrawerPaint`) | `clean/minimap/minimap-scene.ts`, `minimap-engine.ts` |
 | Tooltips | `ui/popup/Tip` built in each widget (`DrawerCard.tip`) | `clean/interaction/tip-spec.ts`, built in the view (`drawer-model.ts` `tips`) |

@@ -40,6 +40,20 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.1.0",
+    date: "2026-10-18",
+    headline: "Up to: a machine count is what you have",
+    notes: [
+      "A machine count is now Up to by default. The machines run as hard as the line lets them and never more.",
+      "Each card shows what runs, what you set and a bar that says why: Full, Bottleneck, Starved, Clogged, Unused or Limited.",
+      "A bottleneck's bar runs on to how many machines the line wants.",
+      "Click the word under the count to pick Any, Up to or Exactly. Exactly works as before and fills gaps with forced flows.",
+      "Old Build plans open with their counts as Up to, so they read like they used to.",
+      "A drawer that falls short names the machine that holds it back.",
+      "Circuit as an input is on by default.",
+    ],
+  },
+  {
     version: "4.0.0",
     date: "2026-10-15",
     headline: "Version 4: the in-game planner on the web, and plans you edit together",

@@ -56,9 +56,11 @@ export interface PlanConversion {
  *   becomes its pin (`solvePin`), an Up to pin (never `solvePinExact`: it is what the
  *   built machines can do, not a demand). A classic Solve project keeps the pins it
  *   has, which read as Up to as well.
- * - A card's `targetOutput` becomes a port rate on its output row, and the
- *   plan's `targetRate` lands on the first card making the resource (unless a
- *   card already targets it). The classic fields are left as they are.
+ * - Card and plan targets were display arithmetic, never rows, so they stay
+ *   as they are and pin nothing. Only a classic Solve plan that nothing else
+ *   anchors turns them into port rates (its card's `targetOutput` on its output
+ *   row, the plan's `targetRate` on the first card making the resource), as
+ *   old Solve had no other answer there.
  * - A buffer drawer wired only to cards stays a buffer drawer (its rate, which
  *   no older board enforced, parked as no rule). Any other buffer (wired to a
  *   drawer, or by a loose cell wire) is joined: each wire into it to each wire
@@ -98,11 +100,8 @@ export function convertBuildToPlanWithReport(project: FactoryProject): PlanConve
     }
     return pinNode(node, recipe, build, report);
   });
-  // Solve never read a card's target (Build's display arithmetic), so a stale one must not become a pin.
-  if (build) {
-    nodes = applyTargets(project, nodes, recipesById, report);
-  }
-
+  // A card's target was display arithmetic in both Build and Solve: never a row. Build's counts are Up to now, so a
+  // target made a port rate would pin its card exactly and the plan would no longer read as it did (docs/up-to.md).
   const parkedStorages = build ? parkDormantRates(storages, edges, project, report) : storages;
   if (!build && !hasLiveAnchor(nodes, parkedStorages, edges, project)) {
     // The old Solve had no unique answer here (every machine zero), so the targets the plan states stand in for it.

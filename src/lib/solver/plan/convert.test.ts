@@ -151,10 +151,25 @@ describe("convertBuildToPlan", () => {
     expect(plan.nodes.map((n) => n.solvePin)).toEqual([undefined, 2]);
   });
 
-  describe("targets become port rates", () => {
+  describe("an unanchored Solve plan's targets become port rates", () => {
+    it("leaves a Build plan's targets as they were: display only, no pin", () => {
+      const { project: plan, report } = convertBuildToPlanWithReport(
+        chain({
+          targetRate: { kind: "item", resourceId: "gear", amountPerSecond: 2.5 },
+          nodes: [
+            node("a", "make", 4),
+            node("b", "use", 2, { targetOutput: { kind: "item", resourceId: "kit", amountPerSecond: 7 } }),
+          ],
+        }),
+      );
+      expect(plan.nodes.map((n) => n.portRates)).toEqual([undefined, undefined]);
+      expect(plan.nodes.map((n) => n.solvePin)).toEqual([4, 2]);
+      expect(report.portRates).toBe(0);
+    });
+
     it("puts a card's targetOutput on its output row", () => {
       const plan = convertBuildToPlan(
-        chain({
+        chain({ solveMode: true,
           nodes: [
             node("a", "make", 4),
             node("b", "use", 2, { targetOutput: { kind: "item", resourceId: "kit", amountPerSecond: 7 } }),
@@ -168,7 +183,7 @@ describe("convertBuildToPlan", () => {
 
     it("reports a target the card does not make", () => {
       const { project: plan, report } = convertBuildToPlanWithReport(
-        chain({
+        chain({ solveMode: true,
           nodes: [
             node("a", "make", 4, { targetOutput: { kind: "item", resourceId: "nothing", amountPerSecond: 7 } }),
             node("b", "use", 2),
@@ -181,7 +196,7 @@ describe("convertBuildToPlan", () => {
 
     it("lands the plan's target on the first card making it", () => {
       const plan = convertBuildToPlan(
-        chain({ targetRate: { kind: "item", resourceId: "gear", amountPerSecond: 2.5 } }),
+        chain({ solveMode: true, targetRate: { kind: "item", resourceId: "gear", amountPerSecond: 2.5 } }),
       );
       expect(plan.nodes[0]!.portRates).toEqual({ "output:item:gear": 2.5 });
       expect(plan.nodes[1]!.portRates).toBeUndefined();
@@ -189,7 +204,7 @@ describe("convertBuildToPlan", () => {
 
     it("lets a card that targets the resource keep it, and puts nothing else", () => {
       const plan = convertBuildToPlan(
-        chain({
+        chain({ solveMode: true,
           targetRate: { kind: "item", resourceId: "kit", amountPerSecond: 99 },
           nodes: [
             node("a", "make", 4),
@@ -204,6 +219,7 @@ describe("convertBuildToPlan", () => {
     it("finds the maker in a shared machine's later section by its r<n>: handle", () => {
       const plan = convertBuildToPlan(
         project({
+          solveMode: true,
           recipes: [recipe("one", [["a", 1]], [["x", 1]]), recipe("two", [["b", 1]], [["y", 1]])],
           nodes: [node("s", "one", 1, { extraRecipes: [{ recipeId: "two" }] })],
           targetRate: { kind: "item", resourceId: "y", amountPerSecond: 4 },
@@ -215,6 +231,7 @@ describe("convertBuildToPlan", () => {
     it("encodes the resource id in the handle", () => {
       const plan = convertBuildToPlan(
         project({
+          solveMode: true,
           recipes: [recipe("m", [], [["gt:foo bar", 1]])],
           nodes: [node("a", "m")],
           targetRate: { kind: "item", resourceId: "gt:foo bar", amountPerSecond: 1 },
@@ -336,7 +353,7 @@ describe("convertBuildToPlan", () => {
     );
     const parsed = factoryProjectSchema.parse(JSON.parse(JSON.stringify(plan)));
     expect(parsed.planMode).toBe(true);
-    expect(parsed.nodes[1]!.portRates).toEqual({ "output:item:kit": 2 });
+    expect(parsed.targetRate).toEqual({ kind: "item", resourceId: "kit", amountPerSecond: 2 });
     expect(parsed.nodes[0]!.solvePin).toBe(4);
   });
 });

@@ -603,6 +603,48 @@ export async function queryDatasetResources(
   },
 ) {
   const catalog = await loadCatalog(versionId);
+  // Nothing typed is the item list as it opens and as it scrolls: every resource, sorted, about a second of the one
+  // server thread on RC-2. The answer only changes with the catalog and the popularity sweep, so it is kept.
+  const blankKey =
+    request.query.trim() === ""
+      ? JSON.stringify([request.kind ?? "", request.mod ?? "", request.sort ?? "relevance", request.source ?? null])
+      : undefined;
+  const kept = blankKey === undefined ? undefined : blankResourceSearches.get(catalog)?.get(blankKey);
+  const blank =
+    kept && kept.popularity === request.popularity ? kept.value : await searchDatasetResources(catalog, request);
+  if (blankKey !== undefined && blank !== kept?.value) {
+    const byKey = blankResourceSearches.get(catalog) ?? new Map();
+    byKey.set(blankKey, { popularity: request.popularity, value: blank });
+    blankResourceSearches.set(catalog, byKey);
+  }
+  const { matches, modCounts, resolved } = blank;
+
+  return {
+    resources: matches
+      .slice(request.offset, request.offset + request.limit)
+      .map((match) => catalog.resourceIndex[match.resourceIndex])
+      .filter(Boolean),
+    total: matches.length,
+    offset: request.offset,
+    limit: request.limit,
+    hasMore: request.offset + request.limit < matches.length,
+    mods: [...modCounts.entries()]
+      .map(([id, count]) => ({ id, count }))
+      .sort((a, b) => b.count - a.count || a.id.localeCompare(b.id)),
+    ...searchOutcome(resolved),
+  };
+}
+
+type ResourceSearch = Awaited<ReturnType<typeof searchDatasetResources>>;
+const blankResourceSearches = new WeakMap<
+  LoadedRecipeIndex,
+  Map<string, { popularity?: Map<string, number>; value: ResourceSearch }>
+>();
+
+async function searchDatasetResources(
+  catalog: LoadedRecipeIndex,
+  request: Parameters<typeof queryDatasetResources>[1],
+) {
   const indexes = ensureResourceIndexes(catalog);
   const sourceKeys = request.source
     ? await getPassiveSourceResourceKeys(catalog, request.source)
@@ -667,21 +709,7 @@ export async function queryDatasetResources(
     directionCounts,
     request.popularity,
   );
-
-  return {
-    resources: matches
-      .slice(request.offset, request.offset + request.limit)
-      .map((match) => catalog.resourceIndex[match.resourceIndex])
-      .filter(Boolean),
-    total: matches.length,
-    offset: request.offset,
-    limit: request.limit,
-    hasMore: request.offset + request.limit < matches.length,
-    mods: [...modCounts.entries()]
-      .map(([id, count]) => ({ id, count }))
-      .sort((a, b) => b.count - a.count || a.id.localeCompare(b.id)),
-    ...searchOutcome(resolved),
-  };
+  return { matches, modCounts, resolved };
 }
 
 /**

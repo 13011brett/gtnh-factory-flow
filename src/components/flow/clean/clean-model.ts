@@ -22,11 +22,18 @@ import {
   type MachineConfigTierControl,
 } from "@/lib/model";
 import { powerDisplayFromEuT, powerDisplaySuffix, rateSuffixForKind } from "@/lib/model/rate-unit";
+import { isCustomRateRecipe } from "@/lib/model/custom-rate";
 import { useDeviceSettings } from "@/lib/device-settings";
-import { getRecipeProgrammedCircuit, type RecipeProgrammedCircuit } from "@/lib/model/programmed-circuit";
+import {
+  getRecipeProgrammedCircuit,
+  type RecipeProgrammedCircuit,
+} from "@/lib/model/programmed-circuit";
 import { stripBeeFrameSlotInputs } from "@/lib/model/bee-display";
 import { getOverclockedRecipeStats } from "@/lib/solver/overclock";
-import { applyMachineOutputMultipliers, getMachineParallelMultiplier } from "@/lib/solver/machine-effects";
+import {
+  applyMachineOutputMultipliers,
+  getMachineParallelMultiplier,
+} from "@/lib/solver/machine-effects";
 import { getNodePowerReport, getNodeSteamReport, hasPowerReport } from "@/lib/solver/power-report";
 import { isMultiblockRecipe } from "@/lib/solver/power";
 import { prefersCuratedMachineMath } from "@/lib/solver/runtime-calculation";
@@ -34,7 +41,9 @@ import { getFusionMachine } from "@/lib/machines/fusion";
 import { energyHatchTypeExistsAtTier } from "@/lib/machines/energy-hatches";
 import { carryMachineVoltage } from "@/lib/solver/hatch-input";
 import { getVoltageTierMaxEuT } from "@/lib/model/tiers";
-import { makePortKey } from "@/lib/solver/plan/port-key";
+import { makePortKey, parsePortKey } from "@/lib/solver/plan/port-key";
+import type { PlanUpTo, UpToReason } from "@/lib/solver/plan/types";
+import { PIN_RULE_LABEL, pinRuleOf, withPinRule, type PinRule } from "@/lib/model/pin-rule";
 import { getMachineStructureArt } from "@/lib/power/structure-art";
 import { useFactoryStore, useRateDisplayUnits } from "@/store/factory-store";
 import { useWorkspaceView } from "@/lib/workspace-view";
@@ -108,6 +117,82 @@ export interface CleanPowerView {
   title: string;
 }
 
+/**
+ * The count under the machine (docs/up-to.md): what runs, big, and under it what you set, small: the rule's word and
+ * the number in gold ("up to 24", "exactly 24"). Nothing set (Any) shows "(set count)" while nothing sets this part
+ * of the plan, else nothing (a crop says what it counts).
+ */
+export interface CleanCountView {
+  /** What runs, as printed: "×18.2" (a crop's has no times sign). */
+  text: string;
+  /** What runs: an Up to card's reached count, else the solved count (the pin when one is set). */
+  value: number;
+  /** A count is set: Up to or Exactly. */
+  pinned: boolean;
+  rule: PinRule;
+  /** The rule's word on the card, lower case: "up to", "exactly"; empty for Any. */
+  ruleWord: string;
+  /** The rule cannot change here: a custom rate card is always Exactly. */
+  ruleFixed: boolean;
+  /** The count you set; absent for Any. */
+  set?: number;
+  /** The count you set as printed ("24"); empty for Any. */
+  setText: string;
+  /** Under what runs when nothing is set: "(set count)", a crop's "crops planted", or empty. */
+  note: string;
+  /** The note asks for a count (it pulses with every prompt on the board). */
+  prompt: boolean;
+  /** Nothing runs. */
+  zero: boolean;
+  title: string;
+}
+
+/** The foot bar's colour: an Up to card's reason, FORCED IN, or plain (Up to with no reason). */
+export type FootTone =
+  | "full"
+  | "bottleneck"
+  | "starved"
+  | "clogged"
+  | "unused"
+  | "limited"
+  | "forced"
+  | "plain";
+
+/**
+ * The bar along an Up to card's foot (docs/up-to.md, mockups/up-to-card pass 3): its fill is reached over the count,
+ * one word in the reason's colour, one plain line, and the fraction the bar shows. A bottleneck's bar runs on striped
+ * to what the line wants. An Exactly card fed by a forced input says FORCED IN. Every string final.
+ */
+export interface CleanFootView {
+  tone: FootTone;
+  /** "BOTTLENECK"; empty when the reason was not worked out. */
+  word: string;
+  /** One plain line, shortened (never cut) to fit beside the word and the fraction. */
+  say: string;
+  /** "18.2 / 24"; empty for FORCED IN. */
+  frac: string;
+  /** The fill's width in px inside the bar's track. */
+  fill: number;
+  /** A bottleneck's striped run-on, px inside the track. */
+  ghost?: { left: number; width: number };
+  /** For the tip. */
+  facts: {
+    reason: UpToReason | null | "FORCED";
+    rule: PinRule;
+    running: number;
+    capacity: number;
+    wants?: number;
+    /** The row it is about (STARVED, CLOGGED, UNUSED). */
+    resource?: string;
+    /** Other rows that hold it back just as alone. */
+    tied: string[];
+    /** STARVED: the full cards upstream, by name. */
+    upstream: string[];
+    /** FORCED IN: each forced input, "720 L/s Oxygen". */
+    forced: string[];
+  };
+}
+
 export interface CleanCardView {
   nodeId: string;
   name: string;
@@ -121,14 +206,9 @@ export interface CleanCardView {
   art?: string;
   /** What the zoomed-out view draws: the structure render, or the machine item. */
   glanceArt?: string;
-  count: {
-    text: string;
-    pinned: boolean;
-    zero: boolean;
-    note: "" | "(pinned)" | "(set count)";
-    value: number;
-    title: string;
-  };
+  count: CleanCountView;
+  /** The bar along the foot; absent when there is nothing to say (Any, or Exactly with nothing forced). */
+  foot?: CleanFootView;
   circuit?: RecipeProgrammedCircuit;
   chips: CleanChipView[];
   stripHeight: number;
@@ -142,7 +222,12 @@ export interface CleanCardActions {
   setAmps: (amps: number) => void;
   cycleMachine: (direction: -1 | 1) => void;
   switchMachine: (handlerId: string) => void;
+  /** Sets the count, keeping the rule (Any becomes Up to); nothing means Any. */
   setCount: (count: number | undefined) => void;
+  /** The wheel on the count: one up or down (from Any, Up to at what runs rounded up; below one, Any). */
+  stepCount: (direction: -1 | 1) => void;
+  /** Any, Up to or Exactly (from Any, at what runs rounded up). */
+  setRule: (rule: PinRule) => void;
   stepSetting: (id: string, direction: -1 | 1) => void;
 }
 
@@ -172,13 +257,20 @@ function getNodeTierControl(recipe: Recipe, node: FactoryNode) {
   }
   const hasVoltageTier = GT_OVERCLOCK_TIERS.some((entry) => entry.tier === recipe.minimumTier);
   const recipeMap = (recipe.source?.recipeMap ?? recipe.machineType).toLowerCase().trim();
-  if (recipe.durationTicks <= 0 || (recipe.eut === 0 && !hasVoltageTier && recipeMap !== "tree growth simulator")) {
+  if (
+    recipe.durationTicks <= 0 ||
+    (recipe.eut === 0 && !hasVoltageTier && recipeMap !== "tree growth simulator")
+  ) {
     return undefined;
   }
   const minimum = getOverclockedRecipeStats(recipe, node).minimumTier as VoltageTier;
   const allowBelowMinimum = isMultiblockRecipe(recipe);
-  const maximum = allowBelowMinimum ? undefined : (getRecipeMaximumVoltageTier(recipe) as VoltageTier | undefined);
-  const available = allowBelowMinimum ? undefined : (getRecipeAvailableVoltageTiers(recipe) as VoltageTier[] | undefined);
+  const maximum = allowBelowMinimum
+    ? undefined
+    : (getRecipeMaximumVoltageTier(recipe) as VoltageTier | undefined);
+  const available = allowBelowMinimum
+    ? undefined
+    : (getRecipeAvailableVoltageTiers(recipe) as VoltageTier[] | undefined);
   const current = (
     allowBelowMinimum
       ? (GT_OVERCLOCK_TIERS.find((entry) => entry.tier === node.overclockTier)?.tier ?? minimum)
@@ -232,7 +324,10 @@ const WORDS = CC_GEOMETRY.wordsWidth;
  * The programmed circuit as an input row ("Circuit as an input"): an inert row like the other free inputs, named for
  * its setting when the recipe dials one. Nothing to wire, no rate.
  */
-export function circuitInputPort(resource: RecipeInput, existing: readonly RailPort[]): RailPort | undefined {
+export function circuitInputPort(
+  resource: RecipeInput,
+  existing: readonly RailPort[],
+): RailPort | undefined {
   const key = makeResourceKey(resource.kind, resource.id);
   if (existing.some((port) => port.key === key)) return undefined;
   return {
@@ -276,7 +371,9 @@ export function buildPortView(
   node: Pick<FactoryNode, "portRates">,
   forcedAt: ReadonlyMap<string, number> | undefined,
 ): CleanPortView {
-  const forcedRate = forcedAt?.get(makePortKey(nodeId, port.side === "input" ? "i" : "o", port.handleId));
+  const forcedRate = forcedAt?.get(
+    makePortKey(nodeId, port.side === "input" ? "i" : "o", port.handleId),
+  );
   const shown = portRowPerSecond(port, forcedRate);
   let number: string;
   let unit: string;
@@ -289,7 +386,8 @@ export function buildPortView(
     unit = rateSuffixForKind(port.kind).trim();
   }
   const chance = (port.resource as { chance?: number } | undefined)?.chance;
-  const chanceText = chance !== undefined && chance < 1 ? `${Math.round(chance * 10000) / 100}%` : undefined;
+  const chanceText =
+    chance !== undefined && chance < 1 ? `${Math.round(chance * 10000) / 100}%` : undefined;
   return {
     key: port.key,
     nodeId,
@@ -313,7 +411,10 @@ export function buildPortView(
     resourceKey: makeResourceKey(port.kind, port.resourceId),
     forced:
       forcedRate !== undefined && forcedRate > 0
-        ? { number: formatSlotRateBare(forcedRate, port.kind), unit: rateSuffixForKind(port.kind).trim() }
+        ? {
+            number: formatSlotRateBare(forcedRate, port.kind),
+            unit: rateSuffixForKind(port.kind).trim(),
+          }
         : undefined,
   };
 }
@@ -362,8 +463,17 @@ export function deriveCardFace(recipe: Recipe, projectNode: FactoryNode) {
   const machineDrawsEu = effectiveRecipe.eut > 0 && !isSteamMachineHandler(selectedMachineHandler);
   const tierControl = machineDrawsEu ? getNodeTierControl(effectiveRecipe, projectNode) : undefined;
   const powerReport =
-    machineDrawsEu && tierControl && hasPowerReport(nodeRecipe) ? getNodePowerReport(nodeRecipe, projectNode) : undefined;
-  return { selectedMachineHandler, nodeRecipe, effectiveRecipe, machineDrawsEu, tierControl, powerReport };
+    machineDrawsEu && tierControl && hasPowerReport(nodeRecipe)
+      ? getNodePowerReport(nodeRecipe, projectNode)
+      : undefined;
+  return {
+    selectedMachineHandler,
+    nodeRecipe,
+    effectiveRecipe,
+    machineDrawsEu,
+    tierControl,
+    powerReport,
+  };
 }
 
 /** The picture a card shows in its glance face and its picture column: the structure render, else the machine's item. */
@@ -375,8 +485,12 @@ export function cardPicture(
   mapIcons: ReturnType<typeof useRecipeMapIcons>,
 ) {
   const pictureTier = (face.tierControl?.current ?? projectNode.overclockTier) as string;
-  const recipeMapIcon = mapIcons.get(recipe.source?.recipeMap ?? recipe.machineType) as MachineHandlerIcon | undefined;
-  const machineIcon = machineIconAtTier(machineIcons.get(face.selectedMachineHandler.id), pictureTier) ?? recipeMapIcon;
+  const recipeMapIcon = mapIcons.get(recipe.source?.recipeMap ?? recipe.machineType) as
+    | MachineHandlerIcon
+    | undefined;
+  const machineIcon =
+    machineIconAtTier(machineIcons.get(face.selectedMachineHandler.id), pictureTier) ??
+    recipeMapIcon;
   const art = getMachineStructureArt(face.selectedMachineHandler.id);
   return { machineIcon, art };
 }
@@ -393,14 +507,313 @@ function planSetsOf(plan: NonNullable<PlanExtras>) {
   return sets;
 }
 
-export function cardCountState(result: RecipeNodeData["result"], projectNode: FactoryNode, plan: PlanExtras) {
-  const needed = result?.theoreticalMachinesRequired ?? 0;
+/**
+ * A card's count: its rule, what it needs, and what runs (an Up to card's reached count from the solve, else the pin
+ * when one is set, else the solved count).
+ */
+export function cardCountState(
+  result: RecipeNodeData["result"],
+  projectNode: Pick<FactoryNode, "id" | "solvePin" | "solvePinExact">,
+  plan: PlanExtras,
+  recipe?: Pick<Recipe, "machineType">,
+  needed: number = result?.theoreticalMachinesRequired ?? 0,
+) {
+  const rule = pinRuleOf(projectNode, recipe);
   const pin = projectNode.solvePin;
-  const pinned = pin !== undefined && pin > 0;
+  const pinned = rule !== "any";
+  // An Up to card's read-out; one left over from before the rule changed is not this card's.
+  const upTo = rule === "upTo" ? plan?.upTo?.[projectNode.id] : undefined;
   // Sets, kept per plan: a board of a thousand cards asks this of each of them on every solve.
   const sets = plan !== undefined ? planSetsOf(plan) : undefined;
-  const unset = sets !== undefined && !pinned && (sets.unanchored.has(projectNode.id) || sets.unneeded.has(projectNode.id));
-  return { needed, pin, pinned, unset, value: pinned ? (pin as number) : needed };
+  const unset =
+    sets !== undefined &&
+    !pinned &&
+    (sets.unanchored.has(projectNode.id) || sets.unneeded.has(projectNode.id));
+  const value = upTo ? upTo.reached : pinned ? (pin as number) : needed;
+  return { needed, pin, pinned, unset, value, rule, upTo };
+}
+
+/** The set count as the card prints it: up to three decimals, no trailing zeros. */
+export function formatSetCount(value: number): string {
+  return String(Math.round(value * 1000) / 1000);
+}
+
+/** The count view (the plain card's and every special card's), from `cardCountState`. */
+export function buildCountView(
+  state: ReturnType<typeof cardCountState>,
+  opts: {
+    /** A crop's count has no times sign. */
+    noTimes?: boolean;
+    /** What an Any card says under its count when nothing asks for one (a crop's "crops planted"). */
+    anyNote?: string;
+    /** A custom rate card: always Exactly, no rule menu. */
+    ruleFixed?: boolean;
+    title?: string;
+  } = {},
+): CleanCountView {
+  const { rule, pinned, value, unset, needed } = state;
+  const set = pinned ? (state.pin as number) : undefined;
+  return {
+    text: `${opts.noTimes ? "" : "×"}${formatSolvedMachines(value)}`,
+    value,
+    pinned,
+    rule,
+    ruleWord: pinned ? PIN_RULE_LABEL[rule].toLowerCase() : "",
+    ruleFixed: opts.ruleFixed === true,
+    set,
+    setText: set !== undefined ? formatSetCount(set) : "",
+    note: pinned ? "" : unset ? "(set count)" : (opts.anyNote ?? ""),
+    prompt: !pinned && unset,
+    zero: state.upTo ? state.upTo.reached <= 0.0000005 : !pinned && needed <= 0.0000005,
+    title:
+      opts.title ??
+      (rule === "upTo"
+        ? "Runs as many as the plan lets it. Never more than you set."
+        : rule === "exact"
+          ? "Runs exactly this many. A gap shows as a forced flow."
+          : "How many of this machine the plan needs."),
+  };
+}
+
+/**
+ * The count after one wheel step: from Any, Up to at what runs rounded up (at least one); else the set count rounded,
+ * plus or minus one; below one, Any (undefined).
+ */
+export function wheelCount(
+  count: Pick<CleanCountView, "rule" | "set" | "value">,
+  direction: -1 | 1,
+): number | undefined {
+  if (count.rule === "any" || count.set === undefined)
+    return Math.max(1, Math.ceil(count.value - 0.000001));
+  const next = Math.round(count.set) + direction;
+  return next >= 1 ? next : undefined;
+}
+
+/** The patch that gives a card `rule` and `count` (every write of a count goes through `withPinRule`). */
+export function pinPatch(
+  node: Pick<FactoryNode, "solvePin" | "solvePinExact">,
+  rule: PinRule,
+  count: number | undefined,
+): Pick<FactoryNode, "solvePin" | "solvePinExact"> {
+  const next = withPinRule(
+    { solvePin: node.solvePin, solvePinExact: node.solvePinExact },
+    rule,
+    count,
+  );
+  return { solvePin: next.solvePin, solvePinExact: next.solvePinExact };
+}
+
+/**
+ * The count's actions for a card, over `updateNode`: what a click, the wheel, a middle click and the rule menu write.
+ * `count` is the card's own count view (a shared machine's is its recipes' together).
+ */
+export function pinActions(
+  node: Pick<FactoryNode, "id" | "solvePin" | "solvePinExact">,
+  count: Pick<CleanCountView, "rule" | "set" | "value" | "ruleFixed">,
+  update: (id: string, patch: Pick<FactoryNode, "solvePin" | "solvePinExact">) => void,
+  locked: () => boolean,
+): Pick<CleanCardActions, "setCount" | "stepCount" | "setRule"> {
+  const write = (rule: PinRule, value: number | undefined) => {
+    if (!locked()) update(node.id, pinPatch(node, rule, value));
+  };
+  // A typed or stepped count keeps the rule; from Any it is Up to (a custom rate card's is Exactly).
+  const ruleForCount: PinRule = count.ruleFixed
+    ? "exact"
+    : count.rule === "any"
+      ? "upTo"
+      : count.rule;
+  return {
+    setCount: (value) => write(value !== undefined && value > 0 ? ruleForCount : "any", value),
+    stepCount: (direction) => {
+      const next = wheelCount(count, direction);
+      write(next === undefined ? "any" : ruleForCount, next);
+    },
+    setRule: (rule) => {
+      if (count.ruleFixed && rule !== "any") return;
+      write(rule, count.set ?? Math.max(1, Math.ceil(count.value - 0.000001)));
+    },
+  };
+}
+
+/** The bar's width (the card's inner width), its track (2 px in from each side) and the room its words have. */
+const FOOT_WIDTH = CC_GEOMETRY.cardWidth - 2 * CC_GEOMETRY.railInset;
+export const FOOT_TRACK = FOOT_WIDTH - 4;
+const FOOT_TEXT = FOOT_WIDTH - 14;
+const FOOT_GAP = 6;
+const FOOT_SIZE = 8;
+
+const FOOT_TONE: Record<UpToReason, FootTone> = {
+  FULL: "full",
+  BOTTLENECK: "bottleneck",
+  STARVED: "starved",
+  CLOGGED: "clogged",
+  UNUSED: "unused",
+  LIMITED: "limited",
+};
+
+/** The first of `lines` that fits `room` px at the bar's size; none fits, nothing (the word and fraction still say it). */
+function fitLine(lines: string[], room: number): string {
+  return lines.find((line) => measureClean(line, FOOT_SIZE) <= room) ?? "";
+}
+
+/** The resource a row key names, by its port's name when the card has it. */
+function resourceName(
+  resourceKey: string | undefined,
+  ports: readonly CleanPortView[],
+): string | undefined {
+  if (!resourceKey) return undefined;
+  return (
+    ports.find((port) => port.resourceKey === resourceKey)?.name ??
+    resourceKey.slice(resourceKey.indexOf(":") + 1)
+  );
+}
+
+/**
+ * The foot bar of a card, or nothing: an Up to card with its read-out, or an Exactly card with a forced input on one
+ * of its rows. `ports` are the card's rows (every recipe's on a shared machine), `cardName` names a card by id.
+ */
+export function buildFootView(
+  count: Pick<CleanCountView, "rule" | "set">,
+  upTo: PlanUpTo | undefined,
+  ports: { inputs: readonly CleanPortView[]; outputs: readonly CleanPortView[] },
+  cardName: (id: string) => string | undefined = () => undefined,
+): CleanFootView | undefined {
+  const fmt = formatSolvedMachines;
+  if (count.rule === "upTo" && upTo) {
+    const capacity = upTo.capacity > 0 ? upTo.capacity : (count.set ?? 0);
+    const reached = Math.max(0, upTo.reached);
+    const wants =
+      upTo.reason === "BOTTLENECK" && upTo.wants !== undefined && upTo.wants > capacity
+        ? upTo.wants
+        : undefined;
+    // The bar's end is the count, or what the line wants when that is more.
+    const end = wants ?? capacity;
+    const share = (value: number) => (end > 0 ? Math.min(1, Math.max(0, value / end)) : 0);
+    const fill = Math.round(FOOT_TRACK * share(reached));
+    const ghostLeft = Math.round(FOOT_TRACK * share(capacity));
+    const ghost =
+      wants !== undefined ? { left: ghostLeft, width: FOOT_TRACK - ghostLeft } : undefined;
+    const frac = `${fmt(reached)} / ${fmt(end)}`;
+    const reason = upTo.reason;
+    const resource =
+      reason === "STARVED"
+        ? resourceName(upTo.resourceKey, ports.inputs)
+        : reason === "CLOGGED" || reason === "UNUSED"
+          ? resourceName(upTo.resourceKey, ports.outputs)
+          : undefined;
+    const tied = (upTo.tied ?? [])
+      .map((key) => {
+        const at = parsePortKey(key);
+        const rows = at?.side === "i" ? ports.inputs : ports.outputs;
+        return at
+          ? rows.find((port) => port.handleId.replace(/^r\d+:/, "") === at.handle)?.name
+          : undefined;
+      })
+      .filter((name): name is string => name !== undefined);
+    const upstream = (upTo.upstream ?? []).map((id) => cardName(id) ?? "a card");
+    const word = reason ?? "";
+    const room =
+      FOOT_TEXT -
+      (word ? measureClean(word, FOOT_SIZE) + FOOT_GAP : 0) -
+      measureClean(frac, FOOT_SIZE) -
+      FOOT_GAP;
+    const lines: string[] =
+      reason === "FULL"
+        ? ["nothing wants more"]
+        : reason === "BOTTLENECK"
+          ? wants !== undefined
+            ? [`the line wants ${fmt(wants)}`, `wants ${fmt(wants)}`]
+            : ["the line wants more"]
+          : reason === "STARVED"
+            ? resource
+              ? [`short of ${resource}`, "short of an input"]
+              : ["short of an input"]
+            : reason === "CLOGGED"
+              ? resource
+                ? [`${resource} has nowhere to go`, `nowhere for ${resource}`, "an output backs up"]
+                : ["an output backs up"]
+              : reason === "UNUSED"
+                ? resource
+                  ? [`nothing takes ${resource}`, "nothing takes it"]
+                  : ["nothing takes it"]
+                : reason === "LIMITED"
+                  ? ["the plan holds it back", "held back"]
+                  : [];
+    return {
+      tone: reason ? FOOT_TONE[reason] : "plain",
+      word,
+      say: fitLine(lines, room),
+      frac,
+      fill,
+      ghost,
+      facts: {
+        reason,
+        rule: "upTo",
+        running: reached,
+        capacity,
+        wants,
+        resource,
+        tied,
+        upstream,
+        forced: [],
+      },
+    };
+  }
+  if (count.rule === "exact") {
+    const forced = ports.inputs.filter((port) => port.forced);
+    if (forced.length === 0) return undefined;
+    const first = forced[0]!;
+    const rate = `${first.forced!.number}${first.forced!.unit ? ` ${first.forced!.unit}` : ""}`;
+    const set = count.set ?? 0;
+    const keep = set === 1 ? "to keep it running" : `to keep all ${fmt(set)} running`;
+    const word = "FORCED IN";
+    const room = FOOT_TEXT - measureClean(word, FOOT_SIZE) - FOOT_GAP;
+    const lines =
+      forced.length === 1
+        ? [`${rate} of ${first.name} ${keep}`, `${rate} of ${first.name}`, rate]
+        : [
+            `${rate} of ${first.name} and ${forced.length - 1} more`,
+            `${first.name} and ${forced.length - 1} more`,
+            `${forced.length} inputs`,
+          ];
+    return {
+      tone: "forced",
+      word,
+      say: fitLine(lines, room),
+      frac: "",
+      fill: 0,
+      facts: {
+        reason: "FORCED",
+        rule: "exact",
+        running: set,
+        capacity: set,
+        tied: [],
+        upstream: [],
+        forced: forced.map(
+          (port) =>
+            `${port.forced!.number}${port.forced!.unit ? ` ${port.forced!.unit}` : ""} ${port.name}`,
+        ),
+      },
+    };
+  }
+  return undefined;
+}
+
+/** A card's name by id, for the bar's tip (the full cards upstream of a starved one). */
+export function cardNameIn(
+  project: { nodes: readonly FactoryNode[]; recipes: readonly Recipe[] },
+  id: string,
+): string | undefined {
+  const node = project.nodes.find((entry) => entry.id === id);
+  if (!node) return undefined;
+  const recipe = project.recipes.find((entry) => entry.id === node.recipeId);
+  if (!recipe) return undefined;
+  if (recipe.power) return recipe.machineType;
+  try {
+    return getSelectedMachineHandler(recipe, node).label;
+  } catch {
+    return recipe.machineType;
+  }
 }
 
 /** Everything the clean card draws and does, from the same inputs as the classic card. */
@@ -425,19 +838,29 @@ export function useCleanCardModel(
 
   const derived = useMemo(() => {
     const machineHandlers = getRecipeMachineHandlers(recipe);
-    const { selectedMachineHandler, nodeRecipe, effectiveRecipe, machineDrawsEu, tierControl, powerReport } =
-      deriveCardFace(recipe, projectNode);
+    const {
+      selectedMachineHandler,
+      nodeRecipe,
+      effectiveRecipe,
+      machineDrawsEu,
+      tierControl,
+      powerReport,
+    } = deriveCardFace(recipe, projectNode);
     const steamReport = !machineDrawsEu ? getNodeSteamReport(nodeRecipe, projectNode) : undefined;
     const showHatchControl = Boolean(
       powerReport?.isMultiblock &&
-        prefersCuratedMachineMath(effectiveRecipe) &&
-        !getFusionMachine(effectiveRecipe.machineType),
+      prefersCuratedMachineMath(effectiveRecipe) &&
+      !getFusionMachine(effectiveRecipe.machineType),
     );
     const coilControl = getRecipeCoilTierControl(effectiveRecipe, projectNode);
     const controls = getRecipeMachineConfigTierControls(effectiveRecipe, projectNode);
     const overclockedStats = getOverclockedRecipeStats(nodeRecipe, projectNode);
     const displayRecipe = stripBeeFrameSlotInputs(effectiveRecipe);
-    const adjusted = applyMachineOutputMultipliers(displayRecipe, projectNode, overclockedStats.tier);
+    const adjusted = applyMachineOutputMultipliers(
+      displayRecipe,
+      projectNode,
+      overclockedStats.tier,
+    );
     const overclockedRecipe = { ...displayRecipe, ...adjusted, ...overclockedStats };
     return {
       machineHandlers,
@@ -457,7 +880,13 @@ export function useCleanCardModel(
 
   const pinControls = useMemo(() => settingControls(recipe, projectNode), [recipe, projectNode]);
   const verdict = deriveNodeVerdict(liveProject, lastResult, projectNode.id);
-  const rails = buildRailPorts(liveProject, lastResult, projectNode.id, derived.overclockedRecipe, verdict);
+  const rails = buildRailPorts(
+    liveProject,
+    lastResult,
+    projectNode.id,
+    derived.overclockedRecipe,
+    verdict,
+  );
   const plan = lastResult?.plan;
 
   // Only this card's forced entries; the plan list is short, so no memo.
@@ -466,7 +895,8 @@ export function useCleanCardModel(
     if (entry.nodeId === projectNode.id) forcedAt.set(entry.portKey, entry.perSecond);
   }
 
-  const { selectedMachineHandler, machineHandlers, tierControl, powerReport, steamReport } = derived;
+  const { selectedMachineHandler, machineHandlers, tierControl, powerReport, steamReport } =
+    derived;
   const { machineIcon, art } = cardPicture(recipe, projectNode, derived, machineIcons, mapIcons);
   const name = machineIcon?.displayName ?? selectedMachineHandler.label;
 
@@ -478,24 +908,33 @@ export function useCleanCardModel(
       : undefined;
 
   const G = CC_GEOMETRY;
-  const chipsLeft = G.cardWidth - 8 - (tierLabel ? G.chipWidth : 0) - (ampsLabel ? 2 + G.chipWidth : 0);
+  const chipsLeft =
+    G.cardWidth - 8 - (tierLabel ? G.chipWidth : 0) - (ampsLabel ? 2 + G.chipWidth : 0);
   const nameRoom = Math.max(40, chipsLeft - 8 - 8 - 2 * (G.keySize + 2) - 8 - (hasPicker ? 15 : 0));
   // The mod's name is x1.25 of its 8 px text (10); Monocraft runs wider than the mod's face, so it steps down to 8 before it clips with an ellipsis.
   const nameSize = [10, 9].find((size) => measureClean(name, size) <= nameRoom) ?? 8;
 
+  // Count: what runs, big; what you set, small, under it (docs/up-to.md).
+  const countState = cardCountState(result, projectNode, plan, recipe);
+  const { unset } = countState;
+  const count = buildCountView(countState, { ruleFixed: isCustomRateRecipe(recipe) });
+
   // Power row: a machine's draw, or a steam machine's litres.
   const usage = Math.min(1, Math.max(0, result?.utilization ?? 1));
   const drawScale = averageDraw ? usage : usage > 0 ? 1 : 0;
-  // The card's demand is what the card runs: the solved count (or the pinned one, fractions and all) times one
-  // machine's draw, as the mod prints it, not the built machine count the classic card multiplied by.
+  // The card's demand is the machines it has (the count set, fractions and all; else the solved count) times one
+  // machine's draw, as the mod prints it; averaged by its use (an Up to card's reached over its count).
   const solvedNeeded = result?.theoreticalMachinesRequired ?? 0;
-  const solvedPin = projectNode.solvePin;
-  const machines = (solvedPin !== undefined && solvedPin > 0 ? solvedPin : solvedNeeded) * Math.max(1, projectNode.parallel);
+  const machines = (count.set ?? solvedNeeded) * Math.max(1, projectNode.parallel);
   let power: CleanPowerView | undefined;
   if (powerReport) {
     const stalled = powerReport.state !== "ok";
     power = {
-      number: stalled ? "TIER!" : formatPowerValue(powerDisplayFromEuT(powerReport.drawEuT * machines * drawScale, powerReport.tier)),
+      number: stalled
+        ? "TIER!"
+        : formatPowerValue(
+            powerDisplayFromEuT(powerReport.drawEuT * machines * drawScale, powerReport.tier),
+          ),
       unit: stalled ? "" : powerDisplaySuffix(powerReport.tier),
       name: "Power",
       stalled,
@@ -513,25 +952,17 @@ export function useCleanCardModel(
     };
   }
 
-  // Count: the solved number, gold when pinned, a prompt when nothing sets it.
-  const { needed, pinned, unset, value: countValue } = cardCountState(result, projectNode, plan);
-  const count = {
-    text: `×${formatSolvedMachines(countValue)}`,
-    pinned,
-    zero: !pinned && needed <= 0.0000005,
-    note: (pinned ? "(pinned)" : unset ? "(set count)" : "") as "" | "(pinned)" | "(set count)",
-    value: countValue,
-    title: pinned
-      ? "Pinned count. Click to change it, clear the field to let the plan decide."
-      : "How many of this machine the plan needs. Click to pin a count.",
-  };
-
   // Settings strip (the mod's pins): the settings pinned to this machine's cards, the coil by default on a heat recipe.
   const settings: CleanCardContext["settings"] = [];
   const rawChips: Array<Omit<CleanChipView, "x" | "y" | "width">> = [];
   const pinKey = pinMachineKey(recipe, projectNode);
   for (const control of pinControls) {
-    settings.push({ id: control.id, label: control.label, value: control.value, steps: control.options.length > 1 });
+    settings.push({
+      id: control.id,
+      label: control.label,
+      value: control.value,
+      steps: control.options.length > 1,
+    });
     if (!isPinned(liveProject, pinKey, control)) continue;
     rawChips.push({
       id: control.id,
@@ -560,7 +991,12 @@ export function useCleanCardModel(
   const inputs = (circuitPort ? [...rails.inputs, circuitPort] : rails.inputs).map((port) =>
     buildPortView(projectNode.id, port, projectNode, forcedAt),
   );
-  const outputs = rails.outputs.map((port) => buildPortView(projectNode.id, port, projectNode, forcedAt));
+  const outputs = rails.outputs.map((port) =>
+    buildPortView(projectNode.id, port, projectNode, forcedAt),
+  );
+  const foot = buildFootView(count, countState.upTo, { inputs, outputs }, (id) =>
+    cardNameIn(liveProject, id),
+  );
 
   const view: CleanCardView = {
     nodeId: projectNode.id,
@@ -571,16 +1007,22 @@ export function useCleanCardModel(
       ? {
           label: tierLabel,
           fixed: tierControl?.fixed === true,
-          title: tierControl?.fixed ? "Fixed by the reactor mark" : `Tier ${tierLabel}. Click up, right click down.`,
+          title: tierControl?.fixed
+            ? "Fixed by the reactor mark"
+            : `Tier ${tierLabel}. Click up, right click down.`,
         }
       : undefined,
-    amps: ampsLabel && powerReport ? { label: ampsLabel, value: powerReport.amps, editable: true } : undefined,
+    amps:
+      ampsLabel && powerReport
+        ? { label: ampsLabel, value: powerReport.amps, editable: true }
+        : undefined,
     inputs,
     outputs,
     power,
     art,
     glanceArt: art ?? machineIcon?.iconPath,
     count,
+    foot,
     circuit: circuitPort ? undefined : derived.circuit,
     chips: strip.chips,
     stripHeight: strip.height,
@@ -642,26 +1084,32 @@ export function useCleanCardModel(
     cycleMachine: (direction) => {
       if (isLocked() || machineHandlers.length <= 1) return;
       const ordered = orderMachineHandlers(machineHandlers);
-      const index = Math.max(0, ordered.findIndex((handler) => handler.id === selectedMachineHandler.id));
+      const index = Math.max(
+        0,
+        ordered.findIndex((handler) => handler.id === selectedMachineHandler.id),
+      );
       const next = ordered[(index + direction + ordered.length) % ordered.length];
       if (next) actions.switchMachine(next.id);
     },
-    setCount: (value) => {
-      if (isLocked()) return;
-      updateNode(projectNode.id, { solvePin: value });
-    },
+    ...pinActions(projectNode, count, updateNode, isLocked),
     stepSetting: (id, direction) => {
       if (isLocked()) return;
       const control: MachineConfigTierControl | undefined =
-        id === "heatingCoil" ? derived.coilControl : derived.controls.find((entry) => entry.id === id);
+        id === "heatingCoil"
+          ? derived.coilControl
+          : derived.controls.find((entry) => entry.id === id);
       if (!control || control.tiers.length <= 1) return;
-      const index = control.tiers.findIndex((tier: MachineConfigTierOption) => tier.key === control.current.key);
+      const index = control.tiers.findIndex(
+        (tier: MachineConfigTierOption) => tier.key === control.current.key,
+      );
       const next = control.tiers[(index + direction + control.tiers.length) % control.tiers.length];
       if (!next) return;
       if (id === "heatingCoil") {
         updateNode(projectNode.id, { coilTier: next.key });
       } else {
-        updateNode(projectNode.id, { machineConfigTiers: { ...(projectNode.machineConfigTiers ?? {}), [id]: next.key } });
+        updateNode(projectNode.id, {
+          machineConfigTiers: { ...(projectNode.machineConfigTiers ?? {}), [id]: next.key },
+        });
       }
     },
   };
@@ -671,7 +1119,10 @@ export function useCleanCardModel(
     selectedMachineHandler,
     machineIcon,
     settings,
-    handleIds: [...inputs.filter((p) => !p.port.free).map((p) => p.handleId), ...outputs.map((p) => p.handleId)],
+    handleIds: [
+      ...inputs.filter((p) => !p.port.free).map((p) => p.handleId),
+      ...outputs.map((p) => p.handleId),
+    ],
   };
 
   return { view, actions, context };

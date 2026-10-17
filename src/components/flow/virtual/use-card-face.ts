@@ -3,7 +3,13 @@
 import { useMemo } from "react";
 import { useFactoryStore } from "@/store/factory-store";
 import type { FactoryNode } from "@/lib/model/types";
-import { cardCountState, cardPicture, deriveCardFace, formatSolvedMachines } from "../clean/clean-model";
+import { pinRuleOf } from "@/lib/model/pin-rule";
+import {
+  cardCountState,
+  cardPicture,
+  deriveCardFace,
+  formatSolvedMachines,
+} from "../clean/clean-model";
 import { CC_GEOMETRY } from "../clean/tokens";
 import { estimateRecipeCardHeight } from "./card-shell";
 import { useMachineHandlerIconEntries, useRecipeMapIcons } from "../machine-icons";
@@ -39,7 +45,9 @@ const nodeKeys = new WeakMap<FactoryNode, string>();
 export function stableNodeKey(node: FactoryNode): string {
   let key = nodeKeys.get(node);
   if (key === undefined) {
-    key = JSON.stringify(node, (name, value) => (name === "position" || name === "solvePin" ? undefined : value));
+    key = JSON.stringify(node, (name, value) =>
+      name === "position" || name === "solvePin" ? undefined : value,
+    );
     nodeKeys.set(node, key);
   }
   return key;
@@ -83,18 +91,28 @@ function flowKeys(flows: Record<string, { amountPerSecond: number }> | undefined
 
 /**
  * Everything that can move a card's rows or its box: its data, the settings pins, the flows the solve gives its
- * ports (a port with no flow is not drawn) and the forced rows under them. Over-reporting costs one background
- * redraw; under-reporting is corrected the next time the card is drawn.
+ * ports (a port with no flow is not drawn), the forced rows under them, and the count's rule with whether the solve
+ * read an Up to card out (the bar along the foot). Over-reporting costs one background redraw; under-reporting is
+ * corrected the next time the card is drawn.
  */
 export function useCardLayoutKey(data: RecipeNodeData): string {
   const { projectNode, recipe, result } = data;
   const pins = useFactoryStore((state) => pinsKey(state.project.settingPins));
-  const forced = useFactoryStore((state) => forcedKeyOf(state.lastResult?.plan as PlanLike | undefined, projectNode.id));
-  return `${recipe.id}#${stableNodeKey(projectNode)}#${pins}#${flowKeys(result?.inputs)}|${flowKeys(result?.outputs)}#${forced}`;
+  const forced = useFactoryStore((state) =>
+    forcedKeyOf(state.lastResult?.plan as PlanLike | undefined, projectNode.id),
+  );
+  const readOut = useFactoryStore(
+    (state) => state.lastResult?.plan?.upTo?.[projectNode.id] !== undefined,
+  );
+  const rule = `${pinRuleOf(projectNode, recipe)}${readOut ? "+" : ""}`;
+  return `${recipe.id}#${stableNodeKey(projectNode)}#${pins}#${flowKeys(result?.inputs)}|${flowKeys(result?.outputs)}#${forced}#${rule}`;
 }
 
 /** The face of a card that is not mounted, and the key for its layout. */
-export function useCardFace(data: RecipeNodeData, selected: boolean): { face: ShellFace; layoutKey: string } {
+export function useCardFace(
+  data: RecipeNodeData,
+  selected: boolean,
+): { face: ShellFace; layoutKey: string } {
   const { projectNode, recipe, result } = data;
   const machineIcons = useMachineHandlerIconEntries();
   const mapIcons = useRecipeMapIcons();
@@ -104,7 +122,8 @@ export function useCardFace(data: RecipeNodeData, selected: boolean): { face: Sh
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const derived = useMemo(() => deriveCardFace(recipe, projectNode), [recipe, nodeKey]);
   const plan = useFactoryStore.getState().lastResult?.plan;
-  const count = cardCountState(result, projectNode, plan);
+  // What runs: an Up to card's reached count, as the card's own glance face prints it.
+  const count = cardCountState(result, projectNode, plan, recipe);
   const { machineIcon, art } = cardPicture(recipe, projectNode, derived, machineIcons, mapIcons);
   const face: ShellFace = {
     selected,
@@ -115,7 +134,10 @@ export function useCardFace(data: RecipeNodeData, selected: boolean): { face: Sh
     fallbackWidth: CC_GEOMETRY.cardWidth,
     // The first paint of a card nobody has drawn: the rows its recipe would give it, before the solve says which
     // flow and which forced lines it has. The draw measures the real box.
-    fallbackHeight: estimateRecipeCardHeight(derived.effectiveRecipe, derived.powerReport !== undefined),
+    fallbackHeight: estimateRecipeCardHeight(
+      derived.effectiveRecipe,
+      derived.powerReport !== undefined,
+    ),
   };
   return { face, layoutKey };
 }

@@ -42,8 +42,11 @@ import type {
   CleanCardContext,
   CleanCardView,
   CleanChipView,
+  CleanFootView,
   CleanPortView,
 } from "./clean-model";
+import type { PinRule } from "@/lib/model/pin-rule";
+import { CountRuleMenu } from "./menus/CountRuleMenu";
 import { tierChipColors } from "./tokens";
 import { syncPromptPhase } from "../virtual/prompt-phase";
 import { ensureInteractionHost, useClickSlop, tipAttrs, type TipSpec } from "./interaction";
@@ -61,8 +64,10 @@ import { anchorOf, type MenuAnchor } from "./menus/MenuPortal";
 import { cloneWithSound } from "@/lib/sound/sfx";
 import {
   countRowsTip,
+  footTip,
   machineNameTip,
   powerRowTip,
+  ruleTip,
   stripTip,
   tierChipTip,
   useCardTipFacts,
@@ -356,18 +361,31 @@ function Words({ p, iconProps }: { p: CleanPortView; iconProps: Record<string, u
   );
 }
 
+/**
+ * The count under the machine (docs/up-to.md): what runs, big and white (`::before`, from `data-run`), and under it
+ * what you set: the rule word (a click opens Any, Up to, Exactly) and the number in gold (`::after`, from `data-set`).
+ * A click anywhere else types a count (Any becomes Up to), the wheel steps it, the middle button goes back to Any.
+ * Two elements: the block and the rule word.
+ */
 export function CountBox({
   view,
   tip,
+  ruleTip: ruleTipSpec,
   onSet,
+  onStep,
+  onRule,
   wasClick,
 }: {
   view: CleanCardView["count"];
   tip: TipSpec;
+  ruleTip?: TipSpec;
   onSet: (count: number | undefined) => void;
+  onStep: (direction: -1 | 1) => void;
+  onRule: (rule: PinRule) => void;
   wasClick: (event: MouseEvent) => boolean;
 }) {
   const [draft, setDraft] = useState<string>();
+  const [ruleMenu, setRuleMenu] = useState<MenuAnchor>();
   const editing = draft !== undefined;
   const commit = () => {
     if (draft === undefined) return;
@@ -377,7 +395,7 @@ export function CountBox({
       onSet(undefined);
       return;
     }
-    const value = Number.parseFloat(text.replace(/^×/, ""));
+    const value = Number.parseFloat(text.replace(/^[×x]/, ""));
     if (Number.isFinite(value) && value > 0) onSet(value);
   };
   return (
@@ -385,26 +403,31 @@ export function CountBox({
       role="button"
       tabIndex={0}
       className="cc-count nowheel"
+      aria-label={
+        view.pinned
+          ? `${view.text} running, ${view.ruleWord} ${view.setText}`
+          : `${view.text} machines`
+      }
+      data-rule={view.rule}
+      data-run={view.text}
+      data-set={view.pinned ? view.setText : view.note}
       data-pinned={view.pinned ? "" : undefined}
       data-zero={view.zero ? "" : undefined}
-      data-prompt={view.note === "(set count)" ? "" : undefined}
+      data-prompt={view.prompt ? "" : undefined}
       data-editing={editing ? "" : undefined}
-      data-note={view.note}
       {...tipAttrs(tip)}
       onClick={(event) => {
         glyph(event);
-        if (!editing && wasClick(event)) {
-          setDraft(view.pinned ? String(view.value) : "");
+        if (!editing && wasClick(event) && !checklistLocked()) {
+          setDraft(view.set !== undefined ? view.setText : "");
         }
       }}
       onWheel={(event: WheelEvent) => {
         if (checklistLocked()) return;
         event.stopPropagation();
-        const base = view.pinned ? view.value : Math.max(1, Math.ceil(view.value));
-        const next = Math.round(base) + (event.deltaY < 0 ? 1 : -1);
-        onSet(next >= 1 ? next : undefined);
+        onStep(event.deltaY < 0 ? 1 : -1);
       }}
-      // The middle button unpins: the plan decides the count again.
+      // The middle button goes back to Any: the plan decides the count again.
       onMouseDown={(event) => {
         if (event.button === 1) event.preventDefault();
       }}
@@ -414,12 +437,32 @@ export function CountBox({
         onSet(undefined);
       }}
     >
+      {view.ruleWord ? (
+        <div
+          role={view.ruleFixed ? undefined : "button"}
+          tabIndex={view.ruleFixed ? undefined : 0}
+          className="cc-rule"
+          data-fixed={view.ruleFixed ? "" : undefined}
+          data-open={ruleMenu ? "" : undefined}
+          data-menu-anchor=""
+          aria-haspopup={view.ruleFixed ? undefined : "menu"}
+          aria-expanded={view.ruleFixed ? undefined : ruleMenu !== undefined}
+          {...(ruleTipSpec ? tipAttrs(ruleTipSpec) : {})}
+          onClick={(event) => {
+            glyph(event);
+            if (view.ruleFixed || !wasClick(event) || checklistLocked()) return;
+            setRuleMenu(ruleMenu ? undefined : anchorOf(event.currentTarget));
+          }}
+        >
+          {view.ruleWord}
+        </div>
+      ) : null}
       {editing ? (
         <input
           autoFocus
           value={draft}
           inputMode="decimal"
-          aria-label="Pinned machine count"
+          aria-label="Machine count"
           className="nodrag"
           onChange={(event) => setDraft(event.target.value)}
           onBlur={commit}
@@ -432,9 +475,52 @@ export function CountBox({
             event.stopPropagation();
           }}
         />
-      ) : (
-        view.text
-      )}
+      ) : null}
+      {ruleMenu ? (
+        <CountRuleMenu
+          anchor={ruleMenu}
+          rule={view.rule}
+          onPick={onRule}
+          onClose={() => setRuleMenu(undefined)}
+        />
+      ) : null}
+    </div>
+  );
+}
+
+/**
+ * The bar along the foot (docs/up-to.md): one element. Its fill and a bottleneck's striped run-on are background
+ * layers sized in px (`--fill`, `--ghost-l`, `--ghost-w`), the word is `::before` (`data-word`), the line is its text
+ * and the fraction is `::after` (`data-frac`). Its tip has the details.
+ */
+export function CardFoot({
+  nodeId,
+  foot,
+  gridRow,
+}: {
+  nodeId: string;
+  foot: CleanFootView;
+  gridRow?: number;
+}) {
+  return (
+    <div
+      className="cc-foot"
+      data-tone={foot.tone}
+      data-word={foot.word || undefined}
+      data-frac={foot.frac || undefined}
+      data-ghost={foot.ghost ? "" : undefined}
+      {...tipAttrs(footTip(nodeId, foot))}
+      style={
+        {
+          gridRow,
+          "--fill": `${foot.fill}px`,
+          ...(foot.ghost
+            ? { "--ghost-l": `${foot.ghost.left}px`, "--ghost-w": `${foot.ghost.width}px` }
+            : {}),
+        } as CSSProperties
+      }
+    >
+      {foot.say}
     </div>
   );
 }
@@ -890,7 +976,10 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
         <CountBox
           view={view.count}
           tip={countRowsTip(view, tipFacts.shared)}
+          ruleTip={ruleTip(view)}
           onSet={actions.setCount}
+          onStep={actions.stepCount}
+          onRule={actions.setRule}
           wasClick={wasClick}
         />
       </div>
@@ -917,6 +1006,8 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
           ))}
         </div>
       ) : null}
+
+      {view.foot ? <CardFoot nodeId={view.nodeId} foot={view.foot} /> : null}
 
       <div
         className="cc-glance"

@@ -89,6 +89,8 @@ export interface SpecialView {
   glyph?: "gauge";
   /** A fluid tank has no count. */
   count?: CleanCardView["count"];
+  /** The bar along the foot: an Up to card's reason, or an Exactly card's forced input. */
+  foot?: CleanCardView["foot"];
   /** A crop farm with no crop yet: a dashed key to pick one in place of the rails. */
   pick?: boolean;
   /** A crop farm with a crop: the head key that picks another. */

@@ -14,7 +14,15 @@ import { useFactoryStore } from "@/store/factory-store";
 import { CardActionsMenu } from "../menus/CardActionsMenu";
 import { CropPickerMenu } from "../../CropPickerMenu";
 import { checklistLocked } from "../../RecipeNode";
-import { CountBox, CleanPortRow, StripChip, TierChip, AmpsChip, glyph } from "../CleanCard";
+import {
+  CardFoot,
+  CountBox,
+  CleanPortRow,
+  StripChip,
+  TierChip,
+  AmpsChip,
+  glyph,
+} from "../CleanCard";
 import type { CleanCardView, CleanChipView } from "../clean-model";
 import { ensureInteractionHost, tipAttrs, useClickSlop, type TipSpec } from "../interaction";
 import { menuTip, powerPanelTip } from "../interaction/tips";
@@ -28,6 +36,7 @@ import {
   gearTip,
   machineNameTip,
   powerRowTip,
+  ruleTip,
   tierChipTip,
   useCardTipFacts,
   type CardTipFacts,
@@ -654,7 +663,10 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
             <CountBox
               view={view.count}
               tip={countRowsTip(tipView, tipFacts.shared)}
+              ruleTip={ruleTip(tipView)}
               onSet={actions.setCount}
+              onStep={actions.stepCount}
+              onRule={actions.setRule}
               wasClick={wasClick}
             />
           ) : null}
@@ -684,6 +696,7 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
           ))}
         </div>
       ) : null}
+      {view.foot ? <CardFoot nodeId={view.nodeId} foot={view.foot} gridRow={stripRow + 2} /> : null}
 
       <div
         className="cc-glance"

@@ -13,21 +13,28 @@ import { CC_GEOMETRY } from "../clean/tokens";
 /** A port row is two cells. */
 const ROW = CC_GEOMETRY.rowHeight;
 
+/**
+ * The machine's well (the picture and the count under it, clean.css `.cc-pic`) is at least six cells: an 80 px picture
+ * over what runs and what is set.
+ */
+export const WELL_MIN_HEIGHT = 120;
+
 type Slot = { kind: string; id: string };
 
 /**
  * A card's height from its recipe alone: a row for each distinct input and output (a free input is a row too),
- * a power row on the input rail, the picture's minimum, no strip.
+ * a power row on the input rail, the well's minimum, no strip and no bar along the foot.
  */
 export function estimateRecipeCardHeight(
   recipe: { inputs: ReadonlyArray<Slot>; outputs: ReadonlyArray<Slot> },
   hasPowerRow: boolean,
 ): number {
-  const distinct = (list: ReadonlyArray<Slot>) => new Set(list.map((entry) => `${entry.kind}:${entry.id}`)).size;
+  const distinct = (list: ReadonlyArray<Slot>) =>
+    new Set(list.map((entry) => `${entry.kind}:${entry.id}`)).size;
   const rails = Math.max(
     (distinct(recipe.inputs) + (hasPowerRow ? 1 : 0)) * ROW,
     distinct(recipe.outputs) * ROW,
-    CC_GEOMETRY.pictureMinHeight,
+    WELL_MIN_HEIGHT,
   );
   return CC_GEOMETRY.headHeight + rails;
 }

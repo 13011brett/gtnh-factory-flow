@@ -17,7 +17,7 @@ import { makeLeftoverKey, makePortKey } from "../port-key";
 import type { PlanLeftover, PlanSolveExtras } from "../types";
 
 /**
- * Three hand-built plan-mode results for the UI packages, shaped exactly as the
+ * Four hand-built plan-mode results for the UI packages, shaped exactly as the
  * adapter will return them (`ThroughputResult` with `plan`), so cards, drawers
  * and the overview can be built before the solver is wired. The numbers are
  * consistent (every wire's flow balances at its ports, forced rows are the
@@ -35,6 +35,9 @@ import type { PlanLeftover, PlanSolveExtras } from "../types";
  *   mockUnneeded    a machine nothing pinned feeds or needs at zero, a separate
  *                   island nothing sets (unanchored recipe and drawer), and a
  *                   drawer whose rate cannot be reached (note + unmet).
+ *   mockUpTo        Up to cards in every reason (`extras.upTo`), an Exactly
+ *                   card fed by a forced input, an Exactly card with nothing
+ *                   forced and an Any card. The other mocks' pins are Exactly.
  */
 
 export interface MockPlan {
@@ -57,10 +60,14 @@ interface MockNode {
   recipe: string;
   /** The solved count (= crafts per second). */
   count: number;
-  /** A pin (`solvePin`) the player set. */
+  /** A pin (`solvePin`) the player set: Up to, unless `exact`. */
   pin?: number;
-  /** The pin is Exactly (forced flows make up its gaps); without it, Up to. */
+  /** The pin is Exactly (`solvePinExact`). */
   exact?: boolean;
+  /** Reached over the pin for an Up to card (the engine's `utilization`); else 1 when running, 0 at zero. */
+  utilization?: number;
+  /** More recipes on the same machine (a shared machine): each a solve node `id#rN` with its own solved count. */
+  sections?: Array<{ recipe: string; count: number }>;
   portRates?: Record<string, number>;
   x: number;
   y: number;
@@ -106,7 +113,8 @@ const flow = (item: string, amountPerSecond: number): ResourceFlow => ({
   amountPerSecond,
 });
 
-const handle = (side: "input" | "output", item: string) => `${side}:item:${encodeURIComponent(item)}`;
+const handle = (side: "input" | "output", item: string) =>
+  `${side}:item:${encodeURIComponent(item)}`;
 
 function build(spec: MockSpec): MockPlan {
   const recipes: Recipe[] = spec.recipes.map((r) => ({
@@ -129,9 +137,21 @@ function build(spec: MockSpec): MockPlan {
     overclockTier: "LV",
     enabled: true,
     position: { x: n.x, y: n.y },
-    ...(n.pin !== undefined ? { solvePin: n.pin, ...(n.exact ? { solvePinExact: true } : {}) } : {}),
+    ...(n.pin !== undefined ? { solvePin: n.pin } : {}),
+    ...(n.exact ? { solvePinExact: true } : {}),
+    ...(n.sections ? { extraRecipes: n.sections.map((s) => ({ recipeId: s.recipe })) } : {}),
     ...(n.portRates ? { portRates: n.portRates } : {}),
   }));
+  // Every solve node: a card, and each further recipe of a shared machine as `id#rN`.
+  const solveNodes = spec.nodes.flatMap((n) => [
+    { id: n.id, recipe: n.recipe, count: n.count, utilization: n.utilization },
+    ...(n.sections ?? []).map((s, i) => ({
+      id: `${n.id}#r${i + 1}`,
+      recipe: s.recipe,
+      count: s.count,
+      utilization: n.utilization,
+    })),
+  ]);
   const storages: FactoryStorage[] = spec.drawers.map((d) => ({
     id: d.id,
     kind: "item",
@@ -168,7 +188,7 @@ function build(spec: MockSpec): MockPlan {
 
   const nodeResults: Record<string, NodeThroughputResult> = {};
   let totalEuT = 0;
-  for (const n of spec.nodes) {
+  for (const n of solveNodes) {
     const r = recipeById.get(n.recipe)!;
     const inputs: Record<ResourceKey, ResourceFlow> = {};
     const outputs: Record<ResourceKey, ResourceFlow> = {};
@@ -190,7 +210,7 @@ function build(spec: MockSpec): MockPlan {
       euT,
       requiredRatePerSecond: 0,
       maxRatePerSecond: 0,
-      utilization: n.count > 0 ? 1 : 0,
+      utilization: n.utilization ?? (n.count > 0 ? 1 : 0),
       theoreticalMachinesRequired: n.count,
       status: n.count > 0 ? "balanced" : "underutilized",
       warnings: [],
@@ -243,7 +263,7 @@ function build(spec: MockSpec): MockPlan {
   for (const item of items) {
     let produced = 0;
     let consumed = 0;
-    for (const n of spec.nodes) {
+    for (const n of solveNodes) {
       const r = recipeById.get(n.recipe)!;
       const scale = n.count;
       produced += (r.outputs.find(([i]) => i === item)?.[1] ?? 0) * scale;
@@ -306,7 +326,17 @@ export const mockForced: MockPlan = build({
   description: "Dust leaves a port with no drawer; coal enters another; the product drawer is met.",
   recipes: [
     { id: "Macerator", inputs: [["Iron Ore", 1]], outputs: [["Crushed Iron", 2]] },
-    { id: "Furnace", inputs: [["Crushed Iron", 3], ["Coal", 1]], outputs: [["Iron Ingot", 2], ["Slag", 1]] },
+    {
+      id: "Furnace",
+      inputs: [
+        ["Crushed Iron", 3],
+        ["Coal", 1],
+      ],
+      outputs: [
+        ["Iron Ingot", 2],
+        ["Slag", 1],
+      ],
+    },
     { id: "Slag Washer", inputs: [["Slag", 2]], outputs: [["Clay", 1]] },
     { id: "Coal Maker", inputs: [["Wood", 1]], outputs: [["Coal", 1]] },
   ],
@@ -413,7 +443,8 @@ const leftoversB: PlanLeftover = {
 export const mockLeftovers: MockPlan = build({
   id: "mock-leftovers",
   name: "Leftovers and spares",
-  description: "A shortfall two inputs could bear (stored 25/75) and a surplus with two places to go.",
+  description:
+    "A shortfall two inputs could bear (stored 25/75) and a surplus with two places to go.",
   recipes: [
     { id: "Alloy Smelter", inputs: [["Copper Dust", 4]], outputs: [["Bronze Ingot", 1]] },
     { id: "Crusher", inputs: [["Tin Ore", 1]], outputs: [["Tin Dust", 2]] },
@@ -526,4 +557,150 @@ export const mockUnneeded: MockPlan = build({
   },
 });
 
-export const mockPlans: MockPlan[] = [mockForced, mockLeftovers, mockUnneeded];
+// ---------------------------------------------------------------------------
+// 4. Up to counts: every reason, an Exactly card with a forced input, Any
+// ---------------------------------------------------------------------------
+
+export const mockUpTo: MockPlan = build({
+  id: "mock-up-to",
+  name: "Up to counts",
+  description:
+    "Every Up to reason (full, bottleneck, starved, clogged, unused, limited, no reason), an Exactly card fed by a forced input, an Exactly card with nothing forced, and an Any card.",
+  recipes: [
+    {
+      id: "Pyrolyse Oven",
+      inputs: [["Log", 1]],
+      outputs: [
+        ["Charcoal", 1],
+        ["Wood Tar", 3],
+      ],
+    },
+    {
+      id: "Distillery",
+      inputs: [["Wood Tar", 9]],
+      outputs: [
+        ["Creosote", 4],
+        ["Benzene", 2],
+      ],
+    },
+    { id: "Mixer", inputs: [["Dust", 1]], outputs: [["Mix", 1]] },
+    { id: "Packer", inputs: [["Mix", 2]], outputs: [["Pack", 1]] },
+    { id: "Centrifuge", inputs: [["Slime", 1]], outputs: [["Rubber", 1]] },
+    { id: "Assembler", inputs: [["Plate", 2]], outputs: [["Gear", 1]] },
+    { id: "Oxygen Plant", inputs: [["Air", 1]], outputs: [["Oxygen", 1]] },
+    { id: "Burner", inputs: [["Oxygen", 1]], outputs: [["Heat", 1]] },
+  ],
+  nodes: [
+    // The line: two ovens run flat out and still cannot keep the tower busy.
+    { id: "oven", recipe: "Pyrolyse Oven", count: 2, pin: 2, utilization: 1, x: 0, y: 0 },
+    { id: "tower", recipe: "Distillery", count: 2 / 3, pin: 1, utilization: 2 / 3, x: 480, y: 0 },
+    // Half the mixers' output has nowhere to go: the one packer takes 2 a second.
+    { id: "clog", recipe: "Mixer", count: 2, pin: 4, utilization: 0.5, x: 0, y: 420 },
+    { id: "taker", recipe: "Packer", count: 1, pin: 1, utilization: 1, x: 480, y: 420 },
+    // Nothing takes the rubber; the gears' drawer holds the assemblers to 3; one card's reason ran out of time.
+    { id: "idle", recipe: "Centrifuge", count: 0, pin: 3, utilization: 0, x: 0, y: 840 },
+    { id: "held", recipe: "Assembler", count: 3, pin: 5, utilization: 0.6, x: 480, y: 840 },
+    { id: "slow", recipe: "Assembler", count: 4.5, pin: 6, utilization: 0.75, x: 960, y: 840 },
+    // An Exactly card the oxygen plants cannot keep up with: the gap comes in forced.
+    { id: "feeder", recipe: "Oxygen Plant", count: 3, pin: 3, utilization: 1, x: 0, y: 1260 },
+    { id: "exact", recipe: "Burner", count: 4, pin: 4, exact: true, x: 480, y: 1260 },
+    { id: "exact2", recipe: "Burner", count: 2, pin: 2, exact: true, x: 480, y: 1560 },
+    { id: "any", recipe: "Burner", count: 1.5, x: 960, y: 1560 },
+    // A shared machine: mixing and packing in turns on up to 3 machines, short of dust.
+    {
+      id: "shared",
+      recipe: "Mixer",
+      count: 1.5,
+      pin: 3,
+      utilization: 2.5 / 3,
+      sections: [{ recipe: "Packer", count: 1 }],
+      x: 960,
+      y: 1160,
+    },
+  ],
+  drawers: [
+    { id: "logs", item: "Log", kind: "source", x: -240, y: 0 },
+    { id: "dust", item: "Dust", kind: "source", x: -240, y: 420 },
+    { id: "slime", item: "Slime", kind: "source", x: -240, y: 840 },
+    { id: "rubber", item: "Rubber", kind: "product", rate: 0, mode: "at-most", x: 360, y: 840 },
+    { id: "plates", item: "Plate", kind: "source", x: 240, y: 1100 },
+    { id: "gears", item: "Gear", kind: "product", rate: 3, mode: "exact", x: 860, y: 760 },
+    { id: "air", item: "Air", kind: "source", x: -240, y: 1260 },
+    { id: "oxygen", item: "Oxygen", kind: "source", x: 240, y: 1640 },
+    { id: "dust2", item: "Dust", kind: "source", x: 720, y: 1160 },
+  ],
+  wires: [
+    { id: "w-log", from: "logs", to: "oven", item: "Log", perSecond: 2 },
+    { id: "w-tar", from: "oven", to: "tower", item: "Wood Tar", perSecond: 6 },
+    { id: "w-dust2", from: "dust", to: "clog", item: "Dust", perSecond: 2 },
+    { id: "w-mix", from: "clog", to: "taker", item: "Mix", perSecond: 2 },
+    { id: "w-slime", from: "slime", to: "idle", item: "Slime", perSecond: 0 },
+    { id: "w-rubber", from: "idle", to: "rubber", item: "Rubber", perSecond: 0 },
+    { id: "w-plate1", from: "plates", to: "held", item: "Plate", perSecond: 6 },
+    { id: "w-plate2", from: "plates", to: "slow", item: "Plate", perSecond: 9 },
+    { id: "w-gear", from: "held", to: "gears", item: "Gear", perSecond: 3 },
+    { id: "w-air", from: "air", to: "feeder", item: "Air", perSecond: 3 },
+    { id: "w-oxy", from: "feeder", to: "exact", item: "Oxygen", perSecond: 3 },
+    { id: "w-oxy2", from: "oxygen", to: "exact2", item: "Oxygen", perSecond: 2 },
+    { id: "w-oxy3", from: "oxygen", to: "any", item: "Oxygen", perSecond: 1.5 },
+    { id: "w-dust3", from: "dust2", to: "shared", item: "Dust", perSecond: 1.5 },
+  ],
+  extras: {
+    upTo: {
+      oven: { capacity: 2, reached: 2, reason: "BOTTLENECK", wants: 3 },
+      tower: {
+        capacity: 1,
+        reached: 2 / 3,
+        reason: "STARVED",
+        portKey: inn("tower", "Wood Tar"),
+        resourceKey: "item:Wood Tar",
+        upstream: ["oven"],
+      },
+      clog: {
+        capacity: 4,
+        reached: 2,
+        reason: "CLOGGED",
+        portKey: out("clog", "Mix"),
+        resourceKey: "item:Mix",
+      },
+      taker: { capacity: 1, reached: 1, reason: "FULL" },
+      idle: {
+        capacity: 3,
+        reached: 0,
+        reason: "UNUSED",
+        portKey: out("idle", "Rubber"),
+        resourceKey: "item:Rubber",
+      },
+      held: { capacity: 5, reached: 3, reason: "LIMITED" },
+      slow: { capacity: 6, reached: 4.5, reason: null },
+      // The Exactly burner's forced oxygen over one plant's 1 a second: the line wants one more.
+      feeder: { capacity: 3, reached: 3, reason: "BOTTLENECK", wants: 4 },
+      // A shared card's pool, under the card's id.
+      shared: {
+        capacity: 3,
+        reached: 2.5,
+        reason: "STARVED",
+        portKey: inn("shared", "Dust"),
+        resourceKey: "item:Dust",
+      },
+    },
+    forced: [
+      // The burners want 4 oxygen a second and the plants make 3.
+      {
+        nodeId: "exact",
+        portKey: inn("exact", "Oxygen"),
+        side: "in",
+        resourceKey: "item:Oxygen",
+        perSecond: 1,
+      },
+    ],
+    leftovers: [],
+    unneeded: [],
+    unanchored: [],
+    terminals: [],
+    notes: [],
+    openGates: 1,
+  },
+});
+
+export const mockPlans: MockPlan[] = [mockForced, mockLeftovers, mockUnneeded, mockUpTo];

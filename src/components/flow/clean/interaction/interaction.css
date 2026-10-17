@@ -116,11 +116,6 @@
   height: 14px;
   line-height: 14px;
 }
-.cc-row[data-open] .cc-prk,
-.cc-row[data-open] .cc-prb {
-  /* The mod's ctrlY: the box a few px clear of the striped box's foot, not on it. */
-  bottom: 2px;
-}
 .cc-row[data-carried] .cc-prk,
 .cc-row[data-carried] .cc-prb {
   display: none;
@@ -128,8 +123,8 @@
 .cc-prk,
 .cc-prb {
   position: absolute;
-  /* The mod's CTRL_H 10, 4 px above the row's foot (CardLayout.ctrlY). */
-  bottom: 3px;
+  /* The mod's CTRL_H 10, a few px clear of the tile's foot (CardLayout.ctrlY), on every tile alike. */
+  bottom: 2px;
   z-index: 31;
   box-sizing: border-box;
   height: 10px;
@@ -209,28 +204,16 @@
 /* The mod's order on both sides (CardLayout.keyX, boxX): the key at the words' edge then the box on an input; on an
    output the box ends at the words' edge and the key sits before it. */
 .cc-prk[data-side="input"] {
-  left: 39px;
+  left: 37px;
 }
 .cc-prb[data-side="input"] {
-  left: 51px;
+  left: 49px;
 }
 .cc-prk[data-side="output"] {
-  right: 100px;
+  right: 98px;
 }
 .cc-prb[data-side="output"] {
-  right: 39px;
-}
-.cc-row[data-open] .cc-prk[data-side="input"] {
-  left: 41px;
-}
-.cc-row[data-open] .cc-prb[data-side="input"] {
-  left: 53px;
-}
-.cc-row[data-open] .cc-prk[data-side="output"] {
-  right: 102px;
-}
-.cc-row[data-open] .cc-prb[data-side="output"] {
-  right: 41px;
+  right: 37px;
 }
 @media (prefers-reduced-motion: reduce) {
   .cc-prb[data-prompt] {

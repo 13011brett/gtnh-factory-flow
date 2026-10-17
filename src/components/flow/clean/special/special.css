@@ -24,7 +24,7 @@
 }
 .cc-row[data-side="output"] > .cc-bolt {
   left: auto;
-  right: 4px;
+  right: 3px;
 }
 .cc-row[data-open] > .cc-bolt {
   display: none;
@@ -139,11 +139,10 @@
   user-select: none;
 }
 
-/* The picture sits at the top of the card, beside the first recipe, not stretched over them all. */
+/* The well sits at the top of the card, beside the first recipe, not stretched over them all. */
 .sp-card[data-kind="shared"] .sp-pic {
   align-self: start;
-  height: 100px;
-  min-height: 0;
+  height: 118px;
 }
 
 /* ---- Holders ------------------------------------------------------------- */
@@ -198,21 +197,18 @@
   color: var(--cc-gold);
 }
 
+/* A holder's well is four cells with its margin: the gauge or the tank, and the custom rate's count. */
 .sp-pic[data-holder] {
-  min-height: 80px;
+  min-height: 78px;
 }
 .sp-gauge {
   display: block;
   width: 36px;
   height: 32px;
-  margin-top: 14px;
   image-rendering: pixelated;
   background-size: 36px 32px;
   background-repeat: no-repeat;
   pointer-events: none;
-}
-.sp-card[data-kind="tank"] .cc-machine {
-  margin-top: 4px;
 }
 
 /* ---- Warnings under the strip: a generator the settings cannot run ----------- */

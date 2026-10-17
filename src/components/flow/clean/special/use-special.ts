@@ -20,6 +20,7 @@ import { getRecipeProgrammedCircuit } from "@/lib/model/programmed-circuit";
 import {
   getCustomRateDial,
   getCustomRateSlot,
+  isCustomRateRecipe,
   CUSTOM_RATE_ANY_RESOURCE_ID,
 } from "@/lib/model/custom-rate";
 import { getFluidTankSlot, FLUID_TANK_NAME } from "@/lib/model/fluid-tank";
@@ -60,14 +61,21 @@ import { makeResourceHandleId } from "../../resource-handles";
 import { useRecipeMapIcons, type MachineHandlerIcon } from "../../machine-icons";
 import type { RecipeNodeData } from "../../RecipeNode";
 import {
+  buildCountView,
+  buildFootView,
   buildPortView,
+  cardCountState,
+  cardNameIn,
   formatSolvedMachines,
   layoutStrip,
+  pinActions,
   useCleanCardModel,
   type CleanCardContext,
   type CleanCardActions,
   type CleanCardView,
+  type CleanCountView,
 } from "../clean-model";
+import type { PlanUpTo } from "@/lib/solver/plan/types";
 import { CC_GEOMETRY } from "../tokens";
 import { measureText } from "../text-measure";
 import {
@@ -119,32 +127,30 @@ export function fitNameSize(name: string, opts: { chips: number; picker: boolean
   return [14, 13, 12].find((size) => measureText(name, size, 500) <= room) ?? 9;
 }
 
-/** The card's count when nothing in the plan ties it to a number (the plan's `unanchored` and `unneeded`). */
+/**
+ * A special card's count (docs/up-to.md): what runs (an Up to card's reached count, from the card's id) and what is
+ * set, with whether nothing in the plan ties it to a number (the plan's `unanchored` and `unneeded`) and the card's
+ * Up to read-out. A custom rate card's rule is always Exactly.
+ */
 export function countView(
-  node: Pick<FactoryNode, "id" | "solvePin">,
+  node: Pick<FactoryNode, "id" | "solvePin" | "solvePinExact">,
   needed: number,
-  plan: { unanchored: readonly string[]; unneeded: readonly string[] } | undefined,
-  opts?: { noTimes?: boolean; title?: string; pinnedTitle?: string },
-): CleanCardView["count"] & { unset: boolean } {
-  const pin = node.solvePin;
-  const pinned = pin !== undefined && pin > 0;
-  const unset =
-    plan !== undefined &&
-    !pinned &&
-    (plan.unanchored.includes(node.id) || plan.unneeded.includes(node.id));
-  const value = pinned ? pin : needed;
-  return {
-    text: `${opts?.noTimes ? "" : "×"}${formatSolvedMachines(value)}`,
-    pinned,
-    zero: !pinned && needed <= 0.0000005,
-    note: (pinned ? "(pinned)" : unset ? "(set count)" : "") as "" | "(pinned)" | "(set count)",
-    value,
-    title: pinned
-      ? (opts?.pinnedTitle ??
-        "Pinned count. Click to change it, clear the field to let the plan decide.")
-      : (opts?.title ?? "How many of this machine the plan needs. Click to pin a count."),
-    unset,
-  };
+  plan: Parameters<typeof cardCountState>[2],
+  opts?: {
+    noTimes?: boolean;
+    anyNote?: string;
+    title?: string;
+    recipe?: Pick<Recipe, "machineType">;
+  },
+): { count: CleanCountView; unset: boolean; upTo?: PlanUpTo } {
+  const state = cardCountState(undefined, node, plan, opts?.recipe, needed);
+  const count = buildCountView(state, {
+    noTimes: opts?.noTimes,
+    anyNote: opts?.anyNote,
+    title: opts?.title,
+    ruleFixed: isCustomRateRecipe(opts?.recipe),
+  });
+  return { count, unset: state.unset, upTo: state.upTo };
 }
 
 /** The machine item the plain card draws when its machine has no render of its own. */
@@ -280,7 +286,9 @@ export function useSharedCardModel(data: RecipeNodeData, selected: boolean): Spe
   const anyEu = parts.some((part) => part.powerReport);
   const anySteam = !anyEu && parts.some((part) => part.steamReport);
   // Amps count in the sections' tier when they all run at one.
-  const sectionTiers = new Set(parts.filter((part) => part.powerReport).map((part) => part.powerReport!.tier));
+  const sectionTiers = new Set(
+    parts.filter((part) => part.powerReport).map((part) => part.powerReport!.tier),
+  );
   const ownTier = sectionTiers.size === 1 ? [...sectionTiers][0] : undefined;
   const power: SpecialView["power"] = anyEu
     ? {
@@ -302,8 +310,18 @@ export function useSharedCardModel(data: RecipeNodeData, selected: boolean): Spe
         }
       : undefined;
 
+  // The card's count and bar are its whole pool's, under the card's id; the bar reads every recipe's rows.
   const needed = machinesBySection.reduce((sum, n) => sum + n, 0);
-  const count = countView(projectNode, needed, plan);
+  const { count, unset, upTo } = countView(projectNode, needed, plan);
+  const foot = buildFootView(
+    count,
+    upTo,
+    {
+      inputs: sections.flatMap((entry) => entry.inputs),
+      outputs: sections.flatMap((entry) => entry.outputs),
+    },
+    (id) => cardNameIn(liveProject, id),
+  );
   const handlers = useMemo(
     () =>
       getSharedMachineHandlers(projectNode, (id) =>
@@ -333,12 +351,13 @@ export function useSharedCardModel(data: RecipeNodeData, selected: boolean): Spe
     glanceArt: base.view.glanceArt,
     icon: iconOf(base.context),
     count,
+    foot,
     chips: base.view.chips,
     stripHeight: base.view.stripHeight,
     warnings: [],
     selected,
     cannotRun: base.view.cannotRun,
-    unset: count.unset,
+    unset,
     handleIds: sections.flatMap((entry) => [
       ...entry.inputs.filter((p) => !p.port.free).map((p) => p.handleId),
       ...entry.outputs.map((p) => p.handleId),
@@ -354,10 +373,8 @@ export function useSharedCardModel(data: RecipeNodeData, selected: boolean): Spe
     removeSection: (section) => {
       if (!isLocked()) removeRecipeSection(projectNode.id, section);
     },
-    setCount: (value) => {
-      if (isLocked()) return;
-      updateNode(projectNode.id, { solvePin: value });
-    },
+    // From Any, the wheel and the rule menu start at what all its recipes run together.
+    ...pinActions(projectNode, count, updateNode, isLocked),
   };
   const context: SpecialContext = {
     ...base.context,
@@ -429,7 +446,7 @@ export function usePowerCardModel(data: RecipeNodeData, selected: boolean): Spec
   const art = getPowerStructureArt(info.sourceId);
   const needed = data.result?.theoreticalMachinesRequired ?? 0;
   const plan = useFactoryStore.getState().lastResult?.plan;
-  const count = countView(projectNode, needed, plan);
+  const { count, unset } = countView(projectNode, needed, plan);
   const draws = info.euPerTick < 0;
   void draws;
 
@@ -461,12 +478,14 @@ export function usePowerCardModel(data: RecipeNodeData, selected: boolean): Spec
         }
       : undefined,
     count,
+    // The generator's rows and count are the plain card's: so is its bar.
+    foot: base.view.foot,
     chips,
     stripHeight: strip.height,
     warnings: info.warnings ?? [],
     selected,
     cannotRun: false,
-    unset: count.unset,
+    unset,
     handleIds: base.context.handleIds,
   };
 
@@ -560,22 +579,12 @@ export function useCropCardModel(data: RecipeNodeData, selected: boolean): Speci
 
   const needed = result?.theoreticalMachinesRequired ?? 0;
   const crops = Math.max(0, Math.round(needed));
-  const baseCount = countView(projectNode, needed, plan, { noTimes: true });
-  // Under the count: what it counts.
-  const note = baseCount.pinned
-    ? "crops, pinned"
-    : baseCount.unset
-      ? "(set count)"
-      : Math.round(needed) === 1
-        ? "crop planted"
-        : "crops planted";
-  const count = {
-    ...baseCount,
-    note: note as never,
-    title: baseCount.pinned
-      ? "Pinned crops. Click to change it, clear the field to let the plan decide."
-      : "How many crops the plan plants. Click to pin a number.",
-  };
+  // The count is crops planted: no times sign, and with nothing set the line under it says so.
+  const { count, unset: countUnset } = countView(projectNode, needed, plan, {
+    noTimes: true,
+    anyNote: Math.round(needed) === 1 ? "crop planted" : "crops planted",
+  });
+  if (!count.pinned) count.title = "How many crops the plan plants.";
 
   // The harvester's draw: the Industrial Farm burns whole farms, the Crop Manager spends per harvest. Zero by hand.
   const drawEuT = (() => {
@@ -658,12 +667,13 @@ export function useCropCardModel(data: RecipeNodeData, selected: boolean): Speci
     glanceArt: base.view.glanceArt,
     icon: iconOf(base.context),
     count: placeholder ? undefined : count,
+    foot: placeholder ? undefined : base.view.foot,
     chips: base.view.chips,
     stripHeight: base.view.stripHeight,
     warnings: [],
     selected,
     cannotRun: false,
-    unset: placeholder ? false : baseCount.unset,
+    unset: placeholder ? false : countUnset,
     handleIds: placeholder ? [] : base.context.handleIds,
   };
   const context: SpecialContext = { ...base.context, readings: [], sheet: { kind: "machine" } };
@@ -694,7 +704,9 @@ export function useHolderCardModel(
   const empty = !slot;
   const plan = useFactoryStore.getState().lastResult?.plan;
   const needed = data.result?.theoreticalMachinesRequired ?? 0;
-  const count = kind === "tank" ? undefined : countView(projectNode, needed, plan);
+  // A fluid tank has no count rule at all; a custom rate card's is always Exactly (its dial).
+  const counted = kind === "tank" ? undefined : countView(projectNode, needed, plan, { recipe });
+  const count = counted?.count;
 
   const name = kind === "tank" ? FLUID_TANK_NAME : "Custom Rate";
   const sockets: SpecialView["sockets"] = empty
@@ -782,12 +794,14 @@ export function useHolderCardModel(
       : undefined,
     glanceArt: mapIcon?.iconPath,
     count,
+    // An Exactly custom rate card fed by a forced input says so, as any Exactly card does.
+    foot: count && !empty ? base.view.foot : undefined,
     chips,
     stripHeight,
     warnings: [],
     selected,
     cannotRun: false,
-    unset: count?.unset ?? false,
+    unset: counted?.unset ?? false,
     handleIds: empty ? [sockets!.takeHandle, sockets!.giveHandle] : base.context.handleIds,
   };
 

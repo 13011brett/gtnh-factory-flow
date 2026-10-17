@@ -1,11 +1,11 @@
 // @vitest-environment jsdom
 import { afterEach, beforeAll, expect, it, vi } from "vitest";
-import { cleanup, render } from "@testing-library/react";
+import { cleanup, fireEvent, render } from "@testing-library/react";
 import { ReactFlowProvider } from "@xyflow/react";
 import type { FactoryNode, Recipe, ResourceKind } from "@/lib/model/types";
 import type { RailPort } from "../../node-verdict";
 import type { CleanCardContext, CleanPortView } from "../clean-model";
-import { layoutStrip } from "../clean-model";
+import { buildCountView, buildFootView, layoutStrip } from "../clean-model";
 import { SpecialCard } from "./SpecialCard";
 import type { SpecialModel } from "./use-special";
 import type { SpecialSection, SpecialView } from "./special-model";
@@ -95,14 +95,17 @@ function section(index: number, ins: number, outs: number, shared: boolean): Spe
   };
 }
 
-const COUNT = {
-  text: "×1.5",
-  pinned: false,
-  zero: false,
-  note: "" as const,
-  value: 1.5,
-  title: "",
-};
+const countOf = (
+  rule: "any" | "upTo" | "exact",
+  pin: number | undefined,
+  value: number,
+  opts = {},
+) =>
+  buildCountView(
+    { rule, pin, pinned: rule !== "any", value, needed: value, unset: false, upTo: undefined },
+    opts,
+  );
+const COUNT = countOf("any", undefined, 1.5);
 
 function baseView(): SpecialView {
   return {
@@ -144,6 +147,8 @@ const actions: SpecialModel["actions"] = {
   cycleMachine: noop,
   switchMachine: noop,
   setCount: noop,
+  stepCount: noop,
+  setRule: vi.fn(),
   stepSetting: noop,
   stepChip: noop,
   moveSection: vi.fn(),
@@ -311,4 +316,113 @@ it("shows a farm with no crop as one dashed key to pick one", () => {
   expect(container.querySelectorAll(".sp-pick").length).toBe(1);
   expect(container.querySelector(".cc-pic")).toBeNull();
   expect(container.querySelectorAll(".cc-rail").length).toBe(0);
+});
+
+it("gives a shared machine one count and one bar for the card, under its last row", () => {
+  const view = baseView();
+  const count = countOf("upTo", 6, 4);
+  const inputs = view.sections.flatMap((entry) => entry.inputs);
+  const outputs = view.sections.flatMap((entry) => entry.outputs);
+  const { container } = renderCard({
+    ...view,
+    count,
+    foot: buildFootView(
+      count,
+      { capacity: 6, reached: 4, reason: "CLOGGED", resourceKey: outputs.at(-1)!.resourceKey },
+      { inputs, outputs },
+    ),
+  });
+  expect(container.querySelectorAll(".cc-count").length).toBe(1);
+  expect(container.querySelector(".cc-count")!.getAttribute("data-run")).toBe("×4");
+  expect(container.querySelector(".cc-rule")!.textContent).toBe("up to");
+  const foot = container.querySelectorAll<HTMLElement>(".cc-foot");
+  expect(foot.length).toBe(1);
+  // The second recipe's row names the reason: the bar reads every recipe's rows.
+  expect(foot[0]!.textContent).toBe(`${outputs.at(-1)!.name} has nowhere to go`);
+  // Rules 2 and 4, rails 3 and 5, the power row 6, the strip 7: the bar is under all of it.
+  expect(foot[0]!.style.gridRow).toBe("9");
+});
+
+it("keeps a custom rate card Exactly: its rule word opens no menu", () => {
+  const view: SpecialView = {
+    ...baseView(),
+    kind: "custom-rate",
+    name: "Custom Rate",
+    nameTone: "holder",
+    hasPicker: false,
+    amps: undefined,
+    tier: undefined,
+    sections: [{ section: 0, inputs: [], outputs: [port("output", 1)] }],
+    power: undefined,
+    glyph: "gauge",
+    art: undefined,
+    count: countOf("exact", 1, 1, { ruleFixed: true }),
+  };
+  const { container } = renderCard(view);
+  const rule = container.querySelector(".cc-rule")!;
+  expect(rule.textContent).toBe("exactly");
+  expect(rule.hasAttribute("data-fixed")).toBe(true);
+  expect(rule.getAttribute("role")).toBeNull();
+  fireEvent.click(rule);
+  expect(document.querySelector('[role="menu"]')).toBeNull();
+  expect(container.querySelector(".cc-foot")).toBeNull();
+});
+
+it("counts a crop card's crops with no times sign and says what it counts", () => {
+  const view: SpecialView = {
+    ...baseView(),
+    kind: "crop",
+    name: "Stickreed",
+    hasPicker: false,
+    amps: undefined,
+    tier: undefined,
+    sections: [{ section: 0, inputs: [], outputs: [port("output", 1)] }],
+    power: undefined,
+    count: countOf("any", undefined, 12, { noTimes: true, anyNote: "crops planted" }),
+  };
+  const { container } = renderCard(view);
+  const count = container.querySelector(".cc-count")!;
+  expect(count.getAttribute("data-run")).toBe("12");
+  expect(count.getAttribute("data-set")).toBe("crops planted");
+  cleanup();
+  const upTo = renderCard({
+    ...view,
+    count: countOf("upTo", 16, 12, { noTimes: true, anyNote: "crops planted" }),
+  });
+  const set = upTo.container.querySelector(".cc-count")!;
+  expect(set.getAttribute("data-run")).toBe("12");
+  expect(set.getAttribute("data-set")).toBe("16");
+  expect(upTo.container.querySelector(".cc-rule")!.textContent).toBe("up to");
+});
+
+it("puts a generator's bar under its warnings", () => {
+  const count = countOf("upTo", 2, 2);
+  const outputs = [port("output", 1, "n1", "power")];
+  const view: SpecialView = {
+    ...baseView(),
+    kind: "power",
+    name: "Large Gas Turbine",
+    nameTone: "power",
+    hasPicker: false,
+    amps: undefined,
+    tier: undefined,
+    sections: [{ section: 0, inputs: [port("input", 1)], outputs }],
+    power: undefined,
+    warnings: ["Rotor too weak for this fuel."],
+    count,
+    foot: buildFootView(
+      count,
+      { capacity: 2, reached: 2, reason: "FULL" },
+      { inputs: [], outputs },
+    ),
+  };
+  const { container } = renderCard(view, {
+    ...context,
+    sheet: { kind: "rows", rows: [] },
+  } as typeof context);
+  const foot = container.querySelector<HTMLElement>(".cc-foot")!;
+  expect(foot.getAttribute("data-word")).toBe("FULL");
+  // Rails 2, the strip 3, the warnings 4, the bar 5.
+  expect(foot.style.gridRow).toBe("5");
+  expect(container.querySelectorAll("*").length).toBeLessThanOrEqual(PLAIN_BUDGET);
 });

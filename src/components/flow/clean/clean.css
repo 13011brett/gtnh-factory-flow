@@ -203,8 +203,10 @@
   width: 10px;
   height: 10px;
   background: var(--cc-muted);
-  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 3.5 5 7l3.5-3.5' fill='none' stroke='black' stroke-width='1.6'/%3E%3C/svg%3E") center / contain no-repeat;
-  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 3.5 5 7l3.5-3.5' fill='none' stroke='black' stroke-width='1.6'/%3E%3C/svg%3E") center / contain no-repeat;
+  -webkit-mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 3.5 5 7l3.5-3.5' fill='none' stroke='black' stroke-width='1.6'/%3E%3C/svg%3E")
+    center / contain no-repeat;
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 10'%3E%3Cpath d='M1.5 3.5 5 7l3.5-3.5' fill='none' stroke='black' stroke-width='1.6'/%3E%3C/svg%3E")
+    center / contain no-repeat;
 }
 .cc-name[data-picker]:hover::after {
   background: var(--cc-ink);
@@ -275,71 +277,64 @@
   grid-column: 3;
 }
 
+/*
+ * Every port is a tile of one shape (mockups/up-to-card, pass 3): 38 px tall with a pixel above and below, so a row
+ * keeps the board's two cells and its middle (where its wire docks) stays where it was; a bevel of three inset lines.
+ * A free end of the plan only changes the tile's colours, never its shape.
+ */
 .cc-row {
+  --cc-tile: #2b2d33;
+  --cc-tile-edge: #121418;
+  --cc-tile-hi: #3b3e45;
+  --cc-tile-lo: #222428;
   position: relative;
   box-sizing: border-box;
   flex: none;
-  height: 40px;
-  padding: 0 0 0 40px;
+  height: 38px;
+  margin: 1px 0;
+  padding: 0 0 0 38px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 2px;
   min-width: 0;
+  border-radius: 3px;
+  background: var(--cc-tile);
+  box-shadow:
+    inset 0 0 0 1px var(--cc-tile-edge),
+    inset 1px 1px 0 1px var(--cc-tile-hi),
+    inset -1px -1px 0 1px var(--cc-tile-lo);
 }
 .cc-row[data-side="output"] {
-  padding: 0 40px 0 0;
+  padding: 0 38px 0 0;
   text-align: right;
   align-items: flex-end;
 }
-.cc-row[data-forced] {
-  height: 80px;
-  justify-content: flex-start;
-}
-.cc-row + .cc-row::before {
-  content: "";
-  position: absolute;
-  top: 0;
-  left: 4px;
-  right: 4px;
-  height: 1px;
-  background: var(--cc-hair);
-  pointer-events: none;
-}
 .cc-row[data-port]:hover {
-  background: rgba(255, 255, 255, 0.063);
+  --cc-tile: #31343a;
 }
-/* An unwired port the plan runs through anyway is a free end of it: the striped box of a source (blue, a tank) or a product (orange, a crate). */
+/* An unwired port the plan runs through anyway is a free end of it: the striped tile of a source (blue, a tank) or a
+   product (orange, a crate). */
 .cc-row[data-open] {
-  height: 38px;
-  margin: 1px -2px;
-  padding-left: 42px;
-  background: repeating-linear-gradient(135deg, var(--cc-open-stripe) 0 3px, var(--cc-open-body) 3px 8px);
-  box-shadow: inset 0 0 0 1px var(--cc-open-edge);
-  border-radius: 2px;
+  background: repeating-linear-gradient(
+    135deg,
+    var(--cc-open-stripe) 0 3px,
+    var(--cc-open-body) 3px 8px
+  );
 }
 .cc-row[data-open][data-side="input"] {
   --cc-open-body: #292f38;
   --cc-open-stripe: #2e3844;
-  --cc-open-edge: #4f6986;
-  border-radius: 5px;
+  --cc-tile-edge: #4f6986;
+  --cc-tile-hi: #3a4757;
+  --cc-tile-lo: #22272e;
 }
 .cc-row[data-open][data-side="output"] {
   --cc-open-body: #322d2e;
   --cc-open-stripe: #3e3431;
-  --cc-open-edge: #815e49;
-  padding: 0 42px 0 0;
-}
-.cc-row[data-open]::before {
-  display: none;
-}
-.cc-row[data-open] .cc-icon {
-  left: 6px;
-  top: 3px;
-}
-.cc-row[data-open][data-side="output"] .cc-icon {
-  left: auto;
-  right: 6px;
+  --cc-tile-edge: #815e49;
+  --cc-tile-hi: #4b3f39;
+  --cc-tile-lo: #2a2425;
 }
 .cc-row[data-open][data-side="input"] .cc-num {
   color: #94c3f3;
@@ -356,6 +351,38 @@
 .cc-row[data-open] .cc-num[data-zero] {
   color: var(--cc-idle);
 }
+
+/* A port that also holds a forced row: its own tile over the forced tile, the two as tall as two rows. */
+.cc-row[data-forced] {
+  height: 78px;
+  padding: 0 !important;
+  justify-content: flex-start;
+  gap: 2px;
+  background: none;
+  box-shadow: none;
+}
+.cc-line {
+  position: relative;
+  box-sizing: border-box;
+  height: 38px;
+  padding: 0 0 0 38px;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  gap: 2px;
+  border-radius: 3px;
+  background: var(--cc-tile);
+  box-shadow:
+    inset 0 0 0 1px var(--cc-tile-edge),
+    inset 1px 1px 0 1px var(--cc-tile-hi),
+    inset -1px -1px 0 1px var(--cc-tile-lo);
+}
+.cc-row[data-side="output"] .cc-line {
+  padding: 0 38px 0 0;
+  align-items: flex-end;
+  text-align: right;
+}
+
 /* Lit by a hover scope or an overview row: gold ring and three halos, steady. */
 .cc-row[data-lit] {
   box-shadow:
@@ -366,37 +393,17 @@
   z-index: 1;
 }
 
-/* The row's top 40 px when it also holds a forced row below. */
-.cc-line {
-  position: relative;
-  box-sizing: border-box;
-  height: 40px;
-  padding: 0 0 0 40px;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  gap: 2px;
-}
-.cc-row[data-side="output"] .cc-line {
-  padding: 0 40px 0 0;
-  align-items: flex-end;
-  text-align: right;
-}
-.cc-row[data-forced] {
-  padding: 0 !important;
-}
-
 .cc-icon {
   position: absolute !important;
-  left: 4px;
-  top: 4px;
+  left: 3px;
+  top: 3px;
   width: 32px !important;
   height: 32px !important;
   pointer-events: none;
 }
 .cc-row[data-side="output"] .cc-icon {
   left: auto;
-  right: 4px;
+  right: 3px;
 }
 /* A fluid is the mod's flat square in its colour: 28 of the 32 box, no bevel, no art. */
 .cc-swatch {
@@ -474,19 +481,20 @@
   text-align: right;
 }
 
-/* The power row: a port row without a wire. */
+/* The power row: a tile among the inputs, without a wire. */
 .cc-row[data-power] {
   cursor: default;
 }
 .cc-bolt {
   position: absolute;
-  left: 4px;
-  top: 4px;
+  left: 3px;
+  top: 3px;
   box-sizing: border-box;
   width: 32px;
   height: 32px;
   background:
-    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%23F5B731' d='M18 3 7 18h7l-2 11 12-17h-8z'/%3E%3C/svg%3E") center / 24px no-repeat,
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath fill='%23F5B731' d='M18 3 7 18h7l-2 11 12-17h-8z'/%3E%3C/svg%3E")
+      center / 24px no-repeat,
     #2b2410;
   box-shadow: inset 0 0 0 1px #6b5a22;
   pointer-events: none;
@@ -503,8 +511,8 @@
 .cc-row[data-choice]::after {
   content: "";
   position: absolute;
-  left: 3px;
-  top: 32px;
+  left: 2px;
+  top: 31px;
   width: 5px;
   height: 5px;
   background: #ffaa00;
@@ -513,47 +521,48 @@
 }
 .cc-row[data-side="output"][data-choice]::after {
   left: auto;
-  right: 31px;
+  right: 30px;
 }
 
-/* A forced row: the plan sends material out (or brings it in) here with no drawer. */
+/* A forced row: the plan sends material out (or brings it in) here with no drawer. A tile of the same shape, striped. */
 .cc-forced {
   position: relative;
   box-sizing: border-box;
   align-self: stretch;
-  margin: 1px -2px 0;
   height: 38px;
-  padding: 0 0 0 42px;
+  padding: 0 0 0 38px;
   display: flex;
   flex-direction: column;
   justify-content: center;
   gap: 2px;
-  background: repeating-linear-gradient(135deg, var(--cc-forced-stripe) 0 3px, var(--cc-forced-body) 3px 8px);
-  box-shadow: inset 0 0 0 1px var(--cc-forced-edge);
-  border-radius: var(--cc-forced-radius, 2px);
+  border-radius: 3px;
+  background: repeating-linear-gradient(
+    135deg,
+    var(--cc-forced-stripe) 0 3px,
+    var(--cc-forced-body) 3px 8px
+  );
+  box-shadow:
+    inset 0 0 0 1px var(--cc-forced-edge),
+    inset 1px 1px 0 1px var(--cc-forced-hi),
+    inset -1px -1px 0 1px var(--cc-forced-lo);
 }
 .cc-row[data-side="output"] .cc-forced {
-  padding: 0 42px 0 0;
+  padding: 0 38px 0 0;
   align-items: flex-end;
 }
 .cc-forced[data-kind="in"] {
   --cc-forced-body: #292f38;
   --cc-forced-stripe: #2e3844;
   --cc-forced-edge: #4f6986;
-  --cc-forced-radius: 5px;
+  --cc-forced-hi: #3a4757;
+  --cc-forced-lo: #22272e;
 }
 .cc-forced[data-kind="out"] {
   --cc-forced-body: #322d2e;
   --cc-forced-stripe: #3e3431;
   --cc-forced-edge: #815e49;
-}
-.cc-forced .cc-icon {
-  left: 6px;
-  top: 3px;
-}
-.cc-row[data-side="output"] .cc-forced .cc-icon {
-  left: auto;
-  right: 6px;
+  --cc-forced-hi: #4b3f39;
+  --cc-forced-lo: #2a2425;
 }
 .cc-forced[data-kind="in"] .cc-num {
   color: #94c3f3;
@@ -568,96 +577,96 @@
   color: #c39b84;
 }
 
-/* ---- Picture column ------------------------------------------------------ */
+/* ---- The machine's well ------------------------------------------------------ */
 
+/* The machine sits in a sunk well between the rails (pass 3), its picture over the count. At least six cells tall
+   with its margin (virtual/card-shell.ts WELL_MIN_HEIGHT); a taller card centres both in it. */
 .cc-pic {
   grid-row: 2;
   grid-column: 2;
   position: relative;
-  min-height: 100px;
+  min-height: 118px;
   min-width: 0;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
+  margin: 1px 4px;
   box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  border-radius: 3px;
+  background: #1a1c20;
+  box-shadow:
+    inset 0 0 0 1px #0e0f12,
+    inset 2px 2px 0 0 #141518,
+    inset -1px -1px 0 1px #2f3138;
 }
-/* The art fitted in the 88 px square box, centred both ways, as the mod draws it (RecipeCard.drawMachineArt). */
+/* The art fitted in an 80 px square, never stretched (the mod's RecipeCard.drawMachineArt). */
 .cc-art {
-  width: 88px;
-  height: 88px;
+  width: 80px;
+  height: 80px;
   object-fit: contain;
   image-rendering: pixelated;
-  filter: drop-shadow(5px 7px 6px rgba(0, 0, 0, 0.6));
+  filter: drop-shadow(4px 6px 5px rgba(0, 0, 0, 0.6));
   pointer-events: none;
 }
 .cc-machine {
   width: 64px !important;
   height: 64px !important;
-  /* A single block sits 4 px down the box, clear of the count. */
-  margin-top: 4px;
-  filter: drop-shadow(5px 7px 6px rgba(0, 0, 0, 0.6));
+  filter: drop-shadow(4px 6px 5px rgba(0, 0, 0, 0.6));
   pointer-events: none;
 }
 .cc-circuit {
   position: absolute !important;
-  left: 0;
-  top: 62px;
+  left: 3px;
+  top: 3px;
   width: 24px !important;
   height: 24px !important;
 }
 
-/* The count, as the mod draws it (CardPaint.count): a block on the picture box's bottom right, its right edge 2 px
-   in from the 88 px box, as wide as the widest of the count, "(set count)" and the line under it, so the count never
-   moves whatever is under it; the count (x1.5, 12 px) centred in the block, its top 65 px down the mod's picture box (60 here: the website's box starts 2 px lower and Monocraft sits 1 px low), and
-   the line (8 px) centred 1 px under the count. Drawn over the machine's art. */
+/*
+ * The count under the machine (docs/up-to.md): what runs, big and white (`::before`, its own line), and under it what
+ * you set: the rule word (`.cc-rule`, opens Any, Up to, Exactly) and the number in gold (`::after`). With nothing set
+ * the line under says "(set count)" while nothing sets this part of the plan, else nothing; it always keeps its
+ * height so the block never moves.
+ */
 .cc-count {
-  position: absolute;
-  right: 2px;
-  top: 60px;
+  position: relative;
   z-index: 2;
+  max-width: 100%;
   display: flex;
-  flex-direction: column;
-  align-items: center;
-  box-sizing: border-box;
-  font-size: 12px;
-  font-weight: 400;
-  line-height: 13px;
-  color: var(--cc-ink);
-  cursor: text;
-  user-select: none;
-  white-space: nowrap;
-}
-/* Reserves the width of "(set count)", as the mod's block does. */
-.cc-count::before {
-  content: "(set count)";
-  display: block;
-  height: 0;
-  overflow: hidden;
-  visibility: hidden;
-  font-size: 8px;
-  line-height: 0;
-}
-.cc-count::after {
-  content: attr(data-note);
-  display: block;
-  height: 10px;
+  flex-wrap: wrap;
+  justify-content: center;
+  align-items: baseline;
+  column-gap: 3px;
   font-size: 8px;
   font-weight: 400;
   line-height: 10px;
   color: var(--cc-muted);
+  cursor: text;
+  user-select: none;
+  white-space: nowrap;
+}
+.cc-count::before {
+  content: attr(data-run);
+  flex: 0 0 100%;
+  margin-bottom: 2px;
   text-align: center;
+  font-size: 14px;
+  letter-spacing: -0.8px;
+  line-height: 13px;
+  color: var(--cc-ink);
 }
-.cc-count[data-pinned] {
-  color: var(--cc-gold);
+.cc-count[data-zero]::before {
+  color: var(--cc-idle);
 }
-.cc-count[data-zero] {
+.cc-count::after {
+  content: attr(data-set);
+  min-width: 1px;
+  height: 10px;
   color: var(--cc-muted);
 }
-.cc-count:hover:not([data-editing]) {
-  text-decoration: underline dotted;
-  text-underline-offset: 3px;
-  text-decoration-color: var(--cc-muted);
-}
+.cc-count[data-pinned]::after,
 .cc-count[data-prompt]::after {
   color: var(--cc-gold);
 }
@@ -665,10 +674,33 @@
 :root[data-cc-blink] .cc-count[data-prompt]::after {
   color: var(--cc-prompt-off);
 }
+/* What a click types into: the gold number when a count is set, else what runs. */
+.cc-count:not([data-pinned]):not([data-editing]):hover::before,
+.cc-count[data-pinned]:not([data-editing]):not(:has(.cc-rule:hover)):hover::after {
+  text-decoration: underline dotted;
+  text-decoration-color: var(--cc-muted);
+  text-underline-offset: 2px;
+}
+.cc-count[data-editing]::after {
+  display: none;
+}
+.cc-rule {
+  line-height: 9px;
+  border-bottom: 1px dotted #5a5e68;
+  cursor: pointer;
+}
+.cc-rule:hover,
+.cc-rule[data-open] {
+  color: var(--cc-ink);
+}
+.cc-rule[data-fixed] {
+  border-bottom-color: transparent;
+  cursor: text;
+}
 .cc-count input {
   box-sizing: border-box;
-  width: 64px;
-  height: 18px;
+  width: 48px;
+  height: 12px;
   margin: 0;
   padding: 0 3px;
   border: 1px solid var(--cc-gold);
@@ -676,8 +708,9 @@
   background: #0f1114;
   color: var(--cc-gold);
   font: inherit;
-  font-size: 12px;
-  text-align: right;
+  font-size: 8px;
+  line-height: 10px;
+  text-align: center;
 }
 
 @keyframes cc-prompt {
@@ -695,6 +728,96 @@
     animation: none;
     color: var(--cc-prompt-off);
   }
+}
+
+/* ---- The bar along the foot ------------------------------------------------------ */
+
+/*
+ * An Up to card's story in one bar (docs/up-to.md, pass 3), one cell with its air: the fill is reached over the count,
+ * a bottleneck's bar runs on striped to what the line wants, then one word in the reason's colour, one plain line and
+ * the fraction on the right. Fill and stripes are background layers sized in px from the model (`--fill`, `--ghost-l`,
+ * `--ghost-w`, inside a track 2 px in from the edge); the word and fraction are pseudo-elements. FORCED IN is the same
+ * bar with no fill.
+ */
+.cc-foot {
+  --tone: var(--cc-muted);
+  --fill: 0px;
+  --ghost-l: 0px;
+  --ghost-w: 0px;
+  --cc-foot-fill: color-mix(in srgb, var(--tone) 30%, #17191d);
+  --cc-foot-ghost: color-mix(in srgb, var(--tone) 34%, #17191d);
+  position: relative;
+  grid-column: 1 / -1;
+  box-sizing: border-box;
+  height: 16px;
+  margin: 1px 0 3px;
+  padding: 0 7px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+  overflow: hidden;
+  white-space: nowrap;
+  border-radius: 3px;
+  font-size: 8px;
+  font-weight: 400;
+  line-height: 10px;
+  color: #c8cad0;
+  cursor: default;
+  background-color: #17191d;
+  background-image:
+    linear-gradient(var(--tone), var(--tone)),
+    repeating-linear-gradient(135deg, var(--cc-foot-ghost) 0 3px, transparent 3px 7px),
+    linear-gradient(var(--cc-foot-fill), var(--cc-foot-fill));
+  background-repeat: no-repeat;
+  background-position:
+    calc(2px + var(--ghost-l)) 2px,
+    calc(2px + var(--ghost-l)) 2px,
+    2px 2px;
+  background-size:
+    0 calc(100% - 4px),
+    var(--ghost-w) calc(100% - 4px),
+    var(--fill) calc(100% - 4px);
+  box-shadow:
+    inset 0 0 0 1px #0d0e11,
+    inset 1px 1px 0 1px #111215;
+}
+/* Where your count ends and the striped run-on starts: a line in the reason's colour. */
+.cc-foot[data-ghost] {
+  background-size:
+    1px calc(100% - 4px),
+    var(--ghost-w) calc(100% - 4px),
+    var(--fill) calc(100% - 4px);
+}
+.cc-foot[data-word]::before {
+  content: attr(data-word);
+  color: var(--tone);
+}
+.cc-foot[data-frac]::after {
+  content: attr(data-frac);
+  margin-left: auto;
+  color: var(--cc-ink);
+}
+.cc-foot[data-tone="full"] {
+  --tone: #5ee9b5;
+}
+.cc-foot[data-tone="bottleneck"] {
+  --tone: #f06262;
+}
+.cc-foot[data-tone="starved"] {
+  --tone: #e0a63a;
+}
+.cc-foot[data-tone="clogged"] {
+  --tone: #6fb2d6;
+}
+.cc-foot[data-tone="unused"] {
+  --tone: #8a8e97;
+}
+.cc-foot[data-tone="limited"] {
+  --tone: #b49cf0;
+}
+.cc-foot[data-tone="forced"] {
+  --tone: #94c3f3;
 }
 
 /* ---- Settings strip ------------------------------------------------------- */
@@ -820,7 +943,8 @@
 
 /* A selection outline shows only when several things are selected (the mod's BoardSession.showsSelected): with one
    selected (no selected node followed by another), the card wears no ring; "cannot run" keeps its red. */
-.react-flow__nodes:not(:has(> .react-flow__node.selected ~ .react-flow__node.selected)) .cc-card[data-selected]::before {
+.react-flow__nodes:not(:has(> .react-flow__node.selected ~ .react-flow__node.selected))
+  .cc-card[data-selected]::before {
   box-shadow: none;
 }
 .react-flow__nodes:not(:has(> .react-flow__node.selected ~ .react-flow__node.selected))

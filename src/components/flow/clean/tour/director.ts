@@ -22,6 +22,12 @@ export type Aim = Target | (() => Pt | null);
 
 export class Aborted extends Error {}
 
+/**
+ * What a step waits for never came (a target not found, a recipe list that never showed): the rest of the step would
+ * act on nothing, each action waiting out its own bound, so the step stops there and shows its note.
+ */
+export class Missed extends Error {}
+
 export interface Ctx {
   cursor: Cursor;
   /** Hurried: glides and waits shrink, settling does not. */
@@ -65,7 +71,7 @@ function guard(c: Ctx): void {
   if (c.dead()) throw new Aborted();
 }
 
-async function resolve(aim: Aim, c: Ctx, label: string, timeoutMs = 3500): Promise<{ el?: Element; pt: Pt } | null> {
+async function resolve(aim: Aim, c: Ctx, label: string, timeoutMs = 3500): Promise<{ el?: Element; pt: Pt }> {
   const t0 = performance.now();
   for (;;) {
     guard(c);
@@ -85,7 +91,7 @@ async function resolve(aim: Aim, c: Ctx, label: string, timeoutMs = 3500): Promi
     }
     if (performance.now() - t0 > timeoutMs) {
       warn(c, `${label}: not found`);
-      return null;
+      throw new Missed(label);
     }
     await draws(1);
   }
@@ -120,7 +126,6 @@ export const A = {
     (aim: Aim, label = "target"): Action =>
     async (c) => {
       const at = await resolve(aim, c, label);
-      if (!at) return;
       await c.cursor.glide(at.pt.x, at.pt.y);
       input.moveTo(at.pt);
       await draws(2);
@@ -130,7 +135,6 @@ export const A = {
     (aim: Aim, o: { button?: 0 | 1 | 2; mods?: Mods; label?: string; caps?: string[]; double?: boolean } = {}): Action =>
     async (c) => {
       const at = await resolve(aim, c, o.label ?? "click target");
-      if (!at) return;
       await c.cursor.glide(at.pt.x, at.pt.y);
       guard(c);
       if (o.caps) c.cursor.caps(o.caps);
@@ -153,7 +157,6 @@ export const A = {
     (aim: Aim, text: string, o: { enter?: boolean; label?: string; keep?: boolean } = {}): Action =>
     async (c) => {
       const at = await resolve(aim, c, o.label ?? "text box");
-      if (!at) return;
       await c.cursor.glide(at.pt.x, at.pt.y);
       c.cursor.ripple();
       input.click(at.pt);
@@ -180,7 +183,7 @@ export const A = {
       }
       if (!box) {
         warn(c, `${o.label ?? "text box"}: nothing took the typing`);
-        return;
+        throw new Missed(o.label ?? "text box");
       }
       if (!o.keep) input.clearText(box);
       for (const ch of text) {
@@ -231,7 +234,6 @@ export const A = {
     (aim: Aim, deltaY: number, o: { mods?: Mods; times?: number; label?: string } = {}): Action =>
     async (c) => {
       const at = await resolve(aim, c, o.label ?? "wheel target");
-      if (!at) return;
       await c.cursor.glide(at.pt.x, at.pt.y);
       c.cursor.wheelArrow(deltaY > 0 ? 1 : -1);
       for (let i = 0; i < (o.times ?? 1); i++) {
@@ -250,7 +252,6 @@ export const A = {
     (from: Aim, to: Aim, o: { button?: 0 | 1; mods?: Mods; label?: string; caps?: string[] } = {}): Action =>
     async (c) => {
       const a = await resolve(from, c, `${o.label ?? "drag"} start`);
-      if (!a) return;
       await c.cursor.glide(a.pt.x, a.pt.y);
       c.cursor.badge(o.button === 1 ? "middle" : "left");
       if (o.caps) c.cursor.caps(o.caps);
@@ -258,11 +259,14 @@ export const A = {
       input.press(a.pt, o.button ?? 0, o.mods);
       await draws(1);
       c.cursor.onMove = (x, y) => input.moveTo({ x, y }, o.mods);
-      const b = await resolve(to, c, `${o.label ?? "drag"} end`);
-      if (!b) {
+      let b: { el?: Element; pt: Pt };
+      try {
+        b = await resolve(to, c, `${o.label ?? "drag"} end`);
+      } catch (error) {
+        // Nowhere to take it: let go where it was picked up.
         c.cursor.onMove = undefined;
         input.release(a.pt, o.button ?? 0, o.mods, false);
-        return;
+        throw error;
       }
       try {
         // A first nudge past the slop so the press reads as a drag at once, then the glide.
@@ -290,7 +294,6 @@ export const A = {
       c.cursor.badge("left");
       await sleep(scale(c, 120));
       const b = await resolve(to, c, `${o.label ?? "item"} drop`);
-      if (!b) return;
       await c.cursor.glide(b.pt.x, b.pt.y, c.fast ? undefined : 700);
       input.dragDrop(a.el, a.pt, b.pt);
       await draws(2);
@@ -351,7 +354,7 @@ export const A = {
         guard(c);
         if (performance.now() - t0 > timeoutMs) {
           warn(c, `${label}: never came`);
-          return;
+          throw new Missed(label);
         }
         await draws(1);
       }
@@ -451,8 +454,11 @@ export class Director {
       setTour({ phase: "waiting", noteReady: true });
     } catch (error) {
       if (error instanceof Aborted) return;
-      warn({ stepIndex: index }, `failed: ${error instanceof Error ? error.message : String(error)}`);
-      console.error(error);
+      // A miss is warned where it happened; anything else is a fault.
+      if (!(error instanceof Missed)) {
+        warn({ stepIndex: index }, `failed: ${error instanceof Error ? error.message : String(error)}`);
+        console.error(error);
+      }
       if (!ctx.dead()) {
         this.hooks.onNote(step.note);
         setTour({ phase: "waiting", noteReady: true });

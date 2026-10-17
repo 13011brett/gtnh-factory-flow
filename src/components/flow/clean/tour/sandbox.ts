@@ -7,11 +7,13 @@ import { leaveWelcomeTab } from "@/lib/welcome/welcome-tab";
 import { useDesignStore } from "@/store/design-store";
 import { useFactoryStore } from "@/store/factory-store";
 import { getMinimap, setMinimap, snapshotMinimap, type MinimapSettings } from "../minimap/minimap-settings";
+import { readMapSelectionText, writeMapSelectionText } from "@/components/machine-map-selection";
 
 /**
  * The tour's own plan, kept apart from the player's: the player's design is saved first and put aside, the tour
  * plays on a design of its own called "Tour plan", and what it borrows (the minimap's
- * settings, the items column's search) is copied first and put back. Leaving from any step keeps the player where
+ * settings, the items column's search, the recipe search's machine selection, set to every machine) is
+ * copied first and put back. Leaving from any step keeps the player where
  * they are: if the tour put anything on the plan in front of them it stays, joining their plans as "Tour plan";
  * if not, it is removed and their own design comes back.
  */
@@ -23,6 +25,8 @@ interface Saved {
   tourDesignId?: string;
   minimap: MinimapSettings;
   recipeSearch: string;
+  /** The player's machine selection as stored (null: every machine). */
+  mapSelection: string | null;
   /** The designs there were once the tour's plan was made: any other was made by the tour (a task board). */
   known?: Set<string>;
 }
@@ -47,7 +51,10 @@ export async function enterSandbox(): Promise<void> {
     priorDesignId: prior,
     minimap: snapshotMinimap(),
     recipeSearch: factory.recipeSearch,
+    mapSelection: readMapSelectionText(),
   };
+  // The recipes the tour adds must show whatever machines the player last left selected.
+  writeMapSelectionText(null);
   // The player's work is saved before the plan is put aside.
   if (prior) await designs.saveActiveProject(prior, factory.project);
   leaveWelcomeTab();
@@ -63,6 +70,7 @@ export async function enterSandbox(): Promise<void> {
 export function resetBorrowedSettings(): void {
   if (!saved) return;
   setMinimap({ ...saved.minimap, show: true });
+  writeMapSelectionText(null);
 }
 
 function madeByTour(s: Saved): string[] {
@@ -123,6 +131,7 @@ export async function leaveSandbox(): Promise<void> {
   factory.clearResourceBrowser();
   factory.setRecipeSearch(s.recipeSearch);
   setMinimap(s.minimap);
+  writeMapSelectionText(s.mapSelection);
   const onTourPlan = s.tourDesignId !== undefined && designs.activeDesignId === s.tourDesignId;
   if (onTourPlan && tourPlanTouched()) {
     // The plan in front of them joins theirs as "Tour plan": saved as it is, and the screen stays.

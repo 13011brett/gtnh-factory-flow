@@ -101,7 +101,7 @@ describe("the director", () => {
     expect(notes).toEqual([null, "Done *here*."]);
   });
 
-  it("warns and carries on when a thing never shows, rather than hang", async () => {
+  it("warns and shows the note when a thing never shows, rather than hang", async () => {
     const { layer } = mount();
     const cursor = new Cursor(layer);
     cursor.fast = true;
@@ -113,6 +113,30 @@ describe("the director", () => {
     expect(warn).toHaveBeenCalledWith(expect.stringContaining("ghost: not found"));
     warn.mockRestore();
   }, 10000);
+
+  it("stops a step at a wait that never comes, skipping the actions that would wait on it", async () => {
+    const { layer } = mount();
+    const cursor = new Cursor(layer);
+    cursor.fast = true;
+    const warn = vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    const after = vi.fn();
+    const notes: Array<string | null> = [];
+    const step: Step = {
+      id: "t",
+      actions: [A.until(() => false, "the recipe", 50), A.run(after), A.click(() => null, { label: "ghost" })],
+      note: { text: "Here." },
+    };
+    const director = new Director([step], cursor, { onNote: (n) => notes.push(n ? n.text : null), onLeave: () => undefined });
+    const t0 = performance.now();
+    await director.play(0, true);
+    expect(performance.now() - t0).toBeLessThan(2000);
+    expect(after).not.toHaveBeenCalled();
+    expect(getTour()).toMatchObject({ phase: "waiting", noteReady: true });
+    expect(notes).toEqual([null, "Here."]);
+    expect(warn).toHaveBeenCalledTimes(1);
+    expect(warn).toHaveBeenCalledWith(expect.stringContaining("the recipe: never came"));
+    warn.mockRestore();
+  });
 
   it("steps to the next and leaves after the last", async () => {
     const { layer } = mount();

@@ -35,7 +35,8 @@ The board has its own notes in `flow/CLAUDE.md`, the Pool worksheet in `pool/CLA
   the only doors in and out. A query is clauses (`recipe-query.ts`) plus ANY / ALL / ONLY
   per side; the server does the set algebra (`src/lib/server/CLAUDE.md`).
 - Machine chips are a persisted multi-select (`machine-map-selection.v1`), sent as
-  `mapMode` + `map=`; counts always cover everything that matched.
+  `mapMode` + `map=`; counts always cover everything that matched. Changed from outside
+  (the tour sets every machine and puts the player's back) through `machine-map-selection.ts`.
 - Results page through machine sections in chip order. An open section short of its
   count shows skeletons; the first (`[data-awaiting-page]`) asks for the next page, and
   `onLoadMore` only advances from a page that has landed (`landedRecipePageKeyRef`).

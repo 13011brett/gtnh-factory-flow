@@ -41,6 +41,11 @@ import {
 import { FoldGlyph } from "./flow/clean/fold/FoldKey";
 import { usePlanLayout } from "./use-plan-layout";
 import {
+  MAP_SELECTION_CHANGED_EVENT,
+  MAP_SELECTION_STORAGE_KEY,
+  readMapSelectionText,
+} from "./machine-map-selection";
+import {
   RecipeSearchOverlay,
   type RecipeMapChip,
   type StencilClause,
@@ -56,8 +61,6 @@ export {
 const RECIPE_QUERY_LIMIT = 120;
 
 /** Whether the filter block under the search box is folded away. */
-/** The machine chips' multi-select: which maps' recipes the search shows. */
-const MAP_SELECTION_STORAGE_KEY = "gtnh-factory-flow.machine-map-selection.v1";
 
 const RECIPE_QUERY_CACHE_TTL_MS = 90_000;
 const RECIPE_SEARCH_DEBOUNCE_MS = 200;
@@ -391,6 +394,16 @@ export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
       return deferStateUpdate(() => setMapSelection(stored));
     }
     return undefined;
+  }, []);
+
+  // Changed from outside (the tour borrows the default and puts the player's back): read it again.
+  useEffect(() => {
+    const reread = () => {
+      setMapSelection(readStoredMapSelection());
+      setRecipePage(0);
+    };
+    window.addEventListener(MAP_SELECTION_CHANGED_EVENT, reread);
+    return () => window.removeEventListener(MAP_SELECTION_CHANGED_EVENT, reread);
   }, []);
 
   const changeMapSelection = useCallback((selection: RecipeMapSelection | undefined) => {
@@ -1115,7 +1128,7 @@ function toggledMapSelection(
 
 function readStoredMapSelection(): RecipeMapSelection | undefined {
   try {
-    const stored = window.localStorage.getItem(MAP_SELECTION_STORAGE_KEY);
+    const stored = readMapSelectionText();
     if (!stored) {
       return undefined;
     }

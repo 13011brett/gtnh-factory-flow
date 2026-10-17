@@ -99,23 +99,37 @@ a buffer is wiring only, as before.
 
 ### The read-out (`SolutionView.upTo`)
 
-At the committed point, per Up to pool in pool order, under one counted budget (`MAX_READOUT_LPS`, work never time):
+At the committed point, under one counted budget per island (`readoutBudget`: 96 models, or 8 per Up to pool when that
+is more; work never time). The reasons are old Build's (`node-verdict.ts`): what a card's inputs allow is weighed against
+what its outputs allow, and a card at full speed is a bottleneck when someone downstream goes short of what it makes.
+The pools below their capacity are read first, in pool order, then those at it.
 
-- `reached` = machine time; at its capacity (within 1e-6 of the level):
-  - **wants**: drop the pool's cap and every push band, keep the trades; maximise the other Up to pools' levels plus
-    each unmet drawer's met fraction (total over its target, at most 1). If that cannot beat what they have now, it is
-    **FULL**. Otherwise minimise this pool's machine time at that optimum: more than its capacity is **BOTTLENECK**
-    with `wants`. An Exactly card fed by a forced input on a network this pool makes also wants more: that input over
-    this pool's per-machine rate is added to `wants`.
-  - below its capacity, the reason probes, every other pool held in its band, this one free under its cap,
-    maximising its own level:
-    - **STARVED** when giving one input port a free supply raises it (a wired port: a free column into its
-      conservation row; an unwired port with a capped source drawer: that drawer's cap lifted). All inputs are tried
-      together first; only if that raises it is each tried alone. The first that does is `port`, the others `tied`.
-      `upstream`: the Up to pools making that input that are FULL or BOTTLENECK.
-    - else **CLOGGED** (at zero: **UNUSED**) when giving one output port a free sink raises it.
-    - else **LIMITED**.
-  - budget out: `reason: null`.
+- `reached` = machine time. A free end is a free column into a wired port's conservation row (supply at an input, a
+  sink at an output), or an unwired port's capped source or product drawer with its cap lifted.
+- Below its capacity, with every other pool held at least at its level (free to rise, never to give way: held from
+  above too, a pool in a chain would be pinned from both sides) and this one free under its cap:
+  - `capable` = the most it reaches with a free sink at every output (its inputs as they are); `disposal` = the most
+    with every input fed freely (its outputs as they are).
+  - `disposal < capable` (the outputs strictly tighter): **CLOGGED** (at zero: **UNUSED**). `port` is the first output
+    whose free sink alone (every input fed) raises it, the others that do `tied`.
+  - else, when `capable` is below its capacity and feeding its inputs (every output free) raises it: **STARVED**, the
+    input story first as in old Build. `port` is the first input whose free supply alone (every output free) raises it,
+    the others that do `tied`. When only several together do, `port` is the first of them in machine, then port order,
+    and `tied` the rest (CLOGGED likewise). `upstream`: the Up to pools making that input that are FULL or BOTTLENECK.
+  - else **LIMITED**.
+- At its capacity (within 1e-6 of the level):
+  - **wants**: drop the pool's cap and every push band, keep the trades; maximise the levels of the Up to pools it
+    feeds (wire by wire, downstream) plus each unmet drawer's met fraction (total over its target, at most 1) among
+    those it feeds. If that beats what they have now, minimise this pool's machine time at that optimum: more than its
+    capacity is **BOTTLENECK** with that `wants`. Only what it feeds counts: a pool upstream that it holds back is
+    that pool's CLOGGED.
+  - else, when it makes what a STARVED pool's `port` or `tied` port takes (the inverse of `upstream`): **BOTTLENECK**,
+    `wants` = its capacity plus what those pools would draw at their own capacity beyond what they draw now, over its
+    per-machine rate (each maker is given the whole).
+  - An Exactly card fed by a forced input on a network this pool makes also wants more: that input over this pool's
+    per-machine rate is added to `wants` (a FULL pool so becomes a BOTTLENECK).
+  - else **FULL**.
+- Budget out: `reason: null` for that pool and every pool read after it.
 
 Islands: each island's read-out is its own; `solvePlan` concatenates them, sorted by `node`.
 

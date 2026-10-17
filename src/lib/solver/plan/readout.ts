@@ -1,22 +1,32 @@
 /**
  * The Up to read-out (docs/up-to.md, "The read-out"; `SolutionView.upTo`): why each Up to card runs where it does at
  * the committed point. Every answer is a probe's optimum compared with the point, under the trading the point was
- * settled under (`ctx.committedTrades`); one counted budget per island (MAX_READOUT_LPS models, work never time), past
+ * settled under (`ctx.committedTrades`); one counted budget per island (`readoutBudget`, work never time), past
  * which a pool's reason is null.
  *
- * - At its capacity: would the rest of the plan use more of it? With its cap and every push band gone, the Up to pools
- *   it feeds (wire by wire, downstream) and the unmet drawers it feeds can do better than now: BOTTLENECK, wanting the
- *   least machine time that does it; else FULL. Only what it feeds counts: a pool upstream that it holds back is that
- *   pool's CLOGGED, not this one's BOTTLENECK (old Build's rule: a bottleneck has someone waiting on its output). An
- *   Exactly card on one of its output networks that a forced input still feeds wants more too: that input over its
- *   per-machine rate.
- * - Below it, with every other pool held at least at its level (free to rise, never to give way): free supply at its
- *   inputs that raises it is STARVED, else a free sink at its outputs that does is CLOGGED (UNUSED at zero), else
- *   LIMITED. Inputs (then outputs) are tried all together first, and one by one only when that raises it: `port` is
- *   the first that raises it alone and `tied` the others that do; when only several together do, `port` is the first
- *   of them in machine, then port order and `tied` the rest. Others are held from below only: held at their levels
- *   from above too, a pool in a chain would be pinned from both sides (its feeder could not send more, its taker could
- *   not take more) and no port could ever explain it.
+ * The reasons are old Build's (`node-verdict.ts`, `deriveNodeVerdict`): what a card's inputs allow is weighed against
+ * what its outputs allow, and a card at full speed is a bottleneck when someone downstream goes short of what it makes.
+ *
+ * - Below its capacity, with every other pool held at least at its level (free to rise, never to give way): `capable`
+ *   is the most it reaches with a free sink at every output (its inputs as they are), `disposal` the most with every
+ *   input fed freely (its outputs as they are). Outputs strictly tighter (`disposal < capable`) is CLOGGED (UNUSED at
+ *   zero); otherwise, short at its inputs (`capable` below its capacity, and feeding them raises it) is STARVED, the
+ *   input story first as in old Build; else LIMITED. `port` is the first port on that side whose free end alone (the
+ *   other side free) raises it, `tied` the others that do; when only several together do, `port` is the first of them
+ *   in machine, then port order and `tied` the rest. Others are held from below only: held at their levels from above
+ *   too, a pool in a chain would be pinned from both sides (its feeder could not send more, its taker could not take
+ *   more) and no port could ever explain it.
+ * - At its capacity: BOTTLENECK when the rest of the plan would use more of it, or when it makes what a STARVED pool's
+ *   short port takes (the inverse of `upstream`); else FULL. "Would use more": with its cap and every push band gone,
+ *   the Up to pools it feeds (wire by wire, downstream) and the unmet drawers it feeds can do better than now, and
+ *   `wants` is the least machine time that does it. Only what it feeds counts: a pool upstream that it holds back is
+ *   that pool's CLOGGED, not this one's BOTTLENECK. Else, beside a starved pool, `wants` is its capacity and what the
+ *   starved pools would draw of it at their own capacity beyond what they draw now, over its per-machine rate (each
+ *   maker is given the whole). An Exactly card on one of its output networks that a forced input still feeds wants
+ *   more too: that input over its per-machine rate.
+ *
+ * The pools below their capacity are read first (pool order), then those at it: an at-capacity pool's reason looks at
+ * who is starved.
  */
 import type { SolveContext } from "./context";
 import { compareIds } from "./ids";
@@ -27,15 +37,23 @@ import { tradeModel, type Trades } from "./trade";
 import type { Id, PortRef, UpToReadout, UpToReason } from "./types";
 import { NUMERICS } from "./validate";
 
-/** The read-out's models per island. */
+/** The read-out's models per island, at the least... */
 export const MAX_READOUT_LPS = 96;
+/** ...and per Up to pool on it, when that comes to more (a pool below its capacity takes three to five). */
+export const READOUT_LPS_PER_POOL = 8;
 /** A pool within this of its capacity (in levels) is at it. */
 export const AT_CAPACITY = 1e-6;
 
+/** The read-out's budget for a context: counted from its pools, never from time. */
+export function readoutBudget(pools: number): number {
+  return Math.max(MAX_READOUT_LPS, READOUT_LPS_PER_POOL * pools);
+}
+
 /** Counted work: a model runs only while the budget lasts; once one is refused, every later pool reads null. */
 class Budget {
-  left = MAX_READOUT_LPS;
   spent = false;
+
+  constructor(private left: number) {}
 
   run(ctx: SolveContext, lp: ModelLp, label: string): SolveResult | "spent" {
     if (this.spent || this.left <= 0) {
@@ -55,20 +73,31 @@ export function readUpTo(ctx: SolveContext): UpToReadout[] | undefined {
   if (pools.length === 0) return undefined;
   const point = ctx.point!;
   const trades = ctx.committedTrades;
-  const budget = new Budget();
+  const budget = new Budget(readoutBudget(pools.length));
   const read = new Map<number, UpToReadout>();
   for (const p of pools) {
     const data = ctx.model.pools[p]!;
     const machines = data.machines.map((m) => ctx.model.machines[m]!.spec.id);
-    const readout: UpToReadout = {
+    read.set(p, {
       node: machines[0]!,
       machines,
       capacity: data.capacity,
       reached: ctx.poolTime(p, point.extents),
       reason: null,
-    };
-    const why = trades === null || budget.spent ? null : reasonOf(ctx, p, trades, budget);
-    read.set(p, why === null ? readout : { ...readout, ...why });
+    });
+  }
+  const level = (p: number) => levelOf(ctx, p, point.extents);
+  const full = pools.filter((p) => level(p) >= 1 - AT_CAPACITY);
+  for (const p of pools) {
+    if (full.includes(p) || trades === null || budget.spent) continue;
+    const why = holdBackOf(ctx, p, level(p), trades, budget);
+    if (why !== null) Object.assign(read.get(p)!, why);
+  }
+  const starved = starvedPorts(ctx, read);
+  for (const p of full) {
+    if (trades === null || budget.spent) continue;
+    const why = wantsOf(ctx, p, trades, budget, starved);
+    if (why !== null) Object.assign(read.get(p)!, why);
   }
   for (const p of pools) {
     const readout = read.get(p)!;
@@ -79,12 +108,67 @@ export function readUpTo(ctx: SolveContext): UpToReadout[] | undefined {
   return [...read.values()].sort((a, b) => compareIds(a.node, b.node));
 }
 
-/** Null when the budget ran out on the way. */
-function reasonOf(ctx: SolveContext, pool: number, trades: Trades, budget: Budget): Why | null {
-  const level = levelOf(ctx, pool, ctx.point!.extents);
-  return level >= 1 - AT_CAPACITY
-    ? wantsOf(ctx, pool, trades, budget)
-    : holdBackOf(ctx, pool, level, trades, budget);
+/** A STARVED pool's short port (its `port` or a `tied` one), as a connected port: unwired ones have no network. */
+interface Starved {
+  pool: number;
+  port: number;
+}
+
+function starvedPorts(ctx: SolveContext, read: ReadonlyMap<number, UpToReadout>): Starved[] {
+  const out: Starved[] = [];
+  for (const [p, readout] of read) {
+    if (readout.reason !== "STARVED" || readout.port === undefined) continue;
+    for (const ref of [readout.port, ...(readout.tied ?? [])]) {
+      const m = ctx.model.machineIndex.get(ref.node);
+      const port =
+        m === undefined ? undefined : ctx.model.portLookup.get(portKey(m, ref.port, true));
+      if (port !== undefined) out.push({ pool: p, port });
+    }
+  }
+  return out;
+}
+
+/** A pool's first output on a wire network (machine, then port order), as its per-machine rate; 0 when it makes none there. */
+function rateInto(ctx: SolveContext, pool: number, network: number): number {
+  const model = ctx.model;
+  for (const m of model.pools[pool]!.machines) {
+    const md = model.machines[m]!;
+    for (let i = 0; i < md.outQty.length; i++) {
+      const o = model.portLookup.get(portKey(m, i, false));
+      if (o === undefined || model.portComponent[o] !== network) continue;
+      const rate = model.connectedPorts[o]!.qtyPerCraft / ctx.countOf(m, 1);
+      if (rate > 0) return rate;
+    }
+  }
+  return 0;
+}
+
+/**
+ * Beside starved pools: null when the pool makes nothing a STARVED pool's short port takes, else the machines it would
+ * take to give each such port what its pool would draw at its own capacity (beyond what it draws now).
+ */
+function starvedDemand(
+  ctx: SolveContext,
+  pool: number,
+  starved: readonly Starved[],
+): number | null {
+  const model = ctx.model;
+  const point = ctx.point!;
+  let demand: number | null = null;
+  for (const { pool: s, port } of starved) {
+    if (s === pool) continue;
+    const rate = rateInto(ctx, pool, model.portComponent[port]!);
+    if (!(rate > 0)) continue;
+    const taker = model.connectedPorts[port]!;
+    const now = point.extents[taker.machine]! * taker.qtyPerCraft;
+    const data = model.pools[s]!;
+    const flat = (taker.qtyPerCraft * data.capacity) / ctx.countOf(taker.machine, 1);
+    const level = levelOf(ctx, s, point.extents);
+    // A shared machine's recipe at capacity: its draw now, scaled up to the pool's whole time.
+    const atCapacity = data.machines.length === 1 || !(level > AT_CAPACITY) ? flat : now / level;
+    demand = (demand ?? 0) + Math.max(0, atCapacity - now) / rate;
+  }
+  return demand;
 }
 
 // ---------------------------------------------------------------------------
@@ -247,7 +331,13 @@ function forcedDemand(ctx: SolveContext, pool: number): number {
   return demand;
 }
 
-function wantsOf(ctx: SolveContext, pool: number, trades: Trades, budget: Budget): Why | null {
+function wantsOf(
+  ctx: SolveContext,
+  pool: number,
+  trades: Trades,
+  budget: Budget,
+  starved: readonly Starved[],
+): Why | null {
   const point = ctx.point!;
   const capacity = ctx.model.pools[pool]!.capacity;
   const below = downstreamOf(ctx, pool);
@@ -285,6 +375,11 @@ function wantsOf(ctx: SolveContext, pool: number, trades: Trades, budget: Budget
         if (time > capacity * (1 + NUMERICS.readoutTol)) wants = time;
       }
     }
+  }
+  if (wants === null) {
+    // Someone short of what it makes: a STARVED pool's short port on one of its output networks.
+    const short = starvedDemand(ctx, pool, starved);
+    if (short !== null) wants = capacity + short;
   }
   const forced = forcedDemand(ctx, pool);
   if (forced > 0) wants = (wants ?? capacity) + forced;
@@ -334,16 +429,16 @@ function feedsOf(ctx: SolveContext, pool: number, input: boolean): Feed[] {
   return feeds;
 }
 
-/** Whether free ends at `feeds` raise the pool's level past `level`, others held in their bands. */
-function raises(
+/** The most the pool's level reaches with free ends at `feeds`, others held from below; `fallback` when nothing is found. */
+function highest(
   ctx: SolveContext,
   pool: number,
-  level: number,
   held: Trades,
   feeds: readonly Feed[],
   label: string,
   budget: Budget,
-): boolean | "spent" {
+  fallback: number,
+): number | "spent" {
   const saved = new Map<number, number>();
   for (const f of feeds)
     for (const d of f.drawers) if (!saved.has(d)) saved.set(d, ctx.drawerUpper[d]!);
@@ -358,33 +453,33 @@ function raises(
   priceLevel(ctx, lp, pool, -1);
   const result = budget.run(ctx, lp, label);
   if (result === "spent") return "spent";
-  return result.ok && levelOf(ctx, pool, result.point.extents) > level + NUMERICS.readoutTol;
+  return result.ok ? levelOf(ctx, pool, result.point.extents) : fallback;
 }
 
-/** The first of `feeds` whose free end alone raises the pool, and the others that do; null when none does. */
-function shortAt(
+/**
+ * On one side, the first of `feeds` whose free end alone (with every one of `others` free too) lifts the pool past
+ * `past`, and the others that do; when none does alone, the first of them and the rest (they are short together).
+ */
+function shortPort(
   ctx: SolveContext,
   pool: number,
-  level: number,
   held: Trades,
   feeds: readonly Feed[],
+  others: readonly Feed[],
+  past: number,
   label: string,
   budget: Budget,
-): { port: PortRef; tied?: PortRef[] } | null | "spent" {
-  if (feeds.length === 0) return null;
-  const together = raises(ctx, pool, level, held, feeds, label + " (all)", budget);
-  if (together !== true) return together === "spent" ? "spent" : null;
+): { port: PortRef; tied?: PortRef[] } | "spent" {
   if (feeds.length === 1) return { port: feeds[0]!.ref };
   let port: PortRef | null = null;
   const tied: PortRef[] = [];
   for (const f of feeds) {
-    const alone = raises(ctx, pool, level, held, [f], label, budget);
-    if (alone === "spent") return "spent";
-    if (!alone) continue;
+    const reach = highest(ctx, pool, held, [...others, f], label, budget, past);
+    if (reach === "spent") return "spent";
+    if (!(reach > past + NUMERICS.readoutTol)) continue;
     if (port === null) port = f.ref;
     else tied.push(f.ref);
   }
-  // Only several together raise it: every one of them is short.
   if (port === null) return { port: feeds[0]!.ref, tied: feeds.slice(1).map((f) => f.ref) };
   return tied.length > 0 ? { port, tied } : { port };
 }
@@ -401,32 +496,37 @@ function holdBackOf(
     ...trades,
     floors: trades.floors.filter((b) => b.pool !== pool).map((b) => ({ ...b, hi: 1 })),
   };
-  const starved = shortAt(
-    ctx,
-    pool,
-    level,
-    held,
-    feedsOf(ctx, pool, true),
-    "up to: a free supply",
-    budget,
-  );
-  if (starved === "spent") return null;
-  if (starved !== null) return { reason: "STARVED", ...starved };
-  const clogged = shortAt(
-    ctx,
-    pool,
-    level,
-    held,
-    feedsOf(ctx, pool, false),
-    "up to: a free sink",
-    budget,
-  );
-  if (clogged === "spent") return null;
-  if (clogged !== null) {
+  const ins = feedsOf(ctx, pool, true);
+  const outs = feedsOf(ctx, pool, false);
+  const tol = NUMERICS.readoutTol;
+  // What its inputs allow (every output free) and what its outputs allow (every input fed).
+  const capable =
+    outs.length > 0 ? highest(ctx, pool, held, outs, "up to: outputs free", budget, level) : level;
+  if (capable === "spent") return null;
+  const disposal =
+    ins.length > 0 ? highest(ctx, pool, held, ins, "up to: inputs fed", budget, level) : level;
+  if (disposal === "spent") return null;
+  // The outputs strictly tighter: CLOGGED. A tie tells the input story first, as old Build does.
+  if (disposal < capable - tol) {
+    const at = shortPort(ctx, pool, held, outs, ins, disposal, "up to: one output free", budget);
+    if (at === "spent") return null;
     const point = ctx.point!;
     const dust = NUMERICS.dust * ctx.solutionScaleOf(point);
     const idle = ctx.model.pools[pool]!.machines.every((m) => point.extents[m]! <= dust);
-    return { reason: idle ? "UNUSED" : "CLOGGED", ...clogged };
+    return { reason: idle ? "UNUSED" : "CLOGGED", ...at };
+  }
+  if (capable < 1 - tol && ins.length > 0) {
+    // Short at its inputs only when feeding them (its outputs free) does raise it.
+    const both =
+      outs.length > 0
+        ? highest(ctx, pool, held, [...ins, ...outs], "up to: all free", budget, capable)
+        : disposal;
+    if (both === "spent") return null;
+    if (both > capable + tol) {
+      const at = shortPort(ctx, pool, held, ins, outs, capable, "up to: one input fed", budget);
+      if (at === "spent") return null;
+      return { reason: "STARVED", ...at };
+    }
   }
   return { reason: "LIMITED" };
 }

@@ -66,7 +66,7 @@ export function recipePageSettled(): boolean {
 
 /**
  * The "Add recipe node" key of a recipe on the open page of a machine's tab in the recipe search; with `has`, of
- * the recipe whose slots read so (each slot's name and amount, run together).
+ * the recipe whose rows read so (each row's amount and name, run together).
  */
 export const addRecipe =
   (machine: RegExp, has?: RegExp): Target =>
@@ -74,7 +74,7 @@ export const addRecipe =
     const overlay = recipeOverlay();
     if (!overlay || !machineTabOpen(machine)) return null;
     for (const key of overlay.querySelectorAll(
-      '[data-recipe-page] button[aria-label="Add recipe node"]',
+      '[data-recipe-page] [aria-label="Add recipe node"]',
     )) {
       if (!visible(key)) continue;
       if (!has) return key;

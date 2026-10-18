@@ -94,11 +94,11 @@ const BENDER = /Bending Machine/;
 
 // The forced-flow chain: sulfuric acid from a Large Chemical Reactor, its oxygen from an Electrolyzer (water in,
 // oxygen and hydrogen cells out), its acid used by a Mixer (sugar and acid in, diluted acid and charcoal out).
-// Rows are told apart by the text of their parts, run together.
+// Recipes are told apart by the text of their rows (amount, then name), run together.
 const ELECTROLYZER = /^Electrolyzer/;
-const ACID_RECIPE = /Sulfur Dust×1Programmed CircuitNCOxygen3,000LWater1,000L/;
-const WATER_TO_OXYGEN = /NCWater1,000LHydrogen Cell×2Oxygen1,000L/;
-const SUGAR_MIXER = /Sugar×4Sulfuric Acid1,000L/;
+const ACID_RECIPE = /×1Sulfur Dust3,000Oxygen1,000Water/;
+const WATER_TO_OXYGEN = /1,000Water.*×2Hydrogen Cell1,000Oxygen/;
+const SUGAR_MIXER = /×4Sugar1,000Sulfuric Acid/;
 const MIXER = /^Mixer$/;
 
 /** Whether the drawer for a resource is a trash drawer (or, with "Product", a product drawer): read off its rule key. */

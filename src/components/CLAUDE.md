@@ -40,19 +40,23 @@ The board has its own notes in `flow/CLAUDE.md`, the Pool worksheet in `pool/CLA
 - It is NEI's recipe window in the panel's skin (`nei/nei-recipe.css`, NEI GTNH's GuiRecipe in website units): a tab
   per machine on the window's top edge (Generators first when any answer), paged by its own < > when they overflow; the
   machine's name and the page between NEI's arrows; the magnifier opens the name filter in the page row; the machines
-  that run the open tab in a column on the window's left (their tiers from `machineHandlerIcons`); back, forward, the
-  rate reading and the tier ceiling along the foot; the stencil on its own card underneath.
+  that run the open tab in a sunk column inside the window, left of the page (their tiers from `machineHandlerIcons`);
+  back, forward, the rate reading and the tier ceiling along the foot; the stencil on its own card underneath. The
+  window is at most 900 x 800 shell px, with room round it.
 - One tab at a time, never stored: `RecipeBrowser` keeps the open tab per browse and asks the server for that map alone
   (`mapSelection` include); the first tab needs no query of its own, as the server lists recipes in tab order. Counts
   always cover everything that matched.
-- A tab's recipes share one cell (`shapeOf`: the most item and fluid slots any of them fills, GregTech's grid shapes,
-  the places a recipe leaves empty drawn empty) and a page is as many cells as the window holds. A page asks for more
+- A recipe is the card it becomes on the board, its machine left out (`nei/lookup-card.tsx` on the clean card's own
+  classes): consumed inputs, kept ones (molds, lenses: dimmed, "not used up") and the power tile down the left, outputs
+  down the right, the arrow where the machine's well would be, the plus, the time, the circuit badge and the tier chip in
+  the head. A chanced output reads its average (1 at 25% is 0.25), the chance only in its tooltip. A page is as many
+  cards as fit, counted by the tab's tallest card (`cardCellHeight`); rows size to their own cards. A page asks for more
   until it is full (`onLoadMore` only advances from a page that has landed, `landedRecipePageKeyRef`); the wheel over it
   and PageUp / PageDown turn it.
-- A slot is a well with the art, its count over the corner and its tag (a chance, NC, FREE) over the other, both drawn
-  by CSS from data attributes so a recipe's text is its slots' names and amounts run together (the tour finds recipes by
-  it). A click asks what makes it, a right click what uses it, R and U over it the same, Shift+right click or a held
-  press opens the menu (find, add to takes or makes, the slot's other forms); pressed and moved it lifts onto the stencil.
+- A row's text is its amount then its name (units are `::after`), so a card's text runs its rows together (the tour finds
+  recipes by it). A click asks what makes it, a right click what uses it, R and U over it the same, Shift+right click or
+  a held press opens the menu (find, add to takes or makes, the row's other forms); pressed and moved it lifts onto the
+  stencil.
 - Back/forward stacks live in the store (`browseBack` / `browseForward`); Alt+arrows and
   a bare Backspace walk them.
 - An add lands at `nearestFreeSpot` and the camera follows. An add started from a card's

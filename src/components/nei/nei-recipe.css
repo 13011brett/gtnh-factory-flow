@@ -313,91 +313,156 @@
   border: 1px solid #111317;
 }
 
-/* ===== A recipe: its slots, the arrow, its stats along the foot ===== */
-.nrw-recipe {
-  position: relative;
-  box-sizing: border-box;
+/* ===== The body: the machines that run the open tab, then the page of cards ===== */
+.nrw-body {
   display: flex;
-  flex-direction: column;
-  padding: 8px;
-  background: rgba(0, 0, 0, 0.14);
-  box-shadow: inset 0 0 0 1px #2a2c31;
-  cursor: default;
-}
-.nrw-recipe:hover {
-  box-shadow: inset 0 0 0 1px #3a3c43;
-}
-.nrw-recipe-name {
-  height: 16px;
-  margin-bottom: 6px;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.nrw-io {
-  display: flex;
-  align-items: center;
-  justify-content: center;
   flex: 1;
   min-height: 0;
+  gap: 8px;
 }
-.nrw-side {
+/*
+ * NEI's catalyst column, inside the window: a sunk strip down its left under the two rows, a machine a slot, the
+ * machines a tab's recipes run on, every tier.
+ */
+.nrw-machines {
   display: flex;
   flex-direction: column;
-  gap: 0;
+  align-items: center;
   flex: none;
+  width: 42px;
+  padding: 4px 0;
+  box-sizing: border-box;
+  overflow-x: hidden;
+  overflow-y: auto;
+  scrollbar-width: none;
+  background: rgba(0, 0, 0, 0.2);
+  box-shadow:
+    inset 0 0 0 1px #1b1c20,
+    inset 1px 1px 0 1px #16171a;
 }
-.nrw-slots {
-  display: grid;
-  grid-auto-rows: var(--nrw-slot);
+.nrw-machines::-webkit-scrollbar {
+  display: none;
 }
-.nrw-arrow {
+.nrw-catalyst {
   display: flex;
   align-items: center;
   justify-content: center;
   flex: none;
-  width: 44px;
-  color: #5c5e66;
+  width: var(--nrw-slot);
+  height: var(--nrw-slot);
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
 }
-.nrw-stats {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  height: 22px;
-  margin-top: 6px;
-  flex: none;
-  font-size: 12px;
-  line-height: 14px;
-}
-.nrw-stats > .nrw-grow {
-  flex: 1;
-  min-width: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-.nrw-recipe .nrw-add {
-  width: 22px;
-  height: 22px;
-}
-.nrw-recipe .nrw-add:hover:not(:disabled) {
-  color: #22d3ee;
-}
-/* A tier chip, flat in the tier's colours as the overview draws them. */
-.nrw-tier-tag {
-  flex: none;
-  min-width: 28px;
-  height: 16px;
-  padding: 0 4px;
-  box-sizing: border-box;
-  font-size: 11px;
-  line-height: 16px;
-  text-align: center;
+.nrw-catalyst:hover {
+  background: rgba(255, 255, 255, 0.14);
 }
 
 /*
- * A slot: a well with the art centred in it, its count drawn over the bottom-right corner and its tag (a chance,
- * NC, Free) over the top-left in Minecraft's text. The count and tag are drawn by the slot's own pseudo-elements,
- * so a slot's text is only its name and amount for anything reading it.
+ * A recipe as the card it becomes (flow/clean/clean.css), its machine's well the arrow's narrow column: the card's own
+ * classes, with these few for what only the search adds.
  */
+.nrw .cc-card {
+  grid-template-columns: 112px minmax(0, 1fr) 112px;
+  padding-bottom: 4px;
+  cursor: default;
+}
+.nrw .cc-card[data-recipe]:hover {
+  --cc-frame: #4a4c54;
+}
+.nrw .cc-head {
+  align-items: flex-start;
+}
+.nrw-grow {
+  flex: 1;
+  min-width: 0;
+}
+.nrw-card-time {
+  flex: none;
+  color: var(--cc-muted);
+}
+.nrw-card-named {
+  flex: 0 1 auto;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+}
+.nrw-card-name-icon {
+  flex: none;
+  width: 16px !important;
+  height: 16px !important;
+}
+.nrw-card-circuit {
+  position: relative;
+  flex: none;
+  width: 20px;
+  height: 20px;
+  margin-right: 4px;
+}
+.nrw-card-circuit-icon {
+  position: absolute !important;
+  inset: 0;
+  width: 20px !important;
+  height: 20px !important;
+  pointer-events: none;
+}
+.nrw .cc-key[data-glyph="plus"] {
+  --cc-glyph: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 14 14'%3E%3Crect x='6' y='2' width='2' height='10'/%3E%3Crect x='2' y='6' width='10' height='2'/%3E%3C/svg%3E");
+}
+.nrw .cc-key[data-glyph="plus"]:hover {
+  color: var(--cc-select);
+}
+.nrw .cc-key[aria-disabled] {
+  color: var(--cc-muted);
+  cursor: default;
+}
+/* Where the card's machine would stand: the progress arrow, centred on the rails. */
+.nrw-card-arrow {
+  grid-row: 2;
+  grid-column: 2;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4a4c54;
+}
+.nrw .cc-row.nrw-port {
+  cursor: pointer;
+  touch-action: none;
+}
+.nrw .cc-row.nrw-port:focus-visible {
+  outline: 2px solid var(--cc-gold);
+  outline-offset: -2px;
+}
+/* In the machine and never used up (a mold, a lens), or free: drawn as the card draws a free input. */
+.nrw .cc-row[data-kept] {
+  opacity: 0.6;
+}
+.nrw .cc-num[data-energy] {
+  color: var(--cc-gold);
+}
+.nrw-card-note {
+  grid-column: 1 / -1;
+  grid-row: 3;
+  height: 12px;
+  margin-top: 4px;
+  padding: 0 2px;
+  overflow: hidden;
+  font-size: 9px;
+  letter-spacing: -0.6px;
+  line-height: 12px;
+  color: var(--cc-muted);
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.nrw-card-ghost {
+  display: block;
+  height: 10px;
+  margin: 5px 4px 0;
+  background: #2c2e34;
+}
+
+/* A slot: the stencil's wells for its conditions and its add key. */
 .nrw-slot {
   position: relative;
   display: flex;
@@ -413,20 +478,6 @@
   box-shadow:
     inset 1px 1px 0 #0b0c0e,
     inset -1px -1px 0 #3a3c42;
-  cursor: pointer;
-  touch-action: none;
-}
-.nrw-slot[data-empty] {
-  cursor: default;
-}
-.nrw-slot:not([data-empty]):hover {
-  background: #34363d;
-}
-.nrw-slot[data-hit] {
-  box-shadow:
-    inset 1px 1px 0 #0b0c0e,
-    inset -1px -1px 0 #3a3c42,
-    inset 0 0 0 2px rgba(34, 211, 238, 0.45);
 }
 .nrw-art {
   display: flex;
@@ -436,82 +487,6 @@
   height: 28px;
   overflow: hidden;
   pointer-events: none;
-}
-.nrw-slot[data-count]::after {
-  content: attr(data-count);
-  position: absolute;
-  right: 1px;
-  bottom: -1px;
-  color: #ffffff;
-  text-shadow: 1px 1px 0 #3f3f3f;
-  font-size: 12px;
-  line-height: 12px;
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 1;
-}
-.nrw-slot[data-count][data-energy]::after {
-  color: #ffd257;
-  text-shadow: 1px 1px 0 #3f3215;
-}
-.nrw-slot[data-tag]::before {
-  content: attr(data-tag);
-  position: absolute;
-  left: 2px;
-  top: 2px;
-  color: #ffff55;
-  text-shadow: 1px 1px 0 #3f3f15;
-  font-size: 10px;
-  line-height: 10px;
-  white-space: nowrap;
-  pointer-events: none;
-  z-index: 1;
-}
-.nrw-slot[data-tone="nc"]::before {
-  color: #aaaaaa;
-  text-shadow: 1px 1px 0 #2a2a2a;
-}
-.nrw-slot[data-tone="free"]::before {
-  color: #55ff55;
-  text-shadow: 1px 1px 0 #153f15;
-}
-.sr-text {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
-
-/* ===== The machines that run the open tab's recipes: NEI's catalyst column on the window's left ===== */
-.nrw-catalysts {
-  position: absolute;
-  top: 0;
-  right: calc(100% - 6px);
-  z-index: 0;
-  display: grid;
-  grid-auto-flow: column;
-  direction: rtl;
-  gap: 0;
-  padding: 5px 9px 5px 5px;
-  max-height: 100%;
-  overflow: hidden;
-}
-.nrw-catalyst {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: var(--nrw-slot);
-  height: var(--nrw-slot);
-  padding: 0;
-  background: transparent;
-  border: 0;
-  cursor: pointer;
-}
-.nrw-catalyst:hover {
-  background: rgba(255, 255, 255, 0.14);
 }
 
 /* ===== The stencil: the search's own card under the window, in the window's skin ===== */
@@ -699,9 +674,12 @@ html[data-compact] .nrw .nrw-stencil-head .nrw-seg > .nei-btn {
 html[data-compact] .nrw-stencil-head .nrw-band {
   padding: 0 5px;
 }
-.nrw-slot:focus-visible,
 .nrw-catalyst:focus-visible,
 .nrw-tab:focus-visible {
   outline: 2px solid #ffd257;
   outline-offset: -2px;
+}
+/* A figure squeezed small keeps a gap before its unit, so 240k and EU/Item stay two words. */
+.nrw .cc-num[data-small]::after {
+  margin-left: 3px;
 }

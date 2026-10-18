@@ -13,68 +13,51 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import { memo, useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import "./chrome/mod-panel.css";
 import "./nei/nei.css";
 import "./nei/nei-recipe.css";
 import { ModPick } from "./chrome/ModPick";
 import { createPortal } from "react-dom";
-import type {
-  MouseEvent as ReactMouseEvent,
-  PointerEvent as ReactPointerEvent,
-  ReactNode,
-} from "react";
+import type { MouseEvent as ReactMouseEvent, PointerEvent as ReactPointerEvent } from "react";
 import type { DatasetResourceIndexEntry, RecipeSummary } from "@/lib/datasets/types";
 import type { RecipeQueryRole, RecipeQuerySideOp } from "@/lib/datasets/recipe-query";
-import {
-  AUTO_WORKBENCH_HANDLER_ID,
-  GT_VOLTAGE_TIERS,
-  formatRate,
-  getRecipeMachineHandlers,
-  isControllerSlotInput,
-  isFreeRecipeInput,
-  isOreDictionaryResource,
-  isRecipeInputConsumed,
-  machineCycleTicks,
-} from "@/lib/model";
+import { GT_VOLTAGE_TIERS, getRecipeMachineHandlers } from "@/lib/model";
 import type { MachineTier, ResourceAmount } from "@/lib/model/types";
 import { getVoltageTierIndex } from "@/lib/model/tiers";
-import { isProgrammedCircuitResource } from "@/lib/model/programmed-circuit";
-import { energyPerUnitSuffix, type TimeRateUnit } from "@/lib/model/rate-unit";
-import { formatCompact, resourceLabel } from "@/lib/model/resources";
+import { resourceLabel } from "@/lib/model/resources";
 import { playBoardSound } from "@/lib/board-sounds";
-import { GT_TIER_COLORS } from "./flow/tier-colors";
-import type { RecipeBrowserMachinePin, RecipeInputPicks, TierFilter } from "@/store/factory-store";
+import type { RecipeBrowserMachinePin, TierFilter } from "@/store/factory-store";
 import {
   machineIconAtTier,
   useMachineHandlerIconEntries,
   useRecipeMapIcons,
 } from "./flow/machine-icons";
-import {
-  applyAlternativeCycleFace,
-  getAlternativeCycleFaces,
-  type AlternativeCycleFace,
-} from "@/lib/nei/alternative-cycle";
 import { useIsCompactViewport } from "@/lib/compact-view";
 import { getUiScale, useUiScale } from "@/lib/ui-scale";
 import { machineArtPixels } from "./flow/MachinePicker";
 import { isEditableKeyboardTarget } from "./flow/keyboard";
 import { ItemPickerPopover } from "./ItemPickerPopover";
 import { isSwatchFluid, ResourceIcon, spriteArtPixels } from "./nei/ResourceIcon";
-import { itemTipLines, McFloatingTip, type McTipLine } from "./nei/McTip";
 import {
-  contextualizePreviewRecipe,
-  summaryToPreviewRecipe,
-  type PreviewContextResource,
-} from "./recipe-preview";
+  cardCellHeight,
+  CARD_WIDTH,
+  LookupPowerCard,
+  LookupRecipeCard,
+  LookupSkeletonCard,
+  powerCardRows,
+  recipeCardRows,
+  type ChipMenuPicker,
+  type LookupHandlers,
+  type RateView,
+} from "./nei/lookup-card";
+import { itemTipLines, McFloatingTip } from "./nei/McTip";
+import { summaryToPreviewRecipe, type PreviewContextResource } from "./recipe-preview";
 import {
   POWER_EU_CLAUSE_ID,
   searchPowerSourcesForStencil,
   type PowerStencilHit,
 } from "@/lib/power/power-search";
-import { getPowerMachineIcon, resolvePowerResource } from "@/lib/power/planner-data";
-import { formatAmount } from "@/lib/power/sources/helpers";
-import { buildPowerSettingsReader, type PowerSourceDefinition } from "@/lib/power/types";
 import { useFactoryStore } from "@/store/factory-store";
 import { overlayInsets } from "@/lib/workspace-columns";
 
@@ -88,23 +71,6 @@ export interface StencilClause extends Pick<
 > {
   role: RecipeQueryRole;
 }
-
-/**
- * How the recipes read their numbers: the recipe as written (amounts per
- * craft), or as rates over the recipe's own duration (one machine, full
- * speed, no overclock: the nameplate figures a board card gets).
- */
-// "eu": each OUTPUT slot reads the EU one machine spends per unit of it at
-// the recipe's own tier (no overclock). Input slots read energy per unit
-// EATEN, so the two sides never look like costs to add up.
-type RateView = "recipe" | TimeRateUnit | "ratio" | "eu";
-
-const RATE_VIEW_UNITS: Record<TimeRateUnit, { multiplier: number; per: string }> = {
-  tick: { multiplier: 1 / 20, per: "t" },
-  second: { multiplier: 1, per: "s" },
-  minute: { multiplier: 60, per: "min" },
-  hour: { multiplier: 3600, per: "hr" },
-};
 
 const RATE_VIEW_CHOICES: Array<{ view: RateView; label: string; title: string }> = [
   { view: "recipe", label: "Recipe", title: "Amounts per craft, as the recipe is written" },
@@ -124,24 +90,8 @@ const RATE_VIEW_CHOICES: Array<{ view: RateView; label: string; title: string }>
   },
 ];
 
-function greatestCommonDivisor(left: number, right: number): number {
-  let a = left;
-  let b = right;
-  while (b > 0) {
-    [a, b] = [b, a % b];
-  }
-  return a;
-}
-
 /** Survives close and reopen: the reading you chose is a preference, not a query. */
 let storedRateView: RateView = "recipe";
-
-/** Offered by a slot whose place accepts several forms: the menu lists them. */
-interface ChipMenuPicker {
-  faces: AlternativeCycleFace[];
-  currentId: string;
-  onPick: (face: AlternativeCycleFace) => void;
-}
 
 /** A condition row in flight: where the hand holds it and where it would land. */
 interface StencilDrag {
@@ -187,17 +137,11 @@ interface MachineTab {
   generators?: boolean;
 }
 
-// NEI's measures in shell px (one GUI pixel is about 1.75): an 18 px slot,
-// a 24 px tab. A recipe is its slot grids with the arrow between, its stats
-// along the foot; every recipe of a tab takes the same cell, as a handler's do.
-const SLOT = 32;
+// NEI's measures in shell px (one GUI pixel is about 1.75): an 18 px slot, a 24 px tab. A page is a grid of the
+// tab's cards, every card in the tab's tallest card's cell, as a handler's recipes are.
 const TAB = 42;
-const ARROW = 44;
-const CELL_PAD = 8;
-const CELL_STATS = 28;
-const CELL_NAME = 22;
-const CELL_GAP = 8;
-const PAGE_PAD = 4;
+const CELL_GAP = 12;
+const PAGE_PAD = 6;
 
 /**
  * The recipe search as NEI's recipe window: a tab per machine on the window's
@@ -765,14 +709,15 @@ export function RecipeSearchOverlay({
       active && !onGenerators ? recipes.filter((recipe) => recipe.recipeMap === active.id) : [],
     [active, onGenerators, recipes],
   );
-  const shape = useMemo(
-    () =>
-      onGenerators
-        ? shapeOf(powerHits.map(powerSlotCounts))
-        : shapeOf(tabRecipes.map(recipeSlotCounts)),
+  const cell = useMemo(
+    () => ({
+      width: CARD_WIDTH,
+      height: onGenerators
+        ? cardCellHeight(powerHits.map(powerCardRows), true)
+        : cardCellHeight(tabRecipes.map(recipeCardRows), false),
+    }),
     [onGenerators, powerHits, tabRecipes],
   );
-  const cell = cellSize(shape, onGenerators);
   const [pageEl, setPageEl] = useState<HTMLDivElement | null>(null);
   const area = useElementSize(pageEl);
   const columns = Math.max(1, Math.floor((area.width + CELL_GAP) / (cell.width + CELL_GAP)));
@@ -906,9 +851,6 @@ export function RecipeSearchOverlay({
   }, [active, machineIconEntries, onGenerators, recipeMapIcons, tabRecipes]);
   const [catTip, setCatTip] = useState<{ index: number; x: number; y: number }>();
 
-  const [windowEl, setWindowEl] = useState<HTMLDivElement | null>(null);
-  const windowHeight = useElementSize(windowEl).height;
-
   // The recipe filter: NEI's magnifier opens a field in the page row.
   const [findOpen, setFindOpen] = useState(() => query.trim() !== "");
   const findRef = useRef<HTMLInputElement | null>(null);
@@ -1022,6 +964,16 @@ export function RecipeSearchOverlay({
     [],
   );
 
+  const cardHandlers = useMemo<LookupHandlers>(
+    () => ({
+      onBrowseResource,
+      onChipMenu: openChipMenu,
+      onChipDragStart: beginChipDrag,
+      onHoverSlot: setHoverSlot,
+    }),
+    [beginChipDrag, onBrowseResource, openChipMenu, setHoverSlot],
+  );
+
   const keyStop = (event: ReactPointerEvent) => event.stopPropagation();
 
   const closeButton = (
@@ -1053,7 +1005,9 @@ export function RecipeSearchOverlay({
   const pageLabel = `Page ${tabs.length > 0 ? page + 1 : 0}/${tabs.length > 0 ? pageCount : 0}`;
   const gridStyle = {
     gridTemplateColumns: `repeat(${columns}, ${cell.width}px)`,
-    gridAutoRows: `${cell.height}px`,
+    // Rows fit their own cards; a page is still counted by the tallest, so it never runs over.
+    gridAutoRows: "auto",
+    alignItems: "start",
   };
 
   // A PORTAL, not a child: on compact this component mounts inside a drawer,
@@ -1087,11 +1041,7 @@ export function RecipeSearchOverlay({
         }}
       >
         {/* ===== the machine tabs on the window's top edge ===== */}
-        <div
-          className="nrw-tabs"
-          style={{ marginLeft: sheet ? 0 : CATALYST_ROOM }}
-          onPointerDown={keyStop}
-        >
+        <div className="nrw-tabs" onPointerDown={keyStop}>
           {tabPageCount > 1 ? (
             <button
               type="button"
@@ -1155,62 +1105,7 @@ export function RecipeSearchOverlay({
         </div>
 
         {/* ===== the window ===== */}
-        <div
-          ref={setWindowEl}
-          className="nrw-panel nrw-window"
-          style={{ marginLeft: sheet ? 0 : CATALYST_ROOM }}
-          onPointerDown={keyStop}
-        >
-          {!sheet && catalysts.length > 0 ? (
-            <div
-              className="nrw-panel nrw-catalysts"
-              aria-label="Machines that run these recipes"
-              style={{
-                gridTemplateRows: `repeat(${Math.max(1, Math.min(catalysts.length, catalystRows(windowHeight)))}, ${SLOT}px)`,
-              }}
-            >
-              {catalysts.map((resource, index) => (
-                <button
-                  key={`${resource.kind}:${resource.id}`}
-                  type="button"
-                  className="nrw-catalyst"
-                  aria-label={resource.displayName ?? resource.id}
-                  onClick={() =>
-                    onBrowseResource({ ...resource, amount: 1 } as ResourceAmount, "recipes")
-                  }
-                  onContextMenu={(event) => {
-                    event.preventDefault();
-                    onBrowseResource({ ...resource, amount: 1 } as ResourceAmount, "uses");
-                  }}
-                  onMouseEnter={() => setHoverSlot({ ...resource, amount: 1 } as ResourceAmount)}
-                  onMouseMove={(event) =>
-                    setCatTip(
-                      event.buttons === 0
-                        ? { index, x: event.clientX, y: event.clientY }
-                        : undefined,
-                    )
-                  }
-                  onMouseLeave={() => {
-                    setHoverSlot(undefined);
-                    setCatTip(undefined);
-                  }}
-                >
-                  <span className="nrw-art">
-                    <ResourceIcon
-                      resource={{ ...resource, amount: 1 } as ResourceAmount}
-                      size="sm"
-                      bare
-                      showAmount={false}
-                      tooltip={false}
-                      className="!h-full !w-full"
-                      iconPixelSize={machineArtPixels(28)}
-                    />
-                  </span>
-                </button>
-              ))}
-            </div>
-          ) : null}
-
+        <div className="nrw-panel nrw-window" onPointerDown={keyStop}>
           {/* The machine's name between NEI's two arrows. */}
           <div className="nrw-row">
             {tabs.length > 1 ? (
@@ -1307,88 +1202,128 @@ export function RecipeSearchOverlay({
             </button>
           </div>
 
-          {/* ===== the page ===== */}
-          <div
-            ref={setPageEl}
-            className="nrw-page recipe-search-scroll"
-            data-recipe-page=""
-            data-overflow={overflows ? "" : undefined}
-            style={{ padding: `${PAGE_PAD}px 0` }}
-          >
-            {emptyText ? (
-              <div className="nrw-empty">
-                <span>{emptyText}</span>
-              </div>
-            ) : tabs.length === 0 ? (
+          {/* ===== the body: the machines that run the open tab, then the page ===== */}
+          <div className="nrw-body">
+            {!sheet ? (
               <div
-                className="nrw-grid"
-                style={gridStyle}
-                role="status"
-                aria-label="Loading recipes"
+                className="nrw-machines recipe-search-scroll"
+                aria-label="Machines that run these recipes"
               >
-                {Array.from({ length: Math.min(perPage, 12) }, (_, index) => (
-                  <SkeletonWidget key={index} shape={shape} delay={index * 110} />
-                ))}
-              </div>
-            ) : onGenerators ? (
-              <div className="nrw-grid" style={gridStyle}>
-                {pageHits.map((hit) => (
-                  <PowerWidget
-                    key={`${hit.source.id}|${JSON.stringify(hit.settings ?? {})}`}
-                    hit={hit}
-                    shape={shape}
-                    rateView={rateView}
-                    onPlace={() => placePowerHit(hit)}
-                    onBrowseResource={onBrowseResource}
-                    onChipMenu={openChipMenu}
-                    onChipDragStart={beginChipDrag}
-                    onHoverSlot={setHoverSlot}
-                    onCardMenu={(event) =>
-                      openCardMenu(event, {
-                        label: hit.source.name,
-                        add: () => placePowerHit(hit),
-                      })
+                {catalysts.map((resource, index) => (
+                  <button
+                    key={`${resource.kind}:${resource.id}`}
+                    type="button"
+                    className="nrw-catalyst"
+                    aria-label={resource.displayName ?? resource.id}
+                    onClick={() =>
+                      onBrowseResource({ ...resource, amount: 1 } as ResourceAmount, "recipes")
                     }
-                  />
-                ))}
-              </div>
-            ) : (
-              <div className="nrw-grid" style={gridStyle}>
-                {pageRecipes.map((recipe) => (
-                  <RecipeWidget
-                    key={recipe.id}
-                    recipe={recipe}
-                    shape={shape}
-                    contextResource={contextResource}
-                    onSelectRecipe={onSelectRecipe}
-                    onAdd={onAdd}
-                    onPrefetch={onPrefetch}
-                    onBrowseResource={onBrowseResource}
-                    onChipMenu={openChipMenu}
-                    onChipDragStart={beginChipDrag}
-                    onHoverSlot={setHoverSlot}
-                    rateView={rateView}
-                    onCardMenu={(event, add) =>
-                      openCardMenu(event, {
-                        label: recipe.name,
-                        add,
-                      })
+                    onContextMenu={(event) => {
+                      event.preventDefault();
+                      onBrowseResource({ ...resource, amount: 1 } as ResourceAmount, "uses");
+                    }}
+                    onMouseEnter={() => setHoverSlot({ ...resource, amount: 1 } as ResourceAmount)}
+                    onMouseMove={(event) =>
+                      setCatTip(
+                        event.buttons === 0
+                          ? { index, x: event.clientX, y: event.clientY }
+                          : undefined,
+                      )
                     }
-                  />
-                ))}
-                {awaited > 0 ? (
-                  <div
-                    className="contents"
-                    role="status"
-                    aria-label={`Loading ${active?.label ?? ""} recipes`}
+                    onMouseLeave={() => {
+                      setHoverSlot(undefined);
+                      setCatTip(undefined);
+                    }}
                   >
-                    {Array.from({ length: awaited }, (_, index) => (
-                      <SkeletonWidget key={index} shape={shape} delay={index * 110} />
-                    ))}
-                  </div>
-                ) : null}
+                    <span className="nrw-art">
+                      <ResourceIcon
+                        resource={{ ...resource, amount: 1 } as ResourceAmount}
+                        size="sm"
+                        bare
+                        showAmount={false}
+                        tooltip={false}
+                        className="!h-full !w-full"
+                        iconPixelSize={machineArtPixels(28)}
+                      />
+                    </span>
+                  </button>
+                ))}
               </div>
-            )}
+            ) : null}
+            <div
+              ref={setPageEl}
+              className="nrw-page recipe-search-scroll"
+              data-recipe-page=""
+              data-overflow={overflows ? "" : undefined}
+              style={{ padding: `${PAGE_PAD}px 0` }}
+            >
+              {emptyText ? (
+                <div className="nrw-empty">
+                  <span>{emptyText}</span>
+                </div>
+              ) : tabs.length === 0 ? (
+                <div
+                  className="nrw-grid"
+                  style={gridStyle}
+                  role="status"
+                  aria-label="Loading recipes"
+                >
+                  {Array.from({ length: Math.min(perPage, 12) }, (_, index) => (
+                    <LookupSkeletonCard key={index} delay={index * 110} />
+                  ))}
+                </div>
+              ) : onGenerators ? (
+                <div className="nrw-grid" style={gridStyle}>
+                  {pageHits.map((hit) => (
+                    <LookupPowerCard
+                      key={`${hit.source.id}|${JSON.stringify(hit.settings ?? {})}`}
+                      hit={hit}
+                      rateView={rateView}
+                      onPlace={() => placePowerHit(hit)}
+                      handlers={cardHandlers}
+                      onCardMenu={(event) =>
+                        openCardMenu(event, {
+                          label: hit.source.name,
+                          add: () => placePowerHit(hit),
+                        })
+                      }
+                    />
+                  ))}
+                </div>
+              ) : (
+                <div className="nrw-grid" style={gridStyle}>
+                  {pageRecipes.map((recipe) => (
+                    <LookupRecipeCard
+                      key={recipe.id}
+                      recipe={recipe}
+                      contextResource={contextResource}
+                      onSelectRecipe={onSelectRecipe}
+                      onAdd={onAdd}
+                      onPrefetch={onPrefetch}
+                      handlers={cardHandlers}
+                      rateView={rateView}
+                      onCardMenu={(event, add) =>
+                        openCardMenu(event, {
+                          label: recipe.name,
+                          add,
+                        })
+                      }
+                    />
+                  ))}
+                  {awaited > 0 ? (
+                    <div
+                      className="contents"
+                      role="status"
+                      aria-label={`Loading ${active?.label ?? ""} recipes`}
+                    >
+                      {Array.from({ length: awaited }, (_, index) => (
+                        <LookupSkeletonCard key={index} delay={index * 110} />
+                      ))}
+                    </div>
+                  ) : null}
+                </div>
+              )}
+            </div>
           </div>
 
           {/* ===== the foot: back and forward, how amounts read, the tier ceiling ===== */}
@@ -1454,10 +1389,7 @@ export function RecipeSearchOverlay({
         </div>
 
         {/* ===== the stencil: its own card under the window ===== */}
-        <div
-          className="flex shrink-0 justify-center pt-3 compact:pb-2 compact:pt-2"
-          style={{ marginLeft: sheet ? 0 : CATALYST_ROOM }}
-        >
+        <div className="flex shrink-0 justify-center pt-3 compact:pb-2 compact:pt-2">
           <div
             className="nrw-panel nrw-stencil relative w-full max-w-[880px]"
             onPointerDown={keyStop}
@@ -1699,18 +1631,10 @@ export function RecipeSearchOverlay({
   );
 }
 
-/** Room on the window's left for the machine column (one slot, tucked under the window's edge). */
-const CATALYST_ROOM = SLOT + 8;
-
 type CatalystResource = Pick<
   ResourceAmount,
   "kind" | "id" | "displayName" | "iconPath" | "iconAtlas" | "dominantColor"
 >;
-
-/** How many machines stack in the column before it starts another: the window's height of them. */
-function catalystRows(windowHeight: number): number {
-  return Math.max(1, Math.floor((windowHeight - 12) / SLOT));
-}
 
 /** A side size and its observer, in the element's own (shell) px. */
 function useElementSize(element: HTMLElement | null): { width: number; height: number } {
@@ -1732,102 +1656,6 @@ function useElementSize(element: HTMLElement | null): { width: number; height: n
     return () => observer.disconnect();
   }, [element]);
   return size;
-}
-
-/** How many slots each side of a recipe fills, items and fluids apart. */
-interface SlotCounts {
-  inItems: number;
-  inFluids: number;
-  outItems: number;
-  outFluids: number;
-}
-
-/** A tab's slot grids: every recipe of the tab is drawn in the same cell. */
-interface TabShape {
-  inCols: number;
-  outCols: number;
-  inItems: number;
-  inFluids: number;
-  outItems: number;
-  outFluids: number;
-  rows: number;
-}
-
-function recipeSlotCounts(recipe: RecipeSummary): SlotCounts {
-  const inputs = new Set<string>();
-  let inItems = 0;
-  let inFluids = 0;
-  for (const input of recipe.inputs) {
-    const key = [input.kind, input.id, input.consumed === false ? "nc" : "c"].join("|");
-    if (inputs.has(key)) continue;
-    inputs.add(key);
-    if (input.kind === "fluid") inFluids += 1;
-    else inItems += 1;
-  }
-  let outItems = 0;
-  let outFluids = 0;
-  for (const output of mergeChipResources(recipe.outputs)) {
-    if (output.kind === "fluid") outFluids += 1;
-    else outItems += 1;
-  }
-  return { inItems, inFluids, outItems, outFluids };
-}
-
-function powerSlotCounts(hit: PowerStencilHit): SlotCounts {
-  let model: ReturnType<PowerSourceDefinition["compute"]> | undefined;
-  try {
-    model = hit.source.compute(buildPowerSettingsReader(hit.source, hit.settings));
-  } catch {
-    model = undefined;
-  }
-  const inputs = model?.inputs.filter((flow) => flow.perSecond > 0).length ?? 0;
-  const outputs = model?.outputs.filter((flow) => flow.perSecond > 0).length ?? 0;
-  return { inItems: inputs, inFluids: 0, outItems: outputs + 1, outFluids: 0 };
-}
-
-/** Columns of a slot grid: GregTech's own shapes (2 x 2 for four, 3 wide to nine, then 4). */
-function gridColumns(count: number): number {
-  return count <= 3 ? count : count === 4 ? 2 : count <= 9 ? 3 : count <= 16 ? 4 : 5;
-}
-
-function shapeOf(counts: SlotCounts[]): TabShape {
-  let inItems = 0;
-  let inFluids = 0;
-  let outItems = 0;
-  let outFluids = 0;
-  for (const entry of counts) {
-    inItems = Math.max(inItems, entry.inItems);
-    inFluids = Math.max(inFluids, entry.inFluids);
-    outItems = Math.max(outItems, entry.outItems);
-    outFluids = Math.max(outFluids, entry.outFluids);
-  }
-  if (counts.length === 0) {
-    inItems = 2;
-    outItems = 1;
-  }
-  const inCols = Math.max(1, gridColumns(Math.max(inItems, inFluids)));
-  const outCols = Math.max(1, gridColumns(Math.max(outItems, outFluids)));
-  const inRows = Math.ceil(inItems / inCols) + Math.ceil(inFluids / inCols);
-  const outRows = Math.ceil(outItems / outCols) + Math.ceil(outFluids / outCols);
-  return {
-    inCols,
-    outCols,
-    inItems,
-    inFluids,
-    outItems,
-    outFluids,
-    rows: Math.max(1, inRows, outRows),
-  };
-}
-
-function cellSize(shape: TabShape, named: boolean): { width: number; height: number } {
-  return {
-    width: Math.max(
-      named ? 300 : 200,
-      CELL_PAD * 2 + (shape.inCols + shape.outCols) * SLOT + ARROW,
-    ),
-    height: CELL_PAD * 2 + (named ? CELL_NAME : 0) + shape.rows * SLOT + CELL_STATS,
-  };
 }
 
 /** NEI's progress arrow, in the window's grey. */
@@ -1920,7 +1748,7 @@ function StencilSide({
       {/* A fixed-height stack so removing a row never moves the card. */}
       <div
         ref={(element) => registerListRef(role, element)}
-        className="recipe-search-scroll flex h-[124px] flex-col gap-1.5 overflow-y-auto pr-1 compact:h-[124px]"
+        className="recipe-search-scroll flex h-[84px] flex-col gap-1.5 overflow-y-auto pr-1 compact:h-[124px]"
       >
         {layoutClauses.map((clause, slot) => {
           const index = clauses.indexOf(clause);
@@ -2003,869 +1831,6 @@ function SlotArt({ resource }: { resource: ResourceAmount }) {
   );
 }
 
-/** What a slot reads: the words for anything reading it, the corner count, the tooltip's line. */
-interface SlotReading {
-  /** The amount as the slot's text has it ("×2", "1,000L", "NC"). */
-  text: string;
-  /** The count over the slot's corner, short enough to fit. */
-  count?: string;
-  /** The tooltip's amount line. */
-  tip?: string;
-  energy?: boolean;
-  tag?: { text: string; tone?: "nc" | "free" };
-}
-
-function readingOf(
-  amount: ChipAmount,
-  resource: ResourceAmount,
-  view: RateView,
-  value?: number,
-): SlotReading {
-  const text = `${amount.text}${amount.unit ?? ""}`;
-  const tip = amount.unit
-    ? `${amount.text}${amount.unit.startsWith("/") ? "" : " "}${amount.unit}`
-    : amount.text;
-  if (value === undefined) {
-    return { text, tip };
-  }
-  // Minecraft leaves a count of one off an item's slot.
-  const hideOne = view === "recipe" && resource.kind !== "fluid" && value === 1;
-  // A fluid's litres go unsaid in the corner, as its art already says fluid; the tooltip has them.
-  const count = hideOne ? undefined : slotNumber(value);
-  // A lone item says nothing more in its tooltip than its slot does.
-  return { text, count, tip: hideOne ? undefined : tip, energy: Boolean(amount.energy) };
-}
-
-/** A count that fits a slot's corner: 144, 2.5, 1.5k, 16k, 2M. */
-function slotNumber(value: number): string {
-  if (!Number.isFinite(value)) return "∞";
-  const abs = Math.abs(value);
-  const trim = (text: string) => trimTrailingZeros(text);
-  if (abs >= 1e9) return `${trim((value / 1e9).toFixed(abs >= 1e11 ? 0 : 1))}G`;
-  if (abs >= 1e6) return `${trim((value / 1e6).toFixed(abs >= 1e8 ? 0 : 1))}M`;
-  if (abs >= 1e3) return `${trim((value / 1e3).toFixed(abs >= 1e5 ? 0 : 1))}k`;
-  if (abs >= 100) return `${Math.round(value)}`;
-  if (abs >= 10) return trim(value.toFixed(1));
-  if (abs >= 1) return trim(value.toFixed(2));
-  if (abs === 0) return "0";
-  return trim(value.toPrecision(2));
-}
-
-/** The number a slot's corner shows for the reading in use. */
-function slotValue(
-  resource: ResourceAmount,
-  view: RateView,
-  durationTicks: number,
-  ratioDivisor: number,
-  eut: number,
-): number {
-  if (view === "eu") {
-    return resource.amount > 0
-      ? (Math.max(0, eut) * Math.max(0, durationTicks)) / resource.amount
-      : 0;
-  }
-  if (view === "ratio") {
-    return resource.amount / ratioDivisor;
-  }
-  if (view === "recipe" || durationTicks <= 0) {
-    return resource.amount;
-  }
-  return ((resource.amount * 20) / durationTicks) * RATE_VIEW_UNITS[view].multiplier;
-}
-
-/**
- * One recipe in NEI's way: its input slots, the progress arrow, its output
- * slots, every recipe of the tab in the same grid with the slots it leaves
- * empty drawn empty; its tier, draw and time along the foot with NEI's plus.
- */
-const RecipeWidget = memo(function RecipeWidget({
-  recipe,
-  shape,
-  contextResource,
-  onSelectRecipe,
-  onAdd,
-  onPrefetch,
-  onBrowseResource,
-  onChipMenu,
-  onChipDragStart,
-  onHoverSlot,
-  rateView,
-  onCardMenu,
-}: {
-  recipe: RecipeSummary;
-  shape: TabShape;
-  contextResource?: PreviewContextResource;
-  onSelectRecipe: (recipeId: string) => void;
-  onAdd: (
-    recipe: RecipeSummary,
-    machineHandlerId?: string,
-    inputPicks?: RecipeInputPicks,
-  ) => void | Promise<void>;
-  onPrefetch?: (recipeId: string) => void;
-  onBrowseResource: (resource: ResourceAmount, mode: "recipes" | "uses") => void;
-  onChipMenu: (event: ReactMouseEvent, resource: ResourceAmount, picker?: ChipMenuPicker) => void;
-  /** A slot pressed with the mouse: the stencil may pick it up. */
-  onChipDragStart?: (resource: ResourceAmount, event: ReactPointerEvent<HTMLElement>) => void;
-  onHoverSlot: (resource: ResourceAmount | undefined) => void;
-  rateView: RateView;
-  /** Right click (or a held press): the recipe's menu. */
-  onCardMenu: (event: ReactMouseEvent, add: () => void) => void;
-}) {
-  const preview = useMemo(
-    () => contextualizePreviewRecipe(summaryToPreviewRecipe(recipe), contextResource),
-    [contextResource, recipe],
-  );
-  const isReadOnly = useFactoryStore((state) => state.isReadOnly);
-  const handlers = useMemo(() => getRecipeMachineHandlers(preview), [preview]);
-  const primary = handlers[0];
-  // A dataset recipe is written in its primary machine's numbers already; the
-  // synthesized Auto Workbench is the one handler that brings its own (the
-  // crafting maps are exported instant), so the recipe and its rate views read
-  // the workbench's LV seed instead of claiming twenty crafts a second.
-  const isAutoWorkbench = primary?.id === AUTO_WORKBENCH_HANDLER_ID;
-  // A machine on its own fixed cycle (the Extreme Heat Exchanger) states its
-  // amounts per cycle, whatever duration the recipe was exported with.
-  const durationTicks =
-    machineCycleTicks(primary?.machineType) ??
-    (isAutoWorkbench && primary.durationTicks !== undefined
-      ? primary.durationTicks
-      : recipe.durationTicks);
-  const eut = isAutoWorkbench ? (primary.eut ?? recipe.eut) : recipe.eut;
-  const minimumTier = isAutoWorkbench ? primary.minimumTier : recipe.minimumTier;
-  const seconds = durationTicks / 20;
-  const secondsText = `${formatRate(seconds, seconds >= 10 ? 0 : 1)}s`;
-  const powerText = eut > 0 ? `${eut.toLocaleString()} EU/t` : "no power";
-  const tierColor =
-    eut > 0 ? GT_TIER_COLORS[minimumTier as Exclude<MachineTier, "DEMO">] : undefined;
-  // Crafting-grid recipes arrive one slot at a time, so identical items merge
-  // with their amounts summed. Dictionary groups keep their identity while
-  // their icons cycle; explicit concrete picks still ride onto the board.
-  const [inputPicks, setInputPicks] = useState<RecipeInputPicks>({});
-  const inputChips = useMemo(() => {
-    const merged = new Map<string, { raw: (typeof preview.inputs)[number]; indexes: number[] }>();
-    preview.inputs.forEach((input, index) => {
-      const key = [input.kind, input.id, input.consumed === false ? "nc" : "c"].join("|");
-      const entry = merged.get(key);
-      if (entry) {
-        entry.raw = { ...entry.raw, amount: entry.raw.amount + input.amount };
-        entry.indexes.push(index);
-      } else {
-        merged.set(key, { raw: { ...input }, indexes: [index] });
-      }
-    });
-    return [...merged.values()].map(({ raw, indexes }) => {
-      // Dictionary members preview interchangeably; concrete substitutes keep
-      // their picker because their quantities can differ.
-      const faces = isOreDictionaryResource(raw) ? [] : getAlternativeCycleFaces(raw);
-      const face = inputPicks[indexes[0]] ?? faces[0];
-      return {
-        raw,
-        indexes,
-        faces,
-        resource: face ? applyAlternativeCycleFace(raw, face) : raw,
-      };
-    });
-  }, [inputPicks, preview]);
-  const outputChips = useMemo(() => mergeChipResources(preview.outputs), [preview]);
-  // The RATIO reading: every counted amount over their shared divisor, so
-  // 2 dust into 2 ingots says 1 and 1. Catalysts stay out of the arithmetic,
-  // and any non-whole amount (a substitute's scaled cost) leaves the recipe
-  // unreduced rather than lying about it.
-  const ratioDivisor = useMemo(() => {
-    if (rateView !== "ratio") {
-      return 1;
-    }
-    let divisor = 0;
-    const amounts = [
-      ...inputChips
-        .filter((chip) => isRecipeInputConsumed(chip.raw))
-        .map((chip) => chip.resource.amount),
-      ...outputChips.map((output) => output.amount),
-    ];
-    for (const amount of amounts) {
-      if (!Number.isInteger(amount) || amount <= 0) {
-        return 1;
-      }
-      divisor = greatestCommonDivisor(divisor, amount);
-    }
-    return divisor > 0 ? divisor : 1;
-  }, [inputChips, outputChips, rateView]);
-  // A merged slot stands for every slot it swallowed, so a pick lands on all
-  // of their indexes at once.
-  const pickFace = useCallback((indexes: number[], face: AlternativeCycleFace) => {
-    setInputPicks((previous) => {
-      const next = { ...previous };
-      for (const index of indexes) {
-        next[index] = face;
-      }
-      return next;
-    });
-  }, []);
-
-  // A pointer that settles on a recipe is probably about to press its plus, so
-  // the full recipe starts travelling now. The short fuse keeps a pointer
-  // sweeping across the page from requesting every recipe it crosses.
-  const prefetchTimerRef = useRef<number | undefined>(undefined);
-  const cancelPrefetch = useCallback(() => {
-    if (prefetchTimerRef.current !== undefined) {
-      window.clearTimeout(prefetchTimerRef.current);
-      prefetchTimerRef.current = undefined;
-    }
-  }, []);
-  const armPrefetch = useCallback(() => {
-    if (!onPrefetch) {
-      return;
-    }
-    cancelPrefetch();
-    prefetchTimerRef.current = window.setTimeout(() => {
-      prefetchTimerRef.current = undefined;
-      onPrefetch(recipe.id);
-    }, 150);
-  }, [cancelPrefetch, onPrefetch, recipe.id]);
-  useEffect(() => cancelPrefetch, [cancelPrefetch]);
-  const add = () => void onAdd(recipe, undefined, inputPicks);
-  const openMenu = (event: ReactMouseEvent) => onCardMenu(event, add);
-  const footPress = useLongPress(openMenu);
-
-  const inputSlot = (chip: (typeof inputChips)[number], key: string) => {
-    const picker: ChipMenuPicker | undefined =
-      chip.faces.length > 1
-        ? {
-            faces: chip.faces,
-            currentId: chip.resource.id,
-            onPick: (face) => pickFace(chip.indexes, face),
-          }
-        : undefined;
-    const free = isFreeRecipeInput(chip.raw) && !isControllerSlotInput(chip.raw);
-    const notConsumed = !free && chip.raw.consumed === false;
-    const amount: ChipAmount = free
-      ? { text: "FREE" }
-      : notConsumed
-        ? { text: "NC" }
-        : rateView === "eu"
-          ? formatChipEnergy(chip.resource, "input", eut, durationTicks)
-          : formatChipAmount(chip.resource, rateView, durationTicks, ratioDivisor);
-    const reading = readingOf(
-      amount,
-      chip.resource,
-      rateView,
-      free || notConsumed
-        ? undefined
-        : slotValue(chip.resource, rateView, durationTicks, ratioDivisor, eut),
-    );
-    if (free || notConsumed) {
-      // A catalyst still shows how many it holds; the corner says it stays.
-      reading.count =
-        chip.resource.amount > 1 && chip.resource.kind !== "fluid"
-          ? slotNumber(chip.resource.amount)
-          : undefined;
-      // A circuit is a machine setting, never spent: it wears no NC.
-      reading.tag = free
-        ? { text: "FREE", tone: "free" }
-        : isProgrammedCircuitResource(chip.resource)
-          ? undefined
-          : { text: "NC", tone: "nc" };
-      reading.tip = free ? "Free: nothing is spent" : "Not consumed";
-    }
-    return (
-      <RecipeSlot
-        key={key}
-        resource={chip.resource}
-        reading={reading}
-        hint={picker ? "Scroll to change it" : undefined}
-        onCycle={
-          picker
-            ? (step) => {
-                const at = Math.max(
-                  0,
-                  chip.faces.findIndex((face) => face.id === chip.resource.id),
-                );
-                const next = chip.faces[(at + step + chip.faces.length) % chip.faces.length];
-                pickFace(chip.indexes, next);
-              }
-            : undefined
-        }
-        onBrowseResource={onBrowseResource}
-        onHover={onHoverSlot}
-        onDragStart={(event) => onChipDragStart?.(chip.resource, event)}
-        onMenu={(event) => onChipMenu(event, { ...chip.resource, amount: 1 }, picker)}
-      />
-    );
-  };
-  const outputSlot = (output: (typeof outputChips)[number], key: string) => {
-    const amount =
-      rateView === "eu"
-        ? formatChipEnergy(output, "output", eut, durationTicks)
-        : formatChipAmount(output, rateView, durationTicks, ratioDivisor);
-    const reading = readingOf(
-      amount,
-      output,
-      rateView,
-      slotValue(output, rateView, durationTicks, ratioDivisor, eut),
-    );
-    const chance = "chance" in output ? output.chance : undefined;
-    if (chance !== undefined && chance < 1) {
-      reading.tag = { text: `${Math.round(chance * 1000) / 10}%` };
-    }
-    return (
-      <RecipeSlot
-        key={key}
-        resource={output}
-        reading={reading}
-        chance={chance}
-        onBrowseResource={onBrowseResource}
-        onHover={onHoverSlot}
-        onDragStart={(event) => onChipDragStart?.(output, event)}
-        onMenu={(event) => onChipMenu(event, { ...output, amount: 1 })}
-      />
-    );
-  };
-
-  const inItems = inputChips.filter((chip) => chip.resource.kind !== "fluid");
-  const inFluids = inputChips.filter((chip) => chip.resource.kind === "fluid");
-  const outItems = outputChips.filter((output) => output.kind !== "fluid");
-  const outFluids = outputChips.filter((output) => output.kind === "fluid");
-
-  return (
-    <article
-      data-recipe=""
-      className="nrw-recipe"
-      onClick={() => onSelectRecipe(recipe.id)}
-      onDoubleClick={() => {
-        if (!isReadOnly) add();
-      }}
-      onContextMenu={openMenu}
-      onPointerEnter={armPrefetch}
-      onPointerLeave={cancelPrefetch}
-    >
-      <div className="nrw-io">
-        <SlotSide
-          cols={shape.inCols}
-          items={inItems.map((chip, index) => inputSlot(chip, `in-${index}`))}
-          itemSlots={shape.inItems}
-          fluids={inFluids.map((chip, index) => inputSlot(chip, `inf-${index}`))}
-          fluidSlots={shape.inFluids}
-        />
-        <span className="nrw-arrow">
-          <ProgressArrow />
-        </span>
-        <SlotSide
-          cols={shape.outCols}
-          items={outItems.map((output, index) => outputSlot(output, `out-${index}`))}
-          itemSlots={shape.outItems}
-          fluids={outFluids.map((output, index) => outputSlot(output, `outf-${index}`))}
-          fluidSlots={shape.outFluids}
-        />
-      </div>
-      {/* The tier, its draw and its time, as GregTech writes them under a
-          recipe; NEI's plus at the end adds it to the board. Hold it for the
-          recipe's menu on a finger. */}
-      <div className="nrw-stats" {...footPress.handlers}>
-        {tierColor ? (
-          <span
-            className="nrw-tier-tag"
-            style={{ backgroundColor: tierColor.background, color: tierColor.text }}
-          >
-            {minimumTier}
-          </span>
-        ) : null}
-        <span className="nrw-text nrw-grow" style={{ fontSize: 12, lineHeight: "14px" }}>
-          <span>{powerText}</span>
-          <span className="nrw-muted" style={{ marginLeft: 10 }}>
-            {secondsText}
-          </span>
-        </span>
-        <button
-          type="button"
-          aria-label="Add recipe node"
-          disabled={isReadOnly}
-          title={isReadOnly ? "Open a copy to add recipes" : undefined}
-          onClick={(event) => {
-            event.stopPropagation();
-            if (footPress.consumeClick()) {
-              return;
-            }
-            add();
-          }}
-          className="nei-btn nrw-add"
-        >
-          <Plus className="h-3.5 w-3.5" aria-hidden />
-        </button>
-      </div>
-    </article>
-  );
-});
-
-/**
- * One side of a recipe: its item slots in the tab's grid, then its fluid slots
- * on rows of their own, as GregTech draws a machine's slots; the places this
- * recipe leaves empty are empty wells.
- */
-function SlotSide({
-  cols,
-  items,
-  itemSlots,
-  fluids,
-  fluidSlots,
-}: {
-  cols: number;
-  items: ReactNode[];
-  itemSlots: number;
-  fluids: ReactNode[];
-  fluidSlots: number;
-}) {
-  const fill = (filled: ReactNode[], total: number, key: string) => [
-    ...filled,
-    ...Array.from({ length: Math.max(0, total - filled.length) }, (_, index) => (
-      <span key={`${key}-${index}`} className="nrw-slot" data-empty="" aria-hidden />
-    )),
-  ];
-  const template = { gridTemplateColumns: `repeat(${cols}, ${SLOT}px)` };
-  return (
-    <div className="nrw-side" style={{ width: cols * SLOT }}>
-      {itemSlots > 0 || items.length > 0 ? (
-        <div className="nrw-slots" style={template}>
-          {fill(items, itemSlots, "item")}
-        </div>
-      ) : null}
-      {fluidSlots > 0 || fluids.length > 0 ? (
-        <div className="nrw-slots" style={template}>
-          {fill(fluids, fluidSlots, "fluid")}
-        </div>
-      ) : null}
-    </div>
-  );
-}
-
-/** Per-second power flows in the reading in use; no craft, no ratio. */
-function formatPowerChipAmount(kind: string, perSecond: number, rateView: RateView): ChipAmount {
-  const unit =
-    rateView === "recipe" || rateView === "ratio" || rateView === "eu"
-      ? RATE_VIEW_UNITS.second
-      : RATE_VIEW_UNITS[rateView];
-  const per = unit.per;
-  const value = perSecond * unit.multiplier;
-  const text = trimTrailingZeros(formatRate(value, value >= 100 ? 0 : value >= 10 ? 1 : 2));
-  return kind === "fluid" ? { text, unit: `L/${per}` } : { text, unit: `/${per}` };
-}
-
-function powerPerUnitValue(perSecond: number, rateView: RateView): number {
-  const unit =
-    rateView === "recipe" || rateView === "ratio" || rateView === "eu"
-      ? RATE_VIEW_UNITS.second
-      : RATE_VIEW_UNITS[rateView];
-  return perSecond * unit.multiplier;
-}
-
-function powerDialNote(
-  source: PowerSourceDefinition,
-  settingId?: string,
-  optionKey?: string,
-): string | undefined {
-  if (!settingId || !optionKey) {
-    return undefined;
-  }
-  const setting = source.settings.find((entry) => entry.id === settingId);
-  if (!setting || setting.type !== "select") {
-    return undefined;
-  }
-  const option = setting.options.find((entry) => entry.key === optionKey);
-  return option ? `${setting.label}: ${option.label}` : undefined;
-}
-
-/**
- * A generator answering the stencil, laid out as a recipe: its name over its
- * slots, what it burns into the arrow and the EU it makes first out of it.
- * Not a recipe underneath: the plus places the machine with the matched
- * settings, and the foot names those settings.
- */
-function PowerWidget({
-  hit,
-  shape,
-  rateView,
-  onPlace,
-  onBrowseResource,
-  onChipMenu,
-  onChipDragStart,
-  onHoverSlot,
-  onCardMenu,
-}: {
-  hit: PowerStencilHit;
-  shape: TabShape;
-  rateView: RateView;
-  onPlace: () => void;
-  onBrowseResource: (resource: ResourceAmount, mode: "recipes" | "uses") => void;
-  onChipMenu: (event: ReactMouseEvent, resource: ResourceAmount) => void;
-  onChipDragStart?: (resource: ResourceAmount, event: ReactPointerEvent<HTMLElement>) => void;
-  onHoverSlot: (resource: ResourceAmount | undefined) => void;
-  onCardMenu: (event: ReactMouseEvent) => void;
-}) {
-  const footPress = useLongPress(onCardMenu);
-  const icon = getPowerMachineIcon(hit.source.id);
-  const tierColor = hit.source.unlock
-    ? (GT_TIER_COLORS as Record<string, (typeof GT_TIER_COLORS)["LV"] | undefined>)[
-        hit.source.unlock
-      ]
-    : undefined;
-  const model = useMemo(() => {
-    try {
-      return hit.source.compute(buildPowerSettingsReader(hit.source, hit.settings));
-    } catch {
-      return undefined;
-    }
-  }, [hit]);
-  // Every dialed setting, not only the matched ones: a permuted card's fuel
-  // is exactly what tells it apart from its siblings.
-  const dials = Object.entries(hit.settings ?? {})
-    .map(([settingId, optionKey]) => powerDialNote(hit.source, settingId, optionKey))
-    .filter((note): note is string => note !== undefined);
-  const stats = dials.length > 0 ? dials.join(" · ") : hit.source.blurb;
-  const flowSlot = (direction: "takes" | "makes", flow: { name: string; perSecond: number }) => {
-    const resolved = resolvePowerResource(flow.name);
-    if (!resolved) {
-      // A flow with no dataset resource still shows, inert.
-      return (
-        <span key={`${direction}:${flow.name}`} className="nrw-slot" data-empty="">
-          <span className="sr-text">{flow.name}</span>
-        </span>
-      );
-    }
-    const resource: ResourceAmount = { ...resolved, amount: flow.perSecond } as ResourceAmount;
-    const amount = formatPowerChipAmount(resolved.kind, flow.perSecond, rateView);
-    return (
-      <RecipeSlot
-        key={`${direction}:${flow.name}`}
-        resource={resource}
-        reading={readingOf(amount, resource, "second", powerPerUnitValue(flow.perSecond, rateView))}
-        onBrowseResource={onBrowseResource}
-        onHover={onHoverSlot}
-        onDragStart={(event) => onChipDragStart?.(resource, event)}
-        onMenu={(event) => onChipMenu(event, { ...resource, amount: 1 })}
-      />
-    );
-  };
-  const inputs = model?.inputs.filter((flow) => flow.perSecond > 0) ?? [];
-  const outputs = model?.outputs.filter((flow) => flow.perSecond > 0) ?? [];
-  const euSlot =
-    model && model.euPerTick > 0 ? (
-      <span
-        key="eu"
-        className="nrw-slot"
-        data-empty=""
-        data-count={slotNumber(model.euPerTick)}
-        data-energy=""
-      >
-        <Zap className="h-4 w-4 fill-current text-amber-400" aria-hidden />
-        <span className="sr-text">{`EU~${formatAmount(model.euPerTick)} EU/t`}</span>
-      </span>
-    ) : null;
-  return (
-    <article
-      className="nrw-recipe"
-      data-recipe=""
-      onDoubleClick={onPlace}
-      onContextMenu={onCardMenu}
-    >
-      <div className="nrw-recipe-name flex items-center gap-2">
-        <span className="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden">
-          {icon?.iconPath ? (
-            <ResourceIcon
-              resource={{
-                kind: "item",
-                id: icon.id,
-                amount: 1,
-                displayName: icon.displayName,
-                iconPath: icon.iconPath,
-                dominantColor: icon.dominantColor,
-              }}
-              size="sm"
-              bare
-              tooltip={false}
-              showAmount={false}
-              className="!h-full !w-full"
-              iconPixelSize={machineArtPixels(20)}
-            />
-          ) : (
-            <Zap className="h-3.5 w-3.5 fill-current text-amber-300" aria-hidden />
-          )}
-        </span>
-        <span className="nrw-text min-w-0 truncate">{hit.source.name}</span>
-      </div>
-      <div className="nrw-io">
-        <SlotSide
-          cols={shape.inCols}
-          items={inputs.map((flow) => flowSlot("takes", flow))}
-          itemSlots={shape.inItems}
-          fluids={[]}
-          fluidSlots={0}
-        />
-        <span className="nrw-arrow">
-          <ProgressArrow />
-        </span>
-        <SlotSide
-          cols={shape.outCols}
-          items={[...(euSlot ? [euSlot] : []), ...outputs.map((flow) => flowSlot("makes", flow))]}
-          itemSlots={shape.outItems}
-          fluids={[]}
-          fluidSlots={0}
-        />
-      </div>
-      <div className="nrw-stats" {...footPress.handlers}>
-        {tierColor ? (
-          <span
-            className="nrw-tier-tag"
-            style={{ backgroundColor: tierColor.background, color: tierColor.text }}
-          >
-            {hit.source.unlock}
-          </span>
-        ) : null}
-        <span className="nrw-text nrw-grow nrw-muted" style={{ fontSize: 12, lineHeight: "14px" }}>
-          {stats}
-        </span>
-        <button
-          type="button"
-          aria-label={`Add ${hit.source.name}`}
-          onClick={(event) => {
-            event.stopPropagation();
-            if (footPress.consumeClick()) {
-              return;
-            }
-            onPlace();
-          }}
-          className="nei-btn nrw-add"
-        >
-          <Plus className="h-3.5 w-3.5" aria-hidden />
-        </button>
-      </div>
-    </article>
-  );
-}
-
-/**
- * A recipe still on its way: the tab's slot grid, empty, breathing on a
- * stagger, its arrow filling like a furnace's progress bar.
- */
-function SkeletonWidget({ shape, delay }: { shape: TabShape; delay: number }) {
-  // NEGATIVE delay: a positive one leaves the widget at full base opacity
-  // until its turn, then snaps it into the cycle. Starting every widget
-  // mid-cycle gives the same ripple with nothing to snap.
-  const delayStyle = { animationDelay: `-${delay}ms` };
-  return (
-    <div className="nrw-recipe recipe-search-skeleton" style={delayStyle}>
-      <div className="nrw-io">
-        <SlotSide
-          cols={shape.inCols}
-          items={[]}
-          itemSlots={shape.inItems}
-          fluids={[]}
-          fluidSlots={shape.inFluids}
-        />
-        <span className="nrw-arrow relative">
-          <ProgressArrow />
-          <span
-            className="recipe-search-arrow-fill absolute inset-0 flex items-center justify-center text-[#4cc3d9]"
-            style={delayStyle}
-          >
-            <ProgressArrow />
-          </span>
-        </span>
-        <SlotSide
-          cols={shape.outCols}
-          items={[]}
-          itemSlots={shape.outItems}
-          fluids={[]}
-          fluidSlots={shape.outFluids}
-        />
-      </div>
-      <div className="nrw-stats">
-        <span className="block h-3 w-20 bg-[#2c2e34]" />
-        <span className="block h-3 w-10 bg-[#2c2e34]" />
-      </div>
-    </div>
-  );
-}
-
-/**
- * A slot in a recipe: the item's art in a well, its count over the corner,
- * its tooltip at once in Minecraft's box. A click asks what makes it and a
- * right click what uses it, as in NEI (R and U over it too); a Shift right
- * click or a held press opens every way to use it. Pressed and moved, it
- * lifts onto the stencil.
- */
-function RecipeSlot({
-  resource,
-  reading,
-  chance,
-  hint,
-  onCycle,
-  onBrowseResource,
-  onHover,
-  onMenu,
-  onDragStart,
-}: {
-  resource: ResourceAmount;
-  reading: SlotReading;
-  chance?: number;
-  /** A dim line under the tooltip (the slot has other forms). */
-  hint?: string;
-  /** Wheel over the slot steps through the forms, and the choice sticks. */
-  onCycle?: (step: 1 | -1) => void;
-  onBrowseResource: (resource: ResourceAmount, mode: "recipes" | "uses") => void;
-  onHover: (resource: ResourceAmount | undefined) => void;
-  onMenu: (event: ReactMouseEvent) => void;
-  /** The mouse went down on the slot: the stencil may pick it up. */
-  onDragStart?: (event: ReactPointerEvent<HTMLElement>) => void;
-}) {
-  // The wheel listener is attached by hand, non-passive: React's synthetic
-  // wheel cannot preventDefault, and without it every cycle also turns the page.
-  const rootRef = useRef<HTMLButtonElement | null>(null);
-  useEffect(() => {
-    const element = rootRef.current;
-    if (!element || !onCycle) {
-      return;
-    }
-    const onWheel = (event: WheelEvent) => {
-      const delta = event.deltaY || event.deltaX;
-      if (!delta || !wheelChangesValues()) {
-        return;
-      }
-      event.preventDefault();
-      event.stopPropagation();
-      onCycle(delta > 0 ? 1 : -1);
-    };
-    element.addEventListener("wheel", onWheel, { passive: false });
-    return () => element.removeEventListener("wheel", onWheel);
-  }, [onCycle]);
-
-  const press = useLongPress(onMenu);
-  // The item's Minecraft tooltip, at once, as NEI shows one over a recipe's slot.
-  const [tip, setTip] = useState<{ x: number; y: number }>();
-  const label = resourceLabel(resource);
-  const tipLines = useMemo<McTipLine[] | undefined>(() => {
-    if (!tip) return undefined;
-    const extra = [
-      ...(reading.tip ? [reading.tip] : []),
-      ...(chance !== undefined && chance < 1 ? [`Chance: ${Math.round(chance * 1000) / 10}%`] : []),
-    ];
-    const lines = itemTipLines({ name: label, id: resource.id, tooltip: resource.tooltip, extra });
-    if (hint) lines.splice(1, 0, { text: hint, tone: "hint" });
-    return lines;
-  }, [chance, hint, label, reading.tip, resource.id, resource.tooltip, tip]);
-
-  return (
-    <button
-      ref={rootRef}
-      type="button"
-      className="nrw-slot"
-      data-count={reading.count}
-      data-energy={reading.energy ? "" : undefined}
-      data-tag={reading.tag?.text}
-      data-tone={reading.tag?.tone}
-      {...press.handlers}
-      onMouseEnter={() => onHover(resource)}
-      onMouseMove={(event) =>
-        setTip(event.buttons === 0 ? { x: event.clientX, y: event.clientY } : undefined)
-      }
-      onMouseLeave={() => {
-        setTip(undefined);
-        onHover(undefined);
-      }}
-      onPointerDown={(event) => {
-        press.handlers.onPointerDown(event);
-        onDragStart?.(event);
-      }}
-      onClick={(event) => {
-        event.stopPropagation();
-        // The tap that ends a long press is not a second gesture.
-        if (press.consumeClick()) {
-          return;
-        }
-        onBrowseResource({ ...resource, amount: 1 }, "recipes");
-      }}
-      onContextMenu={(event) => {
-        if (event.shiftKey) {
-          onMenu(event);
-          return;
-        }
-        event.preventDefault();
-        event.stopPropagation();
-        onBrowseResource({ ...resource, amount: 1 }, "uses");
-      }}
-    >
-      <span className="nrw-art">
-        <SlotArt resource={resource} />
-      </span>
-      {/* The slot's words: its name and amount, for anything reading the page. */}
-      <span className="sr-text">
-        {label}
-        {reading.text}
-        {chance !== undefined && chance < 1 ? `${Math.round(chance * 1000) / 10}%` : ""}
-      </span>
-      {tipLines && tip ? <McFloatingTip x={tip.x} y={tip.y} lines={tipLines} /> : null}
-    </button>
-  );
-}
-
-/**
- * iOS never fires contextmenu, so a held touch press (450ms, as on port
- * rows) opens the menu. Spread the handlers onto the element and call
- * `consumeClick` first in its click: the tap ending a long press is not a
- * second gesture.
- */
-function useLongPress(onMenu: (event: ReactMouseEvent) => void) {
-  const pressTimerRef = useRef<number | undefined>(undefined);
-  const pressStartRef = useRef<{ x: number; y: number } | undefined>(undefined);
-  const longPressFiredRef = useRef(false);
-  const clearPress = useCallback(() => {
-    pressStartRef.current = undefined;
-    if (pressTimerRef.current !== undefined) {
-      window.clearTimeout(pressTimerRef.current);
-      pressTimerRef.current = undefined;
-    }
-  }, []);
-  useEffect(() => clearPress, [clearPress]);
-  const onPointerDown = (event: ReactPointerEvent<HTMLElement>) => {
-    if (event.pointerType !== "touch") {
-      return;
-    }
-    const at = { clientX: event.clientX, clientY: event.clientY };
-    clearPress();
-    pressStartRef.current = { x: event.clientX, y: event.clientY };
-    longPressFiredRef.current = false;
-    pressTimerRef.current = window.setTimeout(() => {
-      pressTimerRef.current = undefined;
-      longPressFiredRef.current = true;
-      onMenu({
-        ...at,
-        preventDefault: () => undefined,
-        stopPropagation: () => undefined,
-      } as ReactMouseEvent);
-    }, 450);
-  };
-  const onPointerMove = (event: ReactPointerEvent<HTMLElement>) => {
-    // A finger always jitters; only a real slide cancels the press.
-    const start = pressStartRef.current;
-    if (start && Math.hypot(event.clientX - start.x, event.clientY - start.y) > 8) {
-      clearPress();
-    }
-  };
-  return {
-    handlers: {
-      onPointerDown,
-      onPointerMove,
-      onPointerUp: clearPress,
-      onPointerCancel: clearPress,
-    },
-    consumeClick: () => {
-      if (longPressFiredRef.current) {
-        longPressFiredRef.current = false;
-        return true;
-      }
-      return false;
-    },
-  };
-}
-
 /** A generator's unlock chip sits at or under the tier ceiling. */
 function powerUnlockWithinTier(unlock: string, maxTier: Exclude<TierFilter, "all">): boolean {
   const known = GT_VOLTAGE_TIERS.some((entry) => entry.tier === unlock);
@@ -2886,125 +1851,14 @@ interface CardMenu {
 }
 
 /**
- * An oredict slot wears its first concrete face: the slot is a thing you can
- * click, not the dictionary's internal name.
- */
-function chipFaceResource<T extends ResourceAmount>(resource: T): T {
-  const face = isOreDictionaryResource(resource) ? resource.alternatives?.[0] : undefined;
-  if (!face) {
-    return resource;
-  }
-  return {
-    ...resource,
-    kind: face.kind,
-    id: face.id,
-    displayName: face.displayName ?? resource.displayName,
-    iconPath: face.iconPath ?? resource.iconPath,
-    iconAtlas: face.iconAtlas ?? resource.iconAtlas,
-    dominantColor: face.dominantColor ?? face.iconAtlas?.dominantColor ?? resource.dominantColor,
-  };
-}
-
-/**
- * Crafting-grid recipes list one entry per slot; the same item nine times is
- * one slot saying 9. Non-consumed entries and chanced outputs keep their own
- * slots, because merging those would change what the numbers mean.
- */
-function mergeChipResources<T extends ResourceAmount & { consumed?: boolean; chance?: number }>(
-  resources: T[],
-): T[] {
-  const merged = new Map<string, T>();
-  for (const raw of resources) {
-    const resource = chipFaceResource(raw);
-    const key = [
-      resource.kind,
-      resource.id,
-      resource.consumed === false ? "nc" : "c",
-      resource.chance ?? 1,
-    ].join("|");
-    const existing = merged.get(key);
-    if (existing) {
-      merged.set(key, { ...existing, amount: existing.amount + resource.amount });
-    } else {
-      merged.set(key, resource);
-    }
-  }
-  return [...merged.values()];
-}
-
-/** A slot's number and, apart from it, the quieter unit it is counted in. */
-interface ChipAmount {
-  text: string;
-  unit?: string;
-  /** An EU-per-unit reading, drawn in the board's gold on either side. */
-  energy?: "input" | "output";
-}
-
-/**
- * The EU view's slot: one craft's energy (EU/t x ticks) over the amount this
- * slot makes (or eats) per craft. Chance is not applied. A recipe with no
- * power or no time reads 0.
- */
-function formatChipEnergy(
-  resource: ResourceAmount,
-  side: "input" | "output",
-  eut: number,
-  durationTicks: number,
-): ChipAmount {
-  const perUnit =
-    resource.amount > 0 ? (Math.max(0, eut) * Math.max(0, durationTicks)) / resource.amount : 0;
-  return {
-    text: formatCompact(perUnit),
-    unit: energyPerUnitSuffix(resource.kind).trim(),
-    energy: side,
-  };
-}
-
-/** "7.0" is 7 and "7.50" is 7.5: a trailing zero says nothing. */
-function trimTrailingZeros(text: string): string {
-  return text.includes(".") ? text.replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "") : text;
-}
-
-function formatChipAmount(
-  resource: ResourceAmount,
-  rateView: RateView,
-  durationTicks: number,
-  ratioDivisor = 1,
-): ChipAmount {
-  // Ratio: lowest terms, no time, no unit prefix - a 1:1 recipe says 1 and 1,
-  // not x1 and x1. Fluids keep their L so a litre never reads as an item.
-  if (rateView === "ratio") {
-    const reduced = resource.amount / ratioDivisor;
-    return resource.kind === "fluid"
-      ? { text: reduced.toLocaleString(), unit: "L" }
-      : { text: reduced.toLocaleString() };
-  }
-
-  // The EU view reads INPUTS as written (see the RateView note).
-  if (rateView === "recipe" || rateView === "eu" || durationTicks <= 0) {
-    if (resource.kind === "fluid") {
-      return { text: resource.amount.toLocaleString(), unit: "L" };
-    }
-    return { text: `×${resource.amount.toLocaleString()}` };
-  }
-
-  const unit = RATE_VIEW_UNITS[rateView];
-  const value = ((resource.amount * 20) / durationTicks) * unit.multiplier;
-  const text = trimTrailingZeros(formatRate(value, value >= 100 ? 0 : value >= 10 ? 1 : 2));
-  return resource.kind === "fluid"
-    ? { text, unit: `L/${unit.per}` }
-    : { text, unit: `/${unit.per}` };
-}
-
-/**
  * The search covers everything beside the item browser. The items column
  * stays live because it seeds queries; the overview is only readouts, so the
  * search covers it.
  */
 const BOARD_SIDEBAR_LEFT = 306;
 const RECIPE_SEARCH_MIN_WIDTH = 640;
-const RECIPE_SEARCH_MAX_WIDTH = 2200;
-const RECIPE_SEARCH_MAX_HEIGHT = 1200;
+const RECIPE_SEARCH_MAX_WIDTH = 900;
+const RECIPE_SEARCH_MAX_HEIGHT = 800;
 const RECIPE_SEARCH_SHEET_BELOW = 700;
 
 interface RecipeSearchViewport {
@@ -3058,9 +1912,9 @@ function readRecipeSearchViewport(): RecipeSearchViewport {
     rightInset,
     width: Math.min(
       RECIPE_SEARCH_MAX_WIDTH,
-      Math.max(RECIPE_SEARCH_MIN_WIDTH, viewportWidth - leftInset - rightInset - 24),
+      Math.max(RECIPE_SEARCH_MIN_WIDTH, viewportWidth - leftInset - rightInset - 96),
     ),
-    height: Math.min(RECIPE_SEARCH_MAX_HEIGHT, Math.max(360, viewportHeight - 20)),
+    height: Math.min(RECIPE_SEARCH_MAX_HEIGHT, Math.max(360, viewportHeight - 96)),
   };
 }
 

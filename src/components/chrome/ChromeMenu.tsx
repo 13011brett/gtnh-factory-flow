@@ -2,7 +2,7 @@
 
 import "./chrome.css";
 
-import { useEffect, useRef, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { useDropdownDismiss } from "@/lib/hooks/use-dropdown-dismiss";
 import { activateOnKey } from "@/lib/hooks/button-keys";
@@ -112,10 +112,25 @@ export function ChromeMenu({
     top: shell(anchor.bottom) + 2,
     ...(zIndex === undefined ? {} : { zIndex }),
   };
+  // The menu's width is only known once it is drawn, so one wider than the room on its side (a right-hung menu
+  // near the window's left edge, as the items column's is) is slid back inside the window before it paints.
+  const [slide, setSlide] = useState(0);
+  useLayoutEffect(() => {
+    const box = ref.current?.getBoundingClientRect();
+    if (!box) return;
+    const margin = 2 * scale;
+    if (box.left < margin) {
+      setSlide(shell(margin - box.left));
+    } else if (box.right > window.innerWidth - margin) {
+      setSlide(-Math.min(shell(box.right - (window.innerWidth - margin)), shell(box.left - margin)));
+    }
+    // Measured once as it opens: a menu closes on a scroll or a camera move, so its anchor does not move under it.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
   if (align === "right" && anchor.right !== undefined) {
-    style.right = Math.max(2, vw - shell(anchor.right));
+    style.right = Math.max(2, vw - shell(anchor.right)) - slide;
   } else {
-    style.left = Math.max(2, shell(anchor.left));
+    style.left = Math.max(2, shell(anchor.left)) + slide;
   }
   return createPortal(
     <div

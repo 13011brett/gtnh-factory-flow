@@ -1,7 +1,7 @@
 "use client";
 
 import { useFactoryStore } from "@/store/factory-store";
-import { NODE_GLANCE_LEAVE_ZOOM } from "../../node-detail";
+import { glanceLeaveZoom } from "../../node-detail";
 import { boardZoomScale } from "@/lib/ui-scale";
 import { draws } from "./cursor";
 import type { Rect } from "./placement";
@@ -193,7 +193,7 @@ export function keepDetail(): void {
   const pane = bridge?.paneRect();
   const v = bridge?.viewport();
   if (!bridge || !pane || !v) return;
-  const floor = (NODE_GLANCE_LEAVE_ZOOM + 0.02) * boardZoomScale();
+  const floor = (glanceLeaveZoom() + 0.02) * boardZoomScale();
   if (v.zoom >= floor) return;
   bridge.setCenter((pane.width / 2 - v.x) / v.zoom, (pane.height / 2 - v.y) / v.zoom, floor);
 }

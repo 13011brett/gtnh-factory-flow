@@ -8,10 +8,11 @@
  * ONE level, held here, for nodes and edges alike: detail switching in pieces
  * reads as the board glitching.
  *
- * TUNING: the two numbers below are the whole control surface. They are a
- * pair because a single boundary flickers when the board is parked on it;
- * the gap is the dead zone. Keep it narrow, or regaining detail means zooming
- * noticeably further in than where it was lost.
+ * TUNING: where the glance view starts is the player's ("Zoomed-out view" in
+ * the settings, `glanceEnterZoom`); it comes back a narrow gap above, because
+ * a single boundary flickers when the board is parked on it. Keep the gap
+ * narrow, or regaining detail means zooming noticeably further in than where
+ * it was lost.
  *
  * Nothing here may change a node's SIZE. Detail is dropped with `visibility`,
  * never `display`, so every element keeps its layout box: the router measures
@@ -20,6 +21,7 @@
  * exactly the viewport-dependent routing CLAUDE.md forbids.
  */
 
+import { DEFAULT_ZOOMED_OUT_AT, readDeviceSettings } from "@/lib/device-settings";
 import { boardZoomScale } from "@/lib/ui-scale";
 
 export const NODE_DETAIL_FULL = 0;
@@ -28,23 +30,39 @@ export const NODE_DETAIL_GLANCE = 1;
 export type NodeDetailLevel = typeof NODE_DETAIL_FULL | typeof NODE_DETAIL_GLANCE;
 
 /**
- * Below this the board drops to the glance view: well before a card's names get hard to read (0.65 of a 1:1
- * interface; the default interface's 1.17 puts it near a 0.76 board zoom), since the glance face says what matters
- * from further out (the machine, its count, the Up to bar). It was the mod's own threshold (RecipeCard.GLANCE_ZOOM,
- * 0.42); the mod follows (docs/up-to-mod-port.md).
+ * Below this the board drops to the glance view unless the player moved it: well before a card's names get hard to
+ * read (0.65 of a 1:1 interface; the default interface's 1.17 puts it near a 0.76 board zoom), since the glance face
+ * says what matters from further out (the machine, its count, the Up to bar). The mod follows
+ * (docs/up-to-mod-port.md).
  */
-export const NODE_GLANCE_ENTER_ZOOM = 0.65;
-/** And above this it comes back. The gap is the anti-flicker dead zone. */
-export const NODE_GLANCE_LEAVE_ZOOM = 0.67;
+export const NODE_GLANCE_ENTER_ZOOM = DEFAULT_ZOOMED_OUT_AT;
+/** The anti-flicker dead zone: the board leaves the glance view this far above where it entered it. */
+export const NODE_GLANCE_GAP = 0.02;
+/** Where the default glance view ends. */
+export const NODE_GLANCE_LEAVE_ZOOM = NODE_GLANCE_ENTER_ZOOM + NODE_GLANCE_GAP;
+
+/** Where the glance view starts now: the settings' "Zoomed-out view", as a zoom of a 1:1 interface. */
+export function glanceEnterZoom(): number {
+  return readDeviceSettings().zoomedOutAt;
+}
+
+/** Where the glance view ends now: the gap above where it starts. */
+export function glanceLeaveZoom(): number {
+  return glanceEnterZoom() + NODE_GLANCE_GAP;
+}
 
 /**
  * The level for this zoom, given the level currently in force.
  *
  * Passing the current level is what makes the threshold hysteretic: the step is
- * only entered below `ENTER` and only left above `LEAVE`, so zoom noise around
- * the boundary cannot make the board strobe.
+ * only entered below `enter` and only left above `enter` plus the gap, so zoom
+ * noise around the boundary cannot make the board strobe.
  */
-export function getNodeDetailLevel(zoom: number, current: NodeDetailLevel): NodeDetailLevel {
+export function getNodeDetailLevel(
+  zoom: number,
+  current: NodeDetailLevel,
+  enter: number = glanceEnterZoom(),
+): NodeDetailLevel {
   if (!Number.isFinite(zoom) || zoom <= 0) {
     return current;
   }
@@ -52,10 +70,10 @@ export function getNodeDetailLevel(zoom: number, current: NodeDetailLevel): Node
   // the interface size (ui-scale.ts), so the lettering falls under eight
   // pixels at 0.45 times that.
   const apparent = zoom / boardZoomScale();
-  if (apparent < NODE_GLANCE_ENTER_ZOOM) {
+  if (apparent < enter) {
     return NODE_DETAIL_GLANCE;
   }
-  if (apparent >= NODE_GLANCE_LEAVE_ZOOM) {
+  if (apparent >= enter + NODE_GLANCE_GAP) {
     return NODE_DETAIL_FULL;
   }
   return current;

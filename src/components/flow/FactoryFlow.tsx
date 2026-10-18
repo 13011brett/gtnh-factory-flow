@@ -315,6 +315,7 @@ import { GT_TIER_COLORS } from "./tier-colors";
 import { isPowerDisplayUnit, type RateUnit } from "@/lib/model/rate-unit";
 import { useIsCompactViewport } from "@/lib/compact-view";
 import { useUiScale } from "@/lib/ui-scale";
+import { subscribeDeviceSettings } from "@/lib/device-settings";
 import { BOARD_TOOL_SCALE, useToolbarFold } from "./toolbar-fold";
 import { browseHoveredPort } from "./port-browse";
 import { useBoardTouchGestures } from "./board-touch-gestures";
@@ -7805,14 +7806,17 @@ const NodeDetailController = memo(function NodeDetailController({
       }
     };
 
-    const apply = (zoom: number) => {
-      publishZoom(zoom);
+    const relevel = (zoom: number) => {
       const next = getNodeDetailLevel(zoom, level);
       if (next !== level) {
         level = next;
         setNodeDetailLevel(next);
       }
       applyAttribute();
+    };
+    const apply = (zoom: number) => {
+      publishZoom(zoom);
+      relevel(zoom);
     };
 
     apply(flowStore.getState().transform[2]);
@@ -7822,10 +7826,15 @@ const NodeDetailController = memo(function NodeDetailController({
     // Fires on the forced-glance toggle too, which changes the effective
     // level with no zoom event anywhere near it.
     const unsubscribeLevel = subscribeNodeDetailLevel(applyAttribute);
+    // The "Zoomed-out view" setting moves the threshold under a board that is not moving.
+    const unsubscribeSettings = subscribeDeviceSettings(() =>
+      relevel(flowStore.getState().transform[2]),
+    );
     return () => {
       window.clearTimeout(settleTimer);
       unsubscribeZoom();
       unsubscribeLevel();
+      unsubscribeSettings();
     };
   }, [boardRef, flowStore]);
 

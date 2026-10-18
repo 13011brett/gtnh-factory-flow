@@ -12,6 +12,11 @@ import { useSyncExternalStore } from "react";
 export interface DeviceSettings {
   /** "Names when zoomed out": the glance cards carry their names. */
   zoomedOutNames: boolean;
+  /**
+   * "Zoomed-out view": the board zoom (of a 1:1 interface) below which cards turn to their glance faces
+   * (`node-detail.ts`), from `ZOOMED_OUT_AT_MIN` to `ZOOMED_OUT_AT_MAX`.
+   */
+  zoomedOutAt: number;
   /** "Problem outlines": a card with a problem draws its edge in its bar's colour. */
   problemOutlines: boolean;
   /** "Item browser": on plan boards the items list on the left and the overview on the right (the other way round). */
@@ -20,8 +25,15 @@ export interface DeviceSettings {
   settingsSection: string;
 }
 
+/** Where the glance view starts unless the player moves it: well before a card's names get hard to read. */
+export const DEFAULT_ZOOMED_OUT_AT = 0.65;
+/** Lower, the full card's lettering is unreadable before the glance face arrives. */
+export const ZOOMED_OUT_AT_MIN = 0.35;
+export const ZOOMED_OUT_AT_MAX = 1;
+
 export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   zoomedOutNames: true,
+  zoomedOutAt: DEFAULT_ZOOMED_OUT_AT,
   problemOutlines: true,
   itemsLeft: false,
   settingsSection: "Board",
@@ -43,6 +55,12 @@ export function parseDeviceSettings(raw: string | null): DeviceSettings {
         typeof parsed.zoomedOutNames === "boolean"
           ? parsed.zoomedOutNames
           : DEFAULT_DEVICE_SETTINGS.zoomedOutNames,
+      zoomedOutAt:
+        typeof parsed.zoomedOutAt === "number" &&
+        parsed.zoomedOutAt >= ZOOMED_OUT_AT_MIN &&
+        parsed.zoomedOutAt <= ZOOMED_OUT_AT_MAX
+          ? parsed.zoomedOutAt
+          : DEFAULT_DEVICE_SETTINGS.zoomedOutAt,
       problemOutlines:
         typeof parsed.problemOutlines === "boolean"
           ? parsed.problemOutlines
@@ -77,7 +95,8 @@ function getServerSnapshot(): DeviceSettings {
   return DEFAULT_DEVICE_SETTINGS;
 }
 
-function subscribe(listener: () => void): () => void {
+/** Called after every change; for code outside React that follows a setting (the board's detail level). */
+export function subscribeDeviceSettings(listener: () => void): () => void {
   listeners.add(listener);
   return () => {
     listeners.delete(listener);
@@ -85,7 +104,7 @@ function subscribe(listener: () => void): () => void {
 }
 
 export function useDeviceSettings(): DeviceSettings {
-  return useSyncExternalStore(subscribe, getSnapshot, getServerSnapshot);
+  return useSyncExternalStore(subscribeDeviceSettings, getSnapshot, getServerSnapshot);
 }
 
 export function readDeviceSettings(): DeviceSettings {

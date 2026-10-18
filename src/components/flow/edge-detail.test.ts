@@ -14,7 +14,10 @@ import {
   NODE_GLANCE_ENTER_ZOOM,
   NODE_GLANCE_LEAVE_ZOOM,
   getNodeDetailLevel,
+  glanceEnterZoom,
+  glanceLeaveZoom,
 } from "./node-detail";
+import { resetDeviceSettingsForTests, writeDeviceSettings } from "@/lib/device-settings";
 
 describe("edgeDetailForLevel", () => {
   it("draws everything while the board is readable", () => {
@@ -69,6 +72,22 @@ describe("getNodeDetailLevel", () => {
   it("keeps its level when the zoom is not a usable number", () => {
     expect(getNodeDetailLevel(Number.NaN, NODE_DETAIL_GLANCE)).toBe(NODE_DETAIL_GLANCE);
     expect(getNodeDetailLevel(0, NODE_DETAIL_FULL)).toBe(NODE_DETAIL_FULL);
+  });
+
+  it("starts where the Zoomed-out view setting says, the dead zone above it", () => {
+    try {
+      writeDeviceSettings({ zoomedOutAt: 0.9 });
+      expect(glanceEnterZoom()).toBe(0.9);
+      expect(glanceLeaveZoom()).toBeCloseTo(0.92, 9);
+      expect(getNodeDetailLevel(0.8, NODE_DETAIL_FULL)).toBe(NODE_DETAIL_GLANCE);
+      expect(getNodeDetailLevel(0.91, NODE_DETAIL_GLANCE)).toBe(NODE_DETAIL_GLANCE);
+      expect(getNodeDetailLevel(0.93, NODE_DETAIL_GLANCE)).toBe(NODE_DETAIL_FULL);
+      writeDeviceSettings({ zoomedOutAt: 0.4 });
+      expect(getNodeDetailLevel(0.5, NODE_DETAIL_FULL)).toBe(NODE_DETAIL_FULL);
+      expect(getNodeDetailLevel(0.39, NODE_DETAIL_FULL)).toBe(NODE_DETAIL_GLANCE);
+    } finally {
+      resetDeviceSettingsForTests();
+    }
   });
 });
 

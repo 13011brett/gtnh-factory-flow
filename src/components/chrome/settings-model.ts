@@ -3,6 +3,7 @@ import {
   UI_SCALE_MAX_PERCENT,
   UI_SCALE_MIN_PERCENT,
 } from "@/lib/ui-scale-boot";
+import { ZOOMED_OUT_AT_MAX, ZOOMED_OUT_AT_MIN } from "@/lib/device-settings";
 
 /** The mod's Board "Size" choices (Tiny, Small, Normal, Large) as the interface size's percent. */
 export const SIZE_NAMES = ["Tiny", "Small", "Normal", "Large"] as const;
@@ -16,6 +17,27 @@ export function sizeIndexOf(percent: number): number {
 export function sizePercentOf(index: number): number {
   const percent = SIZE_PERCENT[Math.max(0, Math.min(SIZE_PERCENT.length - 1, index))];
   return Math.max(UI_SCALE_MIN_PERCENT, Math.min(UI_SCALE_MAX_PERCENT, percent));
+}
+
+/**
+ * The "Zoomed-out view" slider's stops: the zoom (of a 1:1 interface) the board turns to its glance faces below,
+ * every 5% from the lowest the settings keep to the highest, named as that percent.
+ */
+export const ZOOMED_OUT_STEPS: readonly number[] = Array.from(
+  { length: Math.round((ZOOMED_OUT_AT_MAX - ZOOMED_OUT_AT_MIN) * 20) + 1 },
+  (_, index) => Math.round(ZOOMED_OUT_AT_MIN * 100 + 5 * index) / 100,
+);
+export const ZOOMED_OUT_NAMES: readonly string[] = ZOOMED_OUT_STEPS.map(
+  (zoom) => `${Math.round(zoom * 100)}%`,
+);
+
+/** The stop nearest a saved zoom. */
+export function zoomedOutIndexOf(zoom: number): number {
+  let best = 0;
+  for (let index = 1; index < ZOOMED_OUT_STEPS.length; index++) {
+    if (Math.abs(ZOOMED_OUT_STEPS[index] - zoom) < Math.abs(ZOOMED_OUT_STEPS[best] - zoom)) best = index;
+  }
+  return best;
 }
 
 /** The mod's Sounds choices and their gains (`PlannerSettings.SOUND_GAINS`); Off silences. */

@@ -35,11 +35,24 @@ describe("the settings box", () => {
     expect(rowLabels()).toEqual([
       "Size",
       "Names when zoomed out",
+      "Zoomed-out view",
       "Problem outlines",
       "Item browser",
       "Font",
     ]);
     expect(document.querySelector(".ms-preview .sp-board")).toBeTruthy();
+  });
+
+  it("Zoomed-out view is a slider of zooms, at 65% until moved, and moving it saves the zoom", () => {
+    render(<ModSettings onClose={vi.fn()} />);
+    const slider = screen.getByRole("slider", { name: "Zoomed-out view" }) as HTMLInputElement;
+    expect(slider.closest(".ms-row")?.querySelector(".ms-value")?.textContent).toBe("65%");
+    fireEvent.change(slider, { target: { value: "11" } });
+    expect(readDeviceSettings().zoomedOutAt).toBe(0.9);
+    expect(
+      JSON.parse(window.localStorage.getItem("gtnh-factory-flow.device-settings.v1")!).zoomedOutAt,
+    ).toBe(0.9);
+    expect(slider.closest(".ms-row")?.querySelector(".ms-value")?.textContent).toBe("90%");
   });
 
   it("Size is Tiny, Small, Normal or Large, and picking one sets the interface size", () => {

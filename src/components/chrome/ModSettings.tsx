@@ -21,7 +21,15 @@ import { setUiScalePercent, useUiScalePercent } from "@/lib/ui-scale";
 import { ChromeMenu, chromeAnchorOf, MENU_ANCHOR_ATTR, type ChromeAnchor } from "./ChromeMenu";
 import { knock, OPEN_CONTROLS_EVENT, OPEN_TOUR_EVENT } from "./chrome-events";
 import { SettingsPreview } from "./SettingsPreview";
-import { SIZE_NAMES, SOUND_NAMES, sizeIndexOf, sizePercentOf } from "./settings-model";
+import {
+  SIZE_NAMES,
+  SOUND_NAMES,
+  ZOOMED_OUT_NAMES,
+  ZOOMED_OUT_STEPS,
+  sizeIndexOf,
+  sizePercentOf,
+  zoomedOutIndexOf,
+} from "./settings-model";
 
 type Kind = "switch" | "choice" | "slider" | "button";
 
@@ -106,6 +114,14 @@ export function ModSettings({ onClose }: { onClose: () => void }) {
           names: ["Off", "On"],
           at: settings.zoomedOutNames ? 1 : 0,
           to: (index) => writeDeviceSettings({ zoomedOutNames: index === 1 }),
+        },
+        {
+          label: "Zoomed-out view",
+          about: "Cards turn simple below this zoom.",
+          kind: "slider",
+          names: ZOOMED_OUT_NAMES,
+          at: zoomedOutIndexOf(settings.zoomedOutAt),
+          to: (index) => writeDeviceSettings({ zoomedOutAt: ZOOMED_OUT_STEPS[index] }),
         },
         {
           label: "Problem outlines",

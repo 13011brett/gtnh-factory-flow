@@ -384,14 +384,26 @@
 }
 .nrw-card-named {
   flex: 0 1 auto;
-  display: flex;
-  align-items: center;
-  gap: 4px;
 }
-.nrw-card-name-icon {
-  flex: none;
-  width: 16px !important;
-  height: 16px !important;
+/* A name too long for the head at 8 px takes two lines of it. */
+.nrw .cc-name[data-wrap] {
+  height: 20px;
+  line-height: 9px;
+  white-space: normal;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+  text-overflow: clip;
+}
+/* A row's name too long for one line takes two at the small size, as the card's tile has room for. */
+.nrw .cc-pname[data-wrap] {
+  line-height: 8px;
+  max-height: 16px;
+  white-space: normal;
+  overflow-wrap: break-word;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
 }
 .nrw-card-circuit {
   position: relative;
@@ -440,20 +452,6 @@
 }
 .nrw .cc-num[data-energy] {
   color: var(--cc-gold);
-}
-.nrw-card-note {
-  grid-column: 1 / -1;
-  grid-row: 3;
-  height: 12px;
-  margin-top: 4px;
-  padding: 0 2px;
-  overflow: hidden;
-  font-size: 9px;
-  letter-spacing: -0.6px;
-  line-height: 12px;
-  color: var(--cc-muted);
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 .nrw-card-ghost {
   display: block;

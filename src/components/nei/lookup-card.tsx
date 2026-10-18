@@ -38,7 +38,7 @@ import type { RecipeInputPicks } from "@/store/factory-store";
 import { useFactoryStore } from "@/store/factory-store";
 import { buildPowerSettingsReader, type PowerSourceDefinition } from "@/lib/power/types";
 import type { PowerStencilHit } from "@/lib/power/power-search";
-import { getPowerMachineIcon, resolvePowerResource } from "@/lib/power/planner-data";
+import { resolvePowerResource } from "@/lib/power/planner-data";
 import { formatAmount } from "@/lib/power/sources/helpers";
 import { circuitNumber } from "../flow/clean/clean-model";
 import { fluidSwatchStyle } from "../flow/clean/fluid-swatch";
@@ -97,7 +97,6 @@ export const CARD_WIDTH = 260;
 const CARD_HEAD = 40;
 const CARD_ROW = 40;
 const CARD_FOOT = 4;
-const CARD_NOTE = 16;
 const WORDS = 70;
 
 /** How many rows a recipe's card has down its two rails. */
@@ -132,10 +131,25 @@ export function powerCardRows(hit: PowerStencilHit): CardRows {
 }
 
 /** The tallest card of a tab: every card takes its cell, as a handler's recipes do. */
-export function cardCellHeight(rows: CardRows[], noted: boolean): number {
+export function cardCellHeight(rows: CardRows[]): number {
   let most = 1;
   for (const entry of rows) most = Math.max(most, entry.inputs, entry.outputs);
-  return CARD_HEAD + most * CARD_ROW + CARD_FOOT + (noted ? CARD_NOTE : 0);
+  return CARD_HEAD + most * CARD_ROW + CARD_FOOT;
+}
+
+/** A figure and its unit fit a row's words at full size (the card's own test, clean-model buildPortView). */
+function numberFits(number: string, unit: string): boolean {
+  return measureClean(number, 13) + 2 + measureClean(unit, 8) <= WORDS;
+}
+
+/**
+ * A head's name as the card sizes it (clean-model nameSize): 10 px, else 9, else 8, and at 8 it may take two lines
+ * rather than lose its end. The room is the head's less the plus and the tier chip.
+ */
+function headName(name: string, chip: boolean): { size: number; wrap: boolean } {
+  const room = CARD_WIDTH - 8 - (chip ? 48 : 0) - 8 - 8 - 22 - 8;
+  const size = [10, 9, 8].find((each) => measureClean(name, each) <= room);
+  return size ? { size, wrap: false } : { size: 8, wrap: true };
 }
 
 /**
@@ -407,7 +421,6 @@ export function LookupPowerCard({
   handlers: LookupHandlers;
 }) {
   const headPress = useLongPress(onCardMenu);
-  const icon = getPowerMachineIcon(hit.source.id);
   const model = useMemo(() => {
     try {
       return hit.source.compute(buildPowerSettingsReader(hit.source, hit.settings));
@@ -415,12 +428,7 @@ export function LookupPowerCard({
       return undefined;
     }
   }, [hit]);
-  // Every dialed setting, not only the matched ones: a permuted card's fuel is exactly what tells it apart from its
-  // siblings.
-  const dials = Object.entries(hit.settings ?? {})
-    .map(([settingId, optionKey]) => powerDialNote(hit.source, settingId, optionKey))
-    .filter((note): note is string => note !== undefined);
-  const note = dials.length > 0 ? dials.join(" · ") : hit.source.blurb;
+  const name = headName(hit.source.name, hit.source.unlock !== undefined);
   const flowRow = (direction: "takes" | "makes", flow: { name: string; perSecond: number }) => {
     const resolved = resolvePowerResource(flow.name);
     const resource = resolved
@@ -468,24 +476,11 @@ export function LookupPowerCard({
         tier={hit.source.unlock}
         press={headPress}
       >
-        <div className="cc-name nrw-card-named">
-          {icon?.iconPath ? (
-            <ResourceIcon
-              resource={{
-                kind: "item",
-                id: icon.id,
-                amount: 1,
-                displayName: icon.displayName,
-                iconPath: icon.iconPath,
-                dominantColor: icon.dominantColor,
-              }}
-              size="sm"
-              bare
-              tooltip={false}
-              showAmount={false}
-              className="nrw-card-name-icon"
-            />
-          ) : null}
+        <div
+          className="cc-name nrw-card-named"
+          data-wrap={name.wrap ? "" : undefined}
+          style={{ "--cc-name-size": `${name.size}px` } as CSSProperties}
+        >
           {hit.source.name}
         </div>
       </CardHead>
@@ -495,12 +490,9 @@ export function LookupPowerCard({
       <CardArrow />
       <div className="cc-rail" data-side="output">
         {model && model.euPerTick > 0 ? (
-          <PowerRow number={`~${formatAmount(model.euPerTick)}`} unit="EU/t" side="output" />
+          <PowerRow number={formatAmount(model.euPerTick)} unit="EU/t" side="output" />
         ) : null}
         {outputs.map((flow) => flowRow("makes", flow))}
-      </div>
-      <div className="nrw-card-note" title={note}>
-        {note}
       </div>
     </article>
   );
@@ -621,7 +613,11 @@ function PowerRow({
   return (
     <div className="cc-row" data-power="" data-side={side}>
       <span className="cc-bolt" />
-      <span className="cc-num" data-unit={unit}>
+      <span
+        className="cc-num"
+        data-unit={unit}
+        data-small={numberFits(number, unit) ? undefined : ""}
+      >
         {number}
       </span>
       <span className="cc-pname">Power</span>
@@ -698,8 +694,8 @@ function LookupRow({
     chance !== undefined && chance < 1 ? `${Math.round(chance * 1000) / 10}%` : undefined;
   const unit = amount.unit ?? "";
   const nameSmall = mcTextWidth(name) > 71;
-  const nameClipped = measureClean(name, nameSmall ? 6 : 8) > WORDS;
-  const numberSmall = kept || measureClean(amount.text, 13) + 2 + measureClean(unit, 8) > WORDS;
+  const nameWraps = measureClean(name, nameSmall ? 6 : 8) > WORDS;
+  const numberSmall = kept || !numberFits(amount.text, unit);
   const lines = useMemo<McTipLine[] | undefined>(() => {
     if (!hover) return undefined;
     const reading = kept
@@ -787,8 +783,8 @@ function LookupRow({
       </span>
       <span
         className="cc-pname"
-        data-small={nameSmall || undefined}
-        data-clip={nameClipped || undefined}
+        data-small={nameSmall || nameWraps || undefined}
+        data-wrap={nameWraps || undefined}
       >
         {name}
       </span>
@@ -891,22 +887,6 @@ function greatestCommonDivisor(left: number, right: number): number {
     [a, b] = [b, a % b];
   }
   return a;
-}
-
-function powerDialNote(
-  source: PowerSourceDefinition,
-  settingId?: string,
-  optionKey?: string,
-): string | undefined {
-  if (!settingId || !optionKey) {
-    return undefined;
-  }
-  const setting = source.settings.find((entry) => entry.id === settingId);
-  if (!setting || setting.type !== "select") {
-    return undefined;
-  }
-  const option = setting.options.find((entry) => entry.key === optionKey);
-  return option ? `${setting.label}: ${option.label}` : undefined;
 }
 
 /** Per-second power flows in the reading in use; no craft, no ratio. */

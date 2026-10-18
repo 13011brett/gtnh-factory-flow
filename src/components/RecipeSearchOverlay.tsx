@@ -713,8 +713,8 @@ export function RecipeSearchOverlay({
     () => ({
       width: CARD_WIDTH,
       height: onGenerators
-        ? cardCellHeight(powerHits.map(powerCardRows), true)
-        : cardCellHeight(tabRecipes.map(recipeCardRows), false),
+        ? cardCellHeight(powerHits.map(powerCardRows))
+        : cardCellHeight(tabRecipes.map(recipeCardRows)),
     }),
     [onGenerators, powerHits, tabRecipes],
   );

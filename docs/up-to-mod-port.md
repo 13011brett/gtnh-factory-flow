@@ -29,8 +29,8 @@ Where things are:
       forced rows the reason's stripes replace theirs.
 - [x] Tier and amps chips look like buttons: the old card's raised bevel (light top-left, dark bottom-right), inverted
       with the label a pixel down while pressed; a fixed chip never presses.
-- [ ] Editors keep the size of what they replace (the amps box the chip's width, the count box about its number's
-      width). The mod uses a number popup for the count: check the amps chip.
+- [x] Editors keep the size of what they replace (the amps box the chip's width, the count box about its number's
+      width). The mod types both in place now: the amps in the chip, the count in a box where its number is.
 - [x] The circuit badge is the circuit's own icon only (no number drawn on it: its icon already shows one); tip
       "Circuit 24".
 - [x] Middle click clears anything set, everywhere: the card's count (to Any), a port's rate box and key, a drawer's

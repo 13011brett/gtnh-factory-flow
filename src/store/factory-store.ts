@@ -52,7 +52,7 @@ import {
   type PowerDisplayUnit,
   type RateUnit,
 } from "@/lib/model/rate-unit";
-import { registerBooksSink, solveBooks, solveBooksNow } from "./solve-books";
+import { registerBooksSink, solveBooks } from "./solve-books";
 import { liveUndoHandler, quietly } from "./live-edit-gate";
 import { applyOps, type LiveOp } from "@/lib/live/ops";
 import { applyEdgeInputOverride } from "@/lib/model/edge-input-overrides";
@@ -285,8 +285,6 @@ interface FactoryStore {
   /** Display only: EU/t or equivalent amps at a chosen voltage. */
   powerDisplayUnit: PowerDisplayUnit;
   setPowerDisplayUnit: (unit: PowerDisplayUnit) => void;
-  /** Recalculate the books by hand: what the solve key does while automatic recalculation is off. */
-  solveNow: () => void;
   setProject: (project: FactoryProject, options?: LoadOptions) => void;
   markHydratedProject: (project: FactoryProject) => void;
   undo: () => void;
@@ -1181,9 +1179,6 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
     try {
       localStorage.setItem("gtnh-factory-flow.power-display-unit.v1", unit);
     } catch { /* Storage can be unavailable; the display still works. */ }
-  },
-  solveNow: () => {
-    set({ lastResult: solveBooksNow(get().project) });
   },
   setProject: (project, options) => {
     // A plan ARRIVING (import, tab switch, setup open) is not an action;

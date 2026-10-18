@@ -346,7 +346,7 @@ export function designCount(): number {
 /** Whether the planner has finished solving (no card reads "(set count)" that has a count to show). */
 export function solved(): boolean {
   const result = useFactoryStore.getState().lastResult;
-  return !result.stale && !result.held;
+  return !result.stale;
 }
 
 // endregion

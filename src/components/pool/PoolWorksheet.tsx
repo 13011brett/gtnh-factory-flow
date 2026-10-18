@@ -1111,8 +1111,7 @@ function Product({ storage, role, onExplain, helpOpen }: { storage: FactoryStora
   const ignored = storageTargetMode(storage, role) === "ignore";
   const inputGoal = isInputRate(storage, role);
   const stale = useFactoryStore(state => state.lastResult.stale);
-  const held = useFactoryStore(state => state.lastResult.held);
-  const status = targetStatus(storage, role, result, stale, held);
+  const status = targetStatus(storage, role, result, stale);
   const rule = useTableRule({ storage, role, name: storage.displayName ?? storage.resourceId });
   return (
     <tr {...orderTarget} className="pool-product" data-worksheet-product={storage.id} data-target-ignored={ignored || undefined}>

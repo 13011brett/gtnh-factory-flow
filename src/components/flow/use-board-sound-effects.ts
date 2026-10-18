@@ -49,7 +49,7 @@ function undoneLately(): boolean {
  * rate sets (a part nothing sets, or a machine left unneeded, is not running).
  */
 export function isRunning(result: ThroughputResult | undefined): boolean {
-  if (!result || result.stale || result.held || result.plan?.failure) return false;
+  if (!result || result.stale || result.plan?.failure) return false;
   const idle = new Set<string>([...(result.plan?.unneeded ?? []), ...(result.plan?.unanchored ?? [])]);
   for (const [id, node] of Object.entries(result.nodes)) {
     if (node.operationRatePerSecond > 1e-9 && !idle.has(id)) return true;
@@ -84,7 +84,7 @@ export function useBoardSoundEffects(): void {
 
     const unsubscribe = useFactoryStore.subscribe((state, prevState) => {
       // Stale books (a solve still out) say nothing either way: the plan keeps running until an answer says not.
-      const settled = !state.lastResult?.stale && !state.lastResult?.held;
+      const settled = !state.lastResult?.stale;
       if (settled && (state.lastResult !== prevState.lastResult || state.project.id !== runningOf)) {
         const now = isRunning(state.lastResult);
         const fresh = state.project.id === runningOf && performance.now() >= quietUntil;

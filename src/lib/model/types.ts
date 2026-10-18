@@ -1148,12 +1148,6 @@ export interface ThroughputResult {
    */
   stale?: boolean;
   /**
-   * Stale because automatic recalculation is OFF and the plan changed since
-   * the last solve: the books are held until the player asks. Never set by a
-   * worker solve, so the "thinking" spinner can tell the two apart.
-   */
-  held?: boolean;
-  /**
    * The clog-lock diagnosis, when the solve that made these books also ran
    * it. Its vent solve is a second, expensive LP, so the solve worker
    * computes it beside the books and `findClogLocks` serves it from here.

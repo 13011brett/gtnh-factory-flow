@@ -21,7 +21,6 @@ it("distinguishes unset, ignored and zero targets", () => {
 });
 it("does not present stale results as a current verdict", () => {
   expect(targetStatus(storage, "product", result, true).label).toBe("Calculating…");
-  expect(targetStatus(storage, "product", result, true, true).label).toBe("Waiting to recalculate");
   expect(targetStatus(storage, "product", undefined).tone).toBe("muted");
 });
 it("does not label numerical noise as excess production", () => {

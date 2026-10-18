@@ -6,11 +6,11 @@ type RateStatus = { label: string; compact?: string; tone: "muted" | "met" | "fa
 
 /** Describe the solver's verdict; never guess which constraint caused a failure. */
 export function targetStatus(storage: FactoryStorage, role: StorageRole | undefined,
-  result: StorageThroughputResult | undefined, stale = false, held = false): RateStatus {
+  result: StorageThroughputResult | undefined, stale = false): RateStatus {
   const mode = storageTargetMode(storage, role);
   if (mode === "ignore") return { label: "Rate not enforced", compact: "Not enforced", tone: "muted" };
   if (!hasStorageTarget(storage, role)) return { label: "No rate set", compact: "No rate set", tone: "muted" };
-  if (stale || !result) return { label: held ? "Waiting to recalculate" : "Calculating…", tone: "muted" };
+  if (stale || !result) return { label: "Calculating…", tone: "muted" };
   const target = Math.abs(storage.targetPerSecond!);
   const actual = isInputRate(storage, role) ? result.consumedPerSecond : result.producedPerSecond;
   // Treat rounding at the solver's relative precision as equality, including large EU targets.

@@ -11,11 +11,7 @@ import { useFactoryStore } from "@/store/factory-store";
  * spinner can never disagree about whether the plan is still thinking.
  */
 export function useSolvingBooks(graceMs = 500): boolean {
-  // Held books (automatic recalculation off) are stale on purpose and are
-  // not "thinking": the solve key says so instead.
-  const stale = useFactoryStore(
-    (state) => Boolean(state.lastResult.stale) && !state.lastResult.held,
-  );
+  const stale = useFactoryStore((state) => Boolean(state.lastResult.stale));
   const [shown, setShown] = useState(false);
   useEffect(() => {
     if (!stale) {

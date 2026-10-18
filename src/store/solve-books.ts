@@ -60,49 +60,17 @@ let lastSolveDurationMs: number | undefined;
 let lastSolveProjectId: string | undefined;
 
 /**
- * AUTO RECALCULATION. On by default: every edit solves. Off, the store's
- * door hands the last books back flagged `held` and remembers nothing else
- * (the project in the store IS the pending plan) until `solveBooksNow` is
- * called. A browser preference, never part of the plan.
+ * Every edit solves; there is no manual recalculation. The old board toolbar's
+ * switch for it saved "off" here, and plan boards show no such switch, so a
+ * browser holding it showed every plan it opened at zero with no way out. The
+ * stored value is removed on load so no browser stays stuck in it.
  */
-const AUTO_SOLVE_KEY = "gtnh-factory-flow.auto-solve.v1";
-let autoSolve = readAutoSolve();
-const autoSolveListeners = new Set<() => void>();
-
-function readAutoSolve(): boolean {
-  try {
-    return typeof localStorage === "undefined" || localStorage.getItem(AUTO_SOLVE_KEY) !== "off";
-  } catch {
-    return true;
+try {
+  if (typeof localStorage !== "undefined") {
+    localStorage.removeItem("gtnh-factory-flow.auto-solve.v1");
   }
-}
-
-export function getAutoSolve(): boolean {
-  return autoSolve;
-}
-
-export function setAutoSolve(on: boolean): void {
-  autoSolve = on;
-  try {
-    localStorage.setItem(AUTO_SOLVE_KEY, on ? "on" : "off");
-  } catch {
-    // A private window that refuses storage still gets the session's setting.
-  }
-  for (const listener of autoSolveListeners) {
-    listener();
-  }
-}
-
-export function subscribeAutoSolve(listener: () => void): () => void {
-  autoSolveListeners.add(listener);
-  return () => {
-    autoSolveListeners.delete(listener);
-  };
-}
-
-/** The solve the player asked for by hand: the gate does not apply. */
-export function solveBooksNow(project: FactoryProject): ThroughputResult {
-  return solveBooksUngated(project);
+} catch {
+  // Storage refused (a private window): nothing was stored either.
 }
 
 const BIG_BOOKS_CACHE_LIMIT = 8;
@@ -129,16 +97,6 @@ export function registerBooksSink(apply: (result: ThroughputResult) => void) {
 }
 
 export function solveBooks(project: FactoryProject): ThroughputResult {
-  if (!autoSolve && lastBooks) {
-    // Held, not thinking: the old books stand until the player presses solve.
-    const held: ThroughputResult = { ...lastBooks, stale: true, held: true };
-    lastBooks = held;
-    return held;
-  }
-  return solveBooksUngated(project);
-}
-
-function solveBooksUngated(project: FactoryProject): ThroughputResult {
   const size = project.nodes.length + project.edges.length;
   const provenSlow =
     lastSolveDurationMs !== undefined &&

@@ -49,7 +49,10 @@ export function finalizePlanResult(
     const count = reading.counts.get(nodeResult.nodeId) ?? 0;
     const built = entry?.builtCount ?? 0;
     const upTo = reading.extras.upTo?.[nodeResult.nodeId];
-    nodeResult.theoreticalMachinesRequired = upTo ? upTo.reached : count;
+    // A shared card's read-out is its whole pool, filed under section 0's id: each recipe keeps its own solved count
+    // (the section shares and the machine list add them up), and only a single card takes what it reached.
+    const shared = (model.groups.get(entry?.owner ?? nodeResult.nodeId)?.length ?? 0) > 1;
+    nodeResult.theoreticalMachinesRequired = upTo && !shared ? upTo.reached : count;
     nodeResult.disposalUtilization = 1;
     // Flows are nameplate at the built count; the solved scale is count / built.
     const act = built > 0 ? count / built : 0;
@@ -72,11 +75,13 @@ export function finalizePlanResult(
     }
     nodeResult.euT *= act;
     totalEuT += nodeResult.euT;
-    // An Up to card is as full as it got of what it may be; the others run flat out at the solved count.
+    // Every flow above is already the solved one, so a running card is fully used at its solved count: every reader
+    // that scales a flow by utilization (the overview, port rows, wires, a group's summary) would count an Up to
+    // card's level twice. How full an Up to card is of its count is its read-out's (reached over capacity).
     const level = upTo && upTo.capacity > 0 ? Math.min(1, upTo.reached / upTo.capacity) : 1;
-    nodeResult.utilization = level;
-    nodeResult.capableUtilization = level;
-    nodeResult.demandUtilization = level;
+    nodeResult.utilization = 1;
+    nodeResult.capableUtilization = 1;
+    nodeResult.demandUtilization = 1;
     const primary = Object.values(nodeResult.outputs)[0];
     nodeResult.requiredRatePerSecond = primary?.amountPerSecond ?? 0;
     nodeResult.maxRatePerSecond = primary?.amountPerSecond ?? 0;

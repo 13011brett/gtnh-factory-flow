@@ -972,7 +972,13 @@ export function useCleanCardModel(
   const count = buildCountView(countState, { ruleFixed: isCustomRateRecipe(recipe) });
 
   // Power row: a machine's draw, or a steam machine's litres.
-  const usage = Math.min(1, Math.max(0, result?.utilization ?? 1));
+  // An Up to card bills its count averaged by how full it got of it (its read-out's reached over capacity).
+  const upTo = countState.upTo;
+  const usage = upTo
+    ? upTo.capacity > 0
+      ? Math.min(1, upTo.reached / upTo.capacity)
+      : 0
+    : Math.min(1, Math.max(0, result?.utilization ?? 1));
   const drawScale = averageDraw ? usage : usage > 0 ? 1 : 0;
   // The card's demand is the machines it has (the count set, fractions and all; else the solved count) times one
   // machine's draw, as the mod prints it; averaged by its use (an Up to card's reached over its count).

@@ -265,6 +265,20 @@ describe("the answer: Up to read-outs and shortfalls reach the extras by card id
     });
   });
 
+  it("a shared card's recipes keep their own counts: the pool's reached is not section 0's", () => {
+    const { result } = run(p(), () =>
+      solved({
+        machineCounts: { a: 4, b: 1.5, s: 0.75, "s#r1": 0.25 },
+        extentsPerSecond: { a: 4, b: 1.5, s: 0.75, "s#r1": 0.25 },
+        upTo: readouts.slice(0, 3),
+      }),
+    );
+    expect(result.nodes["s"]!.theoreticalMachinesRequired).toBeCloseTo(0.75, 9);
+    expect(result.nodes["s#r1"]!.theoreticalMachinesRequired).toBeCloseTo(0.25, 9);
+    // a single card takes what its read-out reached
+    expect(result.nodes["b"]!.theoreticalMachinesRequired).toBe(1.5);
+  });
+
   it("omits upTo and shortfalls when the answer has none", () => {
     const { result } = run(p(), () => solved({}));
     expect(result.plan!.upTo).toBeUndefined();
@@ -334,7 +348,7 @@ describe("the nodes: an Up to card's utilization and status", () => {
       ],
     });
 
-  it("utilization is reached over capacity, the count is what was reached, the status follows the reason", () => {
+  it("a running card is fully used at what it reached, the count is what was reached, the status follows the reason", () => {
     const { result } = run(p(), answer);
     const n = result.nodes;
     expect([
@@ -342,11 +356,12 @@ describe("the nodes: an Up to card's utilization and status", () => {
       n["full"]!.status,
       n["full"]!.theoreticalMachinesRequired,
     ]).toEqual([1, "balanced", 4]);
+    // Its flows are at the reached count already: readers scale flows by utilization, so it stays 1.
     expect([
       n["short"]!.utilization,
       n["short"]!.status,
       n["short"]!.theoreticalMachinesRequired,
-    ]).toEqual([0.25, "underutilized", 1]);
+    ]).toEqual([1, "underutilized", 1]);
     expect([n["wide"]!.utilization, n["wide"]!.status]).toEqual([1, "bottleneck"]);
     // a card with no rule keeps what it had
     expect([

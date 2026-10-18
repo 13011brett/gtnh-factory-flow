@@ -1,22 +1,27 @@
 /*
- * The resize handle on a side column's board-side edge (PanelHandle.tsx): a thin strip inside the column, a line that
- * shows when the pointer is over it or the keyboard is on it, the gold of a held control while it is dragged.
+ * The resize handle on a side column's board-side edge (PanelHandle.tsx): a wide strip, easy to catch, with a line on
+ * the column's edge that shows when the pointer is over it or the keyboard is on it, the gold of a held control while
+ * it is dragged. The strip reaches mostly over the board: inside the column sits the overview list's scrollbar. It
+ * starts below the column's header row, where the column's fold key and the board toolbar's end keys sit against
+ * this edge.
  */
 .panel-handle {
+  --panel-handle-inside: 2px;
+  --panel-handle-outside: 14px;
   position: absolute;
-  top: 0;
+  top: 34px;
   bottom: 0;
   z-index: 50;
-  width: 7px;
+  width: calc(var(--panel-handle-inside) + var(--panel-handle-outside));
   cursor: col-resize;
   touch-action: none;
   outline: none;
 }
 .panel-handle[data-edge="right"] {
-  right: 0;
+  right: calc(-1 * var(--panel-handle-outside));
 }
 .panel-handle[data-edge="left"] {
-  left: 0;
+  left: calc(-1 * var(--panel-handle-outside));
 }
 .panel-handle::after {
   content: "";
@@ -28,10 +33,10 @@
   transition: background-color 0.12s;
 }
 .panel-handle[data-edge="right"]::after {
-  right: 0;
+  left: 0;
 }
 .panel-handle[data-edge="left"]::after {
-  left: 0;
+  right: 0;
 }
 .panel-handle:hover::after,
 .panel-handle:focus-visible::after {

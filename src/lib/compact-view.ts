@@ -2,27 +2,37 @@
 
 import { useSyncExternalStore } from "react";
 import { getUiScale, subscribeUiScale } from "@/lib/ui-scale";
-import { COMPACT_MAX_HEIGHT, COMPACT_MAX_WIDTH, SNUG_MAX_WIDTH } from "@/lib/viewport-breakpoints";
+import {
+  COMPACT_MAX_HEIGHT,
+  COMPACT_MAX_WIDTH,
+  PHONE_MAX_HEIGHT,
+  PHONE_MAX_WIDTH,
+  SNUG_MAX_WIDTH,
+} from "@/lib/viewport-breakpoints";
 
 /**
  * Compact mode: one column instead of three.
  *
  * Below the compact size the board cannot share the window with both side
- * columns, so the columns become drawers that slide over the board, the top
- * bar folds into one menu, and each board toolbar folds into one button.
+ * columns, so the columns become drawers that slide over the board (their two
+ * keys join the top bar), and each board toolbar folds into one button.
  *
  * `globals.css` defines a Tailwind `compact:` variant for the style-only half
  * of the switch (heights, min-heights, font sizes). It keys on the
  * `data-compact` attribute this module stamps on <html>, so the two can never
  * disagree; the boot script in layout.tsx stamps it before first paint.
  *
- * The numbers are SHELL pixels: the interface size (ui-scale.ts) zooms the
- * whole shell, so the media queries are built from the live factor.
+ * Two tests, either one is enough. A phone-sized window (REAL px, `PHONE_MAX_*`)
+ * is compact whatever the interface size: a bigger size must not turn a
+ * desktop window into a phone, and a smaller one lowers the cutoff. A shell
+ * too small for the columns (SHELL px, `COMPACT_MAX_*`: the interface size
+ * zooms the whole shell) is compact too. The queries are built from the live
+ * factor.
  */
-export { COMPACT_MAX_WIDTH, COMPACT_MAX_HEIGHT, SNUG_MAX_WIDTH };
+export { COMPACT_MAX_WIDTH, COMPACT_MAX_HEIGHT, PHONE_MAX_WIDTH, PHONE_MAX_HEIGHT, SNUG_MAX_WIDTH };
 
 /*
- * COMPACT_MAX_HEIGHT: a short window is compact whatever its width. A phone
+ * PHONE_MAX_HEIGHT: a short window is compact whatever its width. A phone
  * held sideways (e.g. 932x430) clears the width test but the desktop
  * layout's minimum heights would push the board's bottom off the screen.
  *
@@ -40,9 +50,14 @@ export { COMPACT_MAX_WIDTH, COMPACT_MAX_HEIGHT, SNUG_MAX_WIDTH };
  * The comma is an OR: either measurement being short is enough.
  */
 export function compactMediaQuery(scale: number): string {
-  return `(max-width: ${COMPACT_MAX_WIDTH * scale - 0.02}px), (max-height: ${
-    COMPACT_MAX_HEIGHT * scale - 0.02
-  }px)`;
+  // The size lowers the phone cutoff, never raises it.
+  const phone = Math.min(scale, 1);
+  return [
+    `(max-width: ${PHONE_MAX_WIDTH * phone - 0.02}px)`,
+    `(max-height: ${PHONE_MAX_HEIGHT * phone - 0.02}px)`,
+    `(max-width: ${COMPACT_MAX_WIDTH * scale - 0.02}px)`,
+    `(max-height: ${COMPACT_MAX_HEIGHT * scale - 0.02}px)`,
+  ].join(", ");
 }
 
 export function snugMediaQuery(scale: number): string {

@@ -16,11 +16,12 @@ import { tipAttrs } from "@/components/flow/clean/interaction";
 import { isEditableKeyboardTarget } from "@/components/flow/keyboard";
 import { downloadPlanFile } from "@/lib/import-export/open-plan-file";
 import { PastePlanDialog } from "@/components/export/PastePlanDialog";
-import { BarKey, useBarFit } from "./bar-parts";
+import { BarKey, useBarFit, useTopBarFit } from "./bar-parts";
 import { AccountKey } from "./AccountKey";
 import { ChromeMenu, chromeAnchorOf, type ChromeAnchor, type MenuEntry } from "./ChromeMenu";
 import { knock, OPEN_FEEDBACK_EVENT, OPEN_TOUR_EVENT, OPEN_CONTROLS_EVENT } from "./chrome-events";
 import { ModTabs } from "./ModTabs";
+import { TOP_BAR_STEPS } from "./top-bar-fold";
 import { libraryRows } from "./library-rows";
 import { copyPlanCode, copyPlanLink, openInModRow, useModReach } from "./share-actions";
 import type { ShareMode } from "@/components/community/SharePlanDialog";
@@ -78,16 +79,16 @@ export interface ModBarProps {
 /**
  * The top bar holds the account's things only: the plan tabs and +, the live state and faces, then Plans (the library
  * on My plans; Shared with me and Community are its shelves) and Share (Invite people first, then the copies), the
- * account key, and feedback, settings and help, all on one row. Its keys are flat like the tabs and + (chrome.css), the
- * picture keys and the face bare until hovered. What edits or views the board (Non-recipe, undo and redo, Arrange, Fit,
+ * account key, and feedback, settings and help, all on one row that never wraps and never hides a key in a menu: short of
+ * room the tabs give way, then Plans, Share and Sign in become icon keys, then the gaps tighten (`useTopBarFit`). Its keys
+ * are flat like the tabs and + (chrome.css), the picture keys and the face bare until hovered. What edits or views the board (Non-recipe, undo and redo, Arrange, Fit,
  * the rate unit, EU/t, Avg) is the board's own toolbar (BoardToolbar), along the top of the board.
  */
 export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMenu, unreadNotes }: ModBarProps) {
   useHistoryShortcuts();
   useEffect(() => ensureInteractionHost(), []);
   const barRef = useRef<HTMLElement | null>(null);
-  const fit = useBarFit(barRef);
-  const tight = fit !== "roomy";
+  const phoneFit = useBarFit(barRef);
   // The library's "last open" and its most-recent-first order.
   const activeDesignId = useDesignStore((state) => state.activeDesignId);
   useEffect(() => {
@@ -103,13 +104,20 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
   const sideOpen = workspace.rightPanelOpen && !bothOpen;
   const library = useLibraryTab();
   const isReadOnly = useFactoryStore((state) => state.isReadOnly);
-  const folded = fit === "folded" && !compact;
   const feedbackOpen = useFeedbackOpen();
   const [menu, setMenu] = useState<{ kind: "share" | "help"; anchor: ChromeAnchor }>();
   const [pasting, setPasting] = useState(false);
   const [controlsOpen, setControlsOpen] = useState(false);
   const [inviting, setInviting] = useState(false);
   const signedIn = useCommunityAuthStore((state) => Boolean(state.user));
+  const username = useCommunityAuthStore((state) => state.user?.username ?? "");
+  const faces = useLiveSession((state) => (state.status === "off" ? 0 : state.present.length));
+  // One row, nothing in a menu: short of room the tabs give way, then Plans, Share and Sign in become icon keys, then the
+  // gaps tighten (top-bar-fold.ts). A phone keeps its words and wraps (chrome.css), with its own give-way (useBarFit).
+  const step = useTopBarFit(barRef, { enabled: !compact, layoutKey: `${username}|${faces}` });
+  const fit = compact ? phoneFit : TOP_BAR_STEPS[step];
+  const tight = compact ? phoneFit !== "roomy" : step === 2;
+  const pictures = !compact && step >= 1;
   const closeMenu = useCallback(() => setMenu(undefined), []);
 
   // The power unit comes back from storage (the old toolbar restored it; it is gone from plan boards).
@@ -198,31 +206,31 @@ export function ModBar({ onShare, onScreenshot, onSettings, onChangelog, onDevMe
       <BarKey
         id="plans"
         gap
-        label={folded ? undefined : "Plans"}
-        icon={folded}
+        label={pictures ? undefined : "Plans"}
+        icon={pictures}
         ariaLabel="Plans"
-        width={folded ? undefined : 42}
+        width={pictures ? undefined : 42}
         open={library.active}
-        tip="Your plans, the ones shared with you, and Community"
+        tip="Plans: your plans, the ones shared with you, and Community"
         // Opens the library on My plans, and shuts it again; its shelves are along its top.
         onClick={() => (library.active ? leaveLibrary() : openLibrary({ kind: "all" }))}
       >
-        {folded ? <PixelIcon name="plans" /> : undefined}
+        {pictures ? <PixelIcon name="plans" /> : undefined}
       </BarKey>
       <BarKey
         id="share"
-        label={folded ? undefined : "Share"}
-        icon={folded}
+        label={pictures ? undefined : "Share"}
+        icon={pictures}
         ariaLabel="Share"
-        width={folded ? undefined : 42}
+        width={pictures ? undefined : 42}
         tip="Share this plan: invite people to edit it with you, or send a copy"
         open={menu?.kind === "share"}
         onClick={(event) => openMenuFrom("share", event)}
         menuAnchor
       >
-        {folded ? <PixelIcon name="share" /> : undefined}
+        {pictures ? <PixelIcon name="share" /> : undefined}
       </BarKey>
-      <AccountKey />
+      <AccountKey pictures={pictures} />
       <BarKey
         id="feedback"
         gap

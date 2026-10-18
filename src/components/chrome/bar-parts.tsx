@@ -1,11 +1,12 @@
 "use client";
 
-import { useEffect, useState, type MouseEvent, type ReactNode } from "react";
+import { useEffect, useLayoutEffect, useRef, useState, type MouseEvent, type ReactNode } from "react";
 import { activateOnKey } from "@/lib/hooks/button-keys";
 import { playBoardSound } from "@/lib/board-sounds";
 import { sfxTick } from "@/lib/sound/sfx";
 import { tipAttrs } from "@/components/flow/clean/interaction";
 import { MENU_ANCHOR_ATTR } from "./ChromeMenu";
+import { stepSaving, topBarStep, type TopBarStep } from "./top-bar-fold";
 
 /** One key of the bar: a label (or a picture), a tip, and the click, right-click and wheel it answers. */
 export function BarKey({
@@ -94,8 +95,8 @@ export function BarKey({
 /**
  * How much room the bar has, in its own pixels. Roomy is the full bar; tight drops what can go without a new picture
  * (Non-recipe to its bolt, Arrange to its label's width, the faces to two and a +N, tighter keys); folded shows Plans
- * and Share as their pictures. The bar never takes a second row (a phone's does: html[data-compact]); past folded the
- * tabs give way. The widths leave the tabs room beside the keys and the faces.
+ * and Share as their pictures. A phone's bar (html[data-compact]) uses these; the desktop top bar has its own steps
+ * (`useTopBarFit`), decided from the room its tabs have. The widths leave the tabs room beside the keys and the faces.
  */
 export type BarFit = "roomy" | "tight" | "folded";
 /** The top bar's widths; the board toolbar has fewer keys and its own (BoardToolbar). */
@@ -122,3 +123,67 @@ export function useBarFit(
   return fit;
 }
 
+/**
+ * The top bar's step (`topBarStep`): the keys as labels, as icons, as icons with tighter gaps. It reads the tab strip's
+ * width, the room the bar has left for the tabs, so a key that grows (a label, the live faces, a font arriving) is seen
+ * as much as the window resizing. What each step gave the tabs is measured when the step is taken, and forgotten when what
+ * the bar holds changes (`layoutKey`: who is signed in, the live faces) or a font arrives: the bar then starts again from
+ * the widest dress. Off (always the widest) on a phone, whose bar keeps its words and wraps instead.
+ */
+export function useTopBarFit(
+  ref: { current: HTMLElement | null },
+  { enabled, layoutKey }: { enabled: boolean; layoutKey: string },
+): TopBarStep {
+  const [step, setStep] = useState<TopBarStep>(0);
+  const [fonts, setFonts] = useState(0);
+  const savings = useRef<number[]>([0, 0]);
+  // The width of the strip and the bar just before the last step down: how much that step gave is read after it.
+  const taken = useRef<{ from: TopBarStep; tabs: number; bar: number } | null>(null);
+  const holds = useRef(`${layoutKey}|${fonts}`);
+
+  useEffect(() => {
+    const fontSet = typeof document === "undefined" ? undefined : document.fonts;
+    const onFonts = () => setFonts((count) => count + 1);
+    fontSet?.addEventListener?.("loadingdone", onFonts);
+    return () => fontSet?.removeEventListener?.("loadingdone", onFonts);
+  }, []);
+
+  useLayoutEffect(() => {
+    const bar = ref.current;
+    const tabs = bar?.querySelector<HTMLElement>(":scope > .mt");
+    if (!bar || !tabs) return;
+    if (!enabled) {
+      if (step !== 0) setStep(0);
+      return;
+    }
+    const now = `${layoutKey}|${fonts}`;
+    if (holds.current !== now) {
+      holds.current = now;
+      savings.current = [0, 0];
+      taken.current = null;
+      if (step !== 0) {
+        setStep(0);
+        return;
+      }
+    }
+    const read = () => {
+      const barWidth = bar.clientWidth;
+      const tabsWidth = tabs.clientWidth;
+      if (barWidth === 0) return;
+      const last = taken.current;
+      if (last && last.from === step - 1) {
+        savings.current[last.from] = stepSaving(last, { tabs: tabsWidth, bar: barWidth });
+        taken.current = null;
+      }
+      const next = topBarStep(step, tabsWidth, savings.current);
+      if (next === step) return;
+      if (next > step) taken.current = { from: step, tabs: tabsWidth, bar: barWidth };
+      setStep(next);
+    };
+    read();
+    const observer = new ResizeObserver(read);
+    observer.observe(tabs);
+    return () => observer.disconnect();
+  }, [ref, enabled, layoutKey, fonts, step]);
+  return step;
+}

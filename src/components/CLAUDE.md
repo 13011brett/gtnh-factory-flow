@@ -21,10 +21,13 @@ The board has its own notes in `flow/CLAUDE.md`, the Pool worksheet in `pool/CLA
 
 ## Compact mode (phones, small windows)
 
-- `src/lib/compact-view.ts`: compact under 900px wide OR 560px tall (shell px). Ask the
-  media query, never `window.innerWidth`, which mobile browsers widen when content overflows.
-- Compact swaps the three columns for the board plus two drawers (`PanelDrawer`), the top
-  bar for `AppMenu`, each toolbar for one folded button. Drawers track the finger by
+- `src/lib/compact-view.ts`: compact when the window is phone-sized in REAL px (under 900 wide or 560 tall;
+  the Size setting can lower that, never raise it, so a bigger Size cannot turn a desktop window into a phone), or when
+  the shell leaves under 800 x 440 shell px for the columns. A desktop window of 1280 x 720 or more is never compact at
+  any Size (Large leaves 842 x 473). The boot script in `layout.tsx` repeats the rule (`ui-scale-boot.ts`); a test pins
+  that the two agree. Ask the media query, never `window.innerWidth`, which mobile browsers widen when content overflows.
+- Compact swaps the three columns for the board plus two drawers (`PanelDrawer`, their two keys join the top bar, which
+  wraps its tabs above its keys), each toolbar for one folded button. Drawers track the finger by
   writing `translate`, not `transform`: Tailwind's translate utilities set `translate`, and
   a `transform` would compose with it and double the offset. Pair any min-height with
   `compact:min-h-0`.
@@ -114,9 +117,17 @@ in `src/store/CLAUDE.md` (Live plans, Task boards).
   (`pointer-events: none`), only the keys do. A task board shows its own header the same way (title and count as plain
   words left; Board / Chain and New task right; `TaskBoard` leaves room at its top). The Non-recipe picker opens below the
   keys (`header[data-board-toolbar]`). Arrange is its label's width, 90 only while it shows progress.
-- Both bars degrade by their own width (`useBarFit`, bar px, `data-fit`, the widths in `BAR_FIT_TOP` and the toolbar's
-  `STRIP_FIT`, which only tightens): tight tightens the keys (Non-recipe shows its bolt alone, Arrange takes its label's width, the faces are
-  two and a +N), wrapped puts the keys on a second row (the top bar's tabs always keep room for the active tab and the +).
+- The desktop top bar is one row and hides nothing in a menu (`useTopBarFit` in `bar-parts.tsx`, steps in the pure,
+  tested `chrome/top-bar-fold.ts`, `data-fit` roomy / icons / tight). The tabs give way first (the strip scrolls; the open
+  plan's tab and the + never go: the `.mt` min-width, and `ModTabs` scrolls the open tab back into view when the strip
+  resizes). With under two full tabs and the + of room, Plans, Share and Sign in become icon keys like feedback, settings
+  and help (tips lead with the name; `AccountKey` takes `pictures`); with under one tab and the + the gaps tighten and the
+  live faces are two and a +N. Each step is judged by the tab strip's measured width, undone by the room the earlier dress
+  would leave (what the step gave is measured when it is taken), and starts again from the widest dress when what the bar
+  holds changes. A new key needs nothing here: the strip's width sees it.
+- A phone's bar (compact) keeps its words and wraps its tabs above its keys; its give-way is `useBarFit` (bar px,
+  `BAR_FIT_TOP`; the toolbar's `STRIP_FIT`): tight tightens the keys (Non-recipe shows its bolt alone, Arrange takes its
+  label's width, the faces are two and a +N). The board toolbar's groups wrap their keys, so a narrow board never cuts one off.
 - Share dialog: the owner is listed first; the owner adds people by name (search asks once typing pauses, 250 ms,
   and drops the answer to an older query) and removes them; someone it is shared with sees everyone and can leave.
   Plans are in the account from the moment they exist (`src/store/CLAUDE.md`), so it never waits on a save. Changes arrive

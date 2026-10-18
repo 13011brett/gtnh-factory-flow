@@ -1,14 +1,24 @@
 /**
- * The layout breakpoints, in SHELL pixels (see ui-scale.ts). Kept in a
- * module with no "use client" so the server layout can inline them into the
- * boot script; compact-view.ts re-exports them and owns the media queries.
+ * The layout breakpoints. Kept in a module with no "use client" so the server layout can inline them into the boot
+ * script; compact-view.ts re-exports them and owns the media queries.
  */
 
-/** Under this width the columns become drawers and the top bar one menu. */
-export const COMPACT_MAX_WIDTH = 900;
+/**
+ * A window under this many REAL px wide is a phone (or a small tablet): compact whatever the interface size, and it
+ * gets the phone's smaller base size (ui-scale-boot.ts). The interface size can lower this, never raise it: a bigger
+ * size must not turn a desktop window into a phone.
+ */
+export const PHONE_MAX_WIDTH = 900;
 
-/** A window shorter than this is compact whatever its width (a phone on its side). */
-export const COMPACT_MAX_HEIGHT = 560;
+/** A window shorter than this many REAL px is a phone on its side, whatever its width. */
+export const PHONE_MAX_HEIGHT = 560;
 
-/** Under this width the top bar's labelled buttons drop to their icons. */
+/**
+ * Under this many SHELL px (real px over the interface size) the two side columns and a usable board no longer fit:
+ * compact whatever the window. Large (1.52) on a 1280 x 720 window leaves 841 x 473, the least a desktop window gets.
+ */
+export const COMPACT_MAX_WIDTH = 800;
+export const COMPACT_MAX_HEIGHT = 440;
+
+/** Under this width (shell px) the top bar's labelled buttons drop to their icons. */
 export const SNUG_MAX_WIDTH = 1280;

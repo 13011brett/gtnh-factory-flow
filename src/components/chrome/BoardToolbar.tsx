@@ -29,7 +29,7 @@ const STRIP_FIT = { tightBelow: 390, foldedBelow: 0 } as const;
 /**
  * The board's toolbar, along the top of the board between the overview and the items list: what edits or views the
  * board, in the mod's order (Non-recipe, undo and redo, Arrange and Fit, the rate unit, EU/t, Avg), the same keys and
- * words as the game's. It wraps to a second row when tight, as the top bar does. A task board has no cards to edit: its
+ * words as the game's. Its right group drops to a second row when the board is too narrow for both. A task board has no cards to edit: its
  * strip carries the board's title and New task instead.
  */
 export function BoardToolbar() {

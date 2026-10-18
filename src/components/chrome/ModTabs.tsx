@@ -117,17 +117,7 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
     setFade((previous) => (previous.left === next.left && previous.right === next.right ? previous : next));
   }, []);
 
-  useLayoutEffect(() => {
-    syncFade();
-    const strip = stripRef.current;
-    if (!strip || typeof ResizeObserver === "undefined") return;
-    const observer = new ResizeObserver(syncFade);
-    observer.observe(strip);
-    return () => observer.disconnect();
-  }, [syncFade, designs.length, publicViews.length]);
-
-  // The open plan's tab comes into view when the open plan changes.
-  useEffect(() => {
+  const keepActiveInView = useCallback(() => {
     const strip = stripRef.current;
     const tab = strip?.querySelector<HTMLElement>("[data-active]");
     if (!strip || !tab) return;
@@ -135,8 +125,26 @@ export function ModTabs({ onPaste, onShare }: ModTabsActions) {
     const right = left + tab.offsetWidth;
     if (left < strip.scrollLeft) strip.scrollLeft = left;
     else if (right > strip.scrollLeft + strip.clientWidth) strip.scrollLeft = right - strip.clientWidth;
+  }, []);
+
+  // The strip narrowing (the window, the bar's keys) must not push the open plan's tab out of sight.
+  useLayoutEffect(() => {
     syncFade();
-  }, [activeDesignId, publicView?.id, designs.length, syncFade]);
+    const strip = stripRef.current;
+    if (!strip || typeof ResizeObserver === "undefined") return;
+    const observer = new ResizeObserver(() => {
+      keepActiveInView();
+      syncFade();
+    });
+    observer.observe(strip);
+    return () => observer.disconnect();
+  }, [syncFade, keepActiveInView, designs.length, publicViews.length]);
+
+  // The open plan's tab comes into view when the open plan changes.
+  useEffect(() => {
+    keepActiveInView();
+    syncFade();
+  }, [activeDesignId, publicView?.id, designs.length, syncFade, keepActiveInView]);
 
   /** The new order of the open tabs, with the parked plans left in their own places among the rest. */
   const commitOrder = useCallback(

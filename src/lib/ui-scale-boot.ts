@@ -5,6 +5,8 @@
  * inlined. See ui-scale.ts for the model.
  */
 
+import { PHONE_MAX_HEIGHT, PHONE_MAX_WIDTH } from "@/lib/viewport-breakpoints";
+
 export const UI_SCALE_STORAGE_KEY = "gtnh-factory-flow.ui-scale.v1";
 
 /** What the setting's 100% renders at, on a desktop-sized window. */
@@ -21,11 +23,8 @@ export const DEFAULT_UI_SCALE_PERCENT = 100;
 export const UI_SCALE_VAR = "--ui-scale";
 export const UI_SCALE_INVERSE_VAR = "--ui-scale-inverse";
 
-/**
- * The 1:1 compact test, for the base decision. The raw numbers must match
- * COMPACT_MAX_WIDTH / COMPACT_MAX_HEIGHT in viewport-breakpoints.ts.
- */
-export const PHONE_MEDIA_QUERY = "(max-width: 899.98px), (max-height: 559.98px)";
+/** The phone-sized window test, in real px: the phone's base size, and the compact layout whatever the size. */
+export const PHONE_MEDIA_QUERY = `(max-width: ${PHONE_MAX_WIDTH - 0.02}px), (max-height: ${PHONE_MAX_HEIGHT - 0.02}px)`;
 
 /**
  * The inline script layout.tsx runs before first paint. It repeats
@@ -34,11 +33,13 @@ export const PHONE_MEDIA_QUERY = "(max-width: 899.98px), (max-height: 559.98px)"
  * there is one place they are written.
  */
 export function uiScaleBootScript(viewport: {
+  phoneMaxWidth: number;
+  phoneMaxHeight: number;
   compactMaxWidth: number;
   compactMaxHeight: number;
   snugMaxWidth: number;
 }): string {
-  const { compactMaxWidth, compactMaxHeight, snugMaxWidth } = viewport;
+  const { phoneMaxWidth, phoneMaxHeight, compactMaxWidth, compactMaxHeight, snugMaxWidth } = viewport;
   return (
     `try{var d=document.documentElement,m=window.matchMedia,p=+localStorage.getItem(${JSON.stringify(
       UI_SCALE_STORAGE_KEY,
@@ -47,7 +48,9 @@ export function uiScaleBootScript(viewport: {
     `var b=m(${JSON.stringify(PHONE_MEDIA_QUERY)}).matches?${UI_SCALE_PHONE_BASE}:${UI_SCALE_BASE};` +
     `var s=Math.round(p/100*b*1000)/1000;` +
     `d.style.setProperty("${UI_SCALE_VAR}",s);d.style.setProperty("${UI_SCALE_INVERSE_VAR}","calc(1 / "+s+")");` +
-    `if(m("(max-width: "+(${compactMaxWidth}*s-0.02)+"px), (max-height: "+(${compactMaxHeight}*s-0.02)+"px)").matches)d.setAttribute("data-compact","");` +
+    // compactMediaQuery in compact-view.ts: a phone-sized window (real px, the size only lowers it), or a shell too small.
+    `var k=Math.min(s,1);` +
+    `if(m("(max-width: "+(${phoneMaxWidth}*k-0.02)+"px), (max-height: "+(${phoneMaxHeight}*k-0.02)+"px), (max-width: "+(${compactMaxWidth}*s-0.02)+"px), (max-height: "+(${compactMaxHeight}*s-0.02)+"px)").matches)d.setAttribute("data-compact","");` +
     `if(m("(max-width: "+(${snugMaxWidth}*s-0.02)+"px)").matches)d.setAttribute("data-snug","")}catch(e){}`
   );
 }

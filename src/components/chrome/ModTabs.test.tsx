@@ -134,6 +134,51 @@ describe("the plan tabs", () => {
     expect(JSON.parse(tab.getAttribute("data-tip")!)).toMatchObject({ title: "Benzene", sub: "Middle-click to close, right-click for more" });
     expect(JSON.parse(screen.getByLabelText("New plan").getAttribute("data-tip")!).title).toBe("New plan, or open an existing one");
   });
+
+  it("scrolls the open plan's tab back into view when the strip narrows, and leaves the scroll alone when it fits", () => {
+    const resized: Array<() => void> = [];
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        private readonly callback: () => void;
+        constructor(callback: () => void) {
+          this.callback = callback;
+        }
+        observe() {
+          resized.push(this.callback);
+        }
+        unobserve() {}
+        disconnect() {}
+      },
+    );
+    let stripWidth = 400;
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockImplementation(function (this: HTMLElement) {
+      return this.classList.contains("mt-strip") ? stripWidth : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(function (this: HTMLElement) {
+      return this.classList.contains("mt-tab") ? 120 : 0;
+    });
+    vi.spyOn(HTMLElement.prototype, "offsetLeft", "get").mockImplementation(function (this: HTMLElement) {
+      const tabs = [...(this.parentElement?.children ?? [])];
+      return tabs.indexOf(this) * 122;
+    });
+    try {
+      useDesignStore.setState({ designs: [design("a", "Benzene"), design("b", "ref-chain"), design("c", "Toluene")], activeDesignId: "c" });
+      render(<ModTabs {...props} />);
+      const strip = document.querySelector<HTMLElement>(".mt-strip")!;
+      // The open tab is the third: it spans 244 to 364, and fits a strip of 400 at the start.
+      expect(strip.scrollLeft).toBe(0);
+      stripWidth = 300;
+      act(() => resized.forEach((callback) => callback()));
+      expect(strip.scrollLeft).toBe(364 - 300);
+      stripWidth = 500;
+      act(() => resized.forEach((callback) => callback()));
+      expect(strip.scrollLeft).toBe(364 - 300);
+    } finally {
+      vi.unstubAllGlobals();
+      vi.restoreAllMocks();
+    }
+  });
 });
 
 describe("dragging the plan tabs", () => {

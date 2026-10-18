@@ -9,13 +9,15 @@ import { colorFor } from "@/lib/live/protocol";
 import { useLiveSession } from "@/store/live-session";
 import { BarKey } from "./bar-parts";
 import { ChromeMenu, chromeAnchorOf, type ChromeAnchor } from "./ChromeMenu";
+import { PixelIcon } from "./pixel-icons";
 import { SignInPanel } from "./SignInPanel";
 
 /**
  * The account key, after Share: "Sign in" while signed out (it opens the sign-in form), the account's face (initials in
- * its colour) while signed in, with a menu of the username and Sign out.
+ * its colour) while signed in, with a menu of the username and Sign out. Short of room the signed-out key is a small
+ * person picture like the other icon keys (`pictures`).
  */
-export function AccountKey() {
+export function AccountKey({ pictures = false }: { pictures?: boolean }) {
   const { user, isLoading, signOut } = useCommunityUser();
   const me = useLiveSession((state) => state.me);
   const [open, setOpen] = useState<{ kind: "form" | "menu"; anchor: ChromeAnchor }>();
@@ -31,12 +33,16 @@ export function AccountKey() {
       <>
         <BarKey
           id="account"
-          label="Sign in"
+          label={pictures ? undefined : "Sign in"}
+          icon={pictures}
+          ariaLabel="Sign in"
           tip="Sign in: your plans are kept in your account, and shared from it"
           open={open?.kind === "form"}
           onClick={(event) => toggle("form", event.currentTarget)}
           menuAnchor
-        />
+        >
+          {pictures ? <PixelIcon name="account" /> : undefined}
+        </BarKey>
         {open?.kind === "form" ? <SignInPanel anchor={open.anchor} onClose={() => setOpen(undefined)} /> : null}
       </>
     );

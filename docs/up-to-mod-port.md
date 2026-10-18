@@ -67,6 +67,7 @@ Where things are:
       arrow, landing in the middle of the view). The website's menu also has Background (its paper themes and
       patterns); the mod need not grow a background setting if it has none.
 - [x] The Peak/Avg key leaves the top toolbar; the overview's machine section keeps its own.
+- [ ] The website's top bar is always one row and hides no key in a menu: the tabs give way first (the open plan's tab and the + always stay), then Plans, Share and Sign in become small flat icon keys like feedback, settings and help (tips lead with the name; Sign in is a small person picture), then the gaps tighten. The website no longer counts a desktop window as a phone because of the Size setting: a window of 1280 x 720 or more keeps the three columns at every Size (`compact-view.ts`).
 
 ## Side by side, 2026-10-17
 

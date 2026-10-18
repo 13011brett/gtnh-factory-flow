@@ -12,7 +12,13 @@ import { APP_FONT_STORAGE_KEY, DEFAULT_APP_FONT } from "@/lib/app-font";
 import { AppFontRestore } from "@/components/AppFontRestore";
 import { UiScaleRestore } from "@/components/UiScaleRestore";
 import { uiScaleBootScript } from "@/lib/ui-scale-boot";
-import { COMPACT_MAX_HEIGHT, COMPACT_MAX_WIDTH, SNUG_MAX_WIDTH } from "@/lib/viewport-breakpoints";
+import {
+  COMPACT_MAX_HEIGHT,
+  COMPACT_MAX_WIDTH,
+  PHONE_MAX_HEIGHT,
+  PHONE_MAX_WIDTH,
+  SNUG_MAX_WIDTH,
+} from "@/lib/viewport-breakpoints";
 import { Analytics } from "./Analytics";
 import { AnalyticsHeartbeat } from "./AnalyticsHeartbeat";
 import { WhatsNewGate } from "@/components/WhatsNewGate";
@@ -106,6 +112,8 @@ const appFontBootScript = `try{var f=localStorage.getItem(${JSON.stringify(
  * one size and snapped to another would flash on every load.
  */
 const uiScaleBoot = uiScaleBootScript({
+  phoneMaxWidth: PHONE_MAX_WIDTH,
+  phoneMaxHeight: PHONE_MAX_HEIGHT,
   compactMaxWidth: COMPACT_MAX_WIDTH,
   compactMaxHeight: COMPACT_MAX_HEIGHT,
   snugMaxWidth: SNUG_MAX_WIDTH,

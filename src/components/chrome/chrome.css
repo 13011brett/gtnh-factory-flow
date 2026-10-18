@@ -599,13 +599,16 @@
 :root:not([data-compact]) .mb[data-mod-bar] > .mb-key.mb-gap {
   margin-left: 8px;
 }
-:root:not([data-compact]) .mb[data-mod-bar]:not([data-fit="roomy"]) > .mb-key.mb-gap {
+:root:not([data-compact]) .mb[data-mod-bar][data-fit="tight"] > .mb-key.mb-gap {
   margin-left: 4px;
 }
 
-/* ---- A narrow bar (data-fit, set by ModBar's useBarFit) ------------------- */
-/* Always one row. Tight: keys sit closer (Non-recipe is its bolt, Arrange its label's width, the faces two and a +N:
-   ModBar). Folded: Plans and Share are their pictures. The tabs give way past that: they scroll, down to their +. */
+/* ---- A narrow bar (data-fit) ------------------------------------------------ */
+/* Always one row, nothing in a menu. The desktop top bar (ModBar's useTopBarFit): roomy, then icons (Plans, Share and
+   Sign in are icon keys like feedback, settings and help: React swaps them), then tight (the gaps close, the faces are
+   two and a +N). The tabs scroll; the open plan's tab and the + never give way (the .mt min-width holds both). A phone's
+   bar and the board toolbar use useBarFit: tight keys sit closer (Non-recipe is its bolt, Arrange its label's width);
+   folded the same. */
 .mt {
   min-width: 68px;
 }
@@ -625,12 +628,6 @@
 .mb[data-fit="folded"] .mb-key[data-glyph="bolt"] {
   padding: 0 6px;
 }
-:root:not([data-compact]) .mb[data-mod-bar][data-fit="folded"] > .mt {
-  min-width: 18px;
-}
-:root:not([data-compact]) .mb[data-mod-bar][data-fit="folded"] > .mb-key[data-icon] {
-  width: 16px;
-}
 
 /* The account key: the account's face, initials in its colour, square and flat as the live faces. */
 .mb-me {
@@ -647,7 +644,7 @@
 /* The board's toolbar: no band. It floats over the board's top edge (BoardToolbar sits inside the board's box), keys
    only: the strip lets the board take every press, the two groups (left: Non-recipe, undo, redo; right: Arrange, Fit,
    the rate, EU/t, Avg) catch their own. When the groups do not fit one row the right one drops to a second row, still
-   at the right. A task board's header floats the same way. */
+   at the right; a board too narrow for the right group alone wraps its keys, so none is cut off. A task board's header floats the same way. */
 .mb.mb-strip {
   position: absolute;
   top: 0;
@@ -667,6 +664,7 @@
 }
 .mb-strip .mb-group {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
   gap: 3px;
   pointer-events: auto;

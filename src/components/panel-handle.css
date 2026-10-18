@@ -1,0 +1,42 @@
+/*
+ * The resize handle on a side column's board-side edge (PanelHandle.tsx): a thin strip inside the column, a line that
+ * shows when the pointer is over it or the keyboard is on it, the gold of a held control while it is dragged.
+ */
+.panel-handle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  z-index: 50;
+  width: 7px;
+  cursor: col-resize;
+  touch-action: none;
+  outline: none;
+}
+.panel-handle[data-edge="right"] {
+  right: 0;
+}
+.panel-handle[data-edge="left"] {
+  left: 0;
+}
+.panel-handle::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: transparent;
+  transition: background-color 0.12s;
+}
+.panel-handle[data-edge="right"]::after {
+  right: 0;
+}
+.panel-handle[data-edge="left"]::after {
+  left: 0;
+}
+.panel-handle:hover::after,
+.panel-handle:focus-visible::after {
+  background: #5a5c65;
+}
+.panel-handle[data-dragging]::after {
+  background: #ffd257;
+}

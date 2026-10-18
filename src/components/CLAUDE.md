@@ -55,7 +55,20 @@ The board has its own notes in `flow/CLAUDE.md`, the Pool worksheet in `pool/CLA
   recipe section to an existing card (`addRecipeToNode`).
 ## Inspector and panels
 
-- Right resource column 234 shell px, left items panel 256 (desktop and drawer caps).
+- Right resource column 234 shell px, left items panel 256 (classic boards and the phone's drawers; fixed).
+- A plan board's two side columns (the overview, the items list; swapped by Settings, Item browser) are resizable and
+  give way to the board. A handle on each column's board-side edge (`PanelHandle`: drag, double-click for the default,
+  arrow keys) sets its width, kept per device (`overviewWidth` 336 by default, 224 to 480; `itemsWidth` 256, 108 to 420,
+  which is three item columns). Widths are shell px and the pointer is real px: divide by `getUiScale()`. The grid is
+  written straight onto `main` (`usePanelFit`, from the pure `fitPanels` in `src/lib/workspace-columns.ts`), never through
+  React per frame or per drag step (a drag writes only the dragged width and saves on release), and `BoardColumn` is
+  memoised so a fold never rebuilds the board. The board keeps `BOARD_MIN_WIDTH` (the toolbar's one row with its labels)
+  while a column can still give way: both shrink toward their least in proportion to what they have over it, then the
+  items list folds to its strip, then the overview. The window's fold is derived state (`itemsAutoFolded`); the player's
+  own folds (`leftPanelOpen`, the rail's `open`) are never written by it, so a column comes back as the window widens.
+  A click on a strip, or a resource browsed (`requestPanelOpen`, `src/lib/panel-force.ts`), opens a window-folded column
+  anyway and the other gives way. The overview's machine lines fit their text to the rail's measured width. Re-measure
+  `BOARD_MIN_WIDTH` when a key is added to the board toolbar.
 - The items column is NEI's list (`ResourceIndexPane`, `nei/nei.css`): page keys and n/m at the top, 32 px slots
   of art alone, a Minecraft tooltip at once (`nei/McTip`), R/U over a slot, filters and sort in one menu key. Its
   search field (`searchAt`) is a body portal at the bottom middle of the screen; on a phone, under Welcome or the

@@ -1,6 +1,12 @@
 "use client";
 
 import { useSyncExternalStore } from "react";
+import {
+  clampItemsWidth,
+  clampOverviewWidth,
+  ITEMS_DEFAULT_WIDTH,
+  OVERVIEW_DEFAULT_WIDTH,
+} from "./workspace-columns";
 
 /**
  * The planner's device settings: the mod's settings box, kept in this browser
@@ -26,6 +32,10 @@ export interface DeviceSettings {
   scrollChangesValues: boolean;
   /** "Item browser": on plan boards the items list on the left and the overview on the right (the other way round). */
   itemsLeft: boolean;
+  /** The overview column's width the player set by dragging its edge (shell px; the window may show it narrower). */
+  overviewWidth: number;
+  /** The items list's width, set the same way. */
+  itemsWidth: number;
   /** The settings box's open section, kept so it opens where it was left. */
   settingsSection: string;
 }
@@ -42,6 +52,8 @@ export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   problemOutlines: true,
   scrollChangesValues: true,
   itemsLeft: false,
+  overviewWidth: OVERVIEW_DEFAULT_WIDTH,
+  itemsWidth: ITEMS_DEFAULT_WIDTH,
   settingsSection: "Board",
 };
 
@@ -79,6 +91,14 @@ export function parseDeviceSettings(raw: string | null): DeviceSettings {
         typeof parsed.itemsLeft === "boolean"
           ? parsed.itemsLeft
           : DEFAULT_DEVICE_SETTINGS.itemsLeft,
+      overviewWidth:
+        typeof parsed.overviewWidth === "number"
+          ? clampOverviewWidth(parsed.overviewWidth)
+          : DEFAULT_DEVICE_SETTINGS.overviewWidth,
+      itemsWidth:
+        typeof parsed.itemsWidth === "number"
+          ? clampItemsWidth(parsed.itemsWidth)
+          : DEFAULT_DEVICE_SETTINGS.itemsWidth,
       settingsSection:
         typeof parsed.settingsSection === "string"
           ? parsed.settingsSection

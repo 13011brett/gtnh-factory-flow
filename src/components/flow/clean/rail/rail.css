@@ -191,8 +191,20 @@
   display: flex;
   align-items: center;
   gap: 5px;
+  min-width: 0;
   color: var(--rail-muted);
   font-variant-numeric: tabular-nums;
+}
+/* A narrow rail (the player dragged its edge in) keeps the title, the count and the key whole: the figure gives. */
+.rail-sec-title,
+.rail-sec-badge {
+  flex: none;
+}
+.rail-sec-end > span {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .rail-empty {

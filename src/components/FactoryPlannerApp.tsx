@@ -7,8 +7,8 @@ import {
   resolveProjectRecipes,
 } from "@/lib/datasets/refresh-project-recipes";
 import type { Recipe } from "@/lib/model/types";
-import { useDeviceSettings } from "@/lib/device-settings";
-import { useCallback, useEffect, useRef, type CSSProperties, type ReactNode } from "react";
+import { useDeviceSettings, writeDeviceSettings } from "@/lib/device-settings";
+import { memo, useCallback, useEffect, useRef, type CSSProperties, type ReactNode } from "react";
 import {
   DEFAULT_DATASET_MANIFEST_URL,
   fetchDatasetManifest,
@@ -52,9 +52,20 @@ import { useBoardSoundEffects } from "./flow/use-board-sound-effects";
 import { InspectorPanel } from "./InspectorPanel";
 import { PanelDrawer } from "./PanelDrawer";
 import { usePlanLayout } from "./use-plan-layout";
-import { PlanOverview, usePlanOverviewWidth } from "./PlanOverviewMount";
+import { PlanOverview } from "./PlanOverviewMount";
 import { ColumnStrip } from "./flow/clean/rail/OverviewRail";
-import { INSPECTOR_WIDTH, ITEMS_WIDTH, PANEL_RAIL_WIDTH, workspaceColumns } from "@/lib/workspace-columns";
+import { useRailView } from "./flow/clean/rail/rail-view";
+import { PanelHandle } from "./PanelHandle";
+import { usePanelFit, type PanelFitState } from "./use-panel-fit";
+import { requestPanelOpen, type SidePanel } from "@/lib/panel-force";
+import {
+  INSPECTOR_WIDTH,
+  ITEMS_DEFAULT_WIDTH,
+  ITEMS_WIDTH,
+  OVERVIEW_DEFAULT_WIDTH,
+  PANEL_RAIL_WIDTH,
+  workspaceColumns,
+} from "@/lib/workspace-columns";
 import { RecipeBrowser } from "./RecipeBrowser";
 import { FoldGlyph } from "./flow/clean/fold/FoldKey";
 
@@ -362,6 +373,8 @@ function RecipeBookOpener() {
     writeWorkspaceView(
       isCompact ? { leftPanelOpen: true, rightPanelOpen: false } : { leftPanelOpen: true },
     );
+    // A window narrow enough to have folded the column opens it for this.
+    if (!isCompact) requestPanelOpen("items");
   }, [browsedResource, isCompact]);
 
   return null;
@@ -386,8 +399,8 @@ function PlacementRevealer() {
   return null;
 }
 
-/** The board and its plan details, below the shared application bar. */
-function BoardColumn() {
+/** The board and its plan details, below the shared application bar. Memoised: the workspace around it re-renders when a column folds, never the board. */
+const BoardColumn = memo(function BoardColumn() {
   const covering = useCoveringPage();
   const publicView = useDesignStore((state) => state.publicView);
   // The mod's bar renames in the tab menu and describes in the share box: no identity strip on a desktop board.
@@ -431,7 +444,7 @@ function BoardColumn() {
       </div>
     </div>
   );
-}
+});
 
 /**
  * Which page, if any, is covering the board. Welcome and the shelf never show
@@ -459,30 +472,58 @@ export function ColumnWorkspace({ workspace, onLoadDatasetVersion, header }: Wor
   const covering = useCoveringPage();
   const poolMode = useFactoryStore((state) => state.project.poolMode === true);
   const planLayout = usePlanLayout();
-  const overviewWidth = usePlanOverviewWidth();
   const worksheet = poolMode;
   // A task board has no overview (the game's): its columns take the overview's room too.
   const taskBoard = useFactoryStore((state) => TASKS_ENABLED && state.project.primaryView === "tasks");
-  const itemsLeft = useDeviceSettings().itemsLeft;
-  const columns = workspaceColumns({
+  const settings = useDeviceSettings();
+  const itemsLeft = settings.itemsLeft;
+  const railOpen = useRailView().open;
+  const hideBoardPanels = Boolean(covering) || worksheet || (taskBoard && planLayout);
+  // Plan boards: the two side columns have the widths the player dragged them to and give way to the board as the
+  // window narrows (src/lib/workspace-columns.ts, fitPanels); the grid is written onto `main` as the window resizes.
+  const mainRef = useRef<HTMLElement>(null);
+  const fit = usePanelFit(
+    mainRef,
+    {
+      itemsOpen: workspace.leftPanelOpen,
+      overviewOpen: railOpen,
+      itemsWidth: settings.itemsWidth,
+      overviewWidth: settings.overviewWidth,
+      covering: hideBoardPanels,
+      itemsLeft,
+    },
     planLayout,
-    itemsOpen: workspace.leftPanelOpen,
-    inspectorOpen: workspace.rightPanelOpen,
-    hideBoardPanels: Boolean(covering) || worksheet || (taskBoard && planLayout),
-    overviewWidth,
-    itemsLeft,
-  });
+  );
+  const columns = planLayout
+    ? fit.initial
+    : workspaceColumns({
+        itemsOpen: workspace.leftPanelOpen,
+        inspectorOpen: workspace.rightPanelOpen,
+        hideBoardPanels,
+      });
   // Plan boards: which grid column the overview and the items take (the board is always the middle one).
   const overviewColumn = columns.itemsSide === "left" ? 3 : 1;
   const itemsColumn = columns.itemsSide === "left" ? 1 : 3;
+  const itemsOpen = planLayout ? fit.itemsOpen : workspace.leftPanelOpen;
+  // The handle sits on each column's board-side edge.
+  const itemsEdge = columns.itemsSide === "left" ? "right" : "left";
+  const overviewEdge = itemsEdge === "left" ? "right" : "left";
 
-  const items = workspace.leftPanelOpen ? (
+  const items = itemsOpen ? (
     <ViewerAwareBrowser onLoadDatasetVersion={onLoadDatasetVersion} />
   ) : (
     <PanelRail side={columns.itemsSide} label="Items" />
   );
   const overview =
-    covering || taskBoard ? <div /> : <PlanOverview side={columns.itemsSide === "left" ? "right" : "left"} />;
+    covering || taskBoard ? (
+      <div />
+    ) : (
+      <PlanOverview
+        side={columns.itemsSide === "left" ? "right" : "left"}
+        open={fit.overviewOpen}
+        onOpen={() => requestPanelOpen("overview")}
+      />
+    );
 
   return (
     <>
@@ -491,6 +532,7 @@ export function ColumnWorkspace({ workspace, onLoadDatasetVersion, header }: Wor
           rail wide enough for one button, so the way back is always on screen
           and the board never has to give the width back to a hover target. */}
       <main
+        ref={mainRef}
         data-items-side={columns.itemsSide}
         data-plan-layout={planLayout ? "" : undefined}
         data-left-px={columns.leftPx}
@@ -516,14 +558,18 @@ export function ColumnWorkspace({ workspace, onLoadDatasetVersion, header }: Wor
             owns its header, so it stays a direct grid item with no wrapper. */}
         {header ? (
           <>
-            <div className="grid min-h-0 min-w-0" style={{ gridColumn: overviewColumn, gridRow: 2 }}>
+            <div className="relative grid min-h-0 min-w-0" style={{ gridColumn: overviewColumn, gridRow: 2 }}>
               {overview}
+              {fit.overviewOpen && !taskBoard ? (
+                <SidePanelHandle panel="overview" edge={overviewEdge} fit={fit} />
+              ) : null}
             </div>
             <div className="grid min-h-0 min-w-0" style={{ gridColumn: 2, gridRow: 2 }}>
               <BoardColumn />
             </div>
-            <div className="grid min-h-0 min-w-0" style={{ gridColumn: itemsColumn, gridRow: 2 }}>
+            <div className="relative grid min-h-0 min-w-0" style={{ gridColumn: itemsColumn, gridRow: 2 }}>
               {items}
+              {itemsOpen ? <SidePanelHandle panel="items" edge={itemsEdge} fit={fit} /> : null}
             </div>
           </>
         ) : null}
@@ -538,6 +584,26 @@ export function ColumnWorkspace({ workspace, onLoadDatasetVersion, header }: Wor
         )}
       </main>
     </>
+  );
+}
+
+/** The handle on a side column's board-side edge: drag to set its width, double-click for the default. */
+function SidePanelHandle({ panel, edge, fit }: { panel: SidePanel; edge: "left" | "right"; fit: PanelFitState }) {
+  const items = panel === "items";
+  return (
+    <PanelHandle
+      label={items ? "Resize the items list" : "Resize the overview"}
+      edge={edge}
+      getWidth={() => fit.widthOf(panel)}
+      getLimits={() => fit.limitsOf(panel)}
+      onStart={() => fit.setResizing(true)}
+      onDrag={(width) => fit.preview(panel, width)}
+      onCommit={(width) => writeDeviceSettings(items ? { itemsWidth: width } : { overviewWidth: width })}
+      onReset={() =>
+        writeDeviceSettings(items ? { itemsWidth: ITEMS_DEFAULT_WIDTH } : { overviewWidth: OVERVIEW_DEFAULT_WIDTH })
+      }
+      onEnd={() => fit.setResizing(false)}
+    />
   );
 }
 
@@ -607,8 +673,11 @@ const TASKS_ENABLED = isLiveConfigured();
  */
 function PanelRail({ side, label }: { side: "left" | "right"; label: "Items" | "Resources" }) {
   // The flag follows what the column holds, not which side it sits on.
-  const open = () =>
+  const open = () => {
     writeWorkspaceView(label === "Items" ? { leftPanelOpen: true } : { rightPanelOpen: true });
+    // A window narrow enough to have folded it keeps it open now.
+    if (label === "Items") requestPanelOpen("items");
+  };
   // The items column folds to the overview's own strip (the owner: both folded columns look and work the same).
   if (label === "Items") return <ColumnStrip label="ITEMS" open="Open the items" side={side} onOpen={open} />;
 

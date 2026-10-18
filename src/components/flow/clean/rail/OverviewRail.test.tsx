@@ -130,6 +130,28 @@ it("opens folded away when asked to stay open (the compact drawer)", () => {
   expect(container.querySelector(".rail-root")).toBeTruthy();
 });
 
+it("shows as the strip when the window folds it, whatever the player's own fold, and a click on it tells the workspace", () => {
+  load(mockLeftovers);
+  const onOpen = vi.fn();
+  const { container } = render(<OverviewRail open={false} onOpen={onOpen} />);
+  expect(container.querySelector(".rail-strip")).toBeTruthy();
+  expect(container.querySelector(".rail-root")).toBeNull();
+  fireEvent.click(screen.getByLabelText("Open the overview"));
+  expect(onOpen).toHaveBeenCalledTimes(1);
+  // The click is also the player's own open: nothing about the fold they made is overwritten by the window's.
+  expect(JSON.parse(window.localStorage.getItem(RAIL_VIEW_STORAGE_KEY)!).open).toBe(true);
+});
+
+it("open from the workspace overrides the stored fold, and the drawer still opens it regardless", () => {
+  load(mockLeftovers);
+  writeRailView({ open: false });
+  const shown = render(<OverviewRail open />);
+  expect(shown.container.querySelector(".rail-root")).toBeTruthy();
+  cleanup();
+  const drawer = render(<OverviewRail open={false} forceOpen />);
+  expect(drawer.container.querySelector(".rail-root")).toBeTruthy();
+});
+
 it("lights a resource on the board while its row is hovered", () => {
   load(mockLeftovers);
   const { container } = render(<OverviewRail />);

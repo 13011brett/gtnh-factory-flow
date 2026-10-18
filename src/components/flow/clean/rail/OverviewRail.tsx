@@ -3,11 +3,14 @@
 import "./rail.css";
 import { fluidSwatchStyle } from "../fluid-swatch";
 import { wheelChangesValues } from "@/lib/device-settings";
+import { OVERVIEW_DEFAULT_WIDTH, PANEL_RAIL_WIDTH } from "@/lib/workspace-columns";
 
 import { Zap } from "lucide-react";
 import {
+  createContext,
   memo,
   useCallback,
+  useContext,
   useEffect,
   useLayoutEffect,
   useMemo,
@@ -86,14 +89,17 @@ const TASKS_ENABLED = isLiveConfigured();
  * strip (kept per device). Hovering a row lights its resource on the board.
  */
 
-export const RAIL_WIDTH = 336;
-export const RAIL_FOLDED_WIDTH = 26;
+/** The rail's width unless the player drags its edge (a plan board's workspace, `fitPanels`). */
+export const RAIL_WIDTH = OVERVIEW_DEFAULT_WIDTH;
+export const RAIL_FOLDED_WIDTH = PANEL_RAIL_WIDTH;
 /** The rail's type: Monocraft at 13 px (the mod's 8 px at the rail's 336 against its 198: its size on screen). */
 export const RAIL_FONT = 13;
 /** A rule key, a gap and a rate box: the controls' block at a line's right (the mod's 12 + 2 + 38 of its 198). */
 export const CONTROLS_W = 88;
-/** A machine line's room between its left indent (30) and the right padding (8). */
-const MACHINE_INNER = RAIL_WIDTH - 30 - 8;
+/** A machine line's room is the rail's width less its left indent (30) and the right padding (8). */
+const MACHINE_INDENT = 30 + 8;
+/** The rail's width as it is now (shell px), for the lines that fit their text to it. */
+const RailWidthContext = createContext(RAIL_WIDTH);
 
 const INK: Record<string, string> = {
   INPUTS: CC.source,
@@ -106,11 +112,6 @@ const SIGN: Record<"inputs" | "outputs" | "internal", string> = {
   outputs: "+",
   internal: "",
 };
-
-/** The column's width for the grid that hosts it. */
-export function useRailColumnWidth(): number {
-  return useRailView().open ? RAIL_WIDTH : RAIL_FOLDED_WIDTH;
-}
 
 /** "×" count text, the mod's `Fmt.machines`. */
 export function machinesText(count: number): string {
@@ -187,24 +188,34 @@ interface RailState {
   menu: (drawer: RailDrawer, x: number, y: number) => void;
 }
 
-/** The whole rail. */
+/**
+ * The whole rail. `open` is whether it shows: the player's fold, and the window's on top of it (a plan board's
+ * workspace); a click on the strip opens it as the player's choice and tells `onOpen` (a window that folded it keeps it
+ * open then).
+ */
 export function OverviewRail({
   forceOpen = false,
   side = "left",
-}: { forceOpen?: boolean; side?: "left" | "right" } = {}) {
+  open,
+  onOpen,
+}: { forceOpen?: boolean; side?: "left" | "right"; open?: boolean; onOpen?: () => void } = {}) {
   const view = useRailView();
-  if (!view.open && !forceOpen) return <FoldedStrip side={side} />;
-  return <OpenRail side={side} />;
+  if (!(open ?? view.open) && !forceOpen) return <FoldedStrip side={side} onOpen={onOpen} />;
+  // A phone's drawer keeps the lines as they were; a column follows the width the player gave it.
+  return <OpenRail side={side} fitWidth={!forceOpen} />;
 }
 
-function FoldedStrip({ side }: { side: "left" | "right" }) {
+function FoldedStrip({ side, onOpen }: { side: "left" | "right"; onOpen?: () => void }) {
   return (
     <ColumnStrip
       label="OVERVIEW"
       open="Open the overview"
       side={side}
       helpAnchor="overview-rail"
-      onOpen={() => writeRailView({ open: true })}
+      onOpen={() => {
+        writeRailView({ open: true });
+        onOpen?.();
+      }}
     />
   );
 }
@@ -248,7 +259,7 @@ export function ColumnStrip({
   );
 }
 
-function OpenRail({ side }: { side: "left" | "right" }) {
+function OpenRail({ side, fitWidth }: { side: "left" | "right"; fitWidth: boolean }) {
   useRateDisplayUnits();
   const view = useRailView();
   const { rail, spares } = useRailData();
@@ -260,6 +271,20 @@ function OpenRail({ side }: { side: "left" | "right" }) {
   const [wheeled, setWheeled] = useState<Record<string, number>>({});
   const timers = useRef(new Map<string, ReturnType<typeof setTimeout>>());
   const scroller = useRef<HTMLDivElement>(null);
+  const root = useRef<HTMLDivElement>(null);
+  // The rail's width, to the 8 px below it: the lines fit their text to it, and a drag should not redo every line.
+  const [width, setWidth] = useState(RAIL_WIDTH);
+  useLayoutEffect(() => {
+    const el = root.current;
+    if (!fitWidth || !el || typeof ResizeObserver === "undefined") return undefined;
+    const measure = () => {
+      if (el.clientWidth > 0) setWidth(Math.floor(el.clientWidth / 8) * 8);
+    };
+    measure();
+    const observer = new ResizeObserver(measure);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [fitWidth]);
   const [scrollTop, setScrollTop] = useState(0);
   const [viewport, setViewport] = useState(600);
   const listWheelAt = useRef(0);
@@ -369,7 +394,9 @@ function OpenRail({ side }: { side: "left" | "right" }) {
   const euText = `${formatCompact(powerDisplayFromEuT(peak ? rail.power.peak.used : rail.power.average.used))} ${powerDisplaySuffix()}`;
 
   return (
+    <RailWidthContext.Provider value={width}>
     <div
+      ref={root}
       className="rail-root"
       data-side={side}
       data-help-anchor="overview-rail"
@@ -427,6 +454,7 @@ function OpenRail({ side }: { side: "left" | "right" }) {
         <RuleMenu drawer={menu.drawer} x={menu.x} y={menu.y} onClose={() => setMenu(null)} />
       ) : null}
     </div>
+    </RailWidthContext.Provider>
   );
 }
 
@@ -1062,6 +1090,7 @@ const MachineRow = memo(function MachineRow({
   state: RailState;
 }) {
   useFontEpoch();
+  const railWidth = useContext(RailWidthContext);
   const [hot, setHot] = useState(false);
   const colors = entry.tier ? tierChipColors(entry.tier) : undefined;
   const countKey = `count:${entry.nodeId}`;
@@ -1081,7 +1110,8 @@ const MachineRow = memo(function MachineRow({
   const reason = shownReason(entry.upTo);
   const countText = `×${machinesText(entry.count)}`;
   const room =
-    MACHINE_INNER -
+    railWidth -
+    MACHINE_INDENT -
     CONTROLS_W -
     18 -
     3 -

@@ -15,6 +15,8 @@ describe("device settings", () => {
       problemOutlines: true,
       scrollChangesValues: true,
       itemsLeft: false,
+      overviewWidth: 336,
+      itemsWidth: 256,
       settingsSection: "Board",
     });
     expect(parseDeviceSettings(null)).toBe(DEFAULT_DEVICE_SETTINGS);
@@ -62,6 +64,17 @@ describe("device settings", () => {
     resetDeviceSettingsForTests();
   });
 
+  it("keeps the side columns' widths the player dragged, held inside their limits, and drops a wrong kind", () => {
+    const read = parseDeviceSettings(JSON.stringify({ overviewWidth: 300, itemsWidth: 180 }));
+    expect([read.overviewWidth, read.itemsWidth]).toEqual([300, 180]);
+    // Outside the limits the value is held to them (a width kept before they moved still opens).
+    const wild = parseDeviceSettings(JSON.stringify({ overviewWidth: 40, itemsWidth: 9000 }));
+    expect([wild.overviewWidth, wild.itemsWidth]).toEqual([224, 420]);
+    const wrong = parseDeviceSettings(JSON.stringify({ overviewWidth: "wide", itemsWidth: null }));
+    expect([wrong.overviewWidth, wrong.itemsWidth]).toEqual([336, 256]);
+    expect(parseDeviceSettings("{}").overviewWidth).toBe(336);
+  });
+
   it("ignores values of the wrong kind", () => {
     const read = parseDeviceSettings(JSON.stringify({ zoomedOutNames: "yes", settingsSection: 4 }));
     expect(read).toEqual(DEFAULT_DEVICE_SETTINGS);
@@ -77,6 +90,8 @@ describe("device settings", () => {
       problemOutlines: true,
       scrollChangesValues: true,
       itemsLeft: false,
+      overviewWidth: 336,
+      itemsWidth: 256,
       settingsSection: "Board",
     });
   });

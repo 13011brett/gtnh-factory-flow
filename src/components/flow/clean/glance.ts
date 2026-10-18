@@ -7,6 +7,7 @@
 import type { CSSProperties } from "react";
 import type { PlanUpTo } from "@/lib/solver/plan/types";
 import type { FootTone } from "./clean-model";
+import { artRatio } from "@/lib/power/structure-art-ratios";
 
 /** The bar a zoomed-out face draws: how full (0 to 1), in which tone, and the reason's word (empty for none). */
 export interface GlanceBar {
@@ -51,10 +52,13 @@ export function glanceFace(
     "linear-gradient(var(--glance-track), var(--glance-track))",
     ...(art ? [art] : []),
   ];
+  // The picture's width over its height, so it stays whole over the bar however tall the card (clean.css).
+  const ratio = artRatio(art?.match(/^url\(["']?(.*?)["']?\)$/)?.[1]);
   return {
     style: {
       backgroundImage: layers.join(", "),
       ["--glance-fill" as string]: `${Math.round(bar.fill * 1000) / 10}%`,
+      ...(ratio !== 1 ? { ["--glance-art-ratio" as string]: String(ratio) } : {}),
     } as CSSProperties,
     "data-bar": "",
     "data-tone": bar.tone,

@@ -38,4 +38,13 @@ describe("the zoomed-out bar", () => {
     });
     expect(glanceFace(undefined, undefined).style).toBeUndefined();
   });
+
+  it("carries a structure render's width over height, so a tall card keeps it whole", () => {
+    const bar = { tone: "clogged" as const, fill: 0.5, word: "CLOGGED" };
+    const reactor = glanceFace("url(/power-art/large-chemical-reactor.png)", bar).style as Record<string, string>;
+    expect(Number(reactor["--glance-art-ratio"])).toBeCloseTo(4 / 3, 2);
+    // An icon is square: the stylesheet's default.
+    const icon = glanceFace("url(/icons/x.png)", bar).style as Record<string, string>;
+    expect(icon["--glance-art-ratio"]).toBeUndefined();
+  });
 });

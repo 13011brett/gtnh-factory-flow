@@ -1031,17 +1031,21 @@
   --glance-bar-h: 36px;
   --glance-track: #17191d;
   --glance-fill-ink: color-mix(in srgb, var(--glance-tone) 45%, #17191d);
+  /* The picture's widest: the card's 320 less 12 a side. With its width over height (--glance-art-ratio, glance.ts)
+     it stays whole on a tall card (a shared machine's), as the mod fits it: sized by the height alone it ran to
+     twice the card's width there and showed a blown-up middle. Centred in the room above the bar. */
+  --glance-art-w: 296px;
   display: flex;
   align-items: flex-end;
   padding-bottom: 0;
   background-position:
     left bottom,
     left bottom,
-    center 12px;
+    center calc(50% - var(--glance-bar-h) / 2);
   background-size:
     var(--glance-fill) var(--glance-bar-h),
     100% var(--glance-bar-h),
-    auto calc(100% - var(--glance-bar-h) - 18px);
+    auto min(calc(100% - var(--glance-bar-h) - 18px), calc(var(--glance-art-w) / var(--glance-art-ratio, 1)));
   background-origin: border-box, border-box, border-box;
   font-size: 24px;
   line-height: var(--glance-bar-h);

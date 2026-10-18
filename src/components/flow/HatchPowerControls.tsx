@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState, type ReactNode } from "react";
+import { wheelChangesValues } from "@/lib/device-settings";
 import { createPortal } from "react-dom";
 import { isTouchPointer } from "@/lib/pointer-kind";
 import { isCompactViewport } from "@/lib/compact-view";
@@ -567,6 +568,7 @@ export function HatchPowerControls({
               stepAmount(-1);
             }}
             onWheel={(e) => {
+              if (!wheelChangesValues()) return;
               e.stopPropagation();
               if (e.shiftKey && !e.ctrlKey && !e.metaKey && !raw) {
                 change(tier, stepPowerOfFourAmps(amps, e.deltaY < 0 ? 1 : -1));
@@ -592,6 +594,7 @@ export function HatchPowerControls({
             stepUnit(-1);
           }}
           onWheel={(e) => {
+            if (!wheelChangesValues()) return;
             e.stopPropagation();
             stepUnit(e.deltaY < 0 ? 1 : -1);
           }}

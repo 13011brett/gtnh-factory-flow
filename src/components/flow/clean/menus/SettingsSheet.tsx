@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useRef, useState } from "react";
+import { wheelChangesValues } from "@/lib/device-settings";
 import type { FormulaLine, FormulaTerm } from "@/lib/machines/formula-lines";
 import { useFactoryStore } from "@/store/factory-store";
 import { ArtBox } from "./ArtBox";
@@ -126,7 +127,9 @@ export function SettingsSheet({ nodeId, anchor, onClose }: { nodeId: string; anc
                     className="cs-row"
                     data-warn={control.warn ? "" : undefined}
                     onWheel={(event) => {
-                      if (!locked) step(control, event.deltaY < 0 ? 1 : -1);
+                      if (!locked && wheelChangesValues()) {
+                        step(control, event.deltaY < 0 ? 1 : -1);
+                      }
                     }}
                     onContextMenu={(event) => {
                       event.preventDefault();

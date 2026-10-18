@@ -39,6 +39,7 @@ import { ensureInteractionHost, tipAttrs } from "../interaction";
 import { startPromptClock } from "../../virtual/prompt-phase";
 import type { TargetMode } from "@/lib/model/storage-target";
 import { playEditSfx } from "@/lib/sound/sfx";
+import { wheelChangesValues } from "@/lib/device-settings";
 
 /** A press that moved this far (screen px) before release is a drag, not a click. */
 const CLICK_SLOP = 3;
@@ -204,13 +205,13 @@ export function CleanDrawer({
   }, [rule.open]);
 
   useNativeWheel(keyEl, (event) => {
-    if (locked || event.ctrlKey || event.deltaY === 0 || !view.hasRule) return;
+    if (locked || event.ctrlKey || event.deltaY === 0 || !view.hasRule || !wheelChangesValues()) return;
     event.preventDefault();
     event.stopPropagation();
     stepRule(event.deltaY > 0 ? 1 : -1);
   });
   useNativeWheel(box, (event) => {
-    if (locked || !view.hasRule || event.deltaY === 0) return;
+    if (locked || !view.hasRule || event.deltaY === 0 || !wheelChangesValues()) return;
     event.preventDefault();
     event.stopPropagation();
     const up = event.deltaY < 0;
@@ -458,6 +459,7 @@ export function CleanDrawer({
               role="button"
               tabIndex={0}
               className="cd-key nodrag nowheel"
+              data-wheel-value=""
               data-cd-key=""
               data-menu-anchor=""
               data-mark={view.ruleMark}
@@ -494,6 +496,7 @@ export function CleanDrawer({
               role={view.kind === "trash" ? undefined : "button"}
               tabIndex={view.kind === "trash" ? undefined : 0}
               className="cd-box nodrag nowheel"
+              data-wheel-value=""
               data-editing={editing ? "" : undefined}
               {...(view.kind === "trash" ? tipAttrs(view.tips.body) : tipAttrs(view.tips.rate))}
               aria-label={

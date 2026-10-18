@@ -2,6 +2,7 @@
 
 import "./rail.css";
 import { fluidSwatchStyle } from "../fluid-swatch";
+import { wheelChangesValues } from "@/lib/device-settings";
 
 import { Zap } from "lucide-react";
 import {
@@ -299,7 +300,10 @@ function OpenRail({ side }: { side: "left" | "right" }) {
     if (!el) return undefined;
     const onWheel = (event: WheelEvent) => {
       const now = Date.now();
-      const handler = now - listWheelAt.current > 400 ? wheelHandlerFor(event.target) : undefined;
+      const handler =
+        now - listWheelAt.current > 400 && wheelChangesValues()
+          ? wheelHandlerFor(event.target)
+          : undefined;
       if (handler) {
         event.preventDefault();
         handler(event.deltaY < 0 ? 1 : -1, event.ctrlKey, event.shiftKey);

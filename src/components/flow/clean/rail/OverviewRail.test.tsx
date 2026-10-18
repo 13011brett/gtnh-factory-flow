@@ -9,6 +9,7 @@ import {
 import type { FactoryProject, ThroughputResult } from "@/lib/model/types";
 import type { PlanNote } from "@/lib/solver/plan/types";
 import { useFactoryStore } from "@/store/factory-store";
+import { writeDeviceSettings } from "@/lib/device-settings";
 import { OverviewRail } from "./OverviewRail";
 import { pinCount } from "./rail-actions";
 import { PlanNoticeStack } from "./NoticeBar";
@@ -563,6 +564,27 @@ it("steps a rate with the wheel: shown at once, one undo step when the wheel goe
     ).toBe(114);
   } finally {
     vi.useRealTimers();
+  }
+});
+
+it("steps nothing with the wheel when Scroll changes values is off: the list keeps the wheel", () => {
+  writeDeviceSettings({ scrollChangesValues: false });
+  try {
+    load(mockUnneeded);
+    const { container } = render(<OverviewRail />);
+    const box = container.querySelector(
+      '[data-resource-row="item:Iron Ingot"] .rail-box',
+    ) as HTMLElement;
+    const before = box.textContent;
+    const event = new WheelEvent("wheel", { deltaY: -100, bubbles: true, cancelable: true });
+    act(() => {
+      box.dispatchEvent(event);
+    });
+    expect(event.defaultPrevented).toBe(false);
+    expect(box.textContent).toBe(before);
+    expect(useFactoryStore.getState().undoHistory).toHaveLength(0);
+  } finally {
+    writeDeviceSettings({ scrollChangesValues: true });
   }
 });
 

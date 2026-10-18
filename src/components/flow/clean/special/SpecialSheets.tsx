@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { wheelChangesValues } from "@/lib/device-settings";
 import { MenuPortal, anchorOf, type MenuAnchor } from "../menus/MenuPortal";
 import { OptionListMenu } from "../menus/OptionListMenu";
 
@@ -93,7 +94,9 @@ export function SpecialSheet({
                   className="cs-row"
                   style={row.enabled ? undefined : { opacity: 0.45 }}
                   onWheel={(event) => {
-                    if (!locked && row.enabled) row.onStep(event.deltaY < 0 ? 1 : -1);
+                    if (!locked && row.enabled && wheelChangesValues()) {
+                      row.onStep(event.deltaY < 0 ? 1 : -1);
+                    }
                   }}
                   onContextMenu={(event) => {
                     event.preventDefault();

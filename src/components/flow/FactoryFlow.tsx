@@ -315,7 +315,7 @@ import { GT_TIER_COLORS } from "./tier-colors";
 import { isPowerDisplayUnit, type RateUnit } from "@/lib/model/rate-unit";
 import { useIsCompactViewport } from "@/lib/compact-view";
 import { useUiScale } from "@/lib/ui-scale";
-import { subscribeDeviceSettings } from "@/lib/device-settings";
+import { subscribeDeviceSettings, wheelChangesValues } from "@/lib/device-settings";
 import { BOARD_TOOL_SCALE, useToolbarFold } from "./toolbar-fold";
 import { browseHoveredPort } from "./port-browse";
 import { useBoardTouchGestures } from "./board-touch-gestures";
@@ -7464,6 +7464,7 @@ const SourceToolbar = memo(function SourceToolbar({
             onWheel={(event) => {
               // The key is also a wheel dial: scroll up climbs the ladder,
               // clamped at the ends. Stopped so the board never zooms.
+              if (!wheelChangesValues()) return;
               event.stopPropagation();
               const index = RATE_UNIT_CHOICES.findIndex((choice) => choice.unit === rateUnit);
               const next = Math.min(
@@ -7531,6 +7532,7 @@ const SourceToolbar = memo(function SourceToolbar({
             onWheel={(event) => {
               // Same wheel dial as the rate key: EU/t is the floor, the
               // tiers climb from it.
+              if (!wheelChangesValues()) return;
               event.stopPropagation();
               const ladder: Array<typeof powerDisplayUnit> = [
                 "eu",

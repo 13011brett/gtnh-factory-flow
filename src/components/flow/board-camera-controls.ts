@@ -1,6 +1,7 @@
 "use client";
 
 import { emitBoardCameraMove } from "@/lib/board-camera-signal";
+import { wheelChangesValues } from "@/lib/device-settings";
 
 import { useEffect } from "react";
 import type { ReactFlowInstance } from "@xyflow/react";
@@ -17,7 +18,8 @@ import { BOARD_MIN_ZOOM, boardMaxZoom } from "./board-camera";
  * cursor, so a burst of notches reads as one dive instead of a run of cuts.
  * Wheels that belong to something else (a `nowheel` popup scrolling its own
  * list, a slot stepping through its alternatives) pass by untouched, the
- * same set d3 skips.
+ * same set d3 skips. A control that steps a value wears `data-wheel-value`;
+ * with "Scroll changes values" off it takes no wheel, so the camera does.
  *
  * MOMENTUM. Velocity is sampled from the VIEWPORT, not the pointer, while a
  * pane drag is down; on release it carries on and dies over about a tenth
@@ -44,6 +46,12 @@ interface Viewport {
   y: number;
   zoom: number;
 }
+
+/** Where the wheel is not the camera's: a popup scrolling its list, a control stepping through choices. */
+const WHEEL_TAKEN = ".nowheel, [data-wheel-steps]";
+/** The same with the value controls left out, for when the wheel changes no value. */
+const WHEEL_TAKEN_BESIDES_VALUES =
+  ".nowheel:not([data-wheel-value]), [data-wheel-steps]:not([data-wheel-value])";
 
 /** How long the zoom takes to close most of the gap to its target. */
 const ZOOM_EASE_TAU_MS = 80;
@@ -278,7 +286,7 @@ export function useBoardCameraControls({
       if (!target?.closest?.(".react-flow")) {
         return;
       }
-      if (target.closest(".nowheel, [data-wheel-steps]")) {
+      if (target.closest(wheelChangesValues() ? WHEEL_TAKEN : WHEEL_TAKEN_BESIDES_VALUES)) {
         return;
       }
       event.preventDefault();

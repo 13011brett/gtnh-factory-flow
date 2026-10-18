@@ -1,6 +1,7 @@
 "use client";
 
 import { useDropdownDismiss } from "@/lib/hooks/use-dropdown-dismiss";
+import { wheelChangesValues } from "@/lib/device-settings";
 
 import {
   ArrowLeftRight,
@@ -324,7 +325,7 @@ export function RecipeSearchOverlay({
     }
     const onWheel = (event: WheelEvent) => {
       const delta = event.deltaY || event.deltaX;
-      if (!delta) {
+      if (!delta || !wheelChangesValues()) {
         return;
       }
       event.preventDefault();
@@ -2455,7 +2456,7 @@ function ResourceChip({
     }
     const onWheel = (event: WheelEvent) => {
       const delta = event.deltaY || event.deltaX;
-      if (!delta) {
+      if (!delta || !wheelChangesValues()) {
         return;
       }
       event.preventDefault();

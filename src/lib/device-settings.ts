@@ -19,6 +19,11 @@ export interface DeviceSettings {
   zoomedOutAt: number;
   /** "Problem outlines": a card with a problem draws its edge in its bar's colour. */
   problemOutlines: boolean;
+  /**
+   * "Scroll changes values": the wheel over a number, chip or key steps it. Off, the wheel never changes a value:
+   * over the board it zooms, elsewhere it scrolls. Handlers ask `wheelChangesValues()`.
+   */
+  scrollChangesValues: boolean;
   /** "Item browser": on plan boards the items list on the left and the overview on the right (the other way round). */
   itemsLeft: boolean;
   /** The settings box's open section, kept so it opens where it was left. */
@@ -35,6 +40,7 @@ export const DEFAULT_DEVICE_SETTINGS: DeviceSettings = {
   zoomedOutNames: true,
   zoomedOutAt: DEFAULT_ZOOMED_OUT_AT,
   problemOutlines: true,
+  scrollChangesValues: true,
   itemsLeft: false,
   settingsSection: "Board",
 };
@@ -65,6 +71,10 @@ export function parseDeviceSettings(raw: string | null): DeviceSettings {
         typeof parsed.problemOutlines === "boolean"
           ? parsed.problemOutlines
           : DEFAULT_DEVICE_SETTINGS.problemOutlines,
+      scrollChangesValues:
+        typeof parsed.scrollChangesValues === "boolean"
+          ? parsed.scrollChangesValues
+          : DEFAULT_DEVICE_SETTINGS.scrollChangesValues,
       itemsLeft:
         typeof parsed.itemsLeft === "boolean"
           ? parsed.itemsLeft
@@ -109,6 +119,15 @@ export function useDeviceSettings(): DeviceSettings {
 
 export function readDeviceSettings(): DeviceSettings {
   return getSnapshot();
+}
+
+/**
+ * Whether the wheel may change a value right now, read when the wheel turns. A handler that steps something returns
+ * early when this is false, before `preventDefault` or `stopPropagation`, so the event goes on to whoever scrolls or
+ * zooms underneath.
+ */
+export function wheelChangesValues(): boolean {
+  return getSnapshot().scrollChangesValues;
 }
 
 export function writeDeviceSettings(patch: Partial<DeviceSettings>): void {

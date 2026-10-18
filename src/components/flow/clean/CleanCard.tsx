@@ -35,6 +35,7 @@ import { isLiveConfigured } from "@/lib/live/live-config";
 /** Task boards come with live plans: no Add to a task row without them. */
 const TASKS_ENABLED = isLiveConfigured();
 import { checklistLocked } from "../RecipeNode";
+import { wheelChangesValues } from "@/lib/device-settings";
 import { MobPickerMenu } from "../MobPickerMenu";
 import { isControllerSlotInput } from "@/lib/model/free-input";
 import type {
@@ -415,6 +416,7 @@ export function CountBox({
       role="button"
       tabIndex={0}
       className="cc-count nowheel"
+      data-wheel-value=""
       aria-label={
         view.pinned
           ? `${view.text} running, ${view.ruleWord} ${view.setText}`
@@ -438,7 +440,7 @@ export function CountBox({
         }
       }}
       onWheel={(event: WheelEvent) => {
-        if (checklistLocked()) return;
+        if (checklistLocked() || !wheelChangesValues()) return;
         event.stopPropagation();
         const up = event.deltaY < 0;
         // Each step ticks and claims the edit, so the board's change sound does not play on top.
@@ -612,6 +614,7 @@ export function TierChip({
       role="button"
       tabIndex={0}
       className="cc-chip nowheel"
+      data-wheel-value=""
       style={style}
       {...tipAttrs(tip)}
       aria-label={`Tier ${label}`}
@@ -629,7 +632,7 @@ export function TierChip({
         if (!fixed) onStep(-1);
       }}
       onWheel={(event) => {
-        if (checklistLocked()) return;
+        if (checklistLocked() || !wheelChangesValues()) return;
         event.stopPropagation();
         if (!fixed) onStep(event.deltaY < 0 ? 1 : -1);
       }}
@@ -672,7 +675,7 @@ export function AmpsChip({
     if (Number.isFinite(value) && value >= 1) onSet(value);
   };
   const step = (event: WheelEvent) => {
-    if (checklistLocked()) return;
+    if (checklistLocked() || !wheelChangesValues()) return;
     event.stopPropagation();
     const unit = event.ctrlKey && event.shiftKey ? 1000 : event.ctrlKey ? 10 : 1;
     if (event.shiftKey && !event.ctrlKey) {
@@ -686,6 +689,7 @@ export function AmpsChip({
       role="button"
       tabIndex={0}
       className="cc-chip nowheel"
+      data-wheel-value=""
       data-editing={draft !== undefined ? "" : undefined}
       style={{
         ...style,
@@ -756,6 +760,7 @@ export function StripChip({
       role="button"
       tabIndex={0}
       className="cc-sc nowheel"
+      data-wheel-value=""
       data-label={chip.label}
       data-warn={chip.warn ? "" : undefined}
       data-reading={chip.reading ? "" : undefined}
@@ -780,7 +785,7 @@ export function StripChip({
         if (!chip.reading) onStep(chip.id, -1);
       }}
       onWheel={(event) => {
-        if (chip.reading || checklistLocked()) return;
+        if (chip.reading || checklistLocked() || !wheelChangesValues()) return;
         event.stopPropagation();
         onStep(chip.id, event.deltaY < 0 ? 1 : -1);
       }}
@@ -925,6 +930,7 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
           data-open={listOpen ? "" : undefined}
           data-machine-menu-toggle={view.hasPicker ? "" : undefined}
           data-wheel-steps={view.hasPicker ? "" : undefined}
+          data-wheel-value={view.hasPicker ? "" : undefined}
           data-menu-anchor=""
           {...tipAttrs(machineNameTip(view, tipFacts))}
           onClick={
@@ -946,7 +952,7 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
           onWheel={
             view.hasPicker
               ? (event) => {
-                  if (checklistLocked()) return;
+                  if (checklistLocked() || !wheelChangesValues()) return;
                   event.stopPropagation();
                   actions.cycleMachine(event.deltaY < 0 ? -1 : 1);
                 }

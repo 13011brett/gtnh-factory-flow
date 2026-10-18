@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useEffect, useRef } from "react";
+import { wheelChangesValues } from "@/lib/device-settings";
 import {
   formatRatioShare,
   getProjectRatioBranches,
@@ -33,6 +34,7 @@ export const RatioWireLabel = memo(function RatioWireLabel({
     <span
       data-ratio-edge={edgeId}
       data-ratio-side={label.key}
+      data-wheel-value=""
       className="pointer-events-auto nodrag nopan nowheel absolute flex flex-col justify-center whitespace-pre text-center text-[10px] font-bold tabular-nums leading-[10px]"
       style={{
         left: label.point.x,
@@ -77,6 +79,7 @@ export function RatioSetupOutput({
     <span
       data-ratio-setup-output={storageId}
       data-tooltip-stop
+      data-wheel-value=""
       className="nodrag nopan nowheel relative z-40 flex h-[18px] w-[46px] shrink-0 items-center justify-center gap-0.5 border border-[var(--flow-output)]/40 bg-[var(--flow-output)]/10 px-0.5 font-bold tabular-nums leading-4 text-[var(--flow-output)]"
       style={{ fontSize: text.length > 4 ? 8 : 10 }}
       onPointerDown={(event) => event.stopPropagation()}
@@ -149,6 +152,7 @@ function WirePercentage({
     const element = ref.current;
     if (!element || locked) return;
     const wheel = (event: WheelEvent) => {
+      if (!wheelChangesValues()) return;
       event.preventDefault();
       event.stopPropagation();
       if (event.deltaY)

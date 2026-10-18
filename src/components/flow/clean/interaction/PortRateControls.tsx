@@ -11,6 +11,7 @@ import { parseRateText, portRatePatch, stepShownRate } from "./port-rate";
 import { openBoxTip, openKeyTip } from "./tips";
 import { tipAttrs } from "./tip-spec";
 import { playEditSfx } from "@/lib/sound/sfx";
+import { wheelChangesValues } from "@/lib/device-settings";
 
 function locked(): boolean {
   const state = useFactoryStore.getState();
@@ -97,7 +98,7 @@ export function PortRateControls({
     if (event.button === 1) event.preventDefault();
   };
   const wheelBox = (event: WheelEvent) => {
-    if (locked()) return;
+    if (locked() || !wheelChangesValues()) return;
     event.stopPropagation();
     const shown = (pinned ? p.rate! : now) * scale;
     const next = stepShownRate(shown, event.deltaY < 0, event);
@@ -112,6 +113,7 @@ export function PortRateControls({
         role="button"
         tabIndex={0}
         className="cc-prk nowheel"
+        data-wheel-value=""
         data-side={p.side}
         data-mode={pinned ? "exact" : "any"}
         aria-label={pinned ? "Rate set: exactly" : "Rate: any"}
@@ -123,6 +125,7 @@ export function PortRateControls({
         onMouseDown={noAutoscroll}
         onAuxClick={clearOnMiddle}
         onWheel={(event) => {
+          if (!wheelChangesValues()) return;
           event.stopPropagation();
           if (!locked() && event.deltaY !== 0) toggle();
         }}
@@ -131,6 +134,7 @@ export function PortRateControls({
         role="button"
         tabIndex={0}
         className="cc-prb nowheel"
+        data-wheel-value=""
         data-side={p.side}
         data-set={pinned ? "" : undefined}
         data-prompt={!pinned && unset ? "" : undefined}

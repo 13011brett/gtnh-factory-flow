@@ -20,7 +20,8 @@ the shared phase of every pulse.
   the mouse from where it went down (React Flow starts a threshold carry at the crossing point and loses that
   travel), `nodeClickDistance={3}` keeps a jittery press a click, and the 20 px grid swallows what a short press moves.
 - Wheel on a rate box is the mod's: the shown figure rounded, then plus or minus 1, 10 with Ctrl, 100 with Shift
-  (`port-rate.ts stepShownRate`, `rate-rule.tsx stepRate` with `add`).
+  (`port-rate.ts stepShownRate`, `rate-rule.tsx stepRate` with `add`). With Settings, Board, "Scroll changes values"
+  off (`wheelChangesValues()`), none of it runs and tips leave their `wheel` rows out.
 - Wire in hand: the board already marks cards `data-drop-fit="yes"` and draws the line; `accept.ts` adds
   `data-accepts` on port rows, `data-snapped` on the card and port under the pointer, `data-origin` on the
   card the wire came from (never green), `data-carried` on the port in hand. A wired port carried back over its own

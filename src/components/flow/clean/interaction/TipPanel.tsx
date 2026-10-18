@@ -1,6 +1,7 @@
 "use client";
 
 import { forwardRef, type CSSProperties } from "react";
+import { wheelChangesValues } from "@/lib/device-settings";
 import { PowerInputPanel } from "../menus/PowerInputPanel";
 import { splitGold, type TipInput, type TipSpec } from "./tip-spec";
 import "./interaction.css";
@@ -53,6 +54,8 @@ export const TipPanel = forwardRef<HTMLDivElement, TipPanelProps>(function TipPa
   if (spec.panel?.kind === "power") {
     return <PowerInputPanel ref={ref} nodeId={spec.panel.nodeId} part={spec.panel.part} style={style} />;
   }
+  // A wheel step is not offered while the wheel changes no value.
+  const actions = spec.actions?.filter((action) => action.input !== "wheel" || wheelChangesValues());
   return (
     <div ref={ref} className="tp ui-zoom" data-clean-tip="" data-tip-panel={spec.panel ? spec.panel.kind : undefined} style={style}>
       <div className="tp-title">{spec.title}</div>
@@ -70,11 +73,11 @@ export const TipPanel = forwardRef<HTMLDivElement, TipPanelProps>(function TipPa
           <Gold text={note.text} />
         </div>
       ))}
-      {spec.actions && spec.actions.length > 0 ? (
+      {actions && actions.length > 0 ? (
         <>
           <div className="tp-rule" />
           <div className="tp-actions">
-            {spec.actions.map((action, index) => (
+            {actions.map((action, index) => (
               <span key={index} className="tp-action">
                 <MouseIcon input={action.input} />
                 {action.label}

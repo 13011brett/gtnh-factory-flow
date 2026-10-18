@@ -1,5 +1,6 @@
 "use client";
 import { targetStatus } from "./target-status";
+import { wheelChangesValues } from "@/lib/device-settings";
 import { TargetRateHelp } from "./TargetRateHelp";
 import { useDropdownDismiss } from "@/lib/hooks/use-dropdown-dismiss";
 import { playBoardSound } from "@/lib/board-sounds";
@@ -91,6 +92,7 @@ export function PoolWorksheet() {
     // capture, while letting each control's existing wheel handler run.
     const preventControlScroll = (event: WheelEvent) => {
       if (
+        wheelChangesValues() &&
         event.target instanceof Element &&
         event.target.closest(
           ".pool-machine-settings .nowheel, .pool-editor-power [data-power-controls], .pool-editor-power .nowheel",

@@ -7,7 +7,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import { APP_FONTS, getStoredAppFont, setAppFont, type AppFontId } from "@/lib/app-font";
 import { resetMeasuredFont } from "@/components/flow/clean/text-measure";
-import { useDeviceSettings, writeDeviceSettings } from "@/lib/device-settings";
+import { useDeviceSettings, wheelChangesValues, writeDeviceSettings } from "@/lib/device-settings";
 import { MinimapSettingsRows } from "@/components/flow/clean/minimap/MinimapSettingsPanel";
 import {
   getSoundLevel,
@@ -130,6 +130,14 @@ export function ModSettings({ onClose }: { onClose: () => void }) {
           names: ["Off", "On"],
           at: settings.problemOutlines ? 1 : 0,
           to: (index) => writeDeviceSettings({ problemOutlines: index === 1 }),
+        },
+        {
+          label: "Scroll changes values",
+          about: "Scroll over a number or chip to change it.",
+          kind: "switch",
+          names: ["Off", "On"],
+          at: settings.scrollChangesValues ? 1 : 0,
+          to: (index) => writeDeviceSettings({ scrollChangesValues: index === 1 }),
         },
         {
           label: "Item browser",
@@ -402,7 +410,7 @@ function SettingRow({
         if (row.kind === "switch") onSet(row, 1 - row.at);
       }}
       onWheel={(event) => {
-        if (row.off || event.deltaY === 0) return;
+        if (row.off || event.deltaY === 0 || !wheelChangesValues()) return;
         const step = event.deltaY < 0 ? 1 : -1;
         if (row.kind === "switch") onSet(row, step > 0 ? 1 : 0);
         else if (row.kind === "choice" || row.kind === "slider") {

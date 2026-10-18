@@ -1,6 +1,7 @@
 "use client";
 
 import { createPortal } from "react-dom";
+import { wheelChangesValues } from "@/lib/device-settings";
 import { useSyncExternalStore, type PointerEvent as ReactPointerEvent } from "react";
 
 /**
@@ -151,6 +152,10 @@ export function RailTipHost() {
     top: Math.min(tip.y + 12, window.innerHeight - 140),
   };
   const { content } = tip;
+  // A wheel step is not offered while the wheel changes no value.
+  const actions = (content.actions ?? []).filter(
+    (action) => action.input !== "wheel" || wheelChangesValues(),
+  );
   return createPortal(
     <div className="rail-tip" style={style} role="tooltip" data-tooltip-stop>
       <div className="rail-tip-title">{content.title}</div>
@@ -166,9 +171,9 @@ export function RailTipHost() {
           {note.text}
         </div>
       ))}
-      {content.actions?.length ? (
+      {actions.length ? (
         <div className="rail-tip-actions">
-          {content.actions.map((action) => (
+          {actions.map((action) => (
             <span key={`${action.input}:${action.label}`} className="rail-tip-action">
               <InputIcon input={action.input} />
               {action.label}

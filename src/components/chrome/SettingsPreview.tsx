@@ -2,6 +2,7 @@
 
 import type { CSSProperties } from "react";
 import { MouseIcon } from "@/components/flow/clean/interaction/TipPanel";
+import { useDeviceSettings } from "@/lib/device-settings";
 
 /** The size choice's card scale in the picture (Tiny, Small, Normal, Large). */
 const CARD_SCALE = [0.78, 0.9, 1, 1.14];
@@ -80,13 +81,14 @@ function SoundPicture({ level }: { level: number }) {
 }
 
 function ControlsPicture() {
+  const { scrollChangesValues } = useDeviceSettings();
   return (
     <div className="sp-controls" aria-hidden>
       {(
         [
           ["left", "Select, drag, wire"],
           ["right", "Menus, go back a choice"],
-          ["wheel", "Zoom; over a value, change it"],
+          ["wheel", scrollChangesValues ? "Zoom; over a value, change it" : "Zoom"],
           ["middle", "Pan; over a rate, clear it"],
         ] as const
       ).map(([input, text]) => (

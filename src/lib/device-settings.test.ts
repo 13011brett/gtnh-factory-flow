@@ -1,12 +1,19 @@
 import { describe, expect, it } from "vitest";
-import { DEFAULT_DEVICE_SETTINGS, parseDeviceSettings } from "./device-settings";
+import {
+  DEFAULT_DEVICE_SETTINGS,
+  parseDeviceSettings,
+  resetDeviceSettingsForTests,
+  wheelChangesValues,
+  writeDeviceSettings,
+} from "./device-settings";
 
 describe("device settings", () => {
-  it("starts at the mod's defaults: names on, problem outlines on, items on the right, Board section", () => {
+  it("starts at the mod's defaults: names on, problem outlines on, scroll changes values, items on the right, Board section", () => {
     expect(DEFAULT_DEVICE_SETTINGS).toEqual({
       zoomedOutNames: true,
       zoomedOutAt: 0.65,
       problemOutlines: true,
+      scrollChangesValues: true,
       itemsLeft: false,
       settingsSection: "Board",
     });
@@ -35,6 +42,26 @@ describe("device settings", () => {
     expect(parseDeviceSettings(JSON.stringify({ zoomedOutAt: "0.9" })).zoomedOutAt).toBe(0.65);
   });
 
+  it("reads Scroll changes values: on unless saved off, and only a real boolean counts", () => {
+    expect(parseDeviceSettings("{}").scrollChangesValues).toBe(true);
+    expect(parseDeviceSettings(JSON.stringify({ scrollChangesValues: false })).scrollChangesValues).toBe(
+      false,
+    );
+    expect(parseDeviceSettings(JSON.stringify({ scrollChangesValues: "no" })).scrollChangesValues).toBe(
+      true,
+    );
+  });
+
+  it("wheelChangesValues follows the setting at the moment it is asked", () => {
+    resetDeviceSettingsForTests();
+    expect(wheelChangesValues()).toBe(true);
+    writeDeviceSettings({ scrollChangesValues: false });
+    expect(wheelChangesValues()).toBe(false);
+    writeDeviceSettings({ scrollChangesValues: true });
+    expect(wheelChangesValues()).toBe(true);
+    resetDeviceSettingsForTests();
+  });
+
   it("ignores values of the wrong kind", () => {
     const read = parseDeviceSettings(JSON.stringify({ zoomedOutNames: "yes", settingsSection: 4 }));
     expect(read).toEqual(DEFAULT_DEVICE_SETTINGS);
@@ -48,6 +75,7 @@ describe("device settings", () => {
       zoomedOutNames: false,
       zoomedOutAt: 0.65,
       problemOutlines: true,
+      scrollChangesValues: true,
       itemsLeft: false,
       settingsSection: "Board",
     });

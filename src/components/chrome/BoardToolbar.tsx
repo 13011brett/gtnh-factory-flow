@@ -3,6 +3,7 @@
 import "./chrome.css";
 
 import { useRef } from "react";
+import { useDeviceSettings } from "@/lib/device-settings";
 import { isLiveConfigured } from "@/lib/live/live-config";
 import { leaveLibrary } from "@/lib/library/library-tab";
 import type { RateUnit } from "@/lib/model/rate-unit";
@@ -111,6 +112,7 @@ function BoardKeys({ tight }: { tight: boolean }) {
   const setRateUnit = useFactoryStore((state) => state.setRateUnit);
   const powerDisplayUnit = useFactoryStore((state) => state.powerDisplayUnit);
   const setPowerDisplayUnit = useFactoryStore((state) => state.setPowerDisplayUnit);
+  const { scrollChangesValues } = useDeviceSettings();
   const powerMenuOpen = useFactoryStore((state) => state.powerMenuOpen);
   const openPowerMenu = useFactoryStore((state) => state.openPowerMenu);
   const closePowerMenu = useFactoryStore((state) => state.closePowerMenu);
@@ -191,7 +193,7 @@ function BoardKeys({ tight }: { tight: boolean }) {
         tip="Rate unit: per tick, second, minute or hour"
         onClick={() => stepRate(1)}
         onContext={() => stepRate(-1)}
-        onWheel={stepRate}
+        onWheel={scrollChangesValues ? stepRate : undefined}
       />
       <BarKey
         id="power"
@@ -200,7 +202,7 @@ function BoardKeys({ tight }: { tight: boolean }) {
         tip="Show power as EU/t, or as amps at each machine's tier"
         onClick={togglePower}
         onContext={togglePower}
-        onWheel={togglePower}
+        onWheel={scrollChangesValues ? togglePower : undefined}
       />
       <BarKey
         id="annotate"

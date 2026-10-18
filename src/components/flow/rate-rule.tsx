@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useLayoutEffect, useRef, useState } from "react";
+import { wheelChangesValues } from "@/lib/device-settings";
 import { ChevronDown } from "lucide-react";
 import type { FactoryStorage, StorageThroughputResult } from "@/lib/model/types";
 import type { StorageRole } from "@/lib/model/storage-role";
@@ -335,7 +336,7 @@ export function RuleButton({ rule, variant = "drawer" }: { rule: RuleControl; va
   // Scrolling steps through the rules, clamped. The button is nowheel, so the
   // board camera leaves it to this.
   useNativeWheel(button, (event) => {
-    if (event.ctrlKey || event.deltaY === 0) return;
+    if (event.ctrlKey || event.deltaY === 0 || !wheelChangesValues()) return;
     event.preventDefault();
     event.stopPropagation();
     rule.stepRule(event.deltaY > 0 ? 1 : -1);
@@ -420,7 +421,7 @@ export function RateBox({ rule }: { rule: RateRule }) {
   // Native and non-passive, so Ctrl-scroll steps the rate instead of
   // zooming the page; the box is nowheel so the board camera leaves it.
   useNativeWheel(box, (event) => {
-    if (event.deltaY === 0) return;
+    if (event.deltaY === 0 || !wheelChangesValues()) return;
     event.preventDefault();
     event.stopPropagation();
     rule.stepRate(event.deltaY < 0, event);

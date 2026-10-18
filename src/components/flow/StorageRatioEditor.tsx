@@ -1,6 +1,7 @@
 "use client";
 
 import { memo, useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { wheelChangesValues } from "@/lib/device-settings";
 import { ArrowUpRight, ChevronDown, ChevronUp, Factory, Split, X } from "lucide-react";
 import { ResourceIcon } from "@/components/nei/ResourceIcon";
 import type { ResourceAmount } from "@/lib/model/types";
@@ -307,7 +308,7 @@ function RatioBranchRow({
   const wheelRef = useRef<(event: WheelEvent) => void>(() => {});
   useEffect(() => {
     wheelRef.current = (event) => {
-      if (event.deltaY === 0) return;
+      if (event.deltaY === 0 || !wheelChangesValues()) return;
       event.preventDefault();
       event.stopPropagation();
       step(event.deltaY < 0 ? 1 : -1, event.shiftKey);

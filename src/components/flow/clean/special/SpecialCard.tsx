@@ -51,6 +51,7 @@ import {
 } from "../menus/settings-model";
 import { SpecialSheet } from "./SpecialSheets";
 import { cloneWithSound } from "@/lib/sound/sfx";
+import { wheelChangesValues } from "@/lib/device-settings";
 import type { SpecialActions, SpecialContext, SpecialModel } from "./use-special";
 import type { SpecialChip, SpecialSection, SpecialView } from "./special-model";
 
@@ -112,6 +113,7 @@ function SectionRule({
       role="button"
       tabIndex={enabled ? 0 : -1}
       className="sp-rk nowheel"
+      data-wheel-value=""
       data-kind={kind}
       data-disabled={enabled ? undefined : ""}
       aria-label={label}
@@ -298,6 +300,7 @@ function SpecialChipView({
       role="button"
       tabIndex={0}
       className="cc-sc nowheel"
+      data-wheel-value=""
       data-label={chip.label}
       data-editing={draft !== undefined ? "" : undefined}
       {...tipAttrs({
@@ -320,7 +323,7 @@ function SpecialChipView({
         onStep(chip.id, -1);
       }}
       onWheel={(event) => {
-        if (checklistLocked()) return;
+        if (checklistLocked() || !wheelChangesValues()) return;
         event.stopPropagation();
         onStep(chip.id, event.deltaY < 0 ? 1 : -1);
       }}
@@ -565,6 +568,7 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
           data-clip={view.nameSize <= 9 ? "" : undefined}
           data-machine-menu-toggle={view.hasPicker ? "" : undefined}
           data-wheel-steps={view.hasPicker ? "" : undefined}
+          data-wheel-value={view.hasPicker ? "" : undefined}
           data-menu-anchor=""
           {...tipAttrs(specialNameTip(view, tipView, tipFacts))}
           onClick={
@@ -586,7 +590,7 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
           onWheel={
             view.hasPicker
               ? (event) => {
-                  if (checklistLocked()) return;
+                  if (checklistLocked() || !wheelChangesValues()) return;
                   event.stopPropagation();
                   actions.cycleMachine(event.deltaY < 0 ? -1 : 1);
                 }

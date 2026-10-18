@@ -1,7 +1,11 @@
 // @vitest-environment jsdom
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, beforeAll, beforeEach, describe, expect, it, vi } from "vitest";
-import { readDeviceSettings, resetDeviceSettingsForTests } from "@/lib/device-settings";
+import {
+  readDeviceSettings,
+  resetDeviceSettingsForTests,
+  writeDeviceSettings,
+} from "@/lib/device-settings";
 import { DEFAULT_UI_SCALE_PERCENT, UI_SCALE_STORAGE_KEY } from "@/lib/ui-scale-boot";
 import { getUiScalePercent } from "@/lib/ui-scale";
 import { areBoardSoundsEnabled, getBoardSoundVolume } from "@/lib/board-sounds";
@@ -37,6 +41,7 @@ describe("the settings box", () => {
       "Names when zoomed out",
       "Zoomed-out view",
       "Problem outlines",
+      "Scroll changes values",
       "Item browser",
       "Font",
     ]);
@@ -53,6 +58,36 @@ describe("the settings box", () => {
       JSON.parse(window.localStorage.getItem("gtnh-factory-flow.device-settings.v1")!).zoomedOutAt,
     ).toBe(0.9);
     expect(slider.closest(".ms-row")?.querySelector(".ms-value")?.textContent).toBe("90%");
+  });
+
+  it("Scroll changes values is a switch, on until turned off, and turning it off saves", () => {
+    render(<ModSettings onClose={vi.fn()} />);
+    const row = screen.getByText("Scroll changes values").closest(".ms-row")!;
+    expect(row.querySelector(".ms-about")?.textContent).toBe(
+      "Scroll over a number or chip to change it.",
+    );
+    expect(readDeviceSettings().scrollChangesValues).toBe(true);
+    fireEvent.click(screen.getByText("Scroll changes values"));
+    expect(readDeviceSettings().scrollChangesValues).toBe(false);
+    expect(
+      JSON.parse(window.localStorage.getItem("gtnh-factory-flow.device-settings.v1")!)
+        .scrollChangesValues,
+    ).toBe(false);
+  });
+
+  it("the wheel over a slider row moves it, until Scroll changes values is off", () => {
+    render(<ModSettings onClose={vi.fn()} />);
+    const row = screen.getByRole("slider", { name: "Zoomed-out view" }).closest(".ms-row")!;
+    const wheel = () => fireEvent.wheel(row, { deltaY: -100 });
+    wheel();
+    expect(readDeviceSettings().zoomedOutAt).toBe(0.7);
+    act(() => writeDeviceSettings({ scrollChangesValues: false }));
+    wheel();
+    wheel();
+    expect(readDeviceSettings().zoomedOutAt).toBe(0.7);
+    act(() => writeDeviceSettings({ scrollChangesValues: true }));
+    wheel();
+    expect(readDeviceSettings().zoomedOutAt).toBe(0.75);
   });
 
   it("Size is Tiny, Small, Normal or Large, and picking one sets the interface size", () => {

@@ -77,6 +77,10 @@ The board has its own notes in `flow/CLAUDE.md`, the Pool worksheet in `pool/CLA
   exists (the Pool worksheet).
 - React's wheel handlers are passive: a control that adjusts on wheel needs a native
   non-passive listener to `preventDefault` the page scroll.
+- Every control that changes a value on the wheel asks `wheelChangesValues()`
+  (`device-settings.ts`) first and returns before `preventDefault` or `stopPropagation`, so with
+  "Scroll changes values" off the wheel scrolls or zooms instead. A focused number input is
+  let go of (`blur()`) on the wheel then. Lists that scroll and pages that turn are not values.
 - Build heavy hover content lazily (pass a thunk).
 - Rendered item textures keep the art in the middle half of the image; draw them at 2x
   the box.

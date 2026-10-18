@@ -53,7 +53,9 @@ The board must stay smooth with 100+ cards on weak PCs.
   names; the walk passes through drawers and stops at the first machine.
 - Every knob on a recipe card checks `checklistLocked()` at event time; drawer rate
   controls read `isReadOnly || checklistMode`. Wheel controls need `nowheel` or the
-  camera takes the wheel.
+  camera takes the wheel; one that steps a value also wears `data-wheel-value` and returns
+  early when `wheelChangesValues()` is false (Settings, "Scroll changes values"), so the
+  camera takes the wheel from it then. A popup that scrolls keeps `nowheel` alone.
 - A shared-machine card stacks its recipes on one pair of rails (`SharedMachineRails`),
   each under a one-cell rule: share % and verdict word on the left, move up/down and
   remove keys on the right, no name. The picture spans them all.

@@ -4,7 +4,7 @@ import { cleanup, fireEvent, render } from "@testing-library/react";
 import { ReactFlowProvider } from "@xyflow/react";
 import type { FactoryNode, Recipe, ResourceKind } from "@/lib/model/types";
 import type { RailPort } from "../node-verdict";
-import { CleanCard } from "./CleanCard";
+import { CleanCard, StripChip } from "./CleanCard";
 import { writeDeviceSettings } from "@/lib/device-settings";
 import type {
   CleanCardActions,
@@ -260,6 +260,78 @@ it("types a count on a click, steps it on the wheel and goes back to Any on a mi
   fireEvent.change(input, { target: { value: "30" } });
   fireEvent.blur(input);
   expect(actions.setCount).toHaveBeenLastCalledWith(30);
+});
+
+it("steps on the wheel only while Scroll changes values is on; off, the wheel is left for the board to zoom", () => {
+  const wheelOver = (element: Element) => {
+    const event = new WheelEvent("wheel", { deltaY: -100, bubbles: true, cancelable: true });
+    let reachedDocument = false;
+    const seen = () => {
+      reachedDocument = true;
+    };
+    document.addEventListener("wheel", seen);
+    element.dispatchEvent(event);
+    document.removeEventListener("wheel", seen);
+    return { event, reachedDocument };
+  };
+  const controls = (container: HTMLElement) => ({
+    count: container.querySelector(".cc-count")!,
+    tier: container.querySelector('.cc-chip[aria-label^="Tier"]')!,
+    amps: container.querySelector('.cc-head .cc-chip:not([aria-label^="Tier"])')!,
+    name: container.querySelector(".cc-name")!,
+  });
+  const calls = (actions: CleanCardActions) => [
+    actions.stepCount,
+    actions.stepTier,
+    actions.setAmps,
+    actions.cycleMachine,
+  ];
+  // A setting chip on the strip steps through the store, so it is drawn on its own.
+  const settingChip = (onStep: () => void) =>
+    render(
+      <StripChip
+        chip={{ id: "heatingCoil", label: "Coil", value: "Nichrome", x: 0, y: 0, width: 80, title: "" }}
+        nodeId="n1"
+        onStep={onStep}
+        onOpen={vi.fn()}
+        wasClick={() => true}
+      />,
+    ).container.querySelector(".cc-sc")!;
+
+  const on = actionsSpy();
+  const onCard = renderCard(upToView(), on);
+  for (const element of Object.values(controls(onCard.container))) {
+    // Each one takes the wheel from the board: the event stops at the control.
+    expect(element.hasAttribute("data-wheel-value")).toBe(true);
+    expect(wheelOver(element).reachedDocument).toBe(false);
+  }
+  for (const call of calls(on)) expect(call).toHaveBeenCalledTimes(1);
+  cleanup();
+  const stepOn = vi.fn();
+  const chipOn = settingChip(stepOn);
+  expect(chipOn.hasAttribute("data-wheel-value")).toBe(true);
+  expect(wheelOver(chipOn).reachedDocument).toBe(false);
+  expect(stepOn).toHaveBeenCalledWith("heatingCoil", 1);
+  cleanup();
+
+  writeDeviceSettings({ scrollChangesValues: false });
+  try {
+    const off = actionsSpy();
+    const offCard = renderCard(upToView(), off);
+    for (const element of Object.values(controls(offCard.container))) {
+      const { event, reachedDocument } = wheelOver(element);
+      expect(event.defaultPrevented).toBe(false);
+      expect(reachedDocument).toBe(true);
+    }
+    for (const call of calls(off)) expect(call).not.toHaveBeenCalled();
+    cleanup();
+    const stepOff = vi.fn();
+    const chipOff = settingChip(stepOff);
+    expect(wheelOver(chipOff).reachedDocument).toBe(true);
+    expect(stepOff).not.toHaveBeenCalled();
+  } finally {
+    writeDeviceSettings({ scrollChangesValues: true });
+  }
 });
 
 it("sounds for itself: a click that opens the editor or the rule menu clicks, each wheel step ticks", () => {

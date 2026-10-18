@@ -1,6 +1,7 @@
 "use client";
 
 import { Check, X } from "lucide-react";
+import { wheelChangesValues } from "@/lib/device-settings";
 import { useEffect, useRef, useState } from "react";
 import {
   BOARD_TIMELAPSE_SPEEDS,
@@ -722,6 +723,10 @@ export function DevMenu({ onClose }: { onClose: () => void }) {
                             }
                           }}
                           aria-label={`${field.label} value`}
+                          // A focused number input steps on the wheel unless it is let go of first.
+                          onWheel={(event) => {
+                            if (!wheelChangesValues()) event.currentTarget.blur();
+                          }}
                           className="w-16 shrink-0 rounded border border-line bg-surface px-1 py-0.5 text-right tabular-nums text-fg"
                         />
                         </div>

@@ -4,8 +4,12 @@ import "./chrome.css";
 
 import { useEffect, useRef } from "react";
 import { createPortal } from "react-dom";
+import { useDeviceSettings } from "@/lib/device-settings";
 import { useDropdownDismiss } from "@/lib/hooks/use-dropdown-dismiss";
 import { getUiScale } from "@/lib/ui-scale";
+
+/** The wheel's row; with "Scroll changes values" off the wheel only zooms. */
+const WHEEL_ROW = "Zoom; over a value, change it";
 
 /** Every gesture on the board, in one list (the mod's "How the board works"). */
 export const CONTROLS: ReadonlyArray<readonly [string, string]> = [
@@ -23,7 +27,7 @@ export const CONTROLS: ReadonlyArray<readonly [string, string]> = [
   ["Drag a selected card", "Move the selection"],
   ["Ctrl+A", "Select everything"],
   ["Delete", "Delete the selection (Esc deselects)"],
-  ["Wheel", "Zoom; over a value, change it"],
+  ["Wheel", WHEEL_ROW],
   ["WASD or arrows", "Pan (+/- or Page Up/Down zoom)"],
   ["Ctrl+C, Ctrl+X, Ctrl+V", "Copy, cut, paste the selection and its wires"],
   ["Ctrl+Z, Ctrl+Shift+Z", "Undo, redo"],
@@ -33,6 +37,7 @@ export const CONTROLS: ReadonlyArray<readonly [string, string]> = [
 /** The controls list: a menu-skinned panel under the bar, closed like any dropdown. */
 export function ControlsList({ onClose }: { onClose: () => void }) {
   const ref = useRef<HTMLDivElement>(null);
+  const { scrollChangesValues } = useDeviceSettings();
   useDropdownDismiss(true, { refs: [ref], onClose, insideSelector: "[data-menu-anchor]" });
   useEffect(() => ref.current?.focus(), []);
   // Hung from the Help key's right edge, as its menu is: the items column sits at the window's right edge now, and a
@@ -55,7 +60,9 @@ export function ControlsList({ onClose }: { onClose: () => void }) {
         {CONTROLS.map(([gesture, effect]) => (
           <div key={gesture} className="mc-controls-row">
             <span className="mc-controls-key">{gesture}</span>
-            <span className="mc-controls-effect">{effect}</span>
+            <span className="mc-controls-effect">
+              {effect === WHEEL_ROW && !scrollChangesValues ? "Zoom" : effect}
+            </span>
           </div>
         ))}
       </div>

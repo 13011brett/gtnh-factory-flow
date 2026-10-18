@@ -1,6 +1,7 @@
 "use client";
 
 import { stripBeeFrameSlotInputs } from "@/lib/model/bee-display";
+import { wheelChangesValues } from "@/lib/device-settings";
 
 import { isTreeGrowthSimulatorToolControl, applyTreeGrowthSimulatorToolInputs, getTreeGrowthSimulatorSlotResource, getTreeGrowthSimulatorSlotTiers } from "@/lib/model/recipe-tool-slots";
 import { MachineFormulas } from "./MachineFormulas";
@@ -1239,7 +1240,7 @@ function RecipeNodeComponent({ data, selected, controlsOnly = false, renderEdito
         }}
         data-hatch-menu-anchor
         onWheel={(event) => {
-          if (checklistLocked()) return;
+          if (checklistLocked() || !wheelChangesValues()) return;
           event.stopPropagation();
           if (!tierControl.fixed) updateTier(event.deltaY < 0 ? 1 : -1);
         }}
@@ -1799,7 +1800,7 @@ function RecipeNodeComponent({ data, selected, controlsOnly = false, renderEdito
                 // The wheel walks the machines in the menu's own order, the
                 // way the tier chip walks tiers; the hover stays put for it.
                 onWheel={hasMachinePicker && !calmMode ? (event) => {
-                  if (checklistLocked()) return;
+                  if (checklistLocked() || !wheelChangesValues()) return;
                   event.stopPropagation();
                   cycleMachineHandler(event.deltaY < 0 ? -1 : 1);
                 } : undefined}
@@ -3428,7 +3429,7 @@ function PowerTierChip({
         step(-1);
       }}
       onWheel={(event) => {
-        if (checklistLocked()) return;
+        if (checklistLocked() || !wheelChangesValues()) return;
         event.stopPropagation();
         step(event.deltaY < 0 ? 1 : -1);
       }}
@@ -4524,7 +4525,7 @@ function CropStepperRow({
     <div
       className={CROP_TILE_CLASS}
       onWheel={(event) => {
-        if (checklistLocked()) return;
+        if (checklistLocked() || !wheelChangesValues()) return;
         event.stopPropagation();
         step(event.deltaY < 0 ? 1 : -1);
       }}
@@ -4602,7 +4603,7 @@ function CropCycleRow({
       className={CROP_TILE_CLASS}
       title={`${label}: ${current.label}`}
       onWheel={(event) => {
-        if (checklistLocked()) return;
+        if (checklistLocked() || !wheelChangesValues()) return;
         event.stopPropagation();
         step(event.deltaY < 0 ? 1 : -1);
       }}
@@ -4683,7 +4684,7 @@ function CropTierChip({
         step(-1);
       }}
       onWheel={(event) => {
-        if (checklistLocked()) return;
+        if (checklistLocked() || !wheelChangesValues()) return;
         event.stopPropagation();
         step(event.deltaY < 0 ? 1 : -1);
       }}
@@ -5876,7 +5877,7 @@ function MachineCountStat({
       // The wheel walks the count too, with the same shift/ctrl multipliers
       // the buttons take. "nowheel" keeps React Flow from zooming under it.
       onWheel={(event) => {
-        if (checklistLocked()) return;
+        if (checklistLocked() || !wheelChangesValues()) return;
         event.stopPropagation();
         stepBy(event.deltaY < 0 ? 1 : -1, event);
       }}

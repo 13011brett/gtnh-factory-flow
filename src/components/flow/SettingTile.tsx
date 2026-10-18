@@ -1,6 +1,7 @@
 "use client";
 
 import { useDropdownDismiss } from "@/lib/hooks/use-dropdown-dismiss";
+import { wheelChangesValues } from "@/lib/device-settings";
 import { focusDropdownFilter } from "@/lib/dropdown-focus";
 import { useDropdownViewport } from "@/lib/hooks/use-dropdown-viewport";
 
@@ -172,6 +173,7 @@ export function SettingTile({
     <div
       className={[SETTING_TILE_CLASS, disabled ? "opacity-35" : ""].join(" ")}
       onWheel={(event) => {
+        if (!wheelChangesValues()) return;
         event.stopPropagation();
         if (disabled) return;
         onStep(event.deltaY < 0 ? 1 : -1);
@@ -378,6 +380,7 @@ export function SettingSelectTile({
     <div
       className={[SETTING_TILE_CLASS, disabled ? "opacity-35" : ""].join(" ")}
       onWheel={(event) => {
+        if (!wheelChangesValues()) return;
         event.stopPropagation();
         if (disabled) return;
         const next = rows[Math.max(0, Math.min(rows.length - 1, index + (event.deltaY < 0 ? 1 : -1)))];

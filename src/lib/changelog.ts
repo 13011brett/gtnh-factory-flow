@@ -40,6 +40,16 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.2.0",
+    date: "2026-10-17",
+    headline: "Pick where the zoomed-out view starts",
+    notes: [
+      "Settings has a Zoomed-out view slider. Cards turn simple below the zoom you pick.",
+      "A card running below its Up to count shows its real rates. Its outputs and the overview no longer read too low.",
+      "Zoomed out, a tall card's picture keeps to the card's width.",
+    ],
+  },
+  {
     version: "4.1.0",
     date: "2026-10-17",
     headline: "Up to: a machine count is what you have",

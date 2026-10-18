@@ -1,0 +1,707 @@
+/*
+ * The recipe search as NEI's recipe window (GuiRecipe in NEI GTNH): machine tabs on the window's top edge, the
+ * machine's name between its two arrows, the page between its two, recipes as slots with the progress arrow, the
+ * machines that run them in a column on the window's left, and our stencil underneath. NEI's measures in website
+ * units (one GUI pixel is about 1.75 shell px, as in nei.css): an 18 px slot is 32, a 24 px tab 42, a 13 x 12 key
+ * 22 x 20, the 12 px title band 22. The skin is ours, not the game's grey: the panel's surface and hairlines
+ * (mod-panel.css), the overview's key (.nei-btn), wells for slots, Minecraft's text and tooltip.
+ */
+
+.nrw {
+  --nrw-slot: 32px;
+  --nrw-tab: 42px;
+  --nrw-surface: #23252a;
+  --nrw-raised: #2a2c32;
+  --nrw-sunk: #1a1b1f;
+  --nrw-edge: #111317;
+  --nrw-hi: #3e4047;
+  --nrw-lo: #16171a;
+  --nrw-band: rgba(0, 0, 0, 0.22);
+  --nrw-ink: #e8e9ee;
+  --nrw-muted: #9a9ca4;
+  --nrw-dim: #6a6c74;
+  font-family: var(--app-font);
+  -webkit-font-smoothing: none;
+  color: var(--nrw-ink);
+}
+
+/* A window: the panel's surface in a black outline, lit on its top-left inner edge and shaded on its bottom-right. */
+.nrw-panel {
+  position: relative;
+  box-sizing: border-box;
+  background: var(--nrw-surface);
+  border: 1px solid var(--nrw-edge);
+  box-shadow:
+    inset 1px 1px 0 var(--nrw-hi),
+    inset -1px -1px 0 var(--nrw-lo),
+    6px 8px 0 rgba(0, 0, 0, 0.45);
+}
+
+/* Minecraft's text: the ink with its shadow one GUI pixel down and right. */
+.nrw-text {
+  color: var(--nrw-ink);
+  text-shadow: 2px 2px 0 #121316;
+  font-size: 14px;
+  line-height: 16px;
+  white-space: nowrap;
+}
+.nrw-muted {
+  color: var(--nrw-muted);
+}
+
+/* ===== The tabs: one per machine on the window's top edge, the open one joined to it ===== */
+.nrw-tabs {
+  position: relative;
+  z-index: 2;
+  display: flex;
+  align-items: flex-end;
+  gap: 0;
+  height: calc(var(--nrw-tab) + 2px);
+  margin-bottom: -5px;
+  padding: 0 4px;
+}
+.nrw-tab-run {
+  display: flex;
+  align-items: flex-end;
+  min-width: 0;
+  flex: 1;
+}
+.nrw-tab {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  box-sizing: border-box;
+  width: var(--nrw-tab);
+  height: calc(var(--nrw-tab) - 4px);
+  margin: 0;
+  padding: 0 0 3px;
+  background: var(--nrw-sunk);
+  border: 1px solid var(--nrw-edge);
+  border-bottom: 0;
+  box-shadow:
+    inset 1px 1px 0 #2f3137,
+    inset -1px 0 0 var(--nrw-lo);
+  cursor: pointer;
+}
+.nrw-tab:hover {
+  background: #202227;
+}
+.nrw-tab[aria-selected="true"] {
+  z-index: 3;
+  height: calc(var(--nrw-tab) + 1px);
+  padding-bottom: 1px;
+  background: var(--nrw-surface);
+  box-shadow:
+    inset 1px 1px 0 var(--nrw-hi),
+    inset -1px 0 0 var(--nrw-lo);
+  cursor: default;
+}
+/* The open tab covers the window's top edge under it, so the two read as one piece. */
+.nrw-tab[aria-selected="true"]::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2px;
+  height: 3px;
+  background: var(--nrw-surface);
+  box-shadow: inset 1px 0 0 var(--nrw-hi);
+}
+.nrw-tab-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  overflow: hidden;
+  pointer-events: none;
+}
+/* The tab strip's own page keys, NEI's thin < and >. */
+.nrw-tab-step {
+  flex: none;
+  width: 14px;
+  height: 30px;
+  margin: 0 2px 6px;
+}
+.nrw-close {
+  flex: none;
+  width: 26px;
+  height: 26px;
+  margin: 0 0 10px 8px;
+}
+
+/* ===== The window ===== */
+.nrw-window {
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  flex: 1;
+  padding: 5px 6px 6px;
+  gap: 4px;
+}
+.nrw-row {
+  display: flex;
+  align-items: center;
+  gap: 0;
+  height: 22px;
+  flex: none;
+}
+.nrw-row > .nei-btn {
+  width: 22px;
+  height: 22px;
+  font-size: 14px;
+}
+/* NEI's dark band behind the machine's name and the page. */
+.nrw-band {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-width: 0;
+  height: 22px;
+  margin: 0 2px;
+  padding: 0 8px;
+  overflow: hidden;
+  background: var(--nrw-band);
+}
+.nrw-band > span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nrw-title {
+  color: #ffffff;
+}
+.nrw-count {
+  margin-left: 8px;
+  color: var(--nrw-dim);
+  text-shadow: none;
+}
+/* The recipe filter, NEI's magnifier and the field it opens in the page row. */
+.nrw-find {
+  display: flex;
+  align-items: center;
+  flex: 1;
+  min-width: 0;
+  height: 22px;
+  margin: 0 2px;
+  padding: 0 6px;
+  box-sizing: border-box;
+  background: #000000;
+  border: 1px solid #a0a0a0;
+}
+.nrw-find:focus-within {
+  border-color: #ffffff;
+}
+.nrw-find input {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  padding: 0;
+  margin: 0;
+  background: transparent;
+  border: 0;
+  outline: none;
+  color: #e0e0e0;
+  caret-color: #d0d0d0;
+  text-shadow: 2px 2px 0 #383838;
+  font-family: var(--app-font);
+  font-size: 14px;
+  line-height: 16px;
+}
+.nrw-find input::placeholder {
+  color: #4a4a4a;
+  text-shadow: none;
+  opacity: 1;
+}
+.nrw-find-page {
+  flex: none;
+  width: 56px;
+  text-align: center;
+}
+
+/* The page of recipes: a grid of fixed cells, centred, as NEI centres its handler's recipes. */
+.nrw-page {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  padding: 4px 0;
+}
+.nrw-page[data-overflow] {
+  overflow-y: auto;
+}
+.nrw-grid {
+  display: grid;
+  justify-content: center;
+  align-content: start;
+  gap: 8px;
+}
+.nrw-empty {
+  display: grid;
+  place-items: center;
+  height: 100%;
+  padding: 16px;
+  color: var(--nrw-muted);
+  text-shadow: 2px 2px 0 #121316;
+  font-size: 14px;
+  line-height: 18px;
+  text-align: center;
+  white-space: normal;
+}
+.nrw-empty > span {
+  max-width: 420px;
+}
+
+/* The window's foot: back and forward, how amounts read, the tier ceiling. */
+.nrw-foot {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
+  min-height: 22px;
+  padding-top: 5px;
+  border-top: 1px solid #2c2e34;
+}
+.nrw-foot .nei-btn {
+  width: 22px;
+  height: 22px;
+}
+.nrw-seg {
+  display: flex;
+  flex: none;
+}
+.nrw .nrw-seg > .nei-btn {
+  height: 22px;
+  min-width: 0;
+  width: auto;
+  padding: 0 7px;
+  margin-left: -1px;
+  font-size: 12px;
+  line-height: 20px;
+  color: var(--nrw-muted);
+}
+.nrw .nrw-seg > .nei-btn:first-child {
+  margin-left: 0;
+}
+.nrw .nrw-seg > .nei-btn[aria-pressed="true"] {
+  position: relative;
+  background: #1b1c20;
+  color: #ffd257;
+  box-shadow:
+    inset 1px 1px 0 #0d0e10,
+    inset -1px -1px 0 #34363c;
+}
+.nrw .nrw-seg > .nei-btn[data-gold] {
+  color: #b99a45;
+}
+.nrw .nrw-seg > .nei-btn[data-gold][aria-pressed="true"] {
+  color: #ffd257;
+}
+.nrw-tier {
+  width: 112px;
+  margin-left: auto;
+}
+.nrw-tier .pn-pick-key {
+  height: 22px;
+  background: #26282d;
+  box-shadow:
+    inset 1px 1px 0 #4a4c54,
+    inset -1px -1px 0 #17191d;
+  border: 1px solid #111317;
+}
+
+/* ===== A recipe: its slots, the arrow, its stats along the foot ===== */
+.nrw-recipe {
+  position: relative;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  padding: 8px;
+  background: rgba(0, 0, 0, 0.14);
+  box-shadow: inset 0 0 0 1px #2a2c31;
+  cursor: default;
+}
+.nrw-recipe:hover {
+  box-shadow: inset 0 0 0 1px #3a3c43;
+}
+.nrw-recipe-name {
+  height: 16px;
+  margin-bottom: 6px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nrw-io {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: 1;
+  min-height: 0;
+}
+.nrw-side {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  flex: none;
+}
+.nrw-slots {
+  display: grid;
+  grid-auto-rows: var(--nrw-slot);
+}
+.nrw-arrow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 44px;
+  color: #5c5e66;
+}
+.nrw-stats {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 22px;
+  margin-top: 6px;
+  flex: none;
+  font-size: 12px;
+  line-height: 14px;
+}
+.nrw-stats > .nrw-grow {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.nrw-recipe .nrw-add {
+  width: 22px;
+  height: 22px;
+}
+.nrw-recipe .nrw-add:hover:not(:disabled) {
+  color: #22d3ee;
+}
+/* A tier chip, flat in the tier's colours as the overview draws them. */
+.nrw-tier-tag {
+  flex: none;
+  min-width: 28px;
+  height: 16px;
+  padding: 0 4px;
+  box-sizing: border-box;
+  font-size: 11px;
+  line-height: 16px;
+  text-align: center;
+}
+
+/*
+ * A slot: a well with the art centred in it, its count drawn over the bottom-right corner and its tag (a chance,
+ * NC, Free) over the top-left in Minecraft's text. The count and tag are drawn by the slot's own pseudo-elements,
+ * so a slot's text is only its name and amount for anything reading it.
+ */
+.nrw-slot {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: var(--nrw-slot);
+  height: var(--nrw-slot);
+  padding: 0;
+  margin: 0;
+  background: #17181b;
+  border: 0;
+  box-shadow:
+    inset 1px 1px 0 #0b0c0e,
+    inset -1px -1px 0 #3a3c42;
+  cursor: pointer;
+  touch-action: none;
+}
+.nrw-slot[data-empty] {
+  cursor: default;
+}
+.nrw-slot:not([data-empty]):hover {
+  background: #34363d;
+}
+.nrw-slot[data-hit] {
+  box-shadow:
+    inset 1px 1px 0 #0b0c0e,
+    inset -1px -1px 0 #3a3c42,
+    inset 0 0 0 2px rgba(34, 211, 238, 0.45);
+}
+.nrw-art {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  overflow: hidden;
+  pointer-events: none;
+}
+.nrw-slot[data-count]::after {
+  content: attr(data-count);
+  position: absolute;
+  right: 1px;
+  bottom: -1px;
+  color: #ffffff;
+  text-shadow: 1px 1px 0 #3f3f3f;
+  font-size: 12px;
+  line-height: 12px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1;
+}
+.nrw-slot[data-count][data-energy]::after {
+  color: #ffd257;
+  text-shadow: 1px 1px 0 #3f3215;
+}
+.nrw-slot[data-tag]::before {
+  content: attr(data-tag);
+  position: absolute;
+  left: 2px;
+  top: 2px;
+  color: #ffff55;
+  text-shadow: 1px 1px 0 #3f3f15;
+  font-size: 10px;
+  line-height: 10px;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 1;
+}
+.nrw-slot[data-tone="nc"]::before {
+  color: #aaaaaa;
+  text-shadow: 1px 1px 0 #2a2a2a;
+}
+.nrw-slot[data-tone="free"]::before {
+  color: #55ff55;
+  text-shadow: 1px 1px 0 #153f15;
+}
+.sr-text {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+/* ===== The machines that run the open tab's recipes: NEI's catalyst column on the window's left ===== */
+.nrw-catalysts {
+  position: absolute;
+  top: 0;
+  right: calc(100% - 6px);
+  z-index: 0;
+  display: grid;
+  grid-auto-flow: column;
+  direction: rtl;
+  gap: 0;
+  padding: 5px 9px 5px 5px;
+  max-height: 100%;
+  overflow: hidden;
+}
+.nrw-catalyst {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: var(--nrw-slot);
+  height: var(--nrw-slot);
+  padding: 0;
+  background: transparent;
+  border: 0;
+  cursor: pointer;
+}
+.nrw-catalyst:hover {
+  background: rgba(255, 255, 255, 0.14);
+}
+
+/* ===== The stencil: the search's own card under the window, in the window's skin ===== */
+.nrw-stencil {
+  padding: 6px;
+}
+.nrw-stencil-side {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+  flex: 1;
+}
+.nrw-stencil-head {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  height: 22px;
+}
+.nrw-stencil-head .nrw-band {
+  justify-content: flex-start;
+  margin: 0;
+}
+.nrw-cond {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  width: 100%;
+  padding: 2px 4px 2px 2px;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.14);
+  box-shadow: inset 0 0 0 1px #2a2c31;
+  cursor: grab;
+  touch-action: none;
+  user-select: none;
+  transition: transform 150ms;
+}
+.nrw-cond:hover {
+  box-shadow: inset 0 0 0 1px #3a3c43;
+}
+.nrw-cond-name {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  font-size: 13px;
+}
+.nrw-cond .nei-btn {
+  width: 18px;
+  height: 18px;
+}
+.nrw-cond[data-lifted] {
+  cursor: grabbing;
+  background: var(--nrw-raised);
+  box-shadow:
+    inset 0 0 0 1px #4a4c54,
+    6px 6px 0 rgba(0, 0, 0, 0.5);
+}
+.nrw-add-cond {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex: none;
+  width: 100%;
+  padding: 2px;
+  box-sizing: border-box;
+  background: transparent;
+  border: 0;
+  color: var(--nrw-dim);
+  cursor: pointer;
+  transition: transform 150ms;
+}
+.nrw-add-cond:hover {
+  color: var(--nrw-ink);
+}
+.nrw-add-cond .nrw-slot {
+  color: inherit;
+  font-size: 18px;
+}
+.nrw-swap {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  flex: none;
+  width: 52px;
+  height: 64px;
+  padding: 0;
+  background: transparent;
+  border: 1px solid transparent;
+  color: #5c5e66;
+  cursor: pointer;
+}
+.nrw-swap:hover {
+  border-color: var(--nrw-edge);
+  background: #26282d;
+  box-shadow:
+    inset 1px 1px 0 #4a4c54,
+    inset -1px -1px 0 #17191d;
+  color: var(--nrw-ink);
+}
+.nrw-swap .nrw-swap-hover {
+  display: none;
+}
+.nrw-swap:hover .nrw-swap-hover {
+  display: block;
+}
+.nrw-swap:hover .nrw-swap-rest {
+  display: none;
+}
+.nrw-pin {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  flex: none;
+  width: 140px;
+  padding: 6px;
+  box-sizing: border-box;
+  background: rgba(0, 0, 0, 0.14);
+  box-shadow: inset 0 0 0 1px #2a2c31;
+  text-align: center;
+}
+
+/* Menus opened from a slot or a recipe: the panel's list. */
+.nrw-menu {
+  position: fixed;
+  z-index: 70;
+  width: 260px;
+  padding: 3px;
+  box-sizing: border-box;
+  font-family: var(--app-font);
+  -webkit-font-smoothing: none;
+}
+.nrw-menu-head {
+  padding: 3px 6px 4px;
+  color: var(--nrw-muted);
+  font-size: 11px;
+  line-height: 14px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+.nrw-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  min-height: 24px;
+  padding: 2px 6px;
+  box-sizing: border-box;
+  background: transparent;
+  border: 0;
+  color: var(--nrw-ink);
+  font-family: inherit;
+  font-size: 12px;
+  line-height: 15px;
+  text-align: left;
+  cursor: pointer;
+}
+.nrw-menu-item:hover {
+  background: #2d2f35;
+}
+.nrw-menu-item[aria-current="true"] {
+  background: #2a2c32;
+  box-shadow: inset 2px 0 0 #ffd257;
+}
+.nrw-menu-rule {
+  height: 1px;
+  margin: 3px 6px;
+  background: #2c2e34;
+}
+
+/* A side's name is never cut: on a phone its keys give way instead. */
+.nrw-stencil-head .nrw-band {
+  flex: 1 0 auto;
+  min-width: max-content;
+}
+html[data-compact] .nrw .nrw-stencil-head .nrw-seg > .nei-btn {
+  padding: 0 4px;
+  font-size: 11px;
+}
+html[data-compact] .nrw-stencil-head .nrw-band {
+  padding: 0 5px;
+}
+.nrw-slot:focus-visible,
+.nrw-catalyst:focus-visible,
+.nrw-tab:focus-visible {
+  outline: 2px solid #ffd257;
+  outline-offset: -2px;
+}

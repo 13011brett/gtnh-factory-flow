@@ -13,10 +13,7 @@ import {
   type RecipeDatasetQueryResult,
   type RecipeMapSelection,
 } from "@/lib/datasets/browser-loader";
-import type {
-  RecipeQueryClause,
-  RecipeQuerySideOp,
-} from "@/lib/datasets/recipe-query";
+import type { RecipeQueryClause, RecipeQuerySideOp } from "@/lib/datasets/recipe-query";
 import type { DatasetResourceIndexEntry, RecipeSummary } from "@/lib/datasets/types";
 import { resourceMatchesInput } from "@/lib/model";
 import { MACHINE_PIN_RESOURCE_ID, useFactoryStore } from "@/store/factory-store";
@@ -40,16 +37,7 @@ import {
 } from "./ResourceIndexPane";
 import { FoldGlyph } from "./flow/clean/fold/FoldKey";
 import { useItemsOnRight } from "./use-plan-layout";
-import {
-  MAP_SELECTION_CHANGED_EVENT,
-  MAP_SELECTION_STORAGE_KEY,
-  readMapSelectionText,
-} from "./machine-map-selection";
-import {
-  RecipeSearchOverlay,
-  type RecipeMapChip,
-  type StencilClause,
-} from "./RecipeSearchOverlay";
+import { RecipeSearchOverlay, type RecipeMapChip, type StencilClause } from "./RecipeSearchOverlay";
 
 // Re-exported so existing imports of the preview helpers from here keep working.
 export {
@@ -114,27 +102,20 @@ export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
   const landedRecipePageKeyRef = useRef<string | undefined>(undefined);
   const [recipeBookSearch, setRecipeBookSearch] = useState("");
   const [filteredRecipes, setFilteredRecipes] = useState<RecipeSummary[]>([]);
-  const [recipeTotal, setRecipeTotal] = useState(0);
+  const [, setRecipeTotal] = useState(0);
   const [recipeHasMore, setRecipeHasMore] = useState(false);
   const [availableRecipeMaps, setAvailableRecipeMaps] = useState<string[]>([]);
-  // The machine chips' selection. Absent means everything is selected (the
-  // default); "exclude" carries the unselected chips, "include" the selected
-  // ones. Stored rather than derived so a map unselected on one search stays
-  // unselected on the next, even across searches where it never appears.
-  const [mapSelection, setMapSelection] = useState<RecipeMapSelection | undefined>(undefined);
-  // PINNED to a machine: the search is scoped to that machine's maps and the
-  // stored chip selection stands aside until the pin comes off.
+  // PINNED to a machine: the search is scoped to that machine's maps; otherwise
+  // every map that matched is a tab.
   const effectiveMapSelection = useMemo<RecipeMapSelection | undefined>(
-    () => (machinePin ? { mode: "include", maps: machinePin.recipeMaps } : mapSelection),
-    [machinePin, mapSelection],
+    () => (machinePin ? { mode: "include", maps: machinePin.recipeMaps } : undefined),
+    [machinePin],
   );
   // Which mode the left panel is in (items, saved blueprints or shared
   // setups), one at a time. A request made before this column mounted (a
   // phone's drawer is unmounted while closed) waits in module state, so it is
   // collected here as well as by the listener below.
-  const [sidebarMode, setSidebarMode] = useState<"items">(
-    () => takePendingSidebarTab() ?? "items",
-  );
+  const [sidebarMode, setSidebarMode] = useState<"items">(() => takePendingSidebarTab() ?? "items");
   const searchInputRef = useRef<HTMLInputElement | null>(null);
   // A request that wanted the search box focused, collected on mount the way
   // the tab is (the panel may have been closed when it was made).
@@ -193,8 +174,6 @@ export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
   const debouncedRecipeSearch = useDebouncedValue(recipeSearch, RESOURCE_SEARCH_DEBOUNCE_MS);
   const debouncedRecipeBookSearch = useDebouncedValue(recipeBookSearch, RECIPE_SEARCH_DEBOUNCE_MS);
 
-
-
   // And the general form of the same thing: anything outside the column can
   // ask for a tab by name, and for the cursor in the search box.
   useEffect(() => {
@@ -242,19 +221,10 @@ export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
 
   const recipeMapChips = useMemo<RecipeMapChip[]>(
     () =>
-      recipeMapTabs.map((tab) => ({
-        ...tab,
-        count: recipeMapCounts[tab.id],
-        selected: isMapSelectedIn(effectiveMapSelection, tab.id),
-      })),
+      recipeMapTabs
+        .filter((tab) => !effectiveMapSelection || effectiveMapSelection.maps.includes(tab.id))
+        .map((tab) => ({ ...tab, count: recipeMapCounts[tab.id] })),
     [effectiveMapSelection, recipeMapCounts, recipeMapTabs],
-  );
-
-  // The All chip reads from what is on screen: lit when every listed chip is
-  // selected, whatever out-of-view maps the stored selection also carries.
-  const allRecipeMapsSelected = useMemo(
-    () => recipeMaps.every((recipeMap) => isMapSelectedIn(effectiveMapSelection, recipeMap)),
-    [effectiveMapSelection, recipeMaps],
   );
 
   // Opening the search seeds the stencil with exactly the question the click
@@ -342,10 +312,6 @@ export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
     setRecipePage(0);
   }, [browseKey, makesOp, stencilClauses, takesOp]);
 
-  const recipeTotalAcrossMaps = useMemo(() => {
-    const counted = Object.values(recipeMapCounts).reduce((sum, count) => sum + count, 0);
-    return counted > 0 ? counted : recipeTotal;
-  }, [recipeMapCounts, recipeTotal]);
   const activeRecipeQuery = activeResource
     ? debouncedRecipeBookSearch.trim()
     : debouncedRecipeSearch.trim();
@@ -384,76 +350,42 @@ export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
     ],
   );
 
+  // The open tab: NEI's one machine at a time, held per browse so a new item
+  // opens on its first tab. A tab the stencil no longer matches gives way to
+  // the first. The first tab needs no query of its own: the server lists
+  // recipes in tab order, so the unscoped answer starts with its recipes.
+  const [viewTab, setViewTab] = useState<{ key: string; id: string } | undefined>(undefined);
+  const activeViewTab = viewTab?.key === browseKey ? viewTab.id : undefined;
+  const firstRecipeMap = recipeMapChips[0]?.id;
+  const selectionForTab = useCallback(
+    (tab: string | undefined): RecipeMapSelection | undefined =>
+      tab && tab !== firstRecipeMap && recipeMaps.includes(tab)
+        ? { mode: "include", maps: [tab] }
+        : effectiveMapSelection,
+    [effectiveMapSelection, firstRecipeMap, recipeMaps],
+  );
+  const querySelection = useMemo(
+    () => selectionForTab(activeViewTab),
+    [activeViewTab, selectionForTab],
+  );
 
-  // Everything selected is the default; a trimmed selection is a saved
-  // preference, applied deferred for the same SSR-agreement reason as the
-  // view above.
-  useEffect(() => {
-    const stored = readStoredMapSelection();
-    if (stored) {
-      return deferStateUpdate(() => setMapSelection(stored));
-    }
-    return undefined;
-  }, []);
-
-  // Changed from outside (the tour borrows the default and puts the player's back): read it again.
-  useEffect(() => {
-    const reread = () => {
-      setMapSelection(readStoredMapSelection());
+  const selectTab = useCallback(
+    (tab: string) => {
+      setViewTab({ key: browseKey, id: tab });
       setRecipePage(0);
-    };
-    window.addEventListener(MAP_SELECTION_CHANGED_EVENT, reread);
-    return () => window.removeEventListener(MAP_SELECTION_CHANGED_EVENT, reread);
-  }, []);
-
-  const changeMapSelection = useCallback((selection: RecipeMapSelection | undefined) => {
-    setMapSelection(selection);
-    setRecipePage(0);
-    if (selection) {
-      window.localStorage.setItem(MAP_SELECTION_STORAGE_KEY, JSON.stringify(selection));
-    } else {
-      window.localStorage.removeItem(MAP_SELECTION_STORAGE_KEY);
-    }
-  }, []);
-
-  const toggleRecipeMap = useCallback(
-    (recipeMap: string) => {
-      changeMapSelection(toggledMapSelection(mapSelection, recipeMap, recipeMaps));
     },
-    [changeMapSelection, mapSelection, recipeMaps],
+    [browseKey],
   );
 
-  // "Only this machine": the selection becomes that one map, and every
-  // other chip goes dark until All or a chip brings it back.
-  const selectOnlyRecipeMap = useCallback(
+  // A pointer over a tab is probably about to open it, so its first page
+  // starts travelling now.
+  const prefetchRecipeMapTab = useCallback(
     (recipeMap: string) => {
-      changeMapSelection({ mode: "include", maps: [recipeMap] });
-    },
-    [changeMapSelection],
-  );
-
-  // The All chip is select-all / select-none: lit, a click clears the board;
-  // unlit, a click selects everything (and forgets stored exclusions).
-  const toggleAllRecipeMaps = useCallback(() => {
-    changeMapSelection(allRecipeMapsSelected ? { mode: "include", maps: [] } : undefined);
-  }, [allRecipeMapsSelected, changeMapSelection]);
-
-  // A pointer over a chip is probably about to toggle it, so the answer that
-  // toggle would show starts travelling now.
-  const prefetchRecipeMapToggle = useCallback(
-    (recipeMap: string) => {
-      if (!selectedDatasetVersion) {
+      if (!selectedDatasetVersion || !activeResource) {
         return;
       }
-
-      const query = activeRecipeQuery;
-      // Map chips only exist inside the book, which only opens on a resource.
-      if (!activeResource) {
-        return;
-      }
-
-      const nextSelection = toggledMapSelection(mapSelection, recipeMap, recipeMaps);
-      const cacheKey = getRecipeQueryKey(nextSelection, 0);
+      const selection = selectionForTab(recipeMap);
+      const cacheKey = getRecipeQueryKey(selection, 0);
       if (
         !cacheKey ||
         getCachedRecipeQuery(recipeQueryCacheRef.current, cacheKey) ||
@@ -467,19 +399,17 @@ export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
         datasetManifestUrl ?? DEFAULT_DATASET_MANIFEST_URL,
         selectedDatasetVersion,
         {
-          query,
-          resource: activeResource
-            ? {
-                kind: activeResource.kind,
-                id: activeResource.id,
-              }
-            : undefined,
+          query: activeRecipeQuery,
+          resource:
+            activeResource.id !== MACHINE_PIN_RESOURCE_ID
+              ? { kind: activeResource.kind, id: activeResource.id }
+              : undefined,
           mode: browserMode,
           clauses: queryClauses.length > 0 ? queryClauses : undefined,
           takesOp,
           makesOp,
           allMaps: true,
-          mapSelection: nextSelection,
+          mapSelection: selection,
           maxTier,
           offset: 0,
           limit: RECIPE_QUERY_LIMIT,
@@ -490,7 +420,7 @@ export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
           trimRecipeQueryCache(recipeQueryCacheRef.current);
         })
         .catch(() => {
-          // Prefetch is opportunistic; the real toggle will surface real errors.
+          // Prefetch is opportunistic; opening the tab surfaces real errors.
         })
         .finally(() => {
           pendingRecipePrefetchesRef.current.delete(cacheKey);
@@ -503,11 +433,10 @@ export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
       datasetManifestUrl,
       getRecipeQueryKey,
       makesOp,
-      mapSelection,
       maxTier,
       queryClauses,
-      recipeMaps,
       selectedDatasetVersion,
+      selectionForTab,
       takesOp,
     ],
   );
@@ -649,9 +578,6 @@ export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
     [getFullRecipe],
   );
 
-
-
-
   useEffect(() => {
     return deferStateUpdate(() => setRecipePage(0));
   }, [
@@ -700,7 +626,7 @@ export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
       });
     }
 
-    const cacheKey = getRecipeQueryKey(effectiveMapSelection, recipePage);
+    const cacheKey = getRecipeQueryKey(querySelection, recipePage);
     const cached = getCachedRecipeQuery(recipeQueryCacheRef.current, cacheKey);
     if (cached) {
       return scheduleAfterPaint(() => {
@@ -752,7 +678,7 @@ export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
           takesOp,
           makesOp,
           allMaps: true,
-          mapSelection: effectiveMapSelection,
+          mapSelection: querySelection,
           maxTier,
           offset: recipePage * RECIPE_QUERY_LIMIT,
           limit: RECIPE_QUERY_LIMIT,
@@ -803,7 +729,7 @@ export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
     datasetManifestUrl,
     getRecipeQueryKey,
     makesOp,
-    effectiveMapSelection,
+    querySelection,
     maxTier,
     queryClauses,
     recipePage,
@@ -816,34 +742,34 @@ export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
         data-help-anchor="browser"
         className={`relative z-40 flex h-full min-h-[360px] min-w-0 compact:min-h-0 flex-col ${itemsOnRight ? "border-l" : "border-r"} border-neutral-800 bg-[#25272c] text-neutral-100`}
       >
-        {(
+        {
           // The wheel pages the list from anywhere in the column, including over
           // the controls and the recent shelf, since nothing here scrolls.
           <div className="flex min-h-0 flex-1 flex-col">
-        <ResourceIndexPane
-          search={recipeSearch}
-          onSearchChange={setRecipeSearch}
-          searchInputRef={searchInputRef}
-          searchFlashing={isSearchFlashing}
-          activeResource={activeResource}
-          onBrowse={browseResource}
-          // NEI's field sits at the bottom middle of the screen. On a phone, under a page covering the board and under
-          // the recipe search (whose own keys sit there) it is at the column's foot.
-          searchAt={isCompact || boardCovered || activeResource ? "bottom" : "dock"}
-          leading={
-            /* Folds this column away (the overview's fold key, facing the board); on a phone it closes the drawer. */
-            <RailKey
-              label="Hide the items column"
-              className="rail-key-fold"
-              onClick={() => writeWorkspaceView({ leftPanelOpen: false })}
-              tip={() => ({ title: "Fold the items" })}
-            >
-              <FoldGlyph direction={itemsOnRight ? "right" : "left"} />
-            </RailKey>
-          }
-        />
+            <ResourceIndexPane
+              search={recipeSearch}
+              onSearchChange={setRecipeSearch}
+              searchInputRef={searchInputRef}
+              searchFlashing={isSearchFlashing}
+              activeResource={activeResource}
+              onBrowse={browseResource}
+              // NEI's field sits at the bottom middle of the screen. On a phone, under a page covering the board and under
+              // the recipe search (whose own keys sit there) it is at the column's foot.
+              searchAt={isCompact || boardCovered || activeResource ? "bottom" : "dock"}
+              leading={
+                /* Folds this column away (the overview's fold key, facing the board); on a phone it closes the drawer. */
+                <RailKey
+                  label="Hide the items column"
+                  className="rail-key-fold"
+                  onClick={() => writeWorkspaceView({ leftPanelOpen: false })}
+                  tip={() => ({ title: "Fold the items" })}
+                >
+                  <FoldGlyph direction={itemsOnRight ? "right" : "left"} />
+                </RailKey>
+              }
+            />
           </div>
-        )}
+        }
       </aside>
 
       {activeResource ? (
@@ -856,13 +782,10 @@ export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
           onMakesOpChange={changeMakesOp}
           onSwapSides={swapStencilSides}
           recipeMapChips={recipeMapChips}
-          allRecipeMapsSelected={allRecipeMapsSelected}
-          onToggleRecipeMap={toggleRecipeMap}
-          onSelectOnlyRecipeMap={selectOnlyRecipeMap}
-          onToggleAllRecipeMaps={toggleAllRecipeMaps}
-          onRecipeMapHover={prefetchRecipeMapToggle}
+          activeTab={activeViewTab}
+          onSelectTab={selectTab}
+          onRecipeMapHover={prefetchRecipeMapTab}
           recipes={filteredRecipes}
-          totalAcrossMaps={recipeTotalAcrossMaps}
           hasMore={recipeHasMore}
           isLoading={recipeQueryLoading}
           queryError={recipeQueryError}
@@ -895,8 +818,7 @@ export function RecipeBrowser({ onLoadDatasetVersion }: RecipeBrowserProps) {
             if (
               !recipeQueryLoading &&
               recipeHasMore &&
-              landedRecipePageKeyRef.current ===
-                getRecipeQueryKey(effectiveMapSelection, recipePage)
+              landedRecipePageKeyRef.current === getRecipeQueryKey(querySelection, recipePage)
             ) {
               setRecipePage(recipePage + 1);
             }
@@ -1010,7 +932,6 @@ function recipeHasRenderableIcons(recipe: Recipe) {
     .every((resource) => Boolean(resource.iconPath || resource.iconAtlas));
 }
 
-
 function scheduleAfterPaint(callback: () => void) {
   if (typeof window === "undefined") {
     callback();
@@ -1035,7 +956,6 @@ function scheduleAfterPaint(callback: () => void) {
     window.cancelAnimationFrame(secondFrame);
   };
 }
-
 
 function appendUniqueRecipes(current: RecipeSummary[], incoming: RecipeSummary[]) {
   const seen = new Set(current.map((recipe) => recipe.id));
@@ -1088,70 +1008,6 @@ function getRecipeQueryCacheKey({
     offset,
     limit,
   ].join("|");
-}
-
-/** Whether the chips' selection shows this map's recipes. Absent means all. */
-function isMapSelectedIn(selection: RecipeMapSelection | undefined, recipeMap: string): boolean {
-  if (!selection) {
-    return true;
-  }
-  const listed = selection.maps.includes(recipeMap);
-  return selection.mode === "exclude" ? !listed : listed;
-}
-
-/**
- * One chip's toggle. Exclusions and inclusions are edited in place so a map
- * unselected on an earlier search survives this one. It normalises back to
- * "all" only for an empty exclusion list or an include list covering every
- * chip on screen.
- */
-function toggledMapSelection(
-  selection: RecipeMapSelection | undefined,
-  recipeMap: string,
-  visibleMaps: string[],
-): RecipeMapSelection | undefined {
-  if (!selection) {
-    return { mode: "exclude", maps: [recipeMap] };
-  }
-  const listed = selection.maps.includes(recipeMap);
-  const maps = listed
-    ? selection.maps.filter((map) => map !== recipeMap)
-    : [...selection.maps, recipeMap];
-  if (selection.mode === "exclude") {
-    return maps.length > 0 ? { mode: "exclude", maps } : undefined;
-  }
-  if (visibleMaps.every((map) => maps.includes(map))) {
-    return undefined;
-  }
-  return { mode: "include", maps };
-}
-
-function readStoredMapSelection(): RecipeMapSelection | undefined {
-  try {
-    const stored = readMapSelectionText();
-    if (!stored) {
-      return undefined;
-    }
-    const parsed: unknown = JSON.parse(stored);
-    if (
-      typeof parsed === "object" &&
-      parsed !== null &&
-      "mode" in parsed &&
-      (parsed.mode === "exclude" || parsed.mode === "include") &&
-      "maps" in parsed &&
-      Array.isArray(parsed.maps)
-    ) {
-      const maps = parsed.maps.filter((map): map is string => typeof map === "string");
-      // An empty exclusion list is just "all"; keep the state canonical.
-      if (parsed.mode === "exclude" && maps.length === 0) {
-        return undefined;
-      }
-      return { mode: parsed.mode, maps };
-    }
-  } catch {
-    // A stale or foreign value reads as the default.
-  }
-  return undefined;
 }
 
 function getCachedRecipeQuery(cache: Map<string, RecipeQueryCacheEntry>, key: string) {
@@ -1212,5 +1068,3 @@ function buildRecipeMapTabs(
     };
   });
 }
-
-

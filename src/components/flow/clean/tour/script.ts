@@ -23,8 +23,11 @@ import {
   libraryKey,
   itemTile,
   itemsSearch,
+  machineTab,
+  machineTabOpen,
   menuRow,
   nodeCount,
+  overlayKey,
   pointIn,
   settingsSheet,
   portBox,
@@ -36,6 +39,7 @@ import {
   railRoot,
   railSection,
   recipeOverlay,
+  recipePageSettled,
   redoKey,
   solved,
   spareBar,
@@ -95,7 +99,7 @@ const ELECTROLYZER = /^Electrolyzer/;
 const ACID_RECIPE = /Sulfur Dust×1Programmed CircuitNCOxygen3,000LWater1,000L/;
 const WATER_TO_OXYGEN = /NCWater1,000LHydrogen Cell×2Oxygen1,000L/;
 const SUGAR_MIXER = /Sugar×4Sulfuric Acid1,000L/;
-const mixers: Target = textOf("button[aria-expanded]", /^Mixer[0-9]/, recipeOverlay);
+const MIXER = /^Mixer$/;
 
 /** Whether the drawer for a resource is a trash drawer (or, with "Product", a product drawer): read off its rule key. */
 function drawerIs(name: string, kind: "Trash" | "Product"): boolean {
@@ -119,6 +123,38 @@ function electrolyzersForExcess(): number {
 
 // region From the items list to a card
 
+/** Opens a machine's tab in the recipe search, turning the strip of tabs to it first. */
+const openMachineTab = (machine: RegExp, label: string): Action[] => [
+  A.until(
+    () => machineTab(machine)() !== null || overlayKey("Next machines")() !== null,
+    `${label}'s tab`,
+    20000,
+  ),
+  ...Array.from({ length: 6 }, () =>
+    A.when(
+      () => machineTab(machine)() === null && overlayKey("Next machines")() !== null,
+      A.click(overlayKey("Next machines"), { label: "more machines" }),
+    ),
+  ),
+  A.when(() => !machineTabOpen(machine), A.click(machineTab(machine), { label: `${label}'s tab` })),
+  A.until(() => machineTabOpen(machine), `${label}'s recipes`),
+];
+
+/** Turns the open tab's pages until the recipe is on one. */
+const pageToRecipe = (machine: RegExp, has: RegExp | undefined, label: string): Action[] => [
+  A.until(() => addRecipe(machine, has)() !== null || recipePageSettled(), label, 20000),
+  ...Array.from({ length: 12 }, () =>
+    A.when(
+      () => addRecipe(machine, has)() === null && overlayKey("Next page")() !== null,
+      A.seq(
+        A.click(overlayKey("Next page"), { label: "next page" }),
+        A.until(recipePageSettled, label, 20000),
+      ),
+    ),
+  ),
+  A.until(() => addRecipe(machine, has)() !== null, label, 20000),
+];
+
 /** Search for the plates and open their recipes, down to the bender's add key. */
 const openPlateRecipes: Action[] = [
   A.run(() => {
@@ -130,7 +166,8 @@ const openPlateRecipes: Action[] = [
   A.click(itemTile("Iron Plate"), { label: "Iron Plate" }),
   A.until(() => recipeOverlay() !== null, "recipe search"),
   A.wait(300),
-  A.until(() => addRecipe(BENDER)() !== null, "the bender's recipe", 20000),
+  ...openMachineTab(BENDER, "the bender"),
+  ...pageToRecipe(BENDER, undefined, "the bender's recipe"),
   A.show(addRecipe(BENDER)),
   A.wait(250),
 ];
@@ -511,7 +548,8 @@ const forcedAdd: Step = {
       A.click(itemTile("Sulfuric Acid"), { label: "Sulfuric Acid" }),
     ),
     A.until(() => recipeOverlay() !== null, "recipe search"),
-    A.until(() => addRecipe(LARGE_REACTOR, ACID_RECIPE)() !== null, "the reactor's recipe", 20000),
+    ...openMachineTab(LARGE_REACTOR, "the large reactor"),
+    ...pageToRecipe(LARGE_REACTOR, ACID_RECIPE, "the reactor's recipe"),
     A.show(addRecipe(LARGE_REACTOR, ACID_RECIPE)),
     A.click(addRecipe(LARGE_REACTOR, ACID_RECIPE), { label: "add the reactor's recipe" }),
     A.until(() => nodeCount() === 1, "the card"),
@@ -532,11 +570,8 @@ const forcedWired: Step = {
   id: "forced-wired",
   actions: [
     ...searchFromPort(portRow(0, "Input", "Oxygen"), 0, "the oxygen input"),
-    A.until(
-      () => addRecipe(ELECTROLYZER, WATER_TO_OXYGEN)() !== null,
-      "the electrolyzer's recipe",
-      20000,
-    ),
+    ...openMachineTab(ELECTROLYZER, "the electrolyzer"),
+    ...pageToRecipe(ELECTROLYZER, WATER_TO_OXYGEN, "the electrolyzer's recipe"),
     A.show(addRecipe(ELECTROLYZER, WATER_TO_OXYGEN)),
     A.click(addRecipe(ELECTROLYZER, WATER_TO_OXYGEN), { label: "add the electrolyzer's recipe" }),
     A.until(() => nodeCount() === 2, "the second card"),
@@ -570,15 +605,10 @@ const forcedUses: Step = {
   id: "forced-uses",
   actions: [
     ...searchFromPort(portRow(0, "Output", "Sulfuric Acid"), 2, "the acid output"),
-    // Far down the list, and a group's rows are drawn only once it is in view: bring the mixers up.
-    A.until(() => mixers() !== null, "the mixers' group", 20000),
-    A.run(() =>
-      mixers()?.scrollIntoView({ block: "start", behavior: "instant" as ScrollBehavior }),
-    ),
-    A.wait(300),
-    A.until(() => addRecipe(/^Mixer/, SUGAR_MIXER)() !== null, "the mixer's recipe", 20000),
-    A.show(addRecipe(/^Mixer/, SUGAR_MIXER)),
-    A.click(addRecipe(/^Mixer/, SUGAR_MIXER), { label: "add the mixer's recipe" }),
+    ...openMachineTab(MIXER, "the mixer"),
+    ...pageToRecipe(MIXER, SUGAR_MIXER, "the mixer's recipe"),
+    A.show(addRecipe(MIXER, SUGAR_MIXER)),
+    A.click(addRecipe(MIXER, SUGAR_MIXER), { label: "add the mixer's recipe" }),
     A.until(() => nodeCount() === 3, "the third card"),
     A.until(solved, "the solve"),
     fit,

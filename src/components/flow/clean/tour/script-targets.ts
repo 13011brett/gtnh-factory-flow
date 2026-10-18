@@ -39,27 +39,47 @@ export const itemTile =
 
 export const recipeOverlay: Target = closestOf(css('button[aria-label="Close recipe search"]'), ".fixed");
 
-export const overlayTab = (re: RegExp): Target => textOf("button:not([aria-expanded])", re, recipeOverlay);
+/** A machine's tab on the recipe search's top edge, when its page of tabs is showing. */
+export const machineTab = (re: RegExp): Target => textOf("[data-machine-tab]", re, recipeOverlay);
 
-/** The "Add recipe node" key of a recipe in a machine's group of the recipe search. */
+/** Whether the recipe search shows this machine's tab open. */
+export function machineTabOpen(re: RegExp): boolean {
+  const title = recipeOverlay()?.querySelector("[data-recipe-tab-title]");
+  return title !== null && title !== undefined && re.test(title.textContent ?? "");
+}
+
+/** One of the recipe search's own keys by its name (Next machines, Next page). */
+export const overlayKey =
+  (name: string): Target =>
+  () => {
+    const key = recipeOverlay()?.querySelector(`button[aria-label="${name}"]`) ?? null;
+    return key && visible(key) && !(key as HTMLButtonElement).disabled ? key : null;
+  };
+
+/** Whether the open page has landed: recipes on it and none still on the way. */
+export function recipePageSettled(): boolean {
+  const page = recipeOverlay()?.querySelector("[data-recipe-page]");
+  return (
+    Boolean(page?.querySelector("[data-recipe]")) && !page?.querySelector(".recipe-search-skeleton")
+  );
+}
+
+/**
+ * The "Add recipe node" key of a recipe on the open page of a machine's tab in the recipe search; with `has`, of
+ * the recipe whose slots read so (each slot's name and amount, run together).
+ */
 export const addRecipe =
   (machine: RegExp, has?: RegExp): Target =>
   () => {
     const overlay = recipeOverlay();
-    if (!overlay) return null;
-    for (const header of overlay.querySelectorAll("button[aria-expanded]")) {
-      if (!machine.test(header.textContent ?? "")) continue;
-      const group = header.parentElement;
-      if (!group) continue;
-      for (const key of group.querySelectorAll('button[aria-label="Add recipe node"]')) {
-        if (!visible(key)) continue;
-        if (!has) return key;
-        let row: Element | null = key;
-        for (let i = 0; i < 5 && row; i++) {
-          if (has.test(row.textContent ?? "") && row.querySelectorAll('button[aria-label="Add recipe node"]').length === 1) return key;
-          row = row.parentElement;
-        }
-      }
+    if (!overlay || !machineTabOpen(machine)) return null;
+    for (const key of overlay.querySelectorAll(
+      '[data-recipe-page] button[aria-label="Add recipe node"]',
+    )) {
+      if (!visible(key)) continue;
+      if (!has) return key;
+      const recipe = key.closest("[data-recipe]");
+      if (recipe && has.test(recipe.textContent ?? "")) return key;
     }
     return null;
   };

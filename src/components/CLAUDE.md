@@ -37,12 +37,22 @@ The board has its own notes in `flow/CLAUDE.md`, the Pool worksheet in `pool/CLA
 - `RecipeBrowser.tsx` owns the query state. `browseResource` / `clearResourceBrowser` are
   the only doors in and out. A query is clauses (`recipe-query.ts`) plus ANY / ALL / ONLY
   per side; the server does the set algebra (`src/lib/server/CLAUDE.md`).
-- Machine chips are a persisted multi-select (`machine-map-selection.v1`), sent as
-  `mapMode` + `map=`; counts always cover everything that matched. Changed from outside
-  (the tour sets every machine and puts the player's back) through `machine-map-selection.ts`.
-- Results page through machine sections in chip order. An open section short of its
-  count shows skeletons; the first (`[data-awaiting-page]`) asks for the next page, and
-  `onLoadMore` only advances from a page that has landed (`landedRecipePageKeyRef`).
+- It is NEI's recipe window in the panel's skin (`nei/nei-recipe.css`, NEI GTNH's GuiRecipe in website units): a tab
+  per machine on the window's top edge (Generators first when any answer), paged by its own < > when they overflow; the
+  machine's name and the page between NEI's arrows; the magnifier opens the name filter in the page row; the machines
+  that run the open tab in a column on the window's left (their tiers from `machineHandlerIcons`); back, forward, the
+  rate reading and the tier ceiling along the foot; the stencil on its own card underneath.
+- One tab at a time, never stored: `RecipeBrowser` keeps the open tab per browse and asks the server for that map alone
+  (`mapSelection` include); the first tab needs no query of its own, as the server lists recipes in tab order. Counts
+  always cover everything that matched.
+- A tab's recipes share one cell (`shapeOf`: the most item and fluid slots any of them fills, GregTech's grid shapes,
+  the places a recipe leaves empty drawn empty) and a page is as many cells as the window holds. A page asks for more
+  until it is full (`onLoadMore` only advances from a page that has landed, `landedRecipePageKeyRef`); the wheel over it
+  and PageUp / PageDown turn it.
+- A slot is a well with the art, its count over the corner and its tag (a chance, NC, FREE) over the other, both drawn
+  by CSS from data attributes so a recipe's text is its slots' names and amounts run together (the tour finds recipes by
+  it). A click asks what makes it, a right click what uses it, R and U over it the same, Shift+right click or a held
+  press opens the menu (find, add to takes or makes, the slot's other forms); pressed and moved it lifts onto the stencil.
 - Back/forward stacks live in the store (`browseBack` / `browseForward`); Alt+arrows and
   a bare Backspace walk them.
 - An add lands at `nearestFreeSpot` and the camera follows. An add started from a card's

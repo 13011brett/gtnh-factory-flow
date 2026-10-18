@@ -5,7 +5,6 @@ import { wheelChangesValues } from "@/lib/device-settings";
 
 import {
   ArrowLeftRight,
-  ChevronDown,
   ChevronLeft,
   ChevronRight,
   Plus,
@@ -14,16 +13,10 @@ import {
   X,
   Zap,
 } from "lucide-react";
-import {
-  memo,
-  useCallback,
-  useEffect,
-  useEffectEvent,
-  useMemo,
-  useRef,
-  useState,
-} from "react";
+import { memo, useCallback, useEffect, useEffectEvent, useMemo, useRef, useState } from "react";
 import "./chrome/mod-panel.css";
+import "./nei/nei.css";
+import "./nei/nei-recipe.css";
 import { ModPick } from "./chrome/ModPick";
 import { createPortal } from "react-dom";
 import type {
@@ -46,13 +39,17 @@ import {
 } from "@/lib/model";
 import type { MachineTier, ResourceAmount } from "@/lib/model/types";
 import { getVoltageTierIndex } from "@/lib/model/tiers";
+import { isProgrammedCircuitResource } from "@/lib/model/programmed-circuit";
 import { energyPerUnitSuffix, type TimeRateUnit } from "@/lib/model/rate-unit";
 import { formatCompact, resourceLabel } from "@/lib/model/resources";
 import { playBoardSound } from "@/lib/board-sounds";
-import { ENERGY_READING_TEXT } from "./flow/flow-explainers";
 import { GT_TIER_COLORS } from "./flow/tier-colors";
 import type { RecipeBrowserMachinePin, RecipeInputPicks, TierFilter } from "@/store/factory-store";
-import { machineIconAtTier, useMachineHandlerIconEntries, useRecipeMapIcons } from "./flow/machine-icons";
+import {
+  machineIconAtTier,
+  useMachineHandlerIconEntries,
+  useRecipeMapIcons,
+} from "./flow/machine-icons";
 import {
   applyAlternativeCycleFace,
   getAlternativeCycleFaces,
@@ -61,9 +58,10 @@ import {
 import { useIsCompactViewport } from "@/lib/compact-view";
 import { getUiScale, useUiScale } from "@/lib/ui-scale";
 import { machineArtPixels } from "./flow/MachinePicker";
+import { isEditableKeyboardTarget } from "./flow/keyboard";
 import { ItemPickerPopover } from "./ItemPickerPopover";
-import { ResourceIcon } from "./nei/ResourceIcon";
-import { itemTipLines, McFloatingTip } from "./nei/McTip";
+import { isSwatchFluid, ResourceIcon, spriteArtPixels } from "./nei/ResourceIcon";
+import { itemTipLines, McFloatingTip, type McTipLine } from "./nei/McTip";
 import {
   contextualizePreviewRecipe,
   summaryToPreviewRecipe,
@@ -84,22 +82,21 @@ import { overlayInsets } from "@/lib/workspace-columns";
  * One condition on the stencil: a resource and the side of the recipe it must
  * appear on, dressed to draw its own chip.
  */
-export interface StencilClause
-  extends Pick<
-    ResourceAmount,
-    "kind" | "id" | "displayName" | "iconPath" | "iconAtlas" | "dominantColor"
-  > {
+export interface StencilClause extends Pick<
+  ResourceAmount,
+  "kind" | "id" | "displayName" | "iconPath" | "iconAtlas" | "dominantColor"
+> {
   role: RecipeQueryRole;
 }
 
 /**
- * How the result cards read their numbers: the recipe as written (amounts per
+ * How the recipes read their numbers: the recipe as written (amounts per
  * craft), or as rates over the recipe's own duration (one machine, full
  * speed, no overclock: the nameplate figures a board card gets).
  */
-// "eu": each OUTPUT chip reads the EU one machine spends per unit of it at
-// the recipe's own tier (no overclock). Input chips read energy per unit
-// EATEN in muted gold, so the two sides never look like costs to add up.
+// "eu": each OUTPUT slot reads the EU one machine spends per unit of it at
+// the recipe's own tier (no overclock). Input slots read energy per unit
+// EATEN, so the two sides never look like costs to add up.
 type RateView = "recipe" | TimeRateUnit | "ratio" | "eu";
 
 const RATE_VIEW_UNITS: Record<TimeRateUnit, { multiplier: number; per: string }> = {
@@ -139,29 +136,7 @@ function greatestCommonDivisor(left: number, right: number): number {
 /** Survives close and reopen: the reading you chose is a preference, not a query. */
 let storedRateView: RateView = "recipe";
 
-/** The Generators chip's state: a browser preference, on unless turned off. */
-const GENERATORS_CHIP_KEY = "gtnh-factory-flow.recipe-search-generators.v1";
-
-function readGeneratorsChip(): boolean {
-  if (typeof window === "undefined") {
-    return true;
-  }
-  try {
-    return window.localStorage.getItem(GENERATORS_CHIP_KEY) !== "off";
-  } catch {
-    return true;
-  }
-}
-
-function writeGeneratorsChip(on: boolean) {
-  try {
-    window.localStorage.setItem(GENERATORS_CHIP_KEY, on ? "on" : "off");
-  } catch {
-    // Storage unavailable: the toggle holds for this session.
-  }
-}
-
-/** Offered by a chip whose slot accepts several forms: the menu lists them. */
+/** Offered by a slot whose place accepts several forms: the menu lists them. */
 interface ChipMenuPicker {
   faces: AlternativeCycleFace[];
   currentId: string;
@@ -173,8 +148,8 @@ interface StencilDrag {
   /** Index into `clauses` of the row being moved, or -1 for a new one. */
   index: number;
   /**
-   * A condition NOT yet in the stencil: a slot chip lifted off a result card.
-   * It lands only when released over a side; anywhere else it vanishes.
+   * A condition NOT yet in the stencil: a slot lifted off a recipe. It lands
+   * only when released over a side; anywhere else it vanishes.
    */
   source?: StencilClause;
   width: number;
@@ -190,23 +165,47 @@ interface StencilDrag {
   overSlot: number;
 }
 
+/** A recipe map that matched: one machine tab. */
 export interface RecipeMapChip {
   id: string;
   label: string;
   count?: number;
-  /** Whether this map's recipes are in the results; a chip click toggles it. */
-  selected: boolean;
   icon?: Pick<
     ResourceAmount,
     "kind" | "id" | "amount" | "displayName" | "iconPath" | "iconAtlas" | "dominantColor"
   >;
 }
 
+/** The Generators tab's id: never a recipe map's name. */
+const GENERATORS_TAB = "@generators";
+
+interface MachineTab {
+  id: string;
+  label: string;
+  count?: number;
+  icon?: RecipeMapChip["icon"];
+  generators?: boolean;
+}
+
+// NEI's measures in shell px (one GUI pixel is about 1.75): an 18 px slot,
+// a 24 px tab. A recipe is its slot grids with the arrow between, its stats
+// along the foot; every recipe of a tab takes the same cell, as a handler's do.
+const SLOT = 32;
+const TAB = 42;
+const ARROW = 44;
+const CELL_PAD = 8;
+const CELL_STATS = 28;
+const CELL_NAME = 22;
+const CELL_GAP = 8;
+const PAGE_PAD = 4;
+
 /**
- * The recipe search: one screen, no browse step. Results fill the top; the
- * STENCIL of the wanted recipe sits on its own card at the bottom middle,
- * takes on the left and makes on the right like a machine card. Each side
- * combines its items with ANY, ALL or ONLY; a recipe must satisfy both sides.
+ * The recipe search as NEI's recipe window: a tab per machine on the window's
+ * top edge, the machine's name and the page between their arrows, the open
+ * tab's recipes a page at a time, the machines that run them in a column on
+ * the left. The STENCIL of the wanted recipe sits on its own card at the
+ * bottom: takes on the left and makes on the right, each side combining its
+ * items with ANY, ALL or ONLY; a recipe must satisfy both sides.
  */
 export function RecipeSearchOverlay({
   clauses,
@@ -217,13 +216,10 @@ export function RecipeSearchOverlay({
   onMakesOpChange,
   onSwapSides,
   recipeMapChips,
-  allRecipeMapsSelected,
-  onToggleRecipeMap,
-  onSelectOnlyRecipeMap,
-  onToggleAllRecipeMaps,
+  activeTab,
+  onSelectTab,
   onRecipeMapHover,
   recipes,
-  totalAcrossMaps,
   hasMore,
   isLoading,
   queryError,
@@ -231,7 +227,6 @@ export function RecipeSearchOverlay({
   onQueryChange,
   maxTier,
   onMaxTierChange,
-  selectedRecipeId,
   onSelectRecipe,
   onAdd,
   onPrefetch,
@@ -255,14 +250,11 @@ export function RecipeSearchOverlay({
   onMakesOpChange: (op: RecipeQuerySideOp) => void;
   onSwapSides: () => void;
   recipeMapChips: RecipeMapChip[];
-  allRecipeMapsSelected: boolean;
-  onToggleRecipeMap: (recipeMap: string) => void;
-  /** Every other chip goes dark: only this machine's recipes stay. */
-  onSelectOnlyRecipeMap: (recipeMap: string) => void;
-  onToggleAllRecipeMaps: () => void;
+  /** The open tab; absent opens the first. */
+  activeTab?: string;
+  onSelectTab: (tab: string) => void;
   onRecipeMapHover: (recipeMap: string) => void;
   recipes: RecipeSummary[];
-  totalAcrossMaps: number;
   hasMore: boolean;
   isLoading: boolean;
   queryError?: string;
@@ -294,14 +286,15 @@ export function RecipeSearchOverlay({
   const machineIconEntries = useMachineHandlerIconEntries();
   const recipeMapIcons = useRecipeMapIcons();
   const machinePinIcon = machinePin
-    ? (machineIconAtTier(machinePin.handlerId ? machineIconEntries.get(machinePin.handlerId) : undefined, machinePin.tier) ??
-      (machinePin.recipeMaps[0] ? recipeMapIcons.get(machinePin.recipeMaps[0]) : undefined))
+    ? (machineIconAtTier(
+        machinePin.handlerId ? machineIconEntries.get(machinePin.handlerId) : undefined,
+        machinePin.tier,
+      ) ?? (machinePin.recipeMaps[0] ? recipeMapIcons.get(machinePin.recipeMaps[0]) : undefined))
     : undefined;
   const panelRef = useRef<HTMLElement>(null);
   const layout = useRecipeSearchViewport();
   // A phone (or any window the app calls compact) gets the search FULL
-  // SCREEN, first-class: its own header stack with the close in the top
-  // right, one swipeable row of machine chips, and a shorter stencil.
+  // SCREEN: the window and the stencil fill it, the machine column goes.
   const compact = useIsCompactViewport();
   // The shell zoom, for placing fixed children of this zoomed portal.
   const uiScale = useUiScale();
@@ -312,10 +305,10 @@ export function RecipeSearchOverlay({
     storedRateView = view;
     setRateView(view);
   }, []);
-  // The wheel walks the rate pills: down for the next reading, up for the
+  // The wheel walks the rate keys: down for the next reading, up for the
   // previous, wrapping at the ends. Attached by hand and non-passive so
-  // the results behind do not scroll with it.
-  const ratePillsRef = useRef<HTMLSpanElement | null>(null);
+  // nothing behind scrolls with it.
+  const ratePillsRef = useRef<HTMLDivElement | null>(null);
   const rateViewRef = useRef(rateView);
   rateViewRef.current = rateView;
   useEffect(() => {
@@ -343,23 +336,22 @@ export function RecipeSearchOverlay({
     };
     element.addEventListener("wheel", onWheel, { passive: false });
     return () => element.removeEventListener("wheel", onWheel);
-  }, [changeRateView, compact]);
+  }, [changeRateView]);
   const [chipMenu, setChipMenu] = useState<
     | {
         x: number;
         y: number;
         resource: ResourceAmount;
-        /** Set when the chip's slot accepts several forms: pick one here. */
+        /** Set when the slot accepts several forms: pick one here. */
         picker?: ChipMenuPicker;
       }
     | undefined
   >(undefined);
-  // The card's own menu (right click or a held press on its machine tile):
-  // what to do with THIS machine's recipes - hide them, keep only them.
+  // A recipe's own menu (right click on its ground, or a held press).
   const [cardMenu, setCardMenu] = useState<CardMenu | undefined>(undefined);
 
-  // Sounds: open on mount, a page turn on every browse-key change (chip,
-  // refactor, back, forward), close on the close paths. An add closes
+  // Sounds: open on mount, a page turn on every browse-key change (an item,
+  // a refactor, back, forward), close on the close paths. An add closes
   // silently here because the card landing on the board makes its own sound.
   const openedRef = useRef(false);
   useEffect(() => {
@@ -375,84 +367,11 @@ export function RecipeSearchOverlay({
     onClose();
   }, [onClose]);
 
-  useEffect(() => {
-    const onKeyDown = (event: KeyboardEvent) => {
-      // The browser's history keys walk the search's pages, and so does a
-      // bare Backspace when it is not deleting text in a box.
-      const inTextField =
-        event.target instanceof HTMLElement &&
-        (event.target.tagName === "INPUT" ||
-          event.target.tagName === "TEXTAREA" ||
-          event.target.isContentEditable);
-      const backKey =
-        (event.altKey && event.key === "ArrowLeft") ||
-        (event.key === "Backspace" && !inTextField && !event.altKey && !event.ctrlKey && !event.metaKey);
-      const forwardKey = event.altKey && event.key === "ArrowRight";
-      if (backKey || forwardKey) {
-        const allowed = backKey ? canGoBack : canGoForward;
-        if (allowed) {
-          event.preventDefault();
-          (backKey ? onBack : onForward)();
-        }
-        return;
-      }
-      if (event.key !== "Escape") {
-        return;
-      }
-      if (chipMenu || cardMenu) {
-        setChipMenu(undefined);
-        setCardMenu(undefined);
-        return;
-      }
-      closeSearch();
-    };
-    window.addEventListener("keydown", onKeyDown);
-    return () => window.removeEventListener("keydown", onKeyDown);
-  }, [canGoBack, canGoForward, cardMenu, chipMenu, closeSearch, onBack, onForward]);
-
-  // Any press outside a menu dismisses it, and so does a wheel turn (the menu
-  // is pinned to the screen while its card scrolls away). CAPTURE phase on
-  // purpose: the search's panels stop pointer events from bubbling, so a
-  // bubbling listener would never hear presses there. Presses inside the
-  // menu are told apart by containment.
-  const menuRef = useRef<HTMLDivElement | null>(null);
-  useDropdownDismiss(Boolean(chipMenu || cardMenu), {
-    refs: [menuRef],
-    onClose: () => {
-      setChipMenu(undefined);
-      setCardMenu(undefined);
-    },
-    fade: true,
-  });
-
-  const openCardMenu = useCallback((event: ReactMouseEvent, menu: Omit<CardMenu, "x" | "y">) => {
-    event.preventDefault();
-    event.stopPropagation();
-    setChipMenu(undefined);
-    // Real px -> shell px: the menu is a fixed child of the zoomed root.
-    const scale = getUiScale();
-    setCardMenu({
-      ...menu,
-      x: Math.min(event.clientX / scale, window.innerWidth / scale - 310),
-      y: Math.min(event.clientY / scale, window.innerHeight / scale - 170),
-    });
+  // The slot under the pointer: R and U over it ask NEI's two questions.
+  const hoverSlotRef = useRef<ResourceAmount | undefined>(undefined);
+  const setHoverSlot = useCallback((resource: ResourceAmount | undefined) => {
+    hoverSlotRef.current = resource;
   }, []);
-
-  const openChipMenu = useCallback(
-    (event: ReactMouseEvent, resource: ResourceAmount, picker?: ChipMenuPicker) => {
-      event.preventDefault();
-      event.stopPropagation();
-      // Real px -> shell px: the menu is a fixed child of the zoomed root.
-      const scale = getUiScale();
-      setChipMenu({
-        x: Math.min(event.clientX / scale, window.innerWidth / scale - 230),
-        y: Math.min(event.clientY / scale, window.innerHeight / scale - (picker ? 330 : 190)),
-        resource,
-        picker,
-      });
-    },
-    [],
-  );
 
   const removeClause = (index: number) => {
     playBoardSound("stencilRemove");
@@ -462,7 +381,8 @@ export function RecipeSearchOverlay({
   const addResourceClause = useCallback(
     (resource: ResourceAmount, role: RecipeQueryRole) => {
       const already = clauses.some(
-        (clause) => clause.role === role && clause.kind === resource.kind && clause.id === resource.id,
+        (clause) =>
+          clause.role === role && clause.kind === resource.kind && clause.id === resource.id,
       );
       if (!already) {
         playBoardSound("stencilAdd");
@@ -562,17 +482,19 @@ export function RecipeSearchOverlay({
 
   const beginChipDrag = useCallback(
     (resource: ResourceAmount, event: ReactPointerEvent<HTMLElement>) => {
-      // Mouse only: on a finger a slot chip's drag is the list's scroll.
+      // Mouse only: on a finger a slot's drag is the page's scroll.
       if (event.button !== 0 || event.pointerType !== "mouse") {
         return;
       }
-      const rect = event.currentTarget.getBoundingClientRect();
-      // The ghost should be a stencil row, so it takes a stencil row's pitch.
-      let pitch = 46;
+      // The ghost should be a stencil row, so it takes a stencil row's size.
+      let pitch = 42;
+      let width = 280;
       for (const element of sideListsRef.current.values()) {
         const row = element.firstElementChild;
         if (row) {
-          pitch = row.getBoundingClientRect().height + 6;
+          const rect = row.getBoundingClientRect();
+          pitch = rect.height + 6;
+          width = rect.width;
           break;
         }
       }
@@ -587,10 +509,10 @@ export function RecipeSearchOverlay({
           iconAtlas: resource.iconAtlas,
           dominantColor: resource.dominantColor ?? resource.iconAtlas?.dominantColor,
         },
-        width: Math.min(rect.width, 320),
+        width,
         pitch,
-        grabDX: event.clientX - rect.left,
-        grabDY: event.clientY - rect.top,
+        grabDX: 18 * getUiScale(),
+        grabDY: 18 * getUiScale(),
         startX: event.clientX,
         startY: event.clientY,
         x: event.clientX,
@@ -630,10 +552,7 @@ export function RecipeSearchOverlay({
           ) {
             overRole = role;
             const within = event.clientY - rect.top + element.scrollTop;
-            overSlot = Math.max(
-              0,
-              Math.min(layoutCount(role), Math.round(within / drag.pitch)),
-            );
+            overSlot = Math.max(0, Math.min(layoutCount(role), Math.round(within / drag.pitch)));
           }
         }
         return {
@@ -641,8 +560,7 @@ export function RecipeSearchOverlay({
           x: event.clientX,
           y: event.clientY,
           active:
-            drag.active ||
-            Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 4,
+            drag.active || Math.hypot(event.clientX - drag.startX, event.clientY - drag.startY) > 4,
           overRole,
           overSlot,
         };
@@ -655,7 +573,7 @@ export function RecipeSearchOverlay({
       if (!drag?.active) {
         return;
       }
-      // The click that closes a real drag is not a click on the chip: swallow
+      // The click that closes a real drag is not a click on the slot: swallow
       // the one the browser is about to send, and only that one.
       const swallow = (event: MouseEvent) => {
         event.stopPropagation();
@@ -674,7 +592,9 @@ export function RecipeSearchOverlay({
         const role = drag.overRole;
         const already = clauses.some(
           (clause) =>
-            clause.role === role && clause.kind === drag.source!.kind && clause.id === drag.source!.id,
+            clause.role === role &&
+            clause.kind === drag.source!.kind &&
+            clause.id === drag.source!.id,
         );
         if (already) {
           return;
@@ -705,10 +625,8 @@ export function RecipeSearchOverlay({
     // The listeners live for the length of ONE drag, not one pointer frame:
     // keying on the boolean keeps every move from re-wiring the window.
   }, [clauses, moveClause, onClausesChange, stencilDrag !== undefined]);
-  // What the ghost shows: the row being moved, or the chip being carried in.
-  const liftedClause = stencilDrag
-    ? (stencilDrag.source ?? clauses[stencilDrag.index])
-    : undefined;
+  // What the ghost shows: the row being moved, or the slot being carried in.
+  const liftedClause = stencilDrag ? (stencilDrag.source ?? clauses[stencilDrag.index]) : undefined;
 
   const addClause = (entry: DatasetResourceIndexEntry, role: RecipeQueryRole) => {
     const already = clauses.some(
@@ -749,15 +667,17 @@ export function RecipeSearchOverlay({
   // source with no tier chip is never filtered.
   const powerHits = useMemo(
     () =>
-      maxTier === "all"
-        ? allPowerHits
-        : allPowerHits.filter(
-            (hit) => !hit.source.unlock || powerUnlockWithinTier(hit.source.unlock, maxTier),
-          ),
-    [allPowerHits, maxTier],
+      machinePin
+        ? []
+        : maxTier === "all"
+          ? allPowerHits
+          : allPowerHits.filter(
+              (hit) => !hit.source.unlock || powerUnlockWithinTier(hit.source.unlock, maxTier),
+            ),
+    [allPowerHits, machinePin, maxTier],
   );
   // "What takes power" is nearly everything in the pack, so nothing answers
-  // it; the empty state explains instead of listing a misleading few.
+  // it; the empty page explains instead of listing a misleading few.
   const asksWhatTakesPower = clauses.some(
     (clause) => clause.id === POWER_EU_CLAUSE_ID && clause.role === "takes",
   );
@@ -776,254 +696,365 @@ export function RecipeSearchOverlay({
     },
     [addPowerSourceNode, refactorNodeToPowerSource, onClose],
   );
-  // The Generators chip rides the machine row: same multi-select gesture,
-  // its own browser-remembered state, and the All key sweeps it along.
-  const [generatorsSelected, setGeneratorsSelected] = useState(readGeneratorsChip);
-  const toggleGenerators = useCallback(() => {
-    playBoardSound("tick");
-    setGeneratorsSelected((on) => {
-      writeGeneratorsChip(!on);
-      return !on;
-    });
-  }, []);
-  const hideGenerators = useCallback(() => {
-    setGeneratorsSelected(false);
-    writeGeneratorsChip(false);
-  }, []);
-  // The two menu items a card offers about its machine, and the tile's own
-  // click, all go through here so the chip row and the cards agree.
-  const hideRecipeMap = useCallback(
-    (recipeMap: string) => {
-      playBoardSound("tick");
-      onToggleRecipeMap(recipeMap);
-    },
-    [onToggleRecipeMap],
-  );
-  const onlyRecipeMap = useCallback(
-    (recipeMap: string) => {
-      playBoardSound("tick");
-      hideGenerators();
-      onSelectOnlyRecipeMap(recipeMap);
-    },
-    [hideGenerators, onSelectOnlyRecipeMap],
-  );
-  // The results regrouped by machine, in chip order, so the list reads as
-  // titled sections. A dark chip is a FOLDED section: still listed, quiet,
-  // one click from open. Every chip gets a section whether or not its
-  // recipes have paged in, so the titles never jump.
-  const machineSections = useMemo(() => {
-    const byMap = new Map<string, RecipeSummary[]>();
-    for (const recipe of recipes) {
-      const bucket = byMap.get(recipe.recipeMap);
-      if (bucket) {
-        bucket.push(recipe);
-      } else {
-        byMap.set(recipe.recipeMap, [recipe]);
-      }
-    }
-    const sections: Array<{
-      id: string;
-      label: string;
-      count?: number;
-      icon?: RecipeMapChip["icon"];
-      open: boolean;
-      recipes: RecipeSummary[];
-    }> = [];
-    const seen = new Set<string>();
-    for (const chip of recipeMapChips) {
-      seen.add(chip.id);
-      const loaded = byMap.get(chip.id) ?? [];
-      sections.push({
+
+  // ===== the tabs: Generators first when any answer, then a tab per machine =====
+  const tabs = useMemo<MachineTab[]>(
+    () => [
+      ...(powerHits.length > 0
+        ? [{ id: GENERATORS_TAB, label: "Generators", count: powerHits.length, generators: true }]
+        : []),
+      ...recipeMapChips.map((chip) => ({
         id: chip.id,
         label: chip.label,
         count: chip.count,
         icon: chip.icon,
-        open: chip.selected,
-        recipes: loaded,
-      });
-    }
-    for (const [recipeMap, loaded] of byMap) {
-      if (!seen.has(recipeMap)) {
-        sections.push({ id: recipeMap, label: recipeMap, open: true, recipes: loaded });
+      })),
+    ],
+    [powerHits.length, recipeMapChips],
+  );
+  const activeTabId =
+    activeTab && tabs.some((tab) => tab.id === activeTab) ? activeTab : tabs[0]?.id;
+  const activeIndex = Math.max(
+    0,
+    tabs.findIndex((tab) => tab.id === activeTabId),
+  );
+  const active = tabs[activeIndex];
+  const onGenerators = active?.generators === true;
+  const selectTab = useCallback(
+    (id: string) => {
+      if (id === activeTabId) {
+        return;
       }
-    }
-    return sections;
-  }, [recipeMapChips, recipes]);
-
-  // Infinite scroll. Pages arrive in section order (the server walks the maps
-  // in chip order), so the first skeleton of an open section short of its
-  // count is where the next page lands. It asks for that page when it nears
-  // the viewport or is already above it, and asks again after every page.
-  const resultsScrollRef = useRef<HTMLDivElement | null>(null);
-  const loadMoreIfAwaitedNear = () => {
-    const scroller = resultsScrollRef.current;
-    if (!scroller || !hasMore || isLoading) {
+      playBoardSound("tick");
+      onSelectTab(id);
+    },
+    [activeTabId, onSelectTab],
+  );
+  const stepTab = (step: 1 | -1) => {
+    if (tabs.length < 2) {
       return;
     }
-    const awaited = scroller.querySelector("[data-awaiting-page] .recipe-search-skeleton");
-    const awaitedNear =
-      awaited !== null &&
-      awaited.getBoundingClientRect().top - scroller.getBoundingClientRect().bottom < 480;
-    if (awaitedNear || scroller.scrollHeight - scroller.scrollTop - scroller.clientHeight < 480) {
-      onLoadMore();
+    const next = tabs[(activeIndex + step + tabs.length) % tabs.length];
+    if (next) {
+      selectTab(next.id);
     }
   };
-  const loadMoreIfAwaitedNearAfterPage = useEffectEvent(loadMoreIfAwaitedNear);
-  useEffect(() => {
-    loadMoreIfAwaitedNearAfterPage();
-  }, [recipes, hasMore, isLoading]);
-  const handleResultsScroll = () => loadMoreIfAwaitedNear();
 
-  // Controls are built once and placed in both layouts.
-  // The chips are a multi-select: each toggles its machine's recipes, and
-  // All is select-all / select-none. Unselecting one chip keeps the rest.
-  const machineChipRow = (
-    <>
-      <MachineChip
-        label="All"
-        count={totalAcrossMaps}
-        active={allRecipeMapsSelected && (powerHits.length === 0 || generatorsSelected)}
-        onClick={() => {
-          playBoardSound("tick");
-          if (powerHits.length > 0) {
-            const next = !allRecipeMapsSelected;
-            setGeneratorsSelected(next);
-            writeGeneratorsChip(next);
-          }
-          onToggleAllRecipeMaps();
-        }}
-      />
-      {powerHits.length > 0 ? (
-        <MachineChip
-          label="Generators"
-          count={powerHits.length}
-          active={generatorsSelected}
-          onClick={toggleGenerators}
-          iconNode={<Zap className="h-4 w-4 fill-current text-amber-400" aria-hidden />}
-        />
-      ) : null}
-      {recipeMapChips.map((chip) => (
-        <MachineChip
-          key={chip.id}
-          label={chip.label}
-          count={chip.count}
-          icon={chip.icon}
-          active={chip.selected}
-          onClick={() => hideRecipeMap(chip.id)}
-          onHover={() => onRecipeMapHover(chip.id)}
-        />
-      ))}
-    </>
+  // The tab strip pages as NEI's does: as many tabs as fit, its own < and >.
+  const [tabRun, setTabRun] = useState<HTMLDivElement | null>(null);
+  const tabRunWidth = useElementSize(tabRun).width;
+  const tabsPerPage = Math.max(1, Math.floor((tabRunWidth || TAB * 8) / TAB));
+  const tabPageCount = Math.max(1, Math.ceil(tabs.length / tabsPerPage));
+  const [tabPageState, setTabPageState] = useState<{ key: string; page: number }>();
+  const tabPageKey = `${activeTabId}|${tabsPerPage}|${tabs.length}`;
+  const tabPage = Math.min(
+    tabPageCount - 1,
+    tabPageState?.key === tabPageKey ? tabPageState.page : Math.floor(activeIndex / tabsPerPage),
   );
-  // Back and forward through the pages the search has shown, browser style.
-  const historyButtons = (
-    <span className="flex shrink-0 items-center gap-1">
-      <button
-        type="button"
-        onClick={onBack}
-        disabled={!canGoBack}
-        aria-label="Back to the previous search"
-        className={[
-          "flex shrink-0 items-center justify-center border-2 border-[var(--mc-33)] bg-[var(--mc-61)] text-[var(--mc-ink)]",
-          compact ? "h-10 w-10" : "h-9 w-9",
-          canGoBack ? "hover:bg-[var(--mc-85)]" : "opacity-35",
-        ].join(" ")}
-      >
-        <ChevronLeft className="h-5 w-5" />
-      </button>
-      <button
-        type="button"
-        onClick={onForward}
-        disabled={!canGoForward}
-        aria-label="Forward to the next search"
-        className={[
-          "flex shrink-0 items-center justify-center border-2 border-[var(--mc-33)] bg-[var(--mc-61)] text-[var(--mc-ink)]",
-          compact ? "h-10 w-10" : "h-9 w-9",
-          canGoForward ? "hover:bg-[var(--mc-85)]" : "opacity-35",
-        ].join(" ")}
-      >
-        <ChevronRight className="h-5 w-5" />
-      </button>
-    </span>
+  const visibleTabs = tabs.slice(tabPage * tabsPerPage, (tabPage + 1) * tabsPerPage);
+  const stepTabPage = (step: 1 | -1) => {
+    playBoardSound("tick");
+    setTabPageState({ key: tabPageKey, page: (tabPage + step + tabPageCount) % tabPageCount });
+  };
+  const [tabTip, setTabTip] = useState<{ id: string; x: number; y: number }>();
+  const tipTab = tabTip ? tabs.find((tab) => tab.id === tabTip.id) : undefined;
+
+  // ===== the open tab's recipes, a page at a time =====
+  const tabRecipes = useMemo(
+    () =>
+      active && !onGenerators ? recipes.filter((recipe) => recipe.recipeMap === active.id) : [],
+    [active, onGenerators, recipes],
   );
-  const ratePillGroup = (
-    <span
-      ref={ratePillsRef}
-      className="flex shrink-0 items-center border-2 border-[var(--mc-47)] bg-[var(--mc-25)]"
-    >
-      {RATE_VIEW_CHOICES.map((choice) => (
-        <OpPill
-          key={choice.view}
-          label={choice.label}
-          active={rateView === choice.view}
-          gold={choice.view === "eu"}
-          onClick={() => {
-            if (choice.view === "eu" && rateView !== "eu") {
-              playBoardSound("dialEnergy");
-            } else if (choice.view !== rateView) {
-              playBoardSound("tick");
-            }
-            changeRateView(choice.view);
-          }}
-        />
-      ))}
-    </span>
+  const shape = useMemo(
+    () =>
+      onGenerators
+        ? shapeOf(powerHits.map(powerSlotCounts))
+        : shapeOf(tabRecipes.map(recipeSlotCounts)),
+    [onGenerators, powerHits, tabRecipes],
   );
-  const nameFilter = (
-    <label
-      className={[
-        "flex min-w-0 items-center gap-2 border-2 border-[var(--mc-33)] bg-[#17191d] px-2 text-sm text-neutral-100 shadow-[inset_2px_2px_0_#30343b,inset_-2px_-2px_0_#050607]",
-        compact ? "h-10 flex-1" : "h-9 w-[200px]",
-      ].join(" ")}
-    >
-      <Search className="h-4 w-4 shrink-0 text-neutral-500" />
-      <input
-        value={query}
-        onChange={(event) => onQueryChange(event.target.value)}
-        placeholder="Filter by name..."
-        className="min-w-0 flex-1 bg-transparent text-neutral-100 outline-none placeholder:text-neutral-500"
-      />
-      {query ? (
-        <button
-          type="button"
-          onClick={() => onQueryChange("")}
-          className="text-neutral-400 hover:text-white"
-          aria-label="Clear the name filter"
-        >
-          <X className="h-4 w-4" />
-        </button>
-      ) : null}
-    </label>
+  const cell = cellSize(shape, onGenerators);
+  const [pageEl, setPageEl] = useState<HTMLDivElement | null>(null);
+  const area = useElementSize(pageEl);
+  const columns = Math.max(1, Math.floor((area.width + CELL_GAP) / (cell.width + CELL_GAP)));
+  const rows = Math.max(
+    1,
+    Math.floor((area.height - PAGE_PAD * 2 + CELL_GAP) / (cell.height + CELL_GAP)),
   );
-  const tierSelect = (
-    <div className={["shrink-0", compact ? "w-[92px]" : "w-28"].join(" ")}>
-      <ModPick
-        value={maxTier}
-        onChange={(tier) => {
-          playBoardSound("tick");
-          onMaxTierChange(tier);
-        }}
-        label="Maximum machine tier"
-        options={[
-          { value: "all" as TierFilter, label: compact ? "Any tier" : "All tiers" },
-          ...GT_VOLTAGE_TIERS.map((entry) => ({ value: entry.tier as TierFilter, label: `≤ ${entry.tier}` })),
-        ]}
-      />
-    </div>
+  const perPage = columns * rows;
+  const tabTotal = onGenerators
+    ? powerHits.length
+    : Math.max(active?.count ?? tabRecipes.length, tabRecipes.length);
+  const pageCount = Math.max(1, Math.ceil(tabTotal / perPage));
+  const viewKey = [
+    browseKey,
+    activeTabId,
+    clauses.map((clause) => `${clause.role}:${clause.kind}:${clause.id}`).join(","),
+    takesOp,
+    makesOp,
+    query.trim(),
+    maxTier,
+  ].join("|");
+  const [pageState, setPageState] = useState<{ key: string; page: number }>({ key: "", page: 0 });
+  const page = Math.min(pageCount - 1, pageState.key === viewKey ? pageState.page : 0);
+  const turnPage = useCallback(
+    (step: number, wrap: boolean) => {
+      if (pageCount < 2) {
+        return;
+      }
+      const raw = page + step;
+      const next = wrap ? (raw + pageCount) % pageCount : Math.max(0, Math.min(pageCount - 1, raw));
+      if (next !== page) {
+        playBoardSound("pageTurn");
+        setPageState({ key: viewKey, page: next });
+      }
+    },
+    [page, pageCount, viewKey],
   );
+  // A slot that turned away under a still pointer answers no R or U.
+  useEffect(() => {
+    hoverSlotRef.current = undefined;
+  }, [viewKey, page]);
+  const pageStart = page * perPage;
+  const pageEnd = Math.min(tabTotal, pageStart + perPage);
+  const pageRecipes = onGenerators ? [] : tabRecipes.slice(pageStart, pageEnd);
+  const pageHits = onGenerators ? powerHits.slice(pageStart, pageEnd) : [];
+  const awaited = onGenerators ? 0 : Math.max(0, pageEnd - pageStart - pageRecipes.length);
+  // One recipe taller than the page (a narrow window): the page scrolls.
+  const overflows = cell.height > area.height - PAGE_PAD * 2 && area.height > 0;
+
+  // The page asks for what it shows: recipes arrive in tab order, so more
+  // pages load until this page is full or the server has no more.
+  const loadForPage = useEffectEvent(() => {
+    if (onGenerators || !active || isLoading || !hasMore) {
+      return;
+    }
+    if (tabRecipes.length < pageEnd) {
+      onLoadMore();
+    }
+  });
+  useEffect(() => {
+    loadForPage();
+  }, [pageEnd, tabRecipes.length, hasMore, isLoading, activeTabId]);
+
+  // The wheel over the page turns it, as NEI's does; a page that scrolls
+  // scrolls first and turns at its ends.
+  const wheelRef = useRef({ at: 0, sum: 0 });
+  const turnPageBy = useEffectEvent((step: number) => turnPage(step, false));
+  useEffect(() => {
+    if (!pageEl) {
+      return;
+    }
+    const onWheel = (event: WheelEvent) => {
+      const delta = event.deltaY || event.deltaX;
+      if (!delta) {
+        return;
+      }
+      if (pageEl.scrollHeight > pageEl.clientHeight + 1) {
+        const atTop = pageEl.scrollTop <= 0;
+        const atBottom = pageEl.scrollTop + pageEl.clientHeight >= pageEl.scrollHeight - 1;
+        if ((delta < 0 && !atTop) || (delta > 0 && !atBottom)) {
+          return;
+        }
+      }
+      event.preventDefault();
+      const now = performance.now();
+      const state = wheelRef.current;
+      if (now - state.at > 250) {
+        state.sum = 0;
+      }
+      state.sum += delta;
+      if (Math.abs(state.sum) < 30 || now - state.at < 140) {
+        return;
+      }
+      state.at = now;
+      const step = state.sum > 0 ? 1 : -1;
+      state.sum = 0;
+      turnPageBy(step);
+    };
+    pageEl.addEventListener("wheel", onWheel, { passive: false });
+    return () => pageEl.removeEventListener("wheel", onWheel);
+  }, [pageEl]);
+
+  // The machines that run the open tab's recipes: NEI's catalysts.
+  const catalysts = useMemo(() => {
+    if (!active || onGenerators) {
+      return [];
+    }
+    const found: CatalystResource[] = [];
+    const seen = new Set<string>();
+    const push = (resource: CatalystResource | undefined) => {
+      if (resource && !seen.has(`${resource.kind}:${resource.id}`)) {
+        seen.add(`${resource.kind}:${resource.id}`);
+        found.push(resource);
+      }
+    };
+    const first = tabRecipes[0];
+    if (first) {
+      for (const handler of getRecipeMachineHandlers(summaryToPreviewRecipe(first))) {
+        const entry = machineIconEntries.get(handler.id);
+        if (entry?.tiers?.length) {
+          for (const variant of entry.tiers) push(variant.resource);
+        } else {
+          push(entry?.resource);
+        }
+      }
+    }
+    if (found.length === 0) {
+      push(active.icon ?? recipeMapIcons.get(active.id));
+    }
+    return found;
+  }, [active, machineIconEntries, onGenerators, recipeMapIcons, tabRecipes]);
+  const [catTip, setCatTip] = useState<{ index: number; x: number; y: number }>();
+
+  const [windowEl, setWindowEl] = useState<HTMLDivElement | null>(null);
+  const windowHeight = useElementSize(windowEl).height;
+
+  // The recipe filter: NEI's magnifier opens a field in the page row.
+  const [findOpen, setFindOpen] = useState(() => query.trim() !== "");
+  const findRef = useRef<HTMLInputElement | null>(null);
+  const showFind = findOpen || query.trim() !== "";
+
+  useEffect(() => {
+    const onKeyDown = (event: KeyboardEvent) => {
+      const inTextField = isEditableKeyboardTarget(event.target);
+      // The browser's history keys walk the search's pages, and so does a
+      // bare Backspace when it is not deleting text in a box.
+      const backKey =
+        (event.altKey && event.key === "ArrowLeft") ||
+        (event.key === "Backspace" &&
+          !inTextField &&
+          !event.altKey &&
+          !event.ctrlKey &&
+          !event.metaKey);
+      const forwardKey = event.altKey && event.key === "ArrowRight";
+      if (backKey || forwardKey) {
+        const allowed = backKey ? canGoBack : canGoForward;
+        if (allowed) {
+          event.preventDefault();
+          (backKey ? onBack : onForward)();
+        }
+        return;
+      }
+      if (!inTextField && (event.key === "PageDown" || event.key === "PageUp")) {
+        event.preventDefault();
+        turnPageBy(event.key === "PageDown" ? 1 : -1);
+        return;
+      }
+      // R and U over a slot, as in NEI.
+      const key = event.key.toLowerCase();
+      if (
+        !inTextField &&
+        (key === "r" || key === "u") &&
+        !event.ctrlKey &&
+        !event.metaKey &&
+        !event.altKey &&
+        !event.shiftKey &&
+        hoverSlotRef.current
+      ) {
+        event.preventDefault();
+        onBrowseResource({ ...hoverSlotRef.current, amount: 1 }, key === "r" ? "recipes" : "uses");
+        return;
+      }
+      if (event.key !== "Escape") {
+        return;
+      }
+      if (chipMenu || cardMenu) {
+        setChipMenu(undefined);
+        setCardMenu(undefined);
+        return;
+      }
+      closeSearch();
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [
+    canGoBack,
+    canGoForward,
+    cardMenu,
+    chipMenu,
+    closeSearch,
+    onBack,
+    onBrowseResource,
+    onForward,
+  ]);
+
+  // Any press outside a menu dismisses it, and so does a wheel turn (the menu
+  // is pinned to the screen while its page turns away). CAPTURE phase on
+  // purpose: the search's panels stop pointer events from bubbling, so a
+  // bubbling listener would never hear presses there. Presses inside the
+  // menu are told apart by containment.
+  const menuRef = useRef<HTMLDivElement | null>(null);
+  useDropdownDismiss(Boolean(chipMenu || cardMenu), {
+    refs: [menuRef],
+    onClose: () => {
+      setChipMenu(undefined);
+      setCardMenu(undefined);
+    },
+    fade: true,
+  });
+
+  const openCardMenu = useCallback((event: ReactMouseEvent, menu: Omit<CardMenu, "x" | "y">) => {
+    event.preventDefault();
+    event.stopPropagation();
+    setChipMenu(undefined);
+    // Real px -> shell px: the menu is a fixed child of the zoomed root.
+    const scale = getUiScale();
+    setCardMenu({
+      ...menu,
+      x: Math.min(event.clientX / scale, window.innerWidth / scale - 270),
+      y: Math.min(event.clientY / scale, window.innerHeight / scale - 80),
+    });
+  }, []);
+
+  const openChipMenu = useCallback(
+    (event: ReactMouseEvent, resource: ResourceAmount, picker?: ChipMenuPicker) => {
+      event.preventDefault();
+      event.stopPropagation();
+      // Real px -> shell px: the menu is a fixed child of the zoomed root.
+      const scale = getUiScale();
+      setChipMenu({
+        x: Math.min(event.clientX / scale, window.innerWidth / scale - 270),
+        y: Math.min(event.clientY / scale, window.innerHeight / scale - (picker ? 330 : 140)),
+        resource,
+        picker,
+      });
+    },
+    [],
+  );
+
+  const keyStop = (event: ReactPointerEvent) => event.stopPropagation();
+
   const closeButton = (
     <button
       type="button"
       aria-label="Close recipe search"
       onClick={closeSearch}
-      className={[
-        "flex shrink-0 cursor-pointer items-center justify-center border-2 border-[var(--mc-33)] bg-[var(--mc-61)] text-[var(--mc-ink)] hover:bg-[var(--mc-85)]",
-        compact ? "h-10 w-10" : "absolute right-2 top-2 z-30 h-8 w-8",
-      ].join(" ")}
+      className="nei-btn nrw-close"
     >
-      <X className={compact ? "h-5 w-5" : "h-4 w-4"} />
+      <X className="h-4 w-4" aria-hidden />
     </button>
   );
+
+  // What the page says when it has no recipes to show.
+  const emptyText = queryError
+    ? queryError
+    : clauses.length === 0 && !query.trim()
+      ? machinePin
+        ? `Pick an item or type a name. Only recipes the ${machinePin.label} runs will show.`
+        : "Add an item to either side of the card below."
+      : tabs.length === 0 && !isLoading
+        ? asksWhatTakesPower
+          ? "Nearly every machine takes power, so that list would be the whole pack. Search for what makes power instead."
+          : machinePin
+            ? `Nothing the ${machinePin.label} runs matches.`
+            : "No matching recipes."
+        : undefined;
+
+  const pageLabel = `Page ${tabs.length > 0 ? page + 1 : 0}/${tabs.length > 0 ? pageCount : 0}`;
+  const gridStyle = {
+    gridTemplateColumns: `repeat(${columns}, ${cell.width}px)`,
+    gridAutoRows: `${cell.height}px`,
+  };
 
   // A PORTAL, not a child: on compact this component mounts inside a drawer,
   // and a drawer slides on `translate` - which quietly turns every fixed
@@ -1031,544 +1062,796 @@ export function RecipeSearchOverlay({
   return createPortal(
     <div
       className={[
-        // A near-black ground: the search is the only thing on screen, and
-        // everything on it stands off the dark.
         // ui-zoom: a body portal is outside the zoomed shell, so the search
         // zooms itself; the viewport it is laid out in is read in shell px.
         "ui-zoom pointer-events-auto fixed inset-0 flex items-center justify-center bg-black/70",
-        // The search covers the RIGHT column and spends that room on bigger
-        // recipes; the LEFT column stays live beside it (see the style
-        // below). On compact it outranks ALL the app chrome - full screen
-        // means full screen.
+        // On compact it outranks ALL the app chrome: full screen means full screen.
         compact ? "z-[90]" : "z-50",
         sheet ? "" : "px-3 py-2",
       ].join(" ")}
       onPointerDown={closeSearch}
-      // The dim starts where the item browser ends: the left column stays
+      // The dim starts where the item browser ends: the items column stays
       // bright and clickable beside the search, because the two are one tool.
       style={{ left: sheet ? 0 : layout.leftInset, right: sheet ? 0 : layout.rightInset }}
     >
-      {/* The section itself does NOT stop the close: only its two solid boxes
-          do, so the bare corners beside the stencil card still read as the
-          backdrop they look like. */}
+      {/* The section itself does NOT stop the close: only its solid parts do,
+          so the bare corners beside the stencil still read as the backdrop. */}
       <section
         ref={panelRef}
-        className="rs-mod pointer-events-auto relative flex flex-col font-mono"
+        className="nrw pointer-events-auto relative flex flex-col"
         aria-label="Recipe search"
         style={{
           width: sheet ? "100%" : `min(${layout.width}px, 100%)`,
           height: sheet ? "100%" : `min(${layout.height}px, 100%)`,
+          padding: sheet ? "6px 6px 0" : undefined,
         }}
       >
-        {/* The frame is 4px like a board window's, a dark grey one shade off
-            the floor: an accent by contrast, not by colour. */}
+        {/* ===== the machine tabs on the window's top edge ===== */}
         <div
-          className="relative flex min-h-0 flex-1 flex-col overflow-hidden border-4 border-[#23262d] bg-[#101215] text-[var(--mc-ink)] shadow-[inset_2px_2px_0_rgba(255,255,255,0.05),inset_-2px_-2px_0_rgba(0,0,0,0.6)]"
-          onPointerDown={(event) => event.stopPropagation()}
+          className="nrw-tabs"
+          style={{ marginLeft: sheet ? 0 : CATALYST_ROOM }}
+          onPointerDown={keyStop}
         >
-          {compact ? (
-            /* ===== phone head: search row with the close top right, then one
-                   swipeable row of machine chips, then the rate switch ===== */
-            <div className="flex flex-col gap-2 p-2">
-              <div className="flex items-center gap-2">
-                {historyButtons}
-                {nameFilter}
-                {closeButton}
-              </div>
-              <div className="recipe-search-scroll flex items-center gap-1.5 overflow-x-auto pb-0.5">
-                {machineChipRow}
-              </div>
-              {/* The tier ceiling rides the rate row: the head row above
-                  has the history keys and the close, and a filter box
-                  narrower than a name is no filter box. */}
-              <div className="flex items-center gap-2">
-                <div className="recipe-search-scroll min-w-0 flex-1 overflow-x-auto">
-                  {ratePillGroup}
-                </div>
-                {tierSelect}
-              </div>
-            </div>
-          ) : (
-            <>
-              {closeButton}
-              {/* ===== the head: machine chips scroll on the left, the
-                     controls stand still on the right. Cut mid-row on
-                     purpose: a third row of chips peeking over the edge is
-                     the scroll cue. ===== */}
-              <div className="flex flex-wrap items-start gap-2 py-3 pl-3 pr-12">
-                <div className="recipe-search-scroll flex max-h-[100px] min-w-[240px] flex-1 flex-wrap items-center gap-1.5 overflow-y-auto pr-1">
-                  {machineChipRow}
-                </div>
-                {/* Two short rows instead of one long one: the filter and
-                    tier up top, the rate switch beneath - so the machine
-                    chips keep the width almost to the corner. */}
-                <div className="ml-auto flex shrink-0 flex-col items-end gap-2">
-                  <div className="flex items-center gap-2">
-                    {historyButtons}
-                    {nameFilter}
-                    {tierSelect}
-                  </div>
-                  {ratePillGroup}
-                </div>
-              </div>
-            </>
-          )}
-
-          {/* ===== the answers ===== */}
-          <div
-            className={[
-              "recipe-search-scroll min-h-0 flex-1 overflow-y-auto",
-              sheet ? "px-1.5" : "px-3",
-            ].join(" ")}
-            ref={resultsScrollRef}
-            onScroll={handleResultsScroll}
-          >
-            {queryError ? (
-              <div className="border-2 border-[var(--mc-47)] bg-[var(--mc-71)] p-3 text-sm shadow-[inset_1px_1px_0_var(--mc-93),inset_-1px_-1px_0_var(--mc-47)]">
-                {queryError}
-              </div>
-            ) : clauses.length === 0 && !query.trim() ? (
-              <div className="grid min-h-[260px] place-items-center border-2 border-[var(--mc-47)] bg-[var(--mc-71)] p-3 text-sm shadow-[inset_1px_1px_0_var(--mc-93),inset_-1px_-1px_0_var(--mc-47)]">
-                Add an item to either side of the card below.
-              </div>
-            ) : (
-              <>
-                {powerHits.length > 0 ? (
-                  // Generators are not recipes, but they are a section like
-                  // any other: the bolt is their machine face, the same
-                  // header folds them, and their chip up top agrees.
-                  <section className="mb-3">
-                    <MachineSectionHeader
-                      label="Generators"
-                      count={powerHits.length}
-                      iconNode={<Zap className="h-6 w-6 fill-current text-amber-400" aria-hidden />}
-                      open={generatorsSelected}
-                      onToggle={toggleGenerators}
-                    />
-                    {generatorsSelected ? (
-                      <div
-                        className="grid items-start gap-2"
-                        style={{
-                          gridTemplateColumns: sheet
-                            ? "minmax(0, 1fr)"
-                            : "repeat(auto-fill, minmax(480px, 1fr))",
-                        }}
-                      >
-                        {powerHits.map((hit) => (
-                          <PowerHitCard
-                            key={`${hit.source.id}|${JSON.stringify(hit.settings ?? {})}`}
-                            hit={hit}
-                            rateView={rateView}
-                            onPlace={() => placePowerHit(hit)}
-                            onBrowseResource={onBrowseResource}
-                            onChipMenu={openChipMenu}
-                            onChipDragStart={beginChipDrag}
-                            onHideMachine={toggleGenerators}
-                            onCardMenu={(event) =>
-                              openCardMenu(event, {
-                                label: hit.source.name,
-                                machineLabel: "generators",
-                                add: () => placePowerHit(hit),
-                                hide: hideGenerators,
-                              })
-                            }
-                          />
-                        ))}
-                      </div>
-                    ) : null}
-                  </section>
-                ) : null}
-                {recipeMapChips.length === 0 && isLoading ? (
-                  <div
-                    className="grid items-start gap-2"
-                    style={{
-                      gridTemplateColumns: sheet
-                        ? "minmax(0, 1fr)"
-                        : "repeat(auto-fill, minmax(480px, 1fr))",
-                    }}
-                    role="status"
-                    aria-label="Loading recipes"
-                  >
-                    {Array.from({ length: sheet ? 4 : 9 }, (_, index) => (
-                      <SkeletonResultCard key={index} delay={index * 110} />
-                    ))}
-                  </div>
-                ) : recipeMapChips.length === 0 && recipes.length === 0 ? (
-                  powerHits.length > 0 && generatorsSelected ? null : (
-                    <div className="grid min-h-[260px] place-items-center border-2 border-[var(--mc-47)] bg-[var(--mc-71)] p-3 text-sm shadow-[inset_1px_1px_0_var(--mc-93),inset_-1px_-1px_0_var(--mc-47)]">
-                      {asksWhatTakesPower
-                        ? "Nearly every machine takes power, so that list would be the whole pack. Search for what makes power instead."
-                        : machinePin && clauses.length === 0 && query.trim() === ""
-                          ? `Pick an item or type a name. Only recipes the ${machinePin.label} runs will show.`
-                          : machinePin
-                            ? `Nothing the ${machinePin.label} runs matches.`
-                            : "No matching recipes."}
-                    </div>
-                  )
-                ) : (
-                  <>
-                    {/* One section per machine, in chip order, always: a
-                        folded machine stays as a quiet title. Built from the
-                        chips, not the recipes, so a refetch (which briefly
-                        empties the recipes) never reorders or blanks titles;
-                        an open section still loading shows skeletons. */}
-                    {machineSections.map((section) => {
-                      // Cards this open section counts but no page has brought
-                      // yet: skeletons, the first of which asks for the next page.
-                      const awaited =
-                        section.open && (hasMore || isLoading) && section.count !== undefined
-                          ? Math.max(0, section.count - section.recipes.length)
-                          : 0;
-                      return (
-                        <section
-                          key={section.id}
-                          className="mb-3"
-                          data-awaiting-page={awaited > 0 ? "" : undefined}
-                        >
-                          <MachineSectionHeader
-                            label={section.label}
-                            count={section.count}
-                            icon={section.icon}
-                            open={section.open}
-                            onToggle={() => hideRecipeMap(section.id)}
-                            onHover={() => onRecipeMapHover(section.id)}
-                          />
-                          {section.open && (section.recipes.length > 0 || awaited > 0) ? (
-                            <div
-                              className="grid items-start gap-2"
-                              style={{
-                                gridTemplateColumns: sheet
-                                  ? "minmax(0, 1fr)"
-                                  : "repeat(auto-fill, minmax(480px, 1fr))",
-                              }}
-                            >
-                              {section.recipes.map((recipe) => (
-                                <CompactRecipeCard
-                                  key={recipe.id}
-                                  recipe={recipe}
-                                  contextResource={contextResource}
-                                  selected={selectedRecipeId === recipe.id}
-                                  onSelectRecipe={onSelectRecipe}
-                                  onAdd={onAdd}
-                                  onPrefetch={onPrefetch}
-                                  onBrowseResource={onBrowseResource}
-                                  onChipMenu={openChipMenu}
-                                  onChipDragStart={beginChipDrag}
-                                  rateView={rateView}
-                                  onCardMenu={(event, machineLabel, add) =>
-                                    openCardMenu(event, {
-                                      label: recipe.name,
-                                      machineLabel,
-                                      add,
-                                      hide: () => hideRecipeMap(recipe.recipeMap),
-                                      only: () => onlyRecipeMap(recipe.recipeMap),
-                                    })
-                                  }
-                                />
-                              ))}
-                              {awaited > 0 ? (
-                                <div
-                                  className="contents"
-                                  role="status"
-                                  aria-label={`Loading ${section.label} recipes`}
-                                >
-                                  {Array.from(
-                                    { length: Math.min(sheet ? 2 : 3, awaited) },
-                                    (_, index) => (
-                                      <SkeletonResultCard key={index} delay={index * 110} />
-                                    ),
-                                  )}
-                                </div>
-                              ) : null}
-                            </div>
-                          ) : null}
-                        </section>
-                      );
-                    })}
-                  </>
-                )}
-              </>
-            )}
-          </div>
-
-        </div>
-
-        {/* ===== the stencil: its own detached card, the foot of the T ===== */}
-        <div className="flex shrink-0 justify-center pt-3 compact:px-2 compact:pb-2 compact:pt-2">
-          <div
-            className="relative w-full max-w-[880px] border-4 border-[#23262d] bg-[#101215] p-3 text-[var(--mc-ink)] shadow-[0_8px_0_rgba(0,0,0,0.5)] compact:p-2"
-            onPointerDown={(event) => event.stopPropagation()}
-          >
-              <div className="flex items-stretch gap-2 compact:gap-1">
-                {machinePin ? (
-                  /* THE MACHINE PIN: the search came from a card's "add a
-                     recipe" key, so that machine is the whole question. Its
-                     picture, its name, one word. Nothing to press: there is
-                     no other way to pin one, and closing the search ends it. */
-                  <div className="flex w-[150px] shrink-0 flex-col items-center justify-center gap-1 border-2 border-[var(--mc-33)] bg-[var(--mc-71)] p-2 text-center compact:w-[110px]">
-                    <span className="flex h-12 w-12 items-center justify-center">
-                      {machinePinIcon ? (
-                        <ResourceIcon
-                          resource={{ ...machinePinIcon, amount: 1 }}
-                          size="sm"
-                          bare
-                          showAmount={false}
-                          tooltip={false}
-                          className="!h-12 !w-12"
-                          iconPixelSize={machineArtPixels(48)}
-                        />
-                      ) : null}
-                    </span>
-                    <span className="w-full truncate text-[13px] font-bold">{machinePin.label}</span>
-                    <span className="text-[11px] uppercase tracking-wide text-[var(--mc-ink-muted)]">
-                      Pinned
-                    </span>
-                  </div>
-                ) : null}
-                <StencilSide
-                  label="Takes"
-                  role="takes"
-                  sideClauses={takesClauses}
-                  clauses={clauses}
-                  op={takesOp}
-                  onOpChange={onTakesOpChange}
-                  onRemove={removeClause}
-                  drag={stencilDrag}
-                  onRowPointerDown={beginRowDrag}
-                  registerListRef={registerSideList}
-                  onOpenPicker={() => setPickerRole(pickerRole === "takes" ? undefined : "takes")}
-                />
-                <button
-                  type="button"
-                  onClick={() => {
-                    playBoardSound("tick");
-                    onSwapSides();
-                  }}
-                  aria-label="Swap the takes and makes sides"
-                  className="group flex w-14 shrink-0 items-center justify-center self-center border-2 border-transparent text-[var(--mc-ink-muted)] hover:border-[var(--mc-33)] hover:bg-[var(--mc-71)] hover:text-[var(--mc-ink)] compact:w-9"
-                  style={{ height: "72px" }}
-                >
-                  <svg
-                    aria-hidden
-                    viewBox="0 0 40 24"
-                    className="h-7 w-11 group-hover:hidden"
-                    fill="none"
-                  >
-                    <path d="M2 12h26" stroke="currentColor" strokeWidth="5" />
-                    <path d="M24 2l14 10-14 10" fill="currentColor" />
-                  </svg>
-                  <ArrowLeftRight aria-hidden className="hidden h-7 w-7 group-hover:block" />
-                </button>
-                <StencilSide
-                  label="Makes"
-                  role="makes"
-                  sideClauses={makesClauses}
-                  clauses={clauses}
-                  op={makesOp}
-                  onOpChange={onMakesOpChange}
-                  onRemove={removeClause}
-                  drag={stencilDrag}
-                  onRowPointerDown={beginRowDrag}
-                  registerListRef={registerSideList}
-                  onOpenPicker={() => setPickerRole(pickerRole === "makes" ? undefined : "makes")}
-                />
-              </div>
-              {pickerRole ? (
-                <ItemPickerPopover
-                  role={pickerRole}
-                  onPick={(entry, role) => {
-                    playBoardSound("stencilAdd");
-                    addClause(entry, role);
-                  }}
-                  onClose={() => setPickerRole(undefined)}
-                  searchPickerResources={searchPickerResources}
-                />
-              ) : null}
-            </div>
-          </div>
-
-          {/* ===== the lifted condition, riding the pointer ===== */}
-          {stencilDrag?.active && liftedClause ? (
-            <div
-              className="pointer-events-none fixed z-[60] cursor-grabbing"
-              // The drag is tracked in real px; this box is a fixed child of
-              // the zoomed root, so it is placed in shell px.
-              style={{
-                left: (stencilDrag.x - stencilDrag.grabDX) / uiScale,
-                top: (stencilDrag.y - stencilDrag.grabDY) / uiScale,
-                width: stencilDrag.width / uiScale,
-              }}
+          {tabPageCount > 1 ? (
+            <button
+              type="button"
+              className="nei-btn nrw-tab-step"
+              aria-label="Previous machines"
+              onClick={() => stepTabPage(-1)}
             >
-              <span className="flex w-full items-center gap-2 border-2 border-[var(--mc-61)] bg-[var(--mc-47)] py-0.5 pl-0.5 pr-1 shadow-[6px_6px_0_rgba(0,0,0,0.5)]">
-                <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden">
-                  {liftedClause.id === POWER_EU_CLAUSE_ID ? (
-                    <Zap className="h-4 w-4 fill-current text-amber-300" aria-hidden />
-                  ) : (
+              &lt;
+            </button>
+          ) : null}
+          <div className="nrw-tab-run" ref={setTabRun} role="tablist" aria-label="Machines">
+            {visibleTabs.map((tab) => (
+              <button
+                key={tab.id}
+                type="button"
+                role="tab"
+                className="nrw-tab"
+                aria-selected={tab.id === activeTabId}
+                aria-label={tab.label}
+                data-machine-tab=""
+                onClick={() => selectTab(tab.id)}
+                onMouseEnter={() => {
+                  if (!tab.generators) onRecipeMapHover(tab.id);
+                }}
+                onMouseMove={(event) =>
+                  setTabTip({ id: tab.id, x: event.clientX, y: event.clientY })
+                }
+                onMouseLeave={() => setTabTip(undefined)}
+              >
+                <span className="nrw-tab-art">
+                  {tab.generators ? (
+                    <Zap className="h-5 w-5 fill-current text-amber-400" aria-hidden />
+                  ) : tab.icon ? (
                     <ResourceIcon
-                      resource={{ ...liftedClause, amount: 1 }}
+                      resource={{ ...tab.icon, amount: 1 }}
                       size="sm"
                       bare
                       showAmount={false}
                       tooltip={false}
                       className="!h-full !w-full"
-                      iconPixelSize={machineArtPixels(32)}
+                      iconPixelSize={machineArtPixels(28)}
                     />
+                  ) : (
+                    <Star aria-hidden className="h-4 w-4 text-[#9a9ca4]" />
                   )}
                 </span>
-                <span className="min-w-0 flex-1 truncate text-[14px] font-bold text-[var(--mc-ink)]">
-                  {liftedClause.displayName ?? liftedClause.id}
-                </span>
-              </span>
+              </button>
+            ))}
+          </div>
+          {tabPageCount > 1 ? (
+            <button
+              type="button"
+              className="nei-btn nrw-tab-step"
+              aria-label="Next machines"
+              onClick={() => stepTabPage(1)}
+            >
+              &gt;
+            </button>
+          ) : null}
+          {closeButton}
+        </div>
+
+        {/* ===== the window ===== */}
+        <div
+          ref={setWindowEl}
+          className="nrw-panel nrw-window"
+          style={{ marginLeft: sheet ? 0 : CATALYST_ROOM }}
+          onPointerDown={keyStop}
+        >
+          {!sheet && catalysts.length > 0 ? (
+            <div
+              className="nrw-panel nrw-catalysts"
+              aria-label="Machines that run these recipes"
+              style={{
+                gridTemplateRows: `repeat(${Math.max(1, Math.min(catalysts.length, catalystRows(windowHeight)))}, ${SLOT}px)`,
+              }}
+            >
+              {catalysts.map((resource, index) => (
+                <button
+                  key={`${resource.kind}:${resource.id}`}
+                  type="button"
+                  className="nrw-catalyst"
+                  aria-label={resource.displayName ?? resource.id}
+                  onClick={() =>
+                    onBrowseResource({ ...resource, amount: 1 } as ResourceAmount, "recipes")
+                  }
+                  onContextMenu={(event) => {
+                    event.preventDefault();
+                    onBrowseResource({ ...resource, amount: 1 } as ResourceAmount, "uses");
+                  }}
+                  onMouseEnter={() => setHoverSlot({ ...resource, amount: 1 } as ResourceAmount)}
+                  onMouseMove={(event) =>
+                    setCatTip(
+                      event.buttons === 0
+                        ? { index, x: event.clientX, y: event.clientY }
+                        : undefined,
+                    )
+                  }
+                  onMouseLeave={() => {
+                    setHoverSlot(undefined);
+                    setCatTip(undefined);
+                  }}
+                >
+                  <span className="nrw-art">
+                    <ResourceIcon
+                      resource={{ ...resource, amount: 1 } as ResourceAmount}
+                      size="sm"
+                      bare
+                      showAmount={false}
+                      tooltip={false}
+                      className="!h-full !w-full"
+                      iconPixelSize={machineArtPixels(28)}
+                    />
+                  </span>
+                </button>
+              ))}
             </div>
           ) : null}
 
-          {/* ===== the chip's right-click menu: every way to use an item ===== */}
-          {cardMenu ? (
-            <div
-              ref={menuRef}
-              className="fixed z-50 w-[300px] border-2 border-[var(--mc-15)] bg-[var(--mc-61)] p-1 font-mono shadow-[4px_4px_0_rgba(0,0,0,0.45)]"
-              style={{ left: cardMenu.x, top: cardMenu.y }}
-              onPointerDown={(event) => event.stopPropagation()}
-            >
-              <div className="truncate px-2 py-1 text-[11px] font-bold text-[var(--mc-ink-muted)]">
-                {cardMenu.label}
-              </div>
-              {[
-                ...(!isReadOnly ? [{ label: "Add to board", act: cardMenu.add }] : []),
-                { label: `Hide ${cardMenu.machineLabel}`, act: cardMenu.hide },
-                ...(cardMenu.only
-                  ? [{ label: `Only ${cardMenu.machineLabel}`, act: cardMenu.only }]
-                  : []),
-                ...(allRecipeMapsSelected
-                  ? []
-                  : [
-                      {
-                        label: "Show every machine",
-                        act: () => {
-                          playBoardSound("tick");
-                          onToggleAllRecipeMaps();
-                        },
-                      },
-                    ]),
-              ].map((item) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={() => {
-                    item.act();
-                    setCardMenu(undefined);
-                  }}
-                  className="block w-full px-2 py-1.5 text-left text-[13px] font-bold text-[var(--mc-ink)] hover:bg-[var(--mc-85)]"
-                >
-                  {item.label}
-                </button>
-              ))}
+          {/* The machine's name between NEI's two arrows. */}
+          <div className="nrw-row">
+            {tabs.length > 1 ? (
+              <button
+                type="button"
+                className="nei-btn"
+                aria-label="Previous machine"
+                onClick={() => stepTab(-1)}
+              >
+                &lt;
+              </button>
+            ) : null}
+            <div className="nrw-band">
+              <span className="nrw-text nrw-title" data-recipe-tab-title="">
+                {active?.label ?? (isLoading ? "" : "No recipes")}
+              </span>
             </div>
-          ) : null}
-          {chipMenu ? (
-            <div
-              ref={menuRef}
-              className="fixed z-50 w-[300px] border-2 border-[var(--mc-15)] bg-[var(--mc-61)] p-1 font-mono shadow-[4px_4px_0_rgba(0,0,0,0.45)]"
-              style={{ left: chipMenu.x, top: chipMenu.y }}
-              onPointerDown={(event) => event.stopPropagation()}
+            {tabs.length > 1 ? (
+              <button
+                type="button"
+                className="nei-btn"
+                aria-label="Next machine"
+                onClick={() => stepTab(1)}
+              >
+                &gt;
+              </button>
+            ) : null}
+          </div>
+
+          {/* The page between its two arrows, and the recipe filter. */}
+          <div className="nrw-row">
+            <button
+              type="button"
+              className="nei-btn"
+              aria-label="Previous page"
+              disabled={pageCount < 2}
+              onClick={() => turnPage(-1, true)}
             >
-              <div className="truncate px-2 py-1 text-[11px] font-bold text-[var(--mc-ink-muted)]">
-                {resourceLabel(chipMenu.resource)}
+              &lt;
+            </button>
+            <button
+              type="button"
+              className="nei-btn"
+              aria-label="Filter recipes by name"
+              aria-pressed={showFind}
+              data-on={showFind ? "" : undefined}
+              style={{ marginLeft: 2 }}
+              onClick={() => {
+                if (showFind) {
+                  onQueryChange("");
+                  setFindOpen(false);
+                } else {
+                  setFindOpen(true);
+                  window.requestAnimationFrame(() => findRef.current?.focus());
+                }
+              }}
+            >
+              <Search className="h-3 w-3" aria-hidden />
+            </button>
+            {showFind ? (
+              <>
+                <label className="nrw-find">
+                  <input
+                    ref={findRef}
+                    value={query}
+                    onChange={(event) => onQueryChange(event.target.value)}
+                    onKeyDown={(event) => {
+                      if (event.key === "Escape" && query) {
+                        event.stopPropagation();
+                        onQueryChange("");
+                      }
+                    }}
+                    placeholder="Filter by name..."
+                    aria-label="Filter recipes by name"
+                  />
+                </label>
+                <span className="nrw-text nrw-find-page">
+                  {tabs.length > 0 ? `${page + 1}/${pageCount}` : "0/0"}
+                </span>
+              </>
+            ) : (
+              <div className="nrw-band">
+                <span className="nrw-text">{pageLabel}</span>
               </div>
-              {(
-                [
-                  {
-                    label: "Find what makes it",
-                    act: () => onBrowseResource({ ...chipMenu.resource, amount: 1 }, "recipes"),
-                  },
-                  {
-                    label: "Find what uses it",
-                    act: () => onBrowseResource({ ...chipMenu.resource, amount: 1 }, "uses"),
-                  },
-                  {
-                    label: "Add to takes",
-                    act: () => addResourceClause(chipMenu.resource, "takes"),
-                  },
-                  {
-                    label: "Add to makes",
-                    act: () => addResourceClause(chipMenu.resource, "makes"),
-                  },
-                ] as const
-              ).map((item) => (
-                <button
-                  key={item.label}
-                  type="button"
-                  onClick={() => {
-                    item.act();
-                    setChipMenu(undefined);
-                  }}
-                  className="block w-full px-2 py-1.5 text-left text-[13px] font-bold text-[var(--mc-ink)] hover:bg-[var(--mc-85)]"
-                >
-                  {item.label}
-                </button>
-              ))}
-              {chipMenu.picker ? (
-                <>
-                  <div className="mx-2 my-1 border-t-2 border-[var(--mc-47)]" />
-                  <div className="px-2 py-1 text-[11px] font-bold text-[var(--mc-ink-muted)]">
-                    This slot also takes
-                  </div>
-                  <div className="recipe-search-scroll max-h-[180px] overflow-y-auto">
-                    {chipMenu.picker.faces.map((face) => (
-                      <button
-                        key={`${face.kind}:${face.id}`}
-                        type="button"
-                        onClick={() => {
-                          chipMenu.picker?.onPick(face);
-                          setChipMenu(undefined);
-                        }}
-                        className={[
-                          "flex w-full items-center gap-2 px-2 py-1 text-left text-[13px] font-bold text-[var(--mc-ink)] hover:bg-[var(--mc-85)]",
-                          face.id === chipMenu.picker?.currentId
-                            ? "bg-[var(--mc-47)] shadow-[inset_3px_0_0_#22d3ee]"
-                            : "",
-                        ].join(" ")}
-                      >
-                        <span className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden ">
-                          <ResourceIcon
-                            resource={{ ...face, amount: 1 }}
-                            size="sm"
-                            bare
-                            showAmount={false}
-                            tooltip={false}
-                            className="!h-full !w-full"
-                            iconPixelSize={machineArtPixels(24)}
-                          />
-                        </span>
-                        <span className="min-w-0 flex-1 truncate">
-                          {face.displayName ?? face.id}
-                        </span>
-                        {/* Three faces all called "Iron Nugget" are three
-                            mods' nuggets: say which, or the list is useless. */}
-                        {face.modId ? (
-                          <span className="shrink-0 text-[11px] font-normal text-[var(--mc-ink-muted)]">
-                            {face.modId}
-                          </span>
-                        ) : null}
-                      </button>
+            )}
+            <button
+              type="button"
+              className="nei-btn"
+              aria-label="Next page"
+              disabled={pageCount < 2}
+              onClick={() => turnPage(1, true)}
+            >
+              &gt;
+            </button>
+          </div>
+
+          {/* ===== the page ===== */}
+          <div
+            ref={setPageEl}
+            className="nrw-page recipe-search-scroll"
+            data-recipe-page=""
+            data-overflow={overflows ? "" : undefined}
+            style={{ padding: `${PAGE_PAD}px 0` }}
+          >
+            {emptyText ? (
+              <div className="nrw-empty">
+                <span>{emptyText}</span>
+              </div>
+            ) : tabs.length === 0 ? (
+              <div
+                className="nrw-grid"
+                style={gridStyle}
+                role="status"
+                aria-label="Loading recipes"
+              >
+                {Array.from({ length: Math.min(perPage, 12) }, (_, index) => (
+                  <SkeletonWidget key={index} shape={shape} delay={index * 110} />
+                ))}
+              </div>
+            ) : onGenerators ? (
+              <div className="nrw-grid" style={gridStyle}>
+                {pageHits.map((hit) => (
+                  <PowerWidget
+                    key={`${hit.source.id}|${JSON.stringify(hit.settings ?? {})}`}
+                    hit={hit}
+                    shape={shape}
+                    rateView={rateView}
+                    onPlace={() => placePowerHit(hit)}
+                    onBrowseResource={onBrowseResource}
+                    onChipMenu={openChipMenu}
+                    onChipDragStart={beginChipDrag}
+                    onHoverSlot={setHoverSlot}
+                    onCardMenu={(event) =>
+                      openCardMenu(event, {
+                        label: hit.source.name,
+                        add: () => placePowerHit(hit),
+                      })
+                    }
+                  />
+                ))}
+              </div>
+            ) : (
+              <div className="nrw-grid" style={gridStyle}>
+                {pageRecipes.map((recipe) => (
+                  <RecipeWidget
+                    key={recipe.id}
+                    recipe={recipe}
+                    shape={shape}
+                    contextResource={contextResource}
+                    onSelectRecipe={onSelectRecipe}
+                    onAdd={onAdd}
+                    onPrefetch={onPrefetch}
+                    onBrowseResource={onBrowseResource}
+                    onChipMenu={openChipMenu}
+                    onChipDragStart={beginChipDrag}
+                    onHoverSlot={setHoverSlot}
+                    rateView={rateView}
+                    onCardMenu={(event, add) =>
+                      openCardMenu(event, {
+                        label: recipe.name,
+                        add,
+                      })
+                    }
+                  />
+                ))}
+                {awaited > 0 ? (
+                  <div
+                    className="contents"
+                    role="status"
+                    aria-label={`Loading ${active?.label ?? ""} recipes`}
+                  >
+                    {Array.from({ length: awaited }, (_, index) => (
+                      <SkeletonWidget key={index} shape={shape} delay={index * 110} />
                     ))}
                   </div>
-                </>
-              ) : null}
+                ) : null}
+              </div>
+            )}
+          </div>
+
+          {/* ===== the foot: back and forward, how amounts read, the tier ceiling ===== */}
+          <div className="nrw-foot">
+            <button
+              type="button"
+              className="nei-btn"
+              onClick={onBack}
+              disabled={!canGoBack}
+              aria-label="Back to the previous search"
+            >
+              <ChevronLeft className="h-3.5 w-3.5" aria-hidden />
+            </button>
+            <button
+              type="button"
+              className="nei-btn"
+              onClick={onForward}
+              disabled={!canGoForward}
+              aria-label="Forward to the next search"
+            >
+              <ChevronRight className="h-3.5 w-3.5" aria-hidden />
+            </button>
+            <div ref={ratePillsRef} className="nrw-seg" role="group" aria-label="How amounts read">
+              {RATE_VIEW_CHOICES.map((choice) => (
+                <button
+                  key={choice.view}
+                  type="button"
+                  className="nei-btn"
+                  title={choice.title}
+                  aria-pressed={rateView === choice.view}
+                  data-gold={choice.view === "eu" ? "" : undefined}
+                  onClick={() => {
+                    if (choice.view === "eu" && rateView !== "eu") {
+                      playBoardSound("dialEnergy");
+                    } else if (choice.view !== rateView) {
+                      playBoardSound("tick");
+                    }
+                    changeRateView(choice.view);
+                  }}
+                >
+                  {choice.label}
+                </button>
+              ))}
             </div>
-          ) : null}
+            <div className="nrw-tier">
+              <ModPick
+                value={maxTier}
+                onChange={(tier) => {
+                  playBoardSound("tick");
+                  onMaxTierChange(tier);
+                }}
+                label="Maximum machine tier"
+                options={[
+                  { value: "all" as TierFilter, label: "All tiers" },
+                  ...GT_VOLTAGE_TIERS.map((entry) => ({
+                    value: entry.tier as TierFilter,
+                    label: `≤ ${entry.tier}`,
+                  })),
+                ]}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* ===== the stencil: its own card under the window ===== */}
+        <div
+          className="flex shrink-0 justify-center pt-3 compact:pb-2 compact:pt-2"
+          style={{ marginLeft: sheet ? 0 : CATALYST_ROOM }}
+        >
+          <div
+            className="nrw-panel nrw-stencil relative w-full max-w-[880px]"
+            onPointerDown={keyStop}
+          >
+            <div className="flex items-stretch gap-2 compact:gap-1">
+              {machinePin ? (
+                /* THE MACHINE PIN: the search came from a card's "add a
+                   recipe" key, so that machine is the whole question. Its
+                   picture, its name, one word. Nothing to press: there is
+                   no other way to pin one, and closing the search ends it. */
+                <div className="nrw-pin compact:!w-[104px]">
+                  <span className="flex h-12 w-12 items-center justify-center">
+                    {machinePinIcon ? (
+                      <ResourceIcon
+                        resource={{ ...machinePinIcon, amount: 1 }}
+                        size="sm"
+                        bare
+                        showAmount={false}
+                        tooltip={false}
+                        className="!h-12 !w-12"
+                        iconPixelSize={machineArtPixels(48)}
+                      />
+                    ) : null}
+                  </span>
+                  <span className="nrw-text w-full truncate text-[13px]">{machinePin.label}</span>
+                  <span className="text-[11px] uppercase text-[#9a9ca4]">Pinned</span>
+                </div>
+              ) : null}
+              <StencilSide
+                label="Takes"
+                role="takes"
+                sideClauses={takesClauses}
+                clauses={clauses}
+                op={takesOp}
+                onOpChange={onTakesOpChange}
+                onRemove={removeClause}
+                drag={stencilDrag}
+                onRowPointerDown={beginRowDrag}
+                registerListRef={registerSideList}
+                onOpenPicker={() => setPickerRole(pickerRole === "takes" ? undefined : "takes")}
+              />
+              <button
+                type="button"
+                onClick={() => {
+                  playBoardSound("tick");
+                  onSwapSides();
+                }}
+                aria-label="Swap the takes and makes sides"
+                className="nrw-swap compact:!w-9"
+              >
+                <ProgressArrow className="nrw-swap-rest" />
+                <ArrowLeftRight aria-hidden className="nrw-swap-hover h-6 w-6" />
+              </button>
+              <StencilSide
+                label="Makes"
+                role="makes"
+                sideClauses={makesClauses}
+                clauses={clauses}
+                op={makesOp}
+                onOpChange={onMakesOpChange}
+                onRemove={removeClause}
+                drag={stencilDrag}
+                onRowPointerDown={beginRowDrag}
+                registerListRef={registerSideList}
+                onOpenPicker={() => setPickerRole(pickerRole === "makes" ? undefined : "makes")}
+              />
+            </div>
+            {pickerRole ? (
+              <ItemPickerPopover
+                role={pickerRole}
+                onPick={(entry, role) => {
+                  playBoardSound("stencilAdd");
+                  addClause(entry, role);
+                }}
+                onClose={() => setPickerRole(undefined)}
+                searchPickerResources={searchPickerResources}
+              />
+            ) : null}
+          </div>
+        </div>
+
+        {/* ===== the lifted condition, riding the pointer ===== */}
+        {stencilDrag?.active && liftedClause ? (
+          <div
+            className="pointer-events-none fixed z-[60]"
+            // The drag is tracked in real px; this box is a fixed child of
+            // the zoomed root, so it is placed in shell px.
+            style={{
+              left: (stencilDrag.x - stencilDrag.grabDX) / uiScale,
+              top: (stencilDrag.y - stencilDrag.grabDY) / uiScale,
+              width: stencilDrag.width / uiScale,
+            }}
+          >
+            <span className="nrw-cond" data-lifted="">
+              <ConditionSlot clause={liftedClause} />
+              <span className="nrw-text nrw-cond-name">
+                {liftedClause.displayName ?? liftedClause.id}
+              </span>
+            </span>
+          </div>
+        ) : null}
+
+        {/* ===== a recipe's menu ===== */}
+        {cardMenu ? (
+          <div
+            ref={menuRef}
+            className="nrw-panel nrw-menu"
+            style={{ left: cardMenu.x, top: cardMenu.y }}
+            onPointerDown={keyStop}
+          >
+            <div className="nrw-menu-head">{cardMenu.label}</div>
+            {!isReadOnly ? (
+              <button
+                type="button"
+                className="nrw-menu-item"
+                onClick={() => {
+                  cardMenu.add();
+                  setCardMenu(undefined);
+                }}
+              >
+                Add to board
+              </button>
+            ) : (
+              <div className="nrw-menu-head">Open a copy to add recipes</div>
+            )}
+          </div>
+        ) : null}
+        {/* ===== a slot's menu: every way to use an item ===== */}
+        {chipMenu ? (
+          <div
+            ref={menuRef}
+            className="nrw-panel nrw-menu"
+            style={{ left: chipMenu.x, top: chipMenu.y }}
+            onPointerDown={keyStop}
+          >
+            <div className="nrw-menu-head">{resourceLabel(chipMenu.resource)}</div>
+            {(
+              [
+                {
+                  label: "Find what makes it",
+                  act: () => onBrowseResource({ ...chipMenu.resource, amount: 1 }, "recipes"),
+                },
+                {
+                  label: "Find what uses it",
+                  act: () => onBrowseResource({ ...chipMenu.resource, amount: 1 }, "uses"),
+                },
+                {
+                  label: "Add to takes",
+                  act: () => addResourceClause(chipMenu.resource, "takes"),
+                },
+                {
+                  label: "Add to makes",
+                  act: () => addResourceClause(chipMenu.resource, "makes"),
+                },
+              ] as const
+            ).map((item) => (
+              <button
+                key={item.label}
+                type="button"
+                className="nrw-menu-item"
+                onClick={() => {
+                  item.act();
+                  setChipMenu(undefined);
+                }}
+              >
+                {item.label}
+              </button>
+            ))}
+            {chipMenu.picker ? (
+              <>
+                <div className="nrw-menu-rule" />
+                <div className="nrw-menu-head">This slot also takes</div>
+                <div className="recipe-search-scroll max-h-[180px] overflow-y-auto">
+                  {chipMenu.picker.faces.map((face) => (
+                    <button
+                      key={`${face.kind}:${face.id}`}
+                      type="button"
+                      className="nrw-menu-item"
+                      aria-current={face.id === chipMenu.picker?.currentId ? "true" : undefined}
+                      onClick={() => {
+                        chipMenu.picker?.onPick(face);
+                        setChipMenu(undefined);
+                      }}
+                    >
+                      <span className="flex h-6 w-6 shrink-0 items-center justify-center overflow-hidden">
+                        <ResourceIcon
+                          resource={{ ...face, amount: 1 }}
+                          size="sm"
+                          bare
+                          showAmount={false}
+                          tooltip={false}
+                          className="!h-full !w-full"
+                          iconPixelSize={machineArtPixels(24)}
+                        />
+                      </span>
+                      <span className="min-w-0 flex-1 truncate">{face.displayName ?? face.id}</span>
+                      {/* Three faces all called "Iron Nugget" are three
+                          mods' nuggets: say which, or the list is useless. */}
+                      {face.modId ? (
+                        <span className="shrink-0 text-[11px] text-[#9a9ca4]">{face.modId}</span>
+                      ) : null}
+                    </button>
+                  ))}
+                </div>
+              </>
+            ) : null}
+          </div>
+        ) : null}
+
+        {tabTip && tipTab ? (
+          <McFloatingTip
+            x={tabTip.x}
+            y={tabTip.y}
+            lines={[
+              { text: tipTab.label, tone: "name" },
+              ...(tipTab.count !== undefined
+                ? [
+                    {
+                      text: `${tipTab.count.toLocaleString()} ${tipTab.count === 1 ? "recipe" : "recipes"}`,
+                    },
+                  ]
+                : []),
+            ]}
+          />
+        ) : null}
+        {catTip && catalysts[catTip.index] ? (
+          <McFloatingTip
+            x={catTip.x}
+            y={catTip.y}
+            lines={itemTipLines({
+              name: catalysts[catTip.index]!.displayName ?? catalysts[catTip.index]!.id,
+              id: catalysts[catTip.index]!.id,
+            })}
+          />
+        ) : null}
       </section>
     </div>,
     document.body,
   );
 }
 
+/** Room on the window's left for the machine column (one slot, tucked under the window's edge). */
+const CATALYST_ROOM = SLOT + 8;
+
+type CatalystResource = Pick<
+  ResourceAmount,
+  "kind" | "id" | "displayName" | "iconPath" | "iconAtlas" | "dominantColor"
+>;
+
+/** How many machines stack in the column before it starts another: the window's height of them. */
+function catalystRows(windowHeight: number): number {
+  return Math.max(1, Math.floor((windowHeight - 12) / SLOT));
+}
+
+/** A side size and its observer, in the element's own (shell) px. */
+function useElementSize(element: HTMLElement | null): { width: number; height: number } {
+  const [size, setSize] = useState({ width: 0, height: 0 });
+  useEffect(() => {
+    if (!element) {
+      return;
+    }
+    const read = () => {
+      const width = element.clientWidth;
+      const height = element.clientHeight;
+      setSize((current) =>
+        current.width === width && current.height === height ? current : { width, height },
+      );
+    };
+    read();
+    const observer = new ResizeObserver(read);
+    observer.observe(element);
+    return () => observer.disconnect();
+  }, [element]);
+  return size;
+}
+
+/** How many slots each side of a recipe fills, items and fluids apart. */
+interface SlotCounts {
+  inItems: number;
+  inFluids: number;
+  outItems: number;
+  outFluids: number;
+}
+
+/** A tab's slot grids: every recipe of the tab is drawn in the same cell. */
+interface TabShape {
+  inCols: number;
+  outCols: number;
+  inItems: number;
+  inFluids: number;
+  outItems: number;
+  outFluids: number;
+  rows: number;
+}
+
+function recipeSlotCounts(recipe: RecipeSummary): SlotCounts {
+  const inputs = new Set<string>();
+  let inItems = 0;
+  let inFluids = 0;
+  for (const input of recipe.inputs) {
+    const key = [input.kind, input.id, input.consumed === false ? "nc" : "c"].join("|");
+    if (inputs.has(key)) continue;
+    inputs.add(key);
+    if (input.kind === "fluid") inFluids += 1;
+    else inItems += 1;
+  }
+  let outItems = 0;
+  let outFluids = 0;
+  for (const output of mergeChipResources(recipe.outputs)) {
+    if (output.kind === "fluid") outFluids += 1;
+    else outItems += 1;
+  }
+  return { inItems, inFluids, outItems, outFluids };
+}
+
+function powerSlotCounts(hit: PowerStencilHit): SlotCounts {
+  let model: ReturnType<PowerSourceDefinition["compute"]> | undefined;
+  try {
+    model = hit.source.compute(buildPowerSettingsReader(hit.source, hit.settings));
+  } catch {
+    model = undefined;
+  }
+  const inputs = model?.inputs.filter((flow) => flow.perSecond > 0).length ?? 0;
+  const outputs = model?.outputs.filter((flow) => flow.perSecond > 0).length ?? 0;
+  return { inItems: inputs, inFluids: 0, outItems: outputs + 1, outFluids: 0 };
+}
+
+/** Columns of a slot grid: GregTech's own shapes (2 x 2 for four, 3 wide to nine, then 4). */
+function gridColumns(count: number): number {
+  return count <= 3 ? count : count === 4 ? 2 : count <= 9 ? 3 : count <= 16 ? 4 : 5;
+}
+
+function shapeOf(counts: SlotCounts[]): TabShape {
+  let inItems = 0;
+  let inFluids = 0;
+  let outItems = 0;
+  let outFluids = 0;
+  for (const entry of counts) {
+    inItems = Math.max(inItems, entry.inItems);
+    inFluids = Math.max(inFluids, entry.inFluids);
+    outItems = Math.max(outItems, entry.outItems);
+    outFluids = Math.max(outFluids, entry.outFluids);
+  }
+  if (counts.length === 0) {
+    inItems = 2;
+    outItems = 1;
+  }
+  const inCols = Math.max(1, gridColumns(Math.max(inItems, inFluids)));
+  const outCols = Math.max(1, gridColumns(Math.max(outItems, outFluids)));
+  const inRows = Math.ceil(inItems / inCols) + Math.ceil(inFluids / inCols);
+  const outRows = Math.ceil(outItems / outCols) + Math.ceil(outFluids / outCols);
+  return {
+    inCols,
+    outCols,
+    inItems,
+    inFluids,
+    outItems,
+    outFluids,
+    rows: Math.max(1, inRows, outRows),
+  };
+}
+
+function cellSize(shape: TabShape, named: boolean): { width: number; height: number } {
+  return {
+    width: Math.max(
+      named ? 300 : 200,
+      CELL_PAD * 2 + (shape.inCols + shape.outCols) * SLOT + ARROW,
+    ),
+    height: CELL_PAD * 2 + (named ? CELL_NAME : 0) + shape.rows * SLOT + CELL_STATS,
+  };
+}
+
+/** NEI's progress arrow, in the window's grey. */
+function ProgressArrow({ className }: { className?: string }) {
+  return (
+    <svg
+      aria-hidden
+      viewBox="0 0 22 15"
+      width="33"
+      height="22"
+      className={className}
+      fill="currentColor"
+    >
+      <path d="M0 5h13V0l9 7.5-9 7.5v-5H0z" />
+    </svg>
+  );
+}
+
 /**
- * One column of the stencil card: the side's name and ANY/ALL/ONLY switch,
- * the condition rows, then the add slot. The stack scrolls inside a FIXED
- * height, so removing a condition never moves the card and the next X stays
- * under the pointer. While a row is dragged this column hides it and the rows
- * below the landing spot slide down to make room.
+ * One column of the stencil card: the side's name in NEI's band with the
+ * ANY / ALL / ONLY keys, the condition rows, then the empty slot that adds one.
+ * The stack scrolls inside a FIXED height, so removing a condition never moves
+ * the card and the next X stays under the pointer. While a row is dragged this
+ * column hides it and the rows below the landing spot slide down to make room.
  */
 function StencilSide({
   label,
@@ -1600,7 +1883,7 @@ function StencilSide({
     ? sideClauses.filter((clause) => clauses.indexOf(clause) !== drag?.index)
     : sideClauses;
   const gapAt = dragActive && drag?.overRole === role ? drag.overSlot : undefined;
-  const pitch = drag?.pitch ?? 46;
+  const pitch = drag?.pitch ?? 42;
   const changeOp = (next: RecipeQuerySideOp) => {
     if (next !== op) {
       playBoardSound("tick");
@@ -1609,35 +1892,35 @@ function StencilSide({
   };
 
   return (
-    <div className="flex min-w-0 flex-1 flex-col gap-1.5">
-      <div className="flex h-6 items-center justify-between">
-        <span className="text-[11px] font-bold uppercase tracking-[0.14em] text-[var(--mc-ink)] compact:text-[10px] compact:tracking-normal">
-          {label}
-        </span>
-        <span className="flex items-center border-2 border-[var(--mc-47)] bg-[var(--mc-25)]">
-          <OpPill
-            label="Any"
-            active={op === "any"}
-            onClick={() => changeOp("any")}
-          />
-          <OpPill
-            label="All"
-            active={op === "all"}
-            onClick={() => changeOp("all")}
-          />
-          <OpPill
-            label="Only"
-            active={op === "only"}
-            onClick={() => changeOp("only")}
-          />
-        </span>
+    <div className="nrw-stencil-side">
+      <div className="nrw-stencil-head">
+        <div className="nrw-band">
+          <span className="nrw-text">{label}</span>
+        </div>
+        <div className="nrw-seg" role="group" aria-label={`${label}: how its items combine`}>
+          {(
+            [
+              ["any", "Any"],
+              ["all", "All"],
+              ["only", "Only"],
+            ] as const
+          ).map(([value, text]) => (
+            <button
+              key={value}
+              type="button"
+              className="nei-btn"
+              aria-pressed={op === value}
+              onClick={() => changeOp(value)}
+            >
+              {text}
+            </button>
+          ))}
+        </div>
       </div>
-      {/* A fixed-height stack so removing a row never moves the card. The
-          scrollbar keeps a full-width lane with a bright thumb, so a stack
-          deeper than the window says so instead of hiding rows. */}
+      {/* A fixed-height stack so removing a row never moves the card. */}
       <div
         ref={(element) => registerListRef(role, element)}
-        className="recipe-search-scroll flex h-[208px] flex-col gap-1.5 overflow-y-auto pr-1 compact:h-[124px]"
+        className="recipe-search-scroll flex h-[124px] flex-col gap-1.5 overflow-y-auto pr-1 compact:h-[124px]"
       >
         {layoutClauses.map((clause, slot) => {
           const index = clauses.indexOf(clause);
@@ -1647,34 +1930,20 @@ function StencilSide({
               key={`${clause.role}:${clause.kind}:${clause.id}`}
               onPointerDown={(event) => onRowPointerDown(index, event)}
               style={{ transform: shifted ? `translateY(${pitch}px)` : undefined }}
-              className="flex w-full shrink-0 cursor-grab touch-none select-none items-center gap-2 border-2 border-transparent bg-[var(--mc-47)] py-0.5 pl-0.5 pr-1 transition-transform duration-150"
+              className="nrw-cond"
             >
-              <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden">
-                {clause.id === POWER_EU_CLAUSE_ID ? (
-                  <Zap className="h-4 w-4 fill-current text-amber-300" aria-hidden />
-                ) : (
-                  <ResourceIcon
-                    resource={{ ...clause, amount: 1 }}
-                    size="sm"
-                    bare
-                    showAmount={false}
-                    tooltip={false}
-                    className="!h-full !w-full"
-                    iconPixelSize={machineArtPixels(32)}
-                  />
-                )}
-              </span>
-              <span className="min-w-0 flex-1 truncate text-[14px] font-bold compact:line-clamp-2 compact:whitespace-normal compact:text-[12px] compact:leading-tight">
+              <ConditionSlot clause={clause} />
+              <span className="nrw-text nrw-cond-name compact:whitespace-normal compact:text-[12px] compact:leading-tight">
                 {clause.displayName ?? clause.id}
               </span>
               <button
                 type="button"
+                className="nei-btn"
                 onPointerDown={(event) => event.stopPropagation()}
                 onClick={() => onRemove(index)}
                 aria-label={`Remove ${clause.displayName ?? clause.id} from the search`}
-                className="flex h-6 w-6 shrink-0 items-center justify-center text-[var(--mc-ink-muted)] hover:text-white"
               >
-                <X className="h-3.5 w-3.5" />
+                <X className="h-3 w-3" aria-hidden />
               </button>
             </span>
           );
@@ -1686,189 +1955,132 @@ function StencilSide({
             role === "takes" ? "Add an input to the search" : "Add an output to the search"
           }
           style={{ transform: gapAt !== undefined ? `translateY(${pitch}px)` : undefined }}
-          className="flex h-10 w-full shrink-0 items-center justify-center gap-1.5 border-2 border-dashed border-[var(--mc-47)] px-2 text-[10px] font-bold uppercase tracking-[0.12em] text-[var(--mc-ink-muted)] transition-transform duration-150 hover:border-[var(--mc-33)] hover:text-[var(--mc-ink)]"
+          className="nrw-add-cond"
         >
-          <Plus className="h-3.5 w-3.5" />
-          {role === "takes" ? "Input" : "Output"}
+          <span className="nrw-slot" data-empty="">
+            <Plus className="h-4 w-4" aria-hidden />
+          </span>
+          <span className="nrw-text text-[13px] !text-inherit" style={{ textShadow: "none" }}>
+            {role === "takes" ? "Input" : "Output"}
+          </span>
         </button>
       </div>
     </div>
   );
 }
 
-function OpPill({
-  label,
-  active,
-  gold = false,
-  onClick,
-}: {
-  label: string;
-  active: boolean;
-  /** The EU view's pill wears the board's gold, pressed or not. */
-  gold?: boolean;
-  onClick: () => void;
-}) {
+/** A condition's item in its slot. */
+function ConditionSlot({ clause }: { clause: StencilClause }) {
   return (
-    <button
-      type="button"
-      onClick={onClick}
-      aria-pressed={active}
-      className={[
-        "h-5 shrink-0 whitespace-nowrap px-1.5 text-[10px] font-bold uppercase tracking-[0.1em] compact:px-1 compact:text-[9px] compact:tracking-normal",
-        active
-          ? gold
-            ? "bg-amber-300 text-black shadow-[inset_1px_1px_0_#fde68a]"
-            : "bg-[var(--mc-61)] text-white"
-          : gold
-            ? "text-amber-400/80 hover:text-amber-300"
-            : "text-[var(--mc-ink-muted)] hover:text-[var(--mc-ink)]",
-      ].join(" ")}
-    >
-      {label}
-    </button>
+    <span className="nrw-slot" data-empty="">
+      <span className="nrw-art">
+        {clause.id === POWER_EU_CLAUSE_ID ? (
+          <Zap className="h-4 w-4 fill-current text-amber-300" aria-hidden />
+        ) : (
+          <SlotArt resource={{ ...clause, amount: 1 }} />
+        )}
+      </span>
+    </span>
   );
 }
 
-/** The searchable item drop-down the stencil's add slots open. */
-
-/**
- * A machine's title line over its recipes: art, name, recipe count and a
- * fold. Folded, it stays as a quiet line, matching its dark chip up top.
- */
-function MachineSectionHeader({
-  label,
-  count,
-  icon,
-  iconNode,
-  open,
-  onToggle,
-  onHover,
-}: {
-  label: string;
-  count?: number;
-  icon?: RecipeMapChip["icon"];
-  /** A hand-drawn face (the Generators bolt) instead of machine art. */
-  iconNode?: ReactNode;
-  open: boolean;
-  onToggle: () => void;
-  onHover?: () => void;
-}) {
-  // STICKY: the title rides the top of the scroll until the next pushes it
-  // off, on the panel's ground so cards pass underneath. Same height open or
-  // folded, so a fold never shifts the titles below.
+/** An item's or fluid's art at a slot's size, sized as the items column sizes it. */
+function SlotArt({ resource }: { resource: ResourceAmount }) {
   return (
-    <button
-      type="button"
-      onClick={onToggle}
-      onMouseEnter={onHover}
-      aria-expanded={open}
-      className={[
-        "sticky top-0 z-10 mb-1.5 flex h-11 w-full items-center gap-2.5 border-t-4 bg-[#101215] pt-1 text-left",
-        open ? "border-[var(--mc-61)]" : "border-[var(--mc-33)] opacity-40 hover:opacity-75",
-      ].join(" ")}
-    >
-      <span className="flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden">
-        {iconNode ? (
-          iconNode
-        ) : icon ? (
-          <ResourceIcon
-            resource={{ ...icon, amount: 1 }}
-            size="sm"
-            bare
-            showAmount={false}
-            tooltip={false}
-            className="!h-full !w-full"
-            iconPixelSize={machineArtPixels(32)}
-          />
-        ) : (
-          <Star aria-hidden className="h-5 w-5 text-[var(--mc-ink-muted)]" />
-        )}
-      </span>
-      <span className="min-w-0 truncate text-[16px] font-bold uppercase tracking-[0.06em] text-[var(--mc-ink)]">{label}</span>
-      {count !== undefined ? (
-        <span className="shrink-0 text-[13px] font-bold text-[var(--mc-ink-muted)] tabular-nums">
-          {count.toLocaleString()}
-        </span>
-      ) : null}
-      <span
-        className="ml-auto flex h-7 w-7 shrink-0 items-center justify-center border-2 border-[var(--mc-33)] bg-[var(--mc-61)] text-[var(--mc-ink)]"
-        aria-hidden
-      >
-        <ChevronDown
-          className={["h-4 w-4 transition-transform duration-150", open ? "" : "-rotate-90"].join(" ")}
-        />
-      </span>
-    </button>
+    <ResourceIcon
+      itemZoom={1.5}
+      resource={{ ...resource, amount: 1, chance: undefined }}
+      size="sm"
+      bare
+      showAmount={false}
+      showConsumedState={false}
+      tooltip={false}
+      iconPixelSize={
+        resource.kind === "fluid" ? (isSwatchFluid(resource) ? 36 : spriteArtPixels(28)) : undefined
+      }
+      className="!h-full !w-full"
+    />
   );
 }
 
-function MachineChip({
-  label,
-  count,
-  icon,
-  iconNode,
-  active,
-  onClick,
-  onHover,
-}: {
-  label: string;
-  count?: number;
-  icon?: RecipeMapChip["icon"];
-  /** A hand-drawn tile face (the Generators chip's bolt) instead of an item. */
-  iconNode?: ReactNode;
-  active: boolean;
-  onClick: () => void;
-  onHover?: () => void;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      onMouseEnter={onHover}
-      aria-pressed={active}
-      className={[
-        "flex shrink-0 items-center gap-1.5 border-2 py-0.5 pl-0.5 pr-2 text-[13px] font-bold",
-        active
-          ? "border-[var(--mc-61)] bg-[var(--mc-47)] text-[var(--mc-ink)]"
-          : "border-[var(--mc-47)] bg-[var(--mc-33)] opacity-45 hover:opacity-90",
-      ].join(" ")}
-    >
-      <span className="flex h-7 w-7 items-center justify-center overflow-hidden">
-        {iconNode ? (
-          iconNode
-        ) : icon ? (
-          <ResourceIcon
-            resource={{ ...icon, amount: 1 }}
-            size="sm"
-            bare
-            showAmount={false}
-            tooltip={false}
-            className="!h-full !w-full"
-            iconPixelSize={machineArtPixels(28)}
-          />
-        ) : (
-          // An empty slot reads as a mistake, so a chip with no machine art
-          // (the All chip) wears a star instead.
-          <Star aria-hidden className="h-4 w-4 text-[var(--mc-ink-muted)]" />
-        )}
-      </span>
-      <span className="max-w-[220px] truncate text-[var(--mc-ink)]">{label}</span>
-      {count !== undefined ? (
-        <span className="text-[12px] font-bold text-[var(--mc-ink-muted)] tabular-nums">
-          {count.toLocaleString()}
-        </span>
-      ) : null}
-    </button>
-  );
+/** What a slot reads: the words for anything reading it, the corner count, the tooltip's line. */
+interface SlotReading {
+  /** The amount as the slot's text has it ("×2", "1,000L", "NC"). */
+  text: string;
+  /** The count over the slot's corner, short enough to fit. */
+  count?: string;
+  /** The tooltip's amount line. */
+  tip?: string;
+  energy?: boolean;
+  tag?: { text: string; tone?: "nc" | "free" };
+}
+
+function readingOf(
+  amount: ChipAmount,
+  resource: ResourceAmount,
+  view: RateView,
+  value?: number,
+): SlotReading {
+  const text = `${amount.text}${amount.unit ?? ""}`;
+  const tip = amount.unit
+    ? `${amount.text}${amount.unit.startsWith("/") ? "" : " "}${amount.unit}`
+    : amount.text;
+  if (value === undefined) {
+    return { text, tip };
+  }
+  // Minecraft leaves a count of one off an item's slot.
+  const hideOne = view === "recipe" && resource.kind !== "fluid" && value === 1;
+  // A fluid's litres go unsaid in the corner, as its art already says fluid; the tooltip has them.
+  const count = hideOne ? undefined : slotNumber(value);
+  // A lone item says nothing more in its tooltip than its slot does.
+  return { text, count, tip: hideOne ? undefined : tip, energy: Boolean(amount.energy) };
+}
+
+/** A count that fits a slot's corner: 144, 2.5, 1.5k, 16k, 2M. */
+function slotNumber(value: number): string {
+  if (!Number.isFinite(value)) return "∞";
+  const abs = Math.abs(value);
+  const trim = (text: string) => trimTrailingZeros(text);
+  if (abs >= 1e9) return `${trim((value / 1e9).toFixed(abs >= 1e11 ? 0 : 1))}G`;
+  if (abs >= 1e6) return `${trim((value / 1e6).toFixed(abs >= 1e8 ? 0 : 1))}M`;
+  if (abs >= 1e3) return `${trim((value / 1e3).toFixed(abs >= 1e5 ? 0 : 1))}k`;
+  if (abs >= 100) return `${Math.round(value)}`;
+  if (abs >= 10) return trim(value.toFixed(1));
+  if (abs >= 1) return trim(value.toFixed(2));
+  if (abs === 0) return "0";
+  return trim(value.toPrecision(2));
+}
+
+/** The number a slot's corner shows for the reading in use. */
+function slotValue(
+  resource: ResourceAmount,
+  view: RateView,
+  durationTicks: number,
+  ratioDivisor: number,
+  eut: number,
+): number {
+  if (view === "eu") {
+    return resource.amount > 0
+      ? (Math.max(0, eut) * Math.max(0, durationTicks)) / resource.amount
+      : 0;
+  }
+  if (view === "ratio") {
+    return resource.amount / ratioDivisor;
+  }
+  if (view === "recipe" || durationTicks <= 0) {
+    return resource.amount;
+  }
+  return ((resource.amount * 20) / durationTicks) * RATE_VIEW_UNITS[view].multiplier;
 }
 
 /**
- * One recipe as a compact card-flavoured row: the machine and its numbers on
- * the first line, named item chips - inputs, arrow, outputs - on the second.
- * Chips that satisfy a stencil condition wear the cyan ring.
+ * One recipe in NEI's way: its input slots, the progress arrow, its output
+ * slots, every recipe of the tab in the same grid with the slots it leaves
+ * empty drawn empty; its tier, draw and time along the foot with NEI's plus.
  */
-const CompactRecipeCard = memo(function CompactRecipeCard({
+const RecipeWidget = memo(function RecipeWidget({
   recipe,
+  shape,
   contextResource,
   onSelectRecipe,
   onAdd,
@@ -1876,12 +2088,13 @@ const CompactRecipeCard = memo(function CompactRecipeCard({
   onBrowseResource,
   onChipMenu,
   onChipDragStart,
+  onHoverSlot,
   rateView,
   onCardMenu,
 }: {
   recipe: RecipeSummary;
+  shape: TabShape;
   contextResource?: PreviewContextResource;
-  selected: boolean;
   onSelectRecipe: (recipeId: string) => void;
   onAdd: (
     recipe: RecipeSummary,
@@ -1891,11 +2104,12 @@ const CompactRecipeCard = memo(function CompactRecipeCard({
   onPrefetch?: (recipeId: string) => void;
   onBrowseResource: (resource: ResourceAmount, mode: "recipes" | "uses") => void;
   onChipMenu: (event: ReactMouseEvent, resource: ResourceAmount, picker?: ChipMenuPicker) => void;
-  /** A slot chip pressed with the mouse: the stencil may pick it up. */
+  /** A slot pressed with the mouse: the stencil may pick it up. */
   onChipDragStart?: (resource: ResourceAmount, event: ReactPointerEvent<HTMLElement>) => void;
+  onHoverSlot: (resource: ResourceAmount | undefined) => void;
   rateView: RateView;
-  /** Right click (or a held press on the header): the card's menu. */
-  onCardMenu: (event: ReactMouseEvent, machineLabel: string, add: () => void) => void;
+  /** Right click (or a held press): the recipe's menu. */
+  onCardMenu: (event: ReactMouseEvent, add: () => void) => void;
 }) {
   const preview = useMemo(
     () => contextualizePreviewRecipe(summaryToPreviewRecipe(recipe), contextResource),
@@ -1904,10 +2118,9 @@ const CompactRecipeCard = memo(function CompactRecipeCard({
   const isReadOnly = useFactoryStore((state) => state.isReadOnly);
   const handlers = useMemo(() => getRecipeMachineHandlers(preview), [preview]);
   const primary = handlers[0];
-  const machineLabel = primary?.label ?? recipe.machineType;
   // A dataset recipe is written in its primary machine's numbers already; the
   // synthesized Auto Workbench is the one handler that brings its own (the
-  // crafting maps are exported instant), so the card and its rate views read
+  // crafting maps are exported instant), so the recipe and its rate views read
   // the workbench's LV seed instead of claiming twenty crafts a second.
   const isAutoWorkbench = primary?.id === AUTO_WORKBENCH_HANDLER_ID;
   // A machine on its own fixed cycle (the Extreme Heat Exchanger) states its
@@ -1977,7 +2190,7 @@ const CompactRecipeCard = memo(function CompactRecipeCard({
     }
     return divisor > 0 ? divisor : 1;
   }, [inputChips, outputChips, rateView]);
-  // A merged chip stands for every slot it swallowed, so a pick lands on all
+  // A merged slot stands for every slot it swallowed, so a pick lands on all
   // of their indexes at once.
   const pickFace = useCallback((indexes: number[], face: AlternativeCycleFace) => {
     setInputPicks((previous) => {
@@ -1989,9 +2202,9 @@ const CompactRecipeCard = memo(function CompactRecipeCard({
     });
   }, []);
 
-  // A pointer that settles on a card is probably about to press its plus, so
+  // A pointer that settles on a recipe is probably about to press its plus, so
   // the full recipe starts travelling now. The short fuse keeps a pointer
-  // sweeping across the grid from requesting every card it crosses.
+  // sweeping across the page from requesting every recipe it crosses.
   const prefetchTimerRef = useRef<number | undefined>(undefined);
   const cancelPrefetch = useCallback(() => {
     if (prefetchTimerRef.current !== undefined) {
@@ -2010,53 +2223,156 @@ const CompactRecipeCard = memo(function CompactRecipeCard({
     }, 150);
   }, [cancelPrefetch, onPrefetch, recipe.id]);
   useEffect(() => cancelPrefetch, [cancelPrefetch]);
-  const openMenu = (event: ReactMouseEvent) =>
-    onCardMenu(event, `${machineLabel} recipes`, () => void onAdd(recipe, undefined, inputPicks));
-  const headPress = useLongPress(openMenu);
+  const add = () => void onAdd(recipe, undefined, inputPicks);
+  const openMenu = (event: ReactMouseEvent) => onCardMenu(event, add);
+  const footPress = useLongPress(openMenu);
+
+  const inputSlot = (chip: (typeof inputChips)[number], key: string) => {
+    const picker: ChipMenuPicker | undefined =
+      chip.faces.length > 1
+        ? {
+            faces: chip.faces,
+            currentId: chip.resource.id,
+            onPick: (face) => pickFace(chip.indexes, face),
+          }
+        : undefined;
+    const free = isFreeRecipeInput(chip.raw) && !isControllerSlotInput(chip.raw);
+    const notConsumed = !free && chip.raw.consumed === false;
+    const amount: ChipAmount = free
+      ? { text: "FREE" }
+      : notConsumed
+        ? { text: "NC" }
+        : rateView === "eu"
+          ? formatChipEnergy(chip.resource, "input", eut, durationTicks)
+          : formatChipAmount(chip.resource, rateView, durationTicks, ratioDivisor);
+    const reading = readingOf(
+      amount,
+      chip.resource,
+      rateView,
+      free || notConsumed
+        ? undefined
+        : slotValue(chip.resource, rateView, durationTicks, ratioDivisor, eut),
+    );
+    if (free || notConsumed) {
+      // A catalyst still shows how many it holds; the corner says it stays.
+      reading.count =
+        chip.resource.amount > 1 && chip.resource.kind !== "fluid"
+          ? slotNumber(chip.resource.amount)
+          : undefined;
+      // A circuit is a machine setting, never spent: it wears no NC.
+      reading.tag = free
+        ? { text: "FREE", tone: "free" }
+        : isProgrammedCircuitResource(chip.resource)
+          ? undefined
+          : { text: "NC", tone: "nc" };
+      reading.tip = free ? "Free: nothing is spent" : "Not consumed";
+    }
+    return (
+      <RecipeSlot
+        key={key}
+        resource={chip.resource}
+        reading={reading}
+        hint={picker ? "Scroll to change it" : undefined}
+        onCycle={
+          picker
+            ? (step) => {
+                const at = Math.max(
+                  0,
+                  chip.faces.findIndex((face) => face.id === chip.resource.id),
+                );
+                const next = chip.faces[(at + step + chip.faces.length) % chip.faces.length];
+                pickFace(chip.indexes, next);
+              }
+            : undefined
+        }
+        onBrowseResource={onBrowseResource}
+        onHover={onHoverSlot}
+        onDragStart={(event) => onChipDragStart?.(chip.resource, event)}
+        onMenu={(event) => onChipMenu(event, { ...chip.resource, amount: 1 }, picker)}
+      />
+    );
+  };
+  const outputSlot = (output: (typeof outputChips)[number], key: string) => {
+    const amount =
+      rateView === "eu"
+        ? formatChipEnergy(output, "output", eut, durationTicks)
+        : formatChipAmount(output, rateView, durationTicks, ratioDivisor);
+    const reading = readingOf(
+      amount,
+      output,
+      rateView,
+      slotValue(output, rateView, durationTicks, ratioDivisor, eut),
+    );
+    const chance = "chance" in output ? output.chance : undefined;
+    if (chance !== undefined && chance < 1) {
+      reading.tag = { text: `${Math.round(chance * 1000) / 10}%` };
+    }
+    return (
+      <RecipeSlot
+        key={key}
+        resource={output}
+        reading={reading}
+        chance={chance}
+        onBrowseResource={onBrowseResource}
+        onHover={onHoverSlot}
+        onDragStart={(event) => onChipDragStart?.(output, event)}
+        onMenu={(event) => onChipMenu(event, { ...output, amount: 1 })}
+      />
+    );
+  };
+
+  const inItems = inputChips.filter((chip) => chip.resource.kind !== "fluid");
+  const inFluids = inputChips.filter((chip) => chip.resource.kind === "fluid");
+  const outItems = outputChips.filter((output) => output.kind !== "fluid");
+  const outFluids = outputChips.filter((output) => output.kind === "fluid");
 
   return (
     <article
-      onClick={() => {
-        if (headPress.consumeClick()) {
-          return;
-        }
-        onSelectRecipe(recipe.id);
+      data-recipe=""
+      className="nrw-recipe"
+      onClick={() => onSelectRecipe(recipe.id)}
+      onDoubleClick={() => {
+        if (!isReadOnly) add();
       }}
-      onDoubleClick={() => { if (!isReadOnly) void onAdd(recipe, undefined, inputPicks); }}
       onContextMenu={openMenu}
       onPointerEnter={armPrefetch}
       onPointerLeave={cancelPrefetch}
-      className={[
-        "cursor-pointer border-2 border-[var(--mc-47)] bg-[var(--mc-33)] p-2 shadow-[inset_1px_1px_0_var(--mc-56),inset_-1px_-1px_0_var(--mc-25)]",
-        // No selected look: a click here is a bookkeeping click, not a state
-        // the card needs to wear.
-        "",
-      ].join(" ")}
-      style={{ contentVisibility: "auto", containIntrinsicSize: "auto 196px" }}
     >
-      {/* The machine is the section title, so the header shows the recipe's
-          tier (in the board's chip paint), time and draw. Hold it for the
-          card's menu on a finger. */}
-      <div className="flex items-center gap-2" {...headPress.handlers}>
+      <div className="nrw-io">
+        <SlotSide
+          cols={shape.inCols}
+          items={inItems.map((chip, index) => inputSlot(chip, `in-${index}`))}
+          itemSlots={shape.inItems}
+          fluids={inFluids.map((chip, index) => inputSlot(chip, `inf-${index}`))}
+          fluidSlots={shape.inFluids}
+        />
+        <span className="nrw-arrow">
+          <ProgressArrow />
+        </span>
+        <SlotSide
+          cols={shape.outCols}
+          items={outItems.map((output, index) => outputSlot(output, `out-${index}`))}
+          itemSlots={shape.outItems}
+          fluids={outFluids.map((output, index) => outputSlot(output, `outf-${index}`))}
+          fluidSlots={shape.outFluids}
+        />
+      </div>
+      {/* The tier, its draw and its time, as GregTech writes them under a
+          recipe; NEI's plus at the end adds it to the board. Hold it for the
+          recipe's menu on a finger. */}
+      <div className="nrw-stats" {...footPress.handlers}>
         {tierColor ? (
           <span
-            className="flex h-6 min-w-9 shrink-0 items-center justify-center border-2 px-1 text-[11px] font-bold shadow-[inset_2px_2px_0_rgba(255,255,255,0.55),inset_-2px_-2px_0_rgba(0,0,0,0.45)]"
-            style={{
-              backgroundColor: tierColor.background,
-              borderColor: tierColor.border,
-              color: tierColor.text,
-              textShadow: `1px 1px 0 ${tierColor.shadow}`,
-            }}
+            className="nrw-tier-tag"
+            style={{ backgroundColor: tierColor.background, color: tierColor.text }}
           >
             {minimumTier}
           </span>
         ) : null}
-        <span className="flex min-w-0 flex-1 items-baseline gap-3 leading-none">
-          <span className="text-[13px] font-bold text-[var(--mc-ink)] tabular-nums">
+        <span className="nrw-text nrw-grow" style={{ fontSize: 12, lineHeight: "14px" }}>
+          <span>{powerText}</span>
+          <span className="nrw-muted" style={{ marginLeft: 10 }}>
             {secondsText}
-          </span>
-          <span className="truncate text-[12px] font-bold text-[var(--mc-ink-muted)] tabular-nums">
-            {powerText}
           </span>
         </span>
         <button
@@ -2066,92 +2382,81 @@ const CompactRecipeCard = memo(function CompactRecipeCard({
           title={isReadOnly ? "Open a copy to add recipes" : undefined}
           onClick={(event) => {
             event.stopPropagation();
-            void onAdd(recipe, undefined, inputPicks);
+            if (footPress.consumeClick()) {
+              return;
+            }
+            add();
           }}
-          className="flex h-6 w-6 shrink-0 items-center justify-center border-2 border-[var(--mc-33)] bg-[var(--mc-61)] text-neutral-100 shadow-[inset_1px_1px_0_var(--mc-85)] hover:border-cyan-400 hover:text-cyan-200"
+          className="nei-btn nrw-add"
         >
-          <Plus className="h-3.5 w-3.5" />
+          <Plus className="h-3.5 w-3.5" aria-hidden />
         </button>
-      </div>
-      {/* Two fixed halves with the arrow between, exactly the way the machine
-          card itself reads: what it takes on the left, what it makes on the
-          right, each item on its own line. */}
-      <div className="mt-1.5 grid grid-cols-[minmax(0,1fr)_28px_minmax(0,1fr)] items-start gap-x-1">
-        <span className="flex min-w-0 flex-col gap-1">
-          {inputChips.map((chip, index) => {
-            const picker: ChipMenuPicker | undefined =
-              chip.faces.length > 1
-                ? {
-                    faces: chip.faces,
-                    currentId: chip.resource.id,
-                    onPick: (face) => pickFace(chip.indexes, face),
-                  }
-                : undefined;
-            return (
-              <ResourceChip
-                key={`in-${index}`}
-                resource={chip.resource}
-                amountText={
-                  isFreeRecipeInput(chip.raw) && !isControllerSlotInput(chip.raw)
-                    ? { text: "FREE" }
-                    : chip.raw.consumed === false
-                    ? { text: "NC" }
-                    : rateView === "eu"
-                      ? formatChipEnergy(chip.resource, "input", eut, durationTicks)
-                      : formatChipAmount(chip.resource, rateView, durationTicks, ratioDivisor)
-                }
-                onCycle={
-                  chip.faces.length > 1
-                    ? (step) => {
-                        const at = Math.max(
-                          0,
-                          chip.faces.findIndex((face) => face.id === chip.resource.id),
-                        );
-                        const next =
-                          chip.faces[(at + step + chip.faces.length) % chip.faces.length];
-                        pickFace(chip.indexes, next);
-                      }
-                    : undefined
-                }
-                onBrowseResource={onBrowseResource}
-                onDragStart={(event) => onChipDragStart?.(chip.resource, event)}
-                onMenu={(event) => onChipMenu(event, { ...chip.resource, amount: 1 }, picker)}
-              />
-            );
-          })}
-        </span>
-        <span className="flex items-center justify-center self-stretch text-[var(--mc-ink-muted)]">
-          <svg aria-hidden viewBox="0 0 40 24" className="h-4 w-7" fill="none">
-            <path d="M2 12h26" stroke="currentColor" strokeWidth="5" />
-            <path d="M24 2l14 10-14 10" fill="currentColor" />
-          </svg>
-        </span>
-        <span className="flex min-w-0 flex-col gap-1">
-          {outputChips.map((output, index) => (
-            <ResourceChip
-              key={`out-${index}`}
-              resource={output}
-              amountText={
-                rateView === "eu"
-                  ? formatChipEnergy(output, "output", eut, durationTicks)
-                  : formatChipAmount(output, rateView, durationTicks, ratioDivisor)
-              }
-              chance={"chance" in output ? output.chance : undefined}
-              onBrowseResource={onBrowseResource}
-              onDragStart={(event) => onChipDragStart?.(output, event)}
-              onMenu={(event) => onChipMenu(event, { ...output, amount: 1 })}
-            />
-          ))}
-        </span>
       </div>
     </article>
   );
 });
 
 /**
- * A ghost result card: the real card's anatomy, empty, pulsing on a stagger
- * while results load. Its arrow fills repeatedly like a furnace progress bar.
+ * One side of a recipe: its item slots in the tab's grid, then its fluid slots
+ * on rows of their own, as GregTech draws a machine's slots; the places this
+ * recipe leaves empty are empty wells.
  */
+function SlotSide({
+  cols,
+  items,
+  itemSlots,
+  fluids,
+  fluidSlots,
+}: {
+  cols: number;
+  items: ReactNode[];
+  itemSlots: number;
+  fluids: ReactNode[];
+  fluidSlots: number;
+}) {
+  const fill = (filled: ReactNode[], total: number, key: string) => [
+    ...filled,
+    ...Array.from({ length: Math.max(0, total - filled.length) }, (_, index) => (
+      <span key={`${key}-${index}`} className="nrw-slot" data-empty="" aria-hidden />
+    )),
+  ];
+  const template = { gridTemplateColumns: `repeat(${cols}, ${SLOT}px)` };
+  return (
+    <div className="nrw-side" style={{ width: cols * SLOT }}>
+      {itemSlots > 0 || items.length > 0 ? (
+        <div className="nrw-slots" style={template}>
+          {fill(items, itemSlots, "item")}
+        </div>
+      ) : null}
+      {fluidSlots > 0 || fluids.length > 0 ? (
+        <div className="nrw-slots" style={template}>
+          {fill(fluids, fluidSlots, "fluid")}
+        </div>
+      ) : null}
+    </div>
+  );
+}
+
+/** Per-second power flows in the reading in use; no craft, no ratio. */
+function formatPowerChipAmount(kind: string, perSecond: number, rateView: RateView): ChipAmount {
+  const unit =
+    rateView === "recipe" || rateView === "ratio" || rateView === "eu"
+      ? RATE_VIEW_UNITS.second
+      : RATE_VIEW_UNITS[rateView];
+  const per = unit.per;
+  const value = perSecond * unit.multiplier;
+  const text = trimTrailingZeros(formatRate(value, value >= 100 ? 0 : value >= 10 ? 1 : 2));
+  return kind === "fluid" ? { text, unit: `L/${per}` } : { text, unit: `/${per}` };
+}
+
+function powerPerUnitValue(perSecond: number, rateView: RateView): number {
+  const unit =
+    rateView === "recipe" || rateView === "ratio" || rateView === "eu"
+      ? RATE_VIEW_UNITS.second
+      : RATE_VIEW_UNITS[rateView];
+  return perSecond * unit.multiplier;
+}
+
 function powerDialNote(
   source: PowerSourceDefinition,
   settingId?: string,
@@ -2168,45 +2473,34 @@ function powerDialNote(
   return option ? `${setting.label}: ${option.label}` : undefined;
 }
 
-/** Per-second power flows in the card's chosen reading; no craft, no ratio. */
-function formatPowerChipAmount(kind: string, perSecond: number, rateView: RateView): ChipAmount {
-  const unit =
-    rateView === "recipe" || rateView === "ratio" || rateView === "eu"
-      ? RATE_VIEW_UNITS.second
-      : RATE_VIEW_UNITS[rateView];
-  const per = unit.per;
-  const value = perSecond * unit.multiplier;
-  const text = trimTrailingZeros(formatRate(value, value >= 100 ? 0 : value >= 10 ? 1 : 2));
-  return kind === "fluid" ? { text, unit: `L/${per}` } : { text, unit: `/${per}` };
-}
-
 /**
- * A generator answering the stencil, laid out like a recipe card, with its
- * generated EU leading the output column as on the board. Not a recipe
- * underneath: the plus places the machine with the matched settings, and the
- * stats line names those settings.
+ * A generator answering the stencil, laid out as a recipe: its name over its
+ * slots, what it burns into the arrow and the EU it makes first out of it.
+ * Not a recipe underneath: the plus places the machine with the matched
+ * settings, and the foot names those settings.
  */
-function PowerHitCard({
+function PowerWidget({
   hit,
+  shape,
   rateView,
   onPlace,
   onBrowseResource,
   onChipMenu,
   onChipDragStart,
-  onHideMachine,
+  onHoverSlot,
   onCardMenu,
 }: {
   hit: PowerStencilHit;
+  shape: TabShape;
   rateView: RateView;
   onPlace: () => void;
   onBrowseResource: (resource: ResourceAmount, mode: "recipes" | "uses") => void;
   onChipMenu: (event: ReactMouseEvent, resource: ResourceAmount) => void;
   onChipDragStart?: (resource: ResourceAmount, event: ReactPointerEvent<HTMLElement>) => void;
-  /** The tile's click: the generators leave the results. */
-  onHideMachine: () => void;
+  onHoverSlot: (resource: ResourceAmount | undefined) => void;
   onCardMenu: (event: ReactMouseEvent) => void;
 }) {
-  const tilePress = useLongPress(onCardMenu);
+  const footPress = useLongPress(onCardMenu);
   const icon = getPowerMachineIcon(hit.source.id);
   const tierColor = hit.source.unlock
     ? (GT_TIER_COLORS as Record<string, (typeof GT_TIER_COLORS)["LV"] | undefined>)[
@@ -2226,53 +2520,54 @@ function PowerHitCard({
     .map(([settingId, optionKey]) => powerDialNote(hit.source, settingId, optionKey))
     .filter((note): note is string => note !== undefined);
   const stats = dials.length > 0 ? dials.join(" · ") : hit.source.blurb;
-  const flowChip = (direction: "takes" | "makes", flow: { name: string; perSecond: number }) => {
+  const flowSlot = (direction: "takes" | "makes", flow: { name: string; perSecond: number }) => {
     const resolved = resolvePowerResource(flow.name);
     if (!resolved) {
       // A flow with no dataset resource still shows, inert.
       return (
-        <span
-          key={`${direction}:${flow.name}`}
-          className="flex w-full items-center gap-1.5 border border-transparent bg-[var(--mc-47)] py-0.5 pl-0.5 pr-1.5"
-        >
-          <span className="h-9 w-9 shrink-0 " />
-          <span className="min-w-0 flex-1 truncate text-[13px] font-bold">{flow.name}</span>
+        <span key={`${direction}:${flow.name}`} className="nrw-slot" data-empty="">
+          <span className="sr-text">{flow.name}</span>
         </span>
       );
     }
     const resource: ResourceAmount = { ...resolved, amount: flow.perSecond } as ResourceAmount;
+    const amount = formatPowerChipAmount(resolved.kind, flow.perSecond, rateView);
     return (
-      <ResourceChip
+      <RecipeSlot
         key={`${direction}:${flow.name}`}
         resource={resource}
-        amountText={formatPowerChipAmount(resolved.kind, flow.perSecond, rateView)}
+        reading={readingOf(amount, resource, "second", powerPerUnitValue(flow.perSecond, rateView))}
         onBrowseResource={onBrowseResource}
+        onHover={onHoverSlot}
         onDragStart={(event) => onChipDragStart?.(resource, event)}
         onMenu={(event) => onChipMenu(event, { ...resource, amount: 1 })}
       />
     );
   };
+  const inputs = model?.inputs.filter((flow) => flow.perSecond > 0) ?? [];
+  const outputs = model?.outputs.filter((flow) => flow.perSecond > 0) ?? [];
+  const euSlot =
+    model && model.euPerTick > 0 ? (
+      <span
+        key="eu"
+        className="nrw-slot"
+        data-empty=""
+        data-count={slotNumber(model.euPerTick)}
+        data-energy=""
+      >
+        <Zap className="h-4 w-4 fill-current text-amber-400" aria-hidden />
+        <span className="sr-text">{`EU~${formatAmount(model.euPerTick)} EU/t`}</span>
+      </span>
+    ) : null;
   return (
     <article
+      className="nrw-recipe"
+      data-recipe=""
       onDoubleClick={onPlace}
       onContextMenu={onCardMenu}
-      className="cursor-pointer border-2 border-[var(--mc-47)] bg-[var(--mc-33)] p-2 shadow-[inset_1px_1px_0_var(--mc-56),inset_-1px_-1px_0_var(--mc-25)]"
-      style={{ contentVisibility: "auto", containIntrinsicSize: "auto 196px" }}
     >
-      <div className="flex items-center gap-2">
-        <button
-          type="button"
-          aria-label="Hide the generators"
-          {...tilePress.handlers}
-          onClick={(event) => {
-            event.stopPropagation();
-            if (tilePress.consumeClick()) {
-              return;
-            }
-            onHideMachine();
-          }}
-          className="flex h-9 w-9 shrink-0 items-center justify-center overflow-hidden hover:shadow-[0_0_0_2px_#22d3ee_inset]"
-        >
+      <div className="nrw-recipe-name flex items-center gap-2">
+        <span className="flex h-5 w-5 shrink-0 items-center justify-center overflow-hidden">
           {icon?.iconPath ? (
             <ResourceIcon
               resource={{
@@ -2288,166 +2583,141 @@ function PowerHitCard({
               tooltip={false}
               showAmount={false}
               className="!h-full !w-full"
-              iconPixelSize={machineArtPixels(36)}
+              iconPixelSize={machineArtPixels(20)}
             />
           ) : (
-            <Zap className="h-4 w-4 fill-current text-amber-300" aria-hidden />
+            <Zap className="h-3.5 w-3.5 fill-current text-amber-300" aria-hidden />
           )}
-        </button>
+        </span>
+        <span className="nrw-text min-w-0 truncate">{hit.source.name}</span>
+      </div>
+      <div className="nrw-io">
+        <SlotSide
+          cols={shape.inCols}
+          items={inputs.map((flow) => flowSlot("takes", flow))}
+          itemSlots={shape.inItems}
+          fluids={[]}
+          fluidSlots={0}
+        />
+        <span className="nrw-arrow">
+          <ProgressArrow />
+        </span>
+        <SlotSide
+          cols={shape.outCols}
+          items={[...(euSlot ? [euSlot] : []), ...outputs.map((flow) => flowSlot("makes", flow))]}
+          itemSlots={shape.outItems}
+          fluids={[]}
+          fluidSlots={0}
+        />
+      </div>
+      <div className="nrw-stats" {...footPress.handlers}>
         {tierColor ? (
           <span
-            className="flex h-9 min-w-9 shrink-0 items-center justify-center border-2 px-1 text-[13px] font-bold shadow-[inset_2px_2px_0_rgba(255,255,255,0.55),inset_-2px_-2px_0_rgba(0,0,0,0.45)]"
-            style={{
-              backgroundColor: tierColor.background,
-              borderColor: tierColor.border,
-              color: tierColor.text,
-              textShadow: `1px 1px 0 ${tierColor.shadow}`,
-            }}
+            className="nrw-tier-tag"
+            style={{ backgroundColor: tierColor.background, color: tierColor.text }}
           >
             {hit.source.unlock}
           </span>
         ) : null}
-        <span className="min-w-0 flex-1 leading-[1.15]">
-          <span className="block truncate text-[15px] font-bold text-[var(--mc-ink)]">
-            {hit.source.name}
-          </span>
-          <span className="mt-0.5 block truncate text-[11px] text-[var(--mc-ink-muted)]">
-            {stats}
-          </span>
+        <span className="nrw-text nrw-grow nrw-muted" style={{ fontSize: 12, lineHeight: "14px" }}>
+          {stats}
         </span>
         <button
           type="button"
           aria-label={`Add ${hit.source.name}`}
           onClick={(event) => {
             event.stopPropagation();
+            if (footPress.consumeClick()) {
+              return;
+            }
             onPlace();
           }}
-          className="flex h-8 w-8 shrink-0 items-center justify-center border-2 border-[var(--mc-33)] bg-[var(--mc-61)] text-neutral-100 shadow-[inset_1px_1px_0_var(--mc-85)] hover:border-cyan-400 hover:text-cyan-200"
+          className="nei-btn nrw-add"
         >
-          <Plus className="h-4 w-4" />
+          <Plus className="h-3.5 w-3.5" aria-hidden />
         </button>
-      </div>
-      <div className="mt-1.5 grid grid-cols-[minmax(0,1fr)_28px_minmax(0,1fr)] items-start gap-x-1">
-        <span className="flex min-w-0 flex-col gap-1">
-          {model?.inputs
-            .filter((flow) => flow.perSecond > 0)
-            .map((flow) => flowChip("takes", flow))}
-        </span>
-        <span className="flex items-center justify-center self-stretch text-[var(--mc-ink-muted)]">
-          <svg aria-hidden viewBox="0 0 40 24" className="h-4 w-7" fill="none">
-            <path d="M2 12h26" stroke="currentColor" strokeWidth="5" />
-            <path d="M24 2l14 10-14 10" fill="currentColor" />
-          </svg>
-        </span>
-        <span className="flex min-w-0 flex-col gap-1">
-          {model && model.euPerTick > 0 ? (
-            <span
-              className={[
-                "flex w-full items-center gap-1.5 border py-0.5 pl-0.5 pr-1.5",
-                "border-transparent bg-[var(--mc-47)]",
-              ].join(" ")}
-            >
-              <span className="flex h-9 w-9 shrink-0 items-center justify-center ">
-                <Zap className="h-4 w-4 fill-current text-amber-400" aria-hidden />
-              </span>
-              <span className="min-w-0 flex-1 truncate text-[13px] font-bold">EU</span>
-              <span className="shrink-0 whitespace-nowrap text-[12px] font-bold tabular-nums text-amber-300">
-                ~{formatAmount(model.euPerTick)} EU/t
-              </span>
-            </span>
-          ) : null}
-          {model?.outputs
-            .filter((flow) => flow.perSecond > 0)
-            .map((flow) => flowChip("makes", flow))}
-        </span>
       </div>
     </article>
   );
 }
 
-function SkeletonResultCard({ delay }: { delay: number }) {
-  // NEGATIVE delay: a positive one leaves the card at full base opacity
-  // until its turn, then snaps it into the cycle - which marched a visible
-  // pop across the grid in reading order. Starting every card mid-cycle
-  // gives the same ripple with nothing to snap.
+/**
+ * A recipe still on its way: the tab's slot grid, empty, breathing on a
+ * stagger, its arrow filling like a furnace's progress bar.
+ */
+function SkeletonWidget({ shape, delay }: { shape: TabShape; delay: number }) {
+  // NEGATIVE delay: a positive one leaves the widget at full base opacity
+  // until its turn, then snaps it into the cycle. Starting every widget
+  // mid-cycle gives the same ripple with nothing to snap.
   const delayStyle = { animationDelay: `-${delay}ms` };
-  const ghostChip = (nameWidth: string, key: number) => (
-    <span
-      key={key}
-      className="flex w-full items-center gap-1.5 border border-transparent bg-[var(--mc-47)] py-0.5 pl-0.5 pr-1.5"
-    >
-      <span className="h-9 w-9 shrink-0 " />
-      <span className={`block h-4 ${nameWidth} bg-[var(--mc-71)]`} />
-    </span>
-  );
-
   return (
-    <div
-      className="recipe-search-skeleton border-2 border-[var(--mc-47)] bg-[var(--mc-33)] p-2 shadow-[inset_1px_1px_0_var(--mc-56),inset_-1px_-1px_0_var(--mc-25)]"
-      style={delayStyle}
-    >
-      <div className="flex items-center gap-2">
-        <span className="h-9 w-9 shrink-0 bg-[var(--mc-47)]" />
-        <span className="flex min-w-0 flex-1 flex-col gap-1.5">
-          <span className="block h-3.5 w-36 bg-[var(--mc-61)]" />
-          <span className="block h-2.5 w-24 bg-[var(--mc-61)]" />
-        </span>
-        <span className="h-8 w-8 shrink-0 border-2 border-[var(--mc-33)] bg-[var(--mc-61)]" />
-      </div>
-      <div className="mt-1.5 grid grid-cols-[minmax(0,1fr)_28px_minmax(0,1fr)] items-start gap-x-1">
-        <span className="flex min-w-0 flex-col gap-1">
-          {ghostChip("w-24", 0)}
-          {ghostChip("w-16", 1)}
-        </span>
-        <span className="relative flex items-start justify-center pt-2 text-[var(--mc-47)]">
-          <svg width="16" height="12" viewBox="0 0 16 12" fill="none" aria-hidden="true">
-            <path d="M1 6h9" stroke="currentColor" strokeWidth="3" />
-            <path d="M8 1l7 5-7 5" fill="currentColor" />
-          </svg>
-          <svg
-            width="16"
-            height="12"
-            viewBox="0 0 16 12"
-            fill="none"
-            aria-hidden="true"
-            className="recipe-search-arrow-fill absolute left-1/2 top-2 -translate-x-1/2 text-[#4cc3d9]"
+    <div className="nrw-recipe recipe-search-skeleton" style={delayStyle}>
+      <div className="nrw-io">
+        <SlotSide
+          cols={shape.inCols}
+          items={[]}
+          itemSlots={shape.inItems}
+          fluids={[]}
+          fluidSlots={shape.inFluids}
+        />
+        <span className="nrw-arrow relative">
+          <ProgressArrow />
+          <span
+            className="recipe-search-arrow-fill absolute inset-0 flex items-center justify-center text-[#4cc3d9]"
             style={delayStyle}
           >
-            <path d="M1 6h9" stroke="currentColor" strokeWidth="3" />
-            <path d="M8 1l7 5-7 5" fill="currentColor" />
-          </svg>
+            <ProgressArrow />
+          </span>
         </span>
-        <span className="flex min-w-0 flex-col gap-1">{ghostChip("w-20", 0)}</span>
+        <SlotSide
+          cols={shape.outCols}
+          items={[]}
+          itemSlots={shape.outItems}
+          fluids={[]}
+          fluidSlots={shape.outFluids}
+        />
+      </div>
+      <div className="nrw-stats">
+        <span className="block h-3 w-20 bg-[#2c2e34]" />
+        <span className="block h-3 w-10 bg-[#2c2e34]" />
       </div>
     </div>
   );
 }
 
-/** A named item chip inside a result: icon, name, amount. Clicks browse it. */
-function ResourceChip({
+/**
+ * A slot in a recipe: the item's art in a well, its count over the corner,
+ * its tooltip at once in Minecraft's box. A click asks what makes it and a
+ * right click what uses it, as in NEI (R and U over it too); a Shift right
+ * click or a held press opens every way to use it. Pressed and moved, it
+ * lifts onto the stencil.
+ */
+function RecipeSlot({
   resource,
-  hit,
-  amountText,
+  reading,
   chance,
+  hint,
   onCycle,
   onBrowseResource,
+  onHover,
   onMenu,
   onDragStart,
 }: {
   resource: ResourceAmount;
-  hit?: boolean;
-  amountText: ChipAmount;
+  reading: SlotReading;
   chance?: number;
-  /** Wheel over the chip steps through the forms, and the choice sticks. */
+  /** A dim line under the tooltip (the slot has other forms). */
+  hint?: string;
+  /** Wheel over the slot steps through the forms, and the choice sticks. */
   onCycle?: (step: 1 | -1) => void;
   onBrowseResource: (resource: ResourceAmount, mode: "recipes" | "uses") => void;
+  onHover: (resource: ResourceAmount | undefined) => void;
   onMenu: (event: ReactMouseEvent) => void;
-  /** The mouse went down on the chip: the stencil may pick it up. */
+  /** The mouse went down on the slot: the stencil may pick it up. */
   onDragStart?: (event: ReactPointerEvent<HTMLElement>) => void;
 }) {
   // The wheel listener is attached by hand, non-passive: React's synthetic
-  // wheel cannot preventDefault, and without it every cycle also scrolls the
-  // results behind the chip.
+  // wheel cannot preventDefault, and without it every cycle also turns the page.
   const rootRef = useRef<HTMLButtonElement | null>(null);
   useEffect(() => {
     const element = rootRef.current;
@@ -2470,14 +2740,36 @@ function ResourceChip({
   const press = useLongPress(onMenu);
   // The item's Minecraft tooltip, at once, as NEI shows one over a recipe's slot.
   const [tip, setTip] = useState<{ x: number; y: number }>();
+  const label = resourceLabel(resource);
+  const tipLines = useMemo<McTipLine[] | undefined>(() => {
+    if (!tip) return undefined;
+    const extra = [
+      ...(reading.tip ? [reading.tip] : []),
+      ...(chance !== undefined && chance < 1 ? [`Chance: ${Math.round(chance * 1000) / 10}%`] : []),
+    ];
+    const lines = itemTipLines({ name: label, id: resource.id, tooltip: resource.tooltip, extra });
+    if (hint) lines.splice(1, 0, { text: hint, tone: "hint" });
+    return lines;
+  }, [chance, hint, label, reading.tip, resource.id, resource.tooltip, tip]);
 
   return (
     <button
       ref={rootRef}
       type="button"
+      className="nrw-slot"
+      data-count={reading.count}
+      data-energy={reading.energy ? "" : undefined}
+      data-tag={reading.tag?.text}
+      data-tone={reading.tag?.tone}
       {...press.handlers}
-      onMouseMove={(event) => setTip(event.buttons === 0 ? { x: event.clientX, y: event.clientY } : undefined)}
-      onMouseLeave={() => setTip(undefined)}
+      onMouseEnter={() => onHover(resource)}
+      onMouseMove={(event) =>
+        setTip(event.buttons === 0 ? { x: event.clientX, y: event.clientY } : undefined)
+      }
+      onMouseLeave={() => {
+        setTip(undefined);
+        onHover(undefined);
+      }}
       onPointerDown={(event) => {
         press.handlers.onPointerDown(event);
         onDragStart?.(event);
@@ -2491,70 +2783,25 @@ function ResourceChip({
         onBrowseResource({ ...resource, amount: 1 }, "recipes");
       }}
       onContextMenu={(event) => {
-        onMenu(event);
+        if (event.shiftKey) {
+          onMenu(event);
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        onBrowseResource({ ...resource, amount: 1 }, "uses");
       }}
-      className={[
-        "flex w-full items-center gap-2 border py-0 pl-0.5 pr-2 text-left",
-        // A slot the stencil asked for says so quietly: the same chip on a
-        // faintly blue ground with a faintly blue edge, not a highlighter.
-        hit
-          ? "border-transparent bg-[#22303a]"
-          : "border-transparent bg-[var(--mc-47)] hover:bg-[var(--mc-56)]",
-      ].join(" ")}
     >
-      <span className="relative flex h-8 w-8 shrink-0 items-center justify-center overflow-hidden">
-        <ResourceIcon
-          resource={{ ...resource, amount: 1, chance: undefined }}
-          size="sm"
-          bare
-          showAmount={false}
-          tooltip={false}
-          className="!h-full !w-full"
-          iconPixelSize={machineArtPixels(32)}
-        />
+      <span className="nrw-art">
+        <SlotArt resource={resource} />
       </span>
-      {/* The icon is the big thing; the name is smaller and may take a
-          second line rather than losing its second word to an ellipsis. */}
-      <span className="min-w-0 flex-1 line-clamp-2 whitespace-normal text-[12px] font-bold leading-tight text-[var(--mc-ink)]">
-        {resourceLabel(resource)}
+      {/* The slot's words: its name and amount, for anything reading the page. */}
+      <span className="sr-text">
+        {label}
+        {reading.text}
+        {chance !== undefined && chance < 1 ? `${Math.round(chance * 1000) / 10}%` : ""}
       </span>
-      <span
-        className={[
-          "ml-3 shrink-0 text-[15px] font-bold tabular-nums",
-          amountText.energy ? ENERGY_READING_TEXT : "text-[var(--mc-ink)]",
-        ].join(" ")}
-      >
-        {amountText.text}
-        {amountText.unit ? (
-          <span
-            className={[
-              "ml-0.5 font-bold",
-              // The energy unit is a tail, not part of the number: a size down
-              // again, in the greyed gold that sits under the reading.
-              amountText.energy ? "text-[10px] font-medium text-[#8c7d4c]" : "text-[11px] text-[var(--mc-ink-muted)]",
-            ].join(" ")}
-          >
-            {amountText.unit}
-          </span>
-        ) : null}
-      </span>
-      {chance !== undefined && chance < 1 ? (
-        <span className="text-[12px] text-[var(--mc-ink-muted)] tabular-nums">
-          {Math.round(chance * 1000) / 10}%
-        </span>
-      ) : null}
-      {tip ? (
-        <McFloatingTip
-          x={tip.x}
-          y={tip.y}
-          lines={itemTipLines({
-            name: resourceLabel(resource),
-            id: resource.id,
-            tooltip: resource.tooltip,
-            extra: chance !== undefined && chance < 1 ? [`Chance: ${Math.round(chance * 1000) / 10}%`] : undefined,
-          })}
-        />
-      ) : null}
+      {tipLines && tip ? <McFloatingTip x={tip.x} y={tip.y} lines={tipLines} /> : null}
     </button>
   );
 }
@@ -2633,17 +2880,13 @@ function powerUnlockWithinTier(unlock: string, maxTier: Exclude<TierFilter, "all
 interface CardMenu {
   x: number;
   y: number;
-  /** The card's name, as the menu's heading. */
+  /** The recipe's name, as the menu's heading. */
   label: string;
-  /** "Arc Furnace recipes", "generators": what hide and only act on. */
-  machineLabel: string;
   add: () => void;
-  hide: () => void;
-  only?: () => void;
 }
 
 /**
- * An oredict slot wears its first concrete face: the chip is a thing you can
+ * An oredict slot wears its first concrete face: the slot is a thing you can
  * click, not the dictionary's internal name.
  */
 function chipFaceResource<T extends ResourceAmount>(resource: T): T {
@@ -2664,8 +2907,8 @@ function chipFaceResource<T extends ResourceAmount>(resource: T): T {
 
 /**
  * Crafting-grid recipes list one entry per slot; the same item nine times is
- * one line saying ×9. Non-consumed entries and chanced outputs keep their own
- * lines, because merging those would change what the numbers mean.
+ * one slot saying 9. Non-consumed entries and chanced outputs keep their own
+ * slots, because merging those would change what the numbers mean.
  */
 function mergeChipResources<T extends ResourceAmount & { consumed?: boolean; chance?: number }>(
   resources: T[],
@@ -2689,7 +2932,7 @@ function mergeChipResources<T extends ResourceAmount & { consumed?: boolean; cha
   return [...merged.values()];
 }
 
-/** A chip's number and, apart from it, the quieter unit it is counted in. */
+/** A slot's number and, apart from it, the quieter unit it is counted in. */
 interface ChipAmount {
   text: string;
   unit?: string;
@@ -2698,7 +2941,7 @@ interface ChipAmount {
 }
 
 /**
- * The EU view's chip: one craft's energy (EU/t x ticks) over the amount this
+ * The EU view's slot: one craft's energy (EU/t x ticks) over the amount this
  * slot makes (or eats) per craft. Chance is not applied. A recipe with no
  * power or no time reads 0.
  */
@@ -2710,7 +2953,11 @@ function formatChipEnergy(
 ): ChipAmount {
   const perUnit =
     resource.amount > 0 ? (Math.max(0, eut) * Math.max(0, durationTicks)) / resource.amount : 0;
-  return { text: formatCompact(perUnit), unit: energyPerUnitSuffix(resource.kind).trim(), energy: side };
+  return {
+    text: formatCompact(perUnit),
+    unit: energyPerUnitSuffix(resource.kind).trim(),
+    energy: side,
+  };
 }
 
 /** "7.0" is 7 and "7.50" is 7.5: a trailing zero says nothing. */
@@ -2749,11 +2996,10 @@ function formatChipAmount(
     : { text, unit: `/${unit.per}` };
 }
 
-
 /**
- * The search covers everything RIGHT of the item browser. The left column
- * stays live because it seeds queries; the right column is only readouts,
- * so the search covers it.
+ * The search covers everything beside the item browser. The items column
+ * stays live because it seeds queries; the overview is only readouts, so the
+ * search covers it.
  */
 const BOARD_SIDEBAR_LEFT = 306;
 const RECIPE_SEARCH_MIN_WIDTH = 640;
@@ -2794,10 +3040,18 @@ function readRecipeSearchViewport(): RecipeSearchViewport {
   // Too narrow to be a window at all: fill the screen instead of leaving a
   // panel that is mostly margin. The item browser is a drawer here anyway.
   if (viewportWidth < RECIPE_SEARCH_SHEET_BELOW) {
-    return { sheet: true, leftInset: 0, rightInset: 0, width: viewportWidth, height: viewportHeight };
+    return {
+      sheet: true,
+      leftInset: 0,
+      rightInset: 0,
+      width: viewportWidth,
+      height: viewportHeight,
+    };
   }
 
-  const { left: leftInset, right: rightInset } = overlayInsets(scale, () => measureLeftSidebar(scale));
+  const { left: leftInset, right: rightInset } = overlayInsets(scale, () =>
+    measureLeftSidebar(scale),
+  );
   return {
     sheet: false,
     leftInset,

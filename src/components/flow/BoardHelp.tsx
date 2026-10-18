@@ -207,8 +207,9 @@ const RECIPE_SEARCH: HelpCard = {
     { chip: "ANY", text: "Match at least one resource" },
     { chip: "ALL", text: "Match all; extras allowed" },
     { chip: "ONLY", text: "Match all; no extras" },
-    { text: "*Machine buttons* filter results" },
-    { mouse: "right", text: "Result menu: *Add to board*" },
+    { text: "*Tabs* show one machine at a time" },
+    { mouse: "left", text: "Slot: *what makes it*" },
+    { mouse: "right", text: "Slot: *what uses it*" },
   ],
 };
 

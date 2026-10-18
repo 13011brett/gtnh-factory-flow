@@ -2,6 +2,7 @@ import { readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
 import { normalizeLoadedProject } from "@/lib/model/project-normalize";
 import { makeResourceKey } from "@/lib/model/resources";
+import { listNodeSections, sectionNodeId } from "@/lib/model/shared-machine";
 import type { FactoryProject } from "@/lib/model/types";
 import { calculatePlanBoardThroughput } from "@/lib/solver/plan/adapter/open";
 import { buildRailModel } from "./clean/rail/rail-model";
@@ -58,5 +59,39 @@ describe("an Up to card below its count reads its solved rates once", () => {
   it("the overview lists the plan's 720 ingots an hour", () => {
     const line = buildRailModel(project, result).outputs.find((entry) => entry.key === ingot);
     expect(perHour(line!.amount)).toBeCloseTo(720, 6);
+  });
+});
+
+describe("a shared card below its Up to count reads every recipe's rates once", () => {
+  it("its first recipe's rows show what it makes, as the others' do", () => {
+    // The card's read-out is filed under its first recipe: that recipe must not read the card's level a second time.
+    const shared = normalizeLoadedProject(
+      JSON.parse(
+        readFileSync(new URL("./__fixtures__/alumina-line-shared-reactor.json", import.meta.url), "utf8"),
+      ) as FactoryProject,
+    );
+    const card = shared.nodes.find((node) => node.id === "node-5f49041d-0bc1-4ef6-8cea-ad435b3d2add")!;
+    card.solvePin = 20;
+    const solved = calculatePlanBoardThroughput(shared);
+    expect(solved.plan!.upTo![card.id]!.reached).toBeLessThan(1);
+    const sections = listNodeSections(card);
+    expect(sections.length).toBeGreaterThan(1);
+    for (const { section, node: view } of sections) {
+      const id = section === 0 ? card.id : sectionNodeId(card.id, section);
+      const recipe = shared.recipes.find((entry) => entry.id === view.recipeId)!;
+      const { outputs } = buildRailPorts(
+        shared,
+        solved,
+        id,
+        recipe,
+        deriveNodeVerdict(shared, solved, id),
+        section === 0 ? undefined : { handleSection: section },
+      );
+      expect(outputs.length).toBeGreaterThan(0);
+      for (const port of outputs) {
+        const made = Object.values(solved.nodes[id]!.outputs).find((flow) => flow.key === port.key)!;
+        expect(port.currentPerSecond, `${id} ${port.key}`).toBeCloseTo(made.amountPerSecond, 9);
+      }
+    }
   });
 });

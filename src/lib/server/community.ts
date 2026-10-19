@@ -47,9 +47,11 @@ function dbDownResponse(status: number): Response {
  * rejection: postgrest-js RETRIES a GET that rejects (other than with an
  * AbortError) three more times with backoff, and words a rejection as its
  * error's name and message. Supabase sits behind Cloudflare, so a stalled
- * instance answers with Cloudflare's HTML error page (522, 524), which the
- * clients would pass on whole as the error message; it becomes the same
- * plain answer, keeping its status so postgrest-js still retries a 520.
+ * instance answers with Cloudflare's HTML error page (522, 524, sent as
+ * text/plain), which the clients would pass on whole as the error message:
+ * any 5xx that is not JSON becomes the same plain answer, keeping its status
+ * so postgrest-js still retries a 520. A 4xx is left alone (PostgREST reads
+ * an empty 404 as no rows).
  */
 export async function fetchWithDbTimeout(
   input: Parameters<typeof fetch>[0],
@@ -68,7 +70,7 @@ export async function fetchWithDbTimeout(
     }
     throw error;
   }
-  if (!response.ok && response.headers.get("content-type")?.includes("text/html")) {
+  if (response.status >= 500 && !response.headers.get("content-type")?.includes("json")) {
     await response.body?.cancel().catch(() => undefined);
     return dbDownResponse(response.status);
   }

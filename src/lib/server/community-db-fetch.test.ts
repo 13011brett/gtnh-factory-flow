@@ -2,7 +2,8 @@ import { createClient } from "@supabase/supabase-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { COMMUNITY_DB_DOWN_MESSAGE, fetchWithDbTimeout } from "./community";
 
-// Cloudflare's answer when the Supabase instance behind it does not respond.
+// Cloudflare's answer when the Supabase instance behind it does not respond:
+// an HTML page, sent as text/plain.
 const CLOUDFLARE_522 =
   "<!DOCTYPE html><html><head><title>supabase.co | 522: Connection timed out</title></head><body></body></html>";
 
@@ -20,13 +21,20 @@ afterEach(() => {
 describe("fetchWithDbTimeout", () => {
   it("turns Cloudflare's HTML error page into the plain message, once", async () => {
     const fetchMock = vi.fn(
-      async () => new Response(CLOUDFLARE_522, { status: 522, headers: { "content-type": "text/html" } }),
+      async () => new Response(CLOUDFLARE_522, { status: 522, headers: { "content-type": "text/plain" } }),
     );
     vi.stubGlobal("fetch", fetchMock);
     const { error, status } = await dbWith().from("community_plans").select("id");
     expect(error?.message).toBe(COMMUNITY_DB_DOWN_MESSAGE);
     expect(status).toBe(522);
     expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
+
+  it("leaves a 4xx alone: an empty 404 still reads as no rows", async () => {
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 404 })));
+    const { error, status } = await dbWith().from("community_plans").select("id");
+    expect(error).toBeNull();
+    expect(status).toBe(204);
   });
 
   it("answers a stalled request with the plain message, not a retried rejection", async () => {

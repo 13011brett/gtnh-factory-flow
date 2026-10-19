@@ -3,7 +3,7 @@ import type { AddressInfo } from "node:net";
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { openLocalDatabase, type LocalDatabase } from "@/lib/server/local-db/database";
 import { useInProcessLocalDb } from "@/lib/server/local-db/client";
-import { getCommunityDb, makeSessionToken } from "@/lib/server/community";
+import { forgetSessionUsers, getCommunityDb, makeSessionToken, resetDbBreaker } from "@/lib/server/community";
 import { resetMemoryTokens } from "@/lib/server/memory-rate";
 import { PROJECT_SCHEMA_VERSION } from "@/lib/model/types";
 import * as library from "./route";
@@ -431,6 +431,8 @@ describe("cloud plans over REST", () => {
 describe("when the database fails a read", () => {
   /** The local database, failing every request whose URL names `table` as a stalled Supabase does. */
   function failing(table: string) {
+    forgetSessionUsers();
+    resetDbBreaker();
     useInProcessLocalDb((req) =>
       req.url.includes(`/rest/v1/${table}`)
         ? Promise.resolve(new Response("<!DOCTYPE html>522", { status: 522, headers: { "content-type": "text/plain" } }))
@@ -438,7 +440,10 @@ describe("when the database fails a read", () => {
     );
   }
 
-  afterEach(() => useInProcessLocalDb(local.handle));
+  afterEach(() => {
+    useInProcessLocalDb(local.handle);
+    resetDbBreaker();
+  });
 
   it("fails the library rather than answer it without the plans shared with you", async () => {
     // The client removes every shared copy a library answer leaves out.

@@ -1,6 +1,13 @@
 import { createClient } from "@supabase/supabase-js";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { COMMUNITY_DB_DOWN_MESSAGE, fetchWithDbTimeout } from "./community";
+import {
+  COMMUNITY_DB_DOWN_MESSAGE,
+  DB_BREAKER_FAILURES,
+  DB_BREAKER_OPEN_MS,
+  fetchWithDbTimeout,
+  getCommunityDb,
+  resetDbBreaker,
+} from "./community";
 
 // Cloudflare's answer when the Supabase instance behind it does not respond:
 // an HTML page, sent as text/plain.
@@ -98,5 +105,42 @@ describe("fetchWithDbTimeout", () => {
     const pending = fetchWithDbTimeout("https://example.supabase.co/rest/v1/x", { signal: caller.signal });
     caller.abort();
     await expect(pending).rejects.toThrow("Cancelled");
+  });
+});
+
+describe("the database breaker", () => {
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllEnvs();
+    resetDbBreaker();
+  });
+
+  it("stops sending after five failures in a row, then lets one through to try", async () => {
+    vi.stubEnv("SUPABASE_URL", "https://example.supabase.co");
+    vi.stubEnv("SUPABASE_SERVICE_ROLE_KEY", "service-key");
+    vi.useFakeTimers({ toFake: ["Date"] });
+    resetDbBreaker();
+    let down = true;
+    const fetchMock = vi.fn(async () =>
+      down
+        ? new Response(CLOUDFLARE_522, { status: 522, headers: { "content-type": "text/plain" } })
+        : Response.json([{ id: "p1" }]),
+    );
+    vi.stubGlobal("fetch", fetchMock);
+    const db = getCommunityDb();
+    for (let i = 0; i < DB_BREAKER_FAILURES; i += 1) {
+      await db.from("community_plans").select("id");
+    }
+    expect(fetchMock).toHaveBeenCalledTimes(DB_BREAKER_FAILURES);
+
+    const held = await db.from("community_plans").select("id");
+    expect(held.error?.message).toBe(COMMUNITY_DB_DOWN_MESSAGE);
+    expect(fetchMock).toHaveBeenCalledTimes(DB_BREAKER_FAILURES);
+
+    down = false;
+    vi.setSystemTime(Date.now() + DB_BREAKER_OPEN_MS);
+    const back = await db.from("community_plans").select("id");
+    expect(back.data).toEqual([{ id: "p1" }]);
+    expect(fetchMock).toHaveBeenCalledTimes(DB_BREAKER_FAILURES + 1);
   });
 });

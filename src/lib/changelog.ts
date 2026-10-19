@@ -40,6 +40,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.3.3",
+    date: "2026-10-19",
+    headline: "Lighter on the community database",
+    notes: [
+      "Your plans sync with your account every 2 minutes instead of every 30 seconds, and less often while the database is down. Your own edits still go up a few seconds after you stop.",
+    ],
+  },
+  {
     version: "4.3.2",
     date: "2026-10-19",
     headline: "Staying signed in when the database is down",

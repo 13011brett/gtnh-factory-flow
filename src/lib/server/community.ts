@@ -33,12 +33,53 @@ export const COMMUNITY_DB_TIMEOUT_MS = 20_000;
 /** What a player reads when the database cannot be reached. */
 export const COMMUNITY_DB_DOWN_MESSAGE = "The community database is not responding. Try again in a few minutes.";
 
+const DB_DOWN_HEADER = "x-community-db-down";
+
 /** A PostgREST-shaped error answer, which every client reads as `{ message }`. */
 function dbDownResponse(status: number): Response {
   return Response.json(
     { message: COMMUNITY_DB_DOWN_MESSAGE, code: "", details: `HTTP ${status}`, hint: "" },
-    { status },
+    { status, headers: { [DB_DOWN_HEADER]: "1" } },
   );
+}
+
+/**
+ * After this many database requests in a row fail as down, the next ones fail
+ * at once, without being sent, for `DB_BREAKER_OPEN_MS`; then one goes through
+ * to try. A stalled instance only recovers once demand drops (its disk budget
+ * refills below baseline), and every tab keeps asking.
+ */
+export const DB_BREAKER_FAILURES = 5;
+export const DB_BREAKER_OPEN_MS = 15_000;
+let dbFailuresInARow = 0;
+let dbBreakerOpenUntil = 0;
+
+/** For tests: a closed breaker. */
+export function resetDbBreaker(): void {
+  dbFailuresInARow = 0;
+  dbBreakerOpenUntil = 0;
+}
+
+/** The database client's fetch: `fetchWithDbTimeout` behind the breaker. */
+async function fetchFromDb(
+  input: Parameters<typeof fetch>[0],
+  init: Parameters<typeof fetch>[1],
+  send: typeof fetch = fetch,
+): Promise<Response> {
+  if (Date.now() < dbBreakerOpenUntil) {
+    // 504: postgrest-js retries a 503, which would only meet the breaker again.
+    return dbDownResponse(504);
+  }
+  const response = await fetchWithDbTimeout(input, init, COMMUNITY_DB_TIMEOUT_MS, send);
+  if (response.headers.get(DB_DOWN_HEADER)) {
+    dbFailuresInARow += 1;
+    if (dbFailuresInARow >= DB_BREAKER_FAILURES) {
+      dbBreakerOpenUntil = Date.now() + DB_BREAKER_OPEN_MS;
+    }
+  } else {
+    dbFailuresInARow = 0;
+  }
+  return response;
 }
 
 /**
@@ -103,7 +144,7 @@ export function getCommunityDb(): SupabaseClient {
       // The same limit and the same plain answers as the hosted project.
       global: {
         fetch: (input, init) =>
-          fetchWithDbTimeout(input, init, COMMUNITY_DB_TIMEOUT_MS, (i, n) => localDbFetch(i, n, fetch)),
+          fetchFromDb(input, init, (i, n) => localDbFetch(i, n, fetch)),
       },
     });
   }
@@ -118,7 +159,7 @@ export function getCommunityDb(): SupabaseClient {
 
     cachedClient = createClient(url, key, {
       auth: { persistSession: false, autoRefreshToken: false },
-      global: { fetch: fetchWithDbTimeout },
+      global: { fetch: (input, init) => fetchFromDb(input, init) },
     });
   }
 
@@ -222,6 +263,10 @@ export async function getSessionUser(request: Request): Promise<SessionUser | un
  * refused sign-in, which the client never retries.
  */
 export async function loadSessionUser(userId: string): Promise<SessionUser | undefined> {
+  const cached = sessionUsers.get(userId);
+  if (cached && Date.now() - cached.at < SESSION_USER_CACHE_MS) {
+    return cached.user;
+  }
   const { data, error } = await getCommunityDb()
     .from("community_users")
     .select("id,username,is_admin")
@@ -230,7 +275,24 @@ export async function loadSessionUser(userId: string): Promise<SessionUser | und
   if (error) {
     throw new Error(error.message || "Account lookup failed.");
   }
+  if (sessionUsers.size >= SESSION_USER_CACHE_MAX) {
+    sessionUsers.clear();
+  }
+  sessionUsers.set(userId, { at: Date.now(), user: data ?? undefined });
   return data ?? undefined;
+}
+
+/**
+ * Accounts by id, kept a minute: nearly every request names its account, and
+ * the database is small. A rename or an admin change shows within the minute.
+ */
+const SESSION_USER_CACHE_MS = 60_000;
+const SESSION_USER_CACHE_MAX = 5000;
+const sessionUsers = new Map<string, { at: number; user: SessionUser | undefined }>();
+
+/** For tests: forget the cached accounts. */
+export function forgetSessionUsers(): void {
+  sessionUsers.clear();
 }
 
 export function isAdminRequest(request: Request): boolean {

@@ -40,6 +40,14 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.3.1",
+    date: "2026-10-19",
+    headline: "A clear message when Community is down",
+    notes: [
+      "When the community database is not responding, Community and your cloud plans say so in one line instead of showing an error page.",
+    ],
+  },
+  {
     version: "4.3.0",
     date: "2026-10-18",
     headline: "Recipe search looks like NEI",

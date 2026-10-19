@@ -71,7 +71,18 @@ export async function fetchWithDbTimeout(
     }
     throw error;
   }
-  if (response.status >= 500 && !response.headers.get("content-type")?.includes("json")) {
+  if (response.status < 500) {
+    return response;
+  }
+  if (!response.headers.get("content-type")?.includes("json")) {
+    await response.body?.cancel().catch(() => undefined);
+    return dbDownResponse(response.status);
+  }
+  // PostgREST up but Postgres not (PGRST000-003: no connection, no schema
+  // cache, no pool slot) says so in its own words: "Could not query the
+  // database for the schema cache. Retrying."
+  const body = (await response.clone().json().catch(() => undefined)) as { code?: unknown } | undefined;
+  if (typeof body?.code === "string" && /^PGRST00[0-3]$/.test(body.code)) {
     await response.body?.cancel().catch(() => undefined);
     return dbDownResponse(response.status);
   }

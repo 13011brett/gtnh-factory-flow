@@ -30,6 +30,25 @@ describe("fetchWithDbTimeout", () => {
     expect(fetchMock).toHaveBeenCalledTimes(1);
   });
 
+  it("says the same when PostgREST answers but its database does not", async () => {
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async () =>
+        Response.json(
+          {
+            code: "PGRST002",
+            message: "Could not query the database for the schema cache. Retrying.",
+            details: null,
+            hint: null,
+          },
+          { status: 504 },
+        ),
+      ),
+    );
+    const { error } = await dbWith().from("community_plans").select("id");
+    expect(error?.message).toBe(COMMUNITY_DB_DOWN_MESSAGE);
+  });
+
   it("leaves a 4xx alone: an empty 404 still reads as no rows", async () => {
     vi.stubGlobal("fetch", vi.fn(async () => new Response("", { status: 404 })));
     const { error, status } = await dbWith().from("community_plans").select("id");

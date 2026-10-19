@@ -30,13 +30,28 @@ let cachedClient: SupabaseClient | undefined;
  */
 export const COMMUNITY_DB_TIMEOUT_MS = 20_000;
 
+/** What a player reads when the database cannot be reached. */
+export const COMMUNITY_DB_DOWN_MESSAGE = "The community database is not responding. Try again in a few minutes.";
+
+/** A PostgREST-shaped error answer, which every client reads as `{ message }`. */
+function dbDownResponse(status: number): Response {
+  return Response.json(
+    { message: COMMUNITY_DB_DOWN_MESSAGE, code: "", details: `HTTP ${status}`, hint: "" },
+    { status },
+  );
+}
+
 /**
  * The client's fetch (database, storage), abandoned after `timeoutMs`,
- * body included. It aborts with a plain AbortError on purpose: postgrest-js
- * RETRIES a GET that fails any other way three more times with backoff, so
- * `AbortSignal.timeout`'s TimeoutError would multiply the limit about fourfold.
+ * body included. A timeout before the answer arrives becomes a 504, not a
+ * rejection: postgrest-js RETRIES a GET that rejects (other than with an
+ * AbortError) three more times with backoff, and words a rejection as its
+ * error's name and message. Supabase sits behind Cloudflare, so a stalled
+ * instance answers with Cloudflare's HTML error page (522, 524), which the
+ * clients would pass on whole as the error message; it becomes the same
+ * plain answer, keeping its status so postgrest-js still retries a 520.
  */
-export function fetchWithDbTimeout(
+export async function fetchWithDbTimeout(
   input: Parameters<typeof fetch>[0],
   init?: Parameters<typeof fetch>[1],
   timeoutMs = COMMUNITY_DB_TIMEOUT_MS,
@@ -44,7 +59,20 @@ export function fetchWithDbTimeout(
   const controller = new AbortController();
   setTimeout(() => controller.abort(), timeoutMs).unref?.();
   const signal = init?.signal ? AbortSignal.any([init.signal, controller.signal]) : controller.signal;
-  return fetch(input, { ...init, signal });
+  let response: Response;
+  try {
+    response = await fetch(input, { ...init, signal });
+  } catch (error) {
+    if (controller.signal.aborted && !init?.signal?.aborted) {
+      return dbDownResponse(504);
+    }
+    throw error;
+  }
+  if (!response.ok && response.headers.get("content-type")?.includes("text/html")) {
+    await response.body?.cancel().catch(() => undefined);
+    return dbDownResponse(response.status);
+  }
+  return response;
 }
 
 export function isCommunityConfigured(): boolean {

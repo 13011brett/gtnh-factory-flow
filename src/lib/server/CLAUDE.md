@@ -23,8 +23,10 @@
 ## Supabase (community.ts, resource-popularity.ts)
 
 The instance is small and has gone down under load. Rules:
-- Every request goes through `fetchWithDbTimeout` (20 s) and aborts with a plain
-  AbortError; postgrest-js retries other failures three more times.
+- Every request goes through `fetchWithDbTimeout` (20 s). A timeout answers 504 rather than
+  rejecting (postgrest-js retries a rejected GET three more times), and Cloudflare's HTML
+  error page (522, 524) becomes the same plain JSON error, so no route shows a player that
+  page. Exam: `community-db-fetch.test.ts`.
 - Nothing a page needs to render may await a community sweep. `getResourcePopularity`
   answers at once with the last good map (sweep every 6 h, retry after 30 min on failure).
 - The design PUT refuses what it can without the database (size, JSON, name, stamps)

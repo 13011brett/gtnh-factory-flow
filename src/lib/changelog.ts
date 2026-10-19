@@ -40,6 +40,15 @@ export interface ChangelogEntry {
 
 export const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "4.3.2",
+    date: "2026-10-19",
+    headline: "Staying signed in when the database is down",
+    notes: [
+      "If the community database stops responding, you stay signed in. The site checks again every 30 seconds instead of showing Sign in.",
+      "Plans shared with you are no longer removed from your device while the database is down.",
+    ],
+  },
+  {
     version: "4.3.1",
     date: "2026-10-19",
     headline: "A clear message when Community is down",

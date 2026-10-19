@@ -57,13 +57,14 @@ export async function fetchWithDbTimeout(
   input: Parameters<typeof fetch>[0],
   init?: Parameters<typeof fetch>[1],
   timeoutMs = COMMUNITY_DB_TIMEOUT_MS,
+  send: typeof fetch = fetch,
 ): Promise<Response> {
   const controller = new AbortController();
   setTimeout(() => controller.abort(), timeoutMs).unref?.();
   const signal = init?.signal ? AbortSignal.any([init.signal, controller.signal]) : controller.signal;
   let response: Response;
   try {
-    response = await fetch(input, { ...init, signal });
+    response = await send(input, { ...init, signal });
   } catch (error) {
     if (controller.signal.aborted && !init?.signal?.aborted) {
       return dbDownResponse(504);
@@ -88,7 +89,11 @@ export function getCommunityDb(): SupabaseClient {
     assertLocalDbAllowed();
     cachedClient = createClient(localDbUrl(), LOCAL_DB_SERVICE_KEY, {
       auth: { persistSession: false, autoRefreshToken: false },
-      global: { fetch: (input, init) => localDbFetch(input, init, fetchWithDbTimeout) },
+      // The same limit and the same plain answers as the hosted project.
+      global: {
+        fetch: (input, init) =>
+          fetchWithDbTimeout(input, init, COMMUNITY_DB_TIMEOUT_MS, (i, n) => localDbFetch(i, n, fetch)),
+      },
     });
   }
   if (!cachedClient) {
@@ -189,20 +194,31 @@ export interface SessionUser {
   is_admin: boolean;
 }
 
-/** Verifies the session cookie and loads the user, or returns undefined. */
+/**
+ * Verifies the session cookie and loads the user, or returns undefined.
+ * Throws when the database does not answer (see `loadSessionUser`).
+ */
 export async function getSessionUser(request: Request): Promise<SessionUser | undefined> {
   const token = readSessionCookie(request.headers.get("cookie"));
   const session = token ? verifySessionToken(token) : undefined;
   return session ? loadSessionUser(session.userId) : undefined;
 }
 
-/** The account behind a verified session, or undefined when it is gone. */
+/**
+ * The account behind a verified session, or undefined when it is gone. A
+ * lookup that fails throws: read as "signed out", it shows a signed-in player
+ * the sign-in button, and the live service would close their socket as a
+ * refused sign-in, which the client never retries.
+ */
 export async function loadSessionUser(userId: string): Promise<SessionUser | undefined> {
-  const { data } = await getCommunityDb()
+  const { data, error } = await getCommunityDb()
     .from("community_users")
     .select("id,username,is_admin")
     .eq("id", userId)
-    .single<SessionUser>();
+    .maybeSingle<SessionUser>();
+  if (error) {
+    throw new Error(error.message || "Account lookup failed.");
+  }
   return data ?? undefined;
 }
 

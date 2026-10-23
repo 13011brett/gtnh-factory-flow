@@ -65,12 +65,14 @@ import {
   buildFootView,
   buildPortView,
   cardCountState,
+  cardLabelIn,
   cardNameIn,
   formatSolvedMachines,
   layoutStrip,
   pinActions,
   useCleanCardModel,
   withReasonPorts,
+  withStallPorts,
   type CleanCardContext,
   type CleanCardActions,
   type CleanCardView,
@@ -315,10 +317,11 @@ export function useSharedCardModel(data: RecipeNodeData, selected: boolean): Spe
   // The card's count and bar are its whole pool's, under the card's id; the bar reads every recipe's rows.
   const needed = machinesBySection.reduce((sum, n) => sum + n, 0);
   const { count, unset, upTo } = countView(projectNode, needed, plan);
-  // The rows its reason names, on every recipe (section 0's are the plain card's, lit already).
+  // The rows its reason names, and a row a stranded spare is stuck on, on every recipe (section 0's are the plain
+  // card's, lit already).
   for (const entry of sections) {
-    entry.inputs = withReasonPorts(entry.inputs, upTo);
-    entry.outputs = withReasonPorts(entry.outputs, upTo);
+    entry.inputs = withStallPorts(withReasonPorts(entry.inputs, upTo), plan, projectNode.id);
+    entry.outputs = withStallPorts(withReasonPorts(entry.outputs, upTo), plan, projectNode.id);
   }
   const foot = buildFootView(
     count,
@@ -329,6 +332,7 @@ export function useSharedCardModel(data: RecipeNodeData, selected: boolean): Spe
     },
     (id) => cardNameIn(liveProject, id),
     base.view.loop,
+    (id, resource, nodeId) => cardLabelIn(liveProject, id, resource, nodeId),
   );
   const handlers = useMemo(
     () =>

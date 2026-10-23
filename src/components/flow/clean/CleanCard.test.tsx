@@ -13,6 +13,7 @@ import type {
   CleanPortView,
 } from "./clean-model";
 import { buildCountView, buildFootView, layoutStrip, reasonStripes } from "./clean-model";
+import { useFactoryStore } from "@/store/factory-store";
 
 vi.mock("@/lib/compact-view", () => ({ isCompactViewport: () => false }));
 
@@ -495,6 +496,76 @@ it("draws the bar as one element: tone, word, line and fraction", () => {
   expect(foot.textContent).toBe("short of Resource input 1");
   expect(foot.style.getPropertyValue("--fill")).toMatch(/^\d+px$/);
   expect(foot.hasAttribute("data-tip")).toBe(true);
+});
+
+/** The reference card as an Up to card a stranded spare on another card ("lcr") holds at zero. */
+function strandedView(): CleanCardView {
+  const view = referenceView();
+  const upToCount = count("upTo", 24, 0);
+  return {
+    ...view,
+    unset: false,
+    count: upToCount,
+    foot: buildFootView(
+      upToCount,
+      {
+        capacity: 24,
+        reached: 0,
+        reason: "UNUSED",
+        resourceKey: "item:mock:output1",
+        stranded: {
+          nodeId: "lcr",
+          cardId: "lcr",
+          portKey: "lcr|o|output:fluid:heavy",
+          resourceKey: "fluid:heavy",
+          resourceName: "Heavy Fuel",
+          perSecond: 28.58,
+          fix: { kind: "drawer" },
+          stalled: ["n1", "lcr"],
+        },
+      },
+      { inputs: view.inputs, outputs: view.outputs },
+      (id) => (id === "lcr" ? "Large Chemical Reactor" : undefined),
+    ),
+  };
+}
+
+it("frames the card a stranded spare is stuck on when its bar is clicked, at no extra element", () => {
+  const frame = vi.fn();
+  const before = useFactoryStore.getState();
+  useFactoryStore.setState({
+    frameBoardNodes: frame,
+    project: { ...before.project, nodes: [...before.project.nodes, { id: "lcr" } as FactoryNode] },
+  });
+  try {
+    const plainCount = renderCard(upToView()).container.querySelectorAll("*").length;
+    cleanup();
+    const { container } = renderCard(strandedView());
+    expect(container.querySelectorAll("*").length).toBe(plainCount);
+    const foot = container.querySelector<HTMLElement>(".cc-foot")!;
+    expect(foot.textContent).toBe("spare Heavy Fuel has nowhere to go");
+    expect(foot.getAttribute("role")).toBe("button");
+    expect(JSON.parse(foot.getAttribute("data-tip")!).actions).toEqual([
+      { input: "left", label: "Show where it is stuck" },
+    ]);
+    fireEvent.click(foot);
+    expect(frame).toHaveBeenCalledWith(["lcr"], { padding: 0.2 });
+    fireEvent.keyDown(foot, { key: "Enter" });
+    expect(frame).toHaveBeenCalledTimes(2);
+    // A press that moved is a drag of the card, not a click.
+    fireEvent.pointerDown(foot, { clientX: 10, clientY: 10 });
+    fireEvent.click(foot, { clientX: 30, clientY: 10 });
+    expect(frame).toHaveBeenCalledTimes(2);
+    cleanup();
+
+    // A bar with nowhere to go is no key and frames nothing.
+    const plain = renderCard(upToView()).container.querySelector<HTMLElement>(".cc-foot")!;
+    expect(plain.hasAttribute("role")).toBe(false);
+    fireEvent.click(plain);
+    expect(frame).toHaveBeenCalledTimes(2);
+  } finally {
+    useFactoryStore.setState({ frameBoardNodes: before.frameBoardNodes, project: before.project });
+  }
 });
 
 it("marks an unwired port and a card that cannot run", () => {

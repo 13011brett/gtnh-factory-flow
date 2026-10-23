@@ -13,7 +13,7 @@ import {
 import { useFactoryStore } from "@/store/factory-store";
 import { startPromptClock } from "../../virtual/prompt-phase";
 import { buildNotices, byUrgency, type BoardNotice, type NoticeSeverity } from "./notices";
-import { framesReadably } from "./rail-actions";
+import { framesReadably, takeStrandedFix } from "./rail-actions";
 import { SparePopupHost } from "./SparePopup";
 import { RailTipHost } from "./rail-tip";
 
@@ -67,7 +67,15 @@ export function useBoardNotices(): BoardNotice[] {
     () => flashSnapshot,
     () => undefined,
   );
-  const solved = useMemo(() => buildNotices(project, result), [project, result]);
+  const readOnly = useFactoryStore((state) => state.isReadOnly);
+  // The sentences carry rates in the rate unit: a turn of that dial rebuilds them (no solve).
+  const rateUnit = useFactoryStore((state) => state.rateUnit);
+  const solved = useMemo(() => {
+    void rateUnit;
+    const notices = buildNotices(project, result);
+    // A read-only board offers no fix: the key would do nothing.
+    return readOnly ? notices.map((notice) => (notice.fix ? { ...notice, fix: undefined } : notice)) : notices;
+  }, [project, result, readOnly, rateUnit]);
   return useMemo(() => {
     // What a conversion did to an older plan, on one line, until it is dismissed.
     const converted: BoardNotice[] = conversion
@@ -86,12 +94,19 @@ export function useBoardNotices(): BoardNotice[] {
   }, [conversion, dismissConversion, flashed, solved]);
 }
 
+/** A notice's fix key: what it offers, done (one undo step; nothing while the books are stale). */
+function takeFix(notice: BoardNotice): void {
+  if (notice.fix) takeStrandedFix(notice.fix.vent);
+}
+
 export function NoticeRow({
   notice,
   onShow,
+  onFix = takeFix,
 }: {
   notice: BoardNotice;
   onShow: (notice: BoardNotice) => void;
+  onFix?: (notice: BoardNotice) => void;
 }) {
   const text = useRef<HTMLSpanElement>(null);
   // The sentence fades out at the end only when the room left clips it.
@@ -112,7 +127,7 @@ export function NoticeRow({
       role={alarm ? "alert" : "status"}
     >
       {notice.tag ? <span className="rail-notice-tag">{notice.tag}</span> : null}
-      <span ref={text} className="rail-notice-text">
+      <span ref={text} className="rail-notice-text" title={notice.text}>
         {notice.text}
       </span>
       {notice.focus.length > 0 ? (
@@ -126,6 +141,20 @@ export function NoticeRow({
           }}
         >
           Show me
+        </span>
+      ) : null}
+      {notice.fix ? (
+        <span
+          role="button"
+          tabIndex={0}
+          className="rail-notice-show"
+          title={notice.fix.tip}
+          onClick={() => onFix(notice)}
+          onKeyDown={(event) => {
+            if (event.key === "Enter" || event.key === " ") onFix(notice);
+          }}
+        >
+          {notice.fix.label}
         </span>
       ) : null}
       {notice.dismiss ? (

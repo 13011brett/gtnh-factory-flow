@@ -17,7 +17,23 @@ let override: SolveCore | undefined;
  */
 export const islandCache: PieceCache = new IslandCache(64);
 
-const cached: SolveCore = (input) => solvePlan(input, planExtensions, islandCache);
+let activeCache: PieceCache = islandCache;
+
+const cached: SolveCore = (input) => solvePlan(input, planExtensions, activeCache);
+
+/**
+ * Runs `solve` with its islands kept in `cache` instead of the plan's own. For solves that are not the plan (the
+ * board's what-if probes): their islands then never push the plan's out of its cache. Answers are the same either way.
+ */
+export function withIslandCache<T>(cache: PieceCache, solve: () => T): T {
+  const was = activeCache;
+  activeCache = cache;
+  try {
+    return solve();
+  } finally {
+    activeCache = was;
+  }
+}
 
 export function setSolveCore(next: SolveCore | undefined): void {
   override = next;

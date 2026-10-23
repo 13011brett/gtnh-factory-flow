@@ -96,6 +96,7 @@ import {
   snapSizeUpToGrid,
 } from "@/lib/board-grid";
 import {
+  boardBodyRect,
   boardWindowSize,
   computeBoardLevelView,
   computeOpenBoardRects,
@@ -125,7 +126,7 @@ import type {
   TargetRate,
   ThroughputResult,
 } from "@/lib/model/types";
-import { nearestFreeSpot, type PlacementRect } from "@/components/flow/board-placement";
+import { nearestFreeSpot, spotIsFree, type PlacementRect } from "@/components/flow/board-placement";
 import { getStorageRoles } from "@/lib/model/storage-role";
 import { edgeRatioWeight, setStorageRatioPercentage, equalizeStorageRatioPercentages } from "@/lib/model/storage-ratios";
 import {
@@ -498,6 +499,12 @@ interface FactoryStore {
     side: "input" | "output",
     position: FactoryStorage["position"],
     handleId: string,
+    options?: {
+      /** The new drawer's drain mode, set in the same edit (one undo step). */
+      drainMode?: StorageDrainMode;
+      /** Land on the nearest clear floor to `position` (flow space) instead of exactly there. */
+      clearFloor?: boolean;
+    },
   ) => void;
   /** Drains only: flip between pulling the feeder flat out and catching the extra. */
   setStorageDrainMode: (storageId: string, drainMode: StorageDrainMode) => void;
@@ -2576,7 +2583,7 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
       });
     });
   },
-  addStorageForConnection: (resource, nodeId, side, position, handleId) => {
+  addStorageForConnection: (resource, nodeId, side, position, handleId, options) => {
     set((state) => {
       // Pool mode feeds every input itself: a source drawer would do nothing,
       // so a drop in the void off an input makes nothing. The drag itself
@@ -2619,16 +2626,26 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
             computeBoardLevelView(state.project).openBoards,
           ).find((frame) => frame.id === anchorOwner)
         : undefined;
+      // A drawer placed for the player (a notice's fix): no pointer chose its
+      // spot, so it takes the nearest clear floor of the board its card is
+      // shown on, and joins that board (or none) instead of the card's own.
+      const floor =
+        options?.clearFloor === true && !state.project.poolMode
+          ? clearFloorFor(state.project, position, anchorOwner)
+          : undefined;
       // Pool mode lets go anywhere, cards included, since nothing else can
       // happen on release: the drawer takes the nearest clear floor instead
       // of landing on whatever was under the pointer.
-      const landing = state.project.poolMode
-        ? nearestFreeSpot(
-            { ...position, width: STORAGE_NODE_WIDTH, height: STORAGE_NODE_HEIGHT },
-            projectBlockerRects(state.project),
-            BOARD_GRID,
-          )
-        : position;
+      const landing = floor
+        ? floor
+        : state.project.poolMode
+          ? nearestFreeSpot(
+              { ...position, width: STORAGE_NODE_WIDTH, height: STORAGE_NODE_HEIGHT },
+              projectBlockerRects(state.project),
+              BOARD_GRID,
+            )
+          : position;
+      const homeFrame = floor ? floor.frame : anchorFrame;
       const storage: FactoryStorage = {
         id: createId("storage"),
         kind: storageResource.kind,
@@ -2638,16 +2655,19 @@ export const useFactoryStore = create<FactoryStore>(withViewerGuard((set, get, w
         iconAtlas: storageResource.iconAtlas,
         dominantColor: storageResource.dominantColor ?? storageResource.iconAtlas?.dominantColor,
         position: snapPositionToGrid(
-          anchorFrame
-            ? { x: landing.x - anchorFrame.x, y: landing.y - anchorFrame.y }
+          homeFrame
+            ? { x: landing.x - homeFrame.x, y: landing.y - homeFrame.y }
             : landing,
         ),
-        pocketId: anchorFrame ? anchorOwner : undefined,
+        pocketId: homeFrame?.id,
         productionGroupId,
         // POOL MODE has no wires: dragging off a port into space still makes
         // the drawer, and the side of the port it came off IS the declaration
         // (off an output: the plan makes this; off an input: it imports this).
         poolSide: state.project.poolMode ? (side === "output" ? "drain" : "source") : undefined,
+        ...(options?.drainMode !== undefined && side === "output"
+          ? { drainMode: options.drainMode }
+          : {}),
       };
       let project: FactoryProject = {
         ...state.project,
@@ -5216,13 +5236,63 @@ function addConnectedRecipeNodeToState(
 }
 
 /**
+ * Where a drawer placed for the player lands (flow space), and the open board
+ * it joins: the nearest clear floor to `position` inside the board its anchor
+ * is shown on (that board's own frame and those around it are no blockers
+ * there; its walls are), else, the board full, beside the outermost frame on
+ * the root. A card inside a minimized board is shown as that board, so its
+ * drawer goes on the level the minimized board stands on.
+ */
+function clearFloorFor(
+  project: FactoryProject,
+  position: { x: number; y: number },
+  anchorOwner: string | undefined,
+): { x: number; y: number; frame?: { id: string; x: number; y: number } } {
+  const size = { width: STORAGE_NODE_WIDTH, height: STORAGE_NODE_HEIGHT };
+  const frames = computeOpenBoardRects(computeBoardLevelView(project).openBoards);
+  const frameOf = new Map(frames.map((frame) => [frame.id, frame] as const));
+  const parentOf = new Map(
+    (project.pockets ?? []).map((pocket) => [pocket.id, pocket.parentPocketId] as const),
+  );
+  // The deepest open board the anchor is shown in, and every board around it.
+  let home: string | undefined = anchorOwner;
+  while (home !== undefined && !frameOf.has(home)) home = parentOf.get(home);
+  const around = new Set<string>();
+  for (let at = home; at !== undefined; at = parentOf.get(at)) around.add(at);
+  const frame = home !== undefined ? frameOf.get(home) : undefined;
+  if (frame) {
+    const body = boardBodyRect(frame);
+    const bounds = {
+      minX: body.x,
+      minY: body.y,
+      maxX: body.x + body.width,
+      maxY: body.y + body.height,
+    };
+    const blockers = projectBlockerRects(project, around);
+    const spot = nearestFreeSpot({ ...position, ...size }, blockers, BOARD_GRID, bounds);
+    if (spotIsFree({ ...spot, ...size }, blockers, BOARD_GRID, bounds)) {
+      return { ...spot, frame };
+    }
+    // No room inside: on the root, right of the outermost frame round it.
+    let outer = frame;
+    for (const id of around) outer = frameOf.get(id) ?? outer;
+    position = { x: outer.x + outer.width + BOARD_GRID * 2, y: position.y };
+  }
+  return nearestFreeSpot({ ...position, ...size }, projectBlockerRects(project), BOARD_GRID);
+}
+
+/**
  * Everything solid on the canvas as flow-space rects: cards, drawers,
  * minimized board cards, and every OPEN frame as one whole rect - a spawned
  * card never lands inside somebody's board uninvited. Members hidden inside
  * a minimized board block nothing, exactly as they render. Footprints are
  * the same estimates the wrap tool uses; overshooting only spreads cards out.
  */
-function projectBlockerRects(project: FactoryProject): PlacementRect[] {
+function projectBlockerRects(
+  project: FactoryProject,
+  /** Open boards whose frames block nothing (the board a thing is placed inside, and those around it). */
+  openFrames?: ReadonlySet<string>,
+): PlacementRect[] {
   const view = computeBoardLevelView(project);
   const frameOrigins = new Map(
     computeOpenBoardRects(view.openBoards).map((rect) => [rect.id, rect] as const),
@@ -5258,7 +5328,7 @@ function projectBlockerRects(project: FactoryProject): PlacementRect[] {
     });
   }
   for (const pocket of project.pockets ?? []) {
-    if (!visible(pocket.parentPocketId)) {
+    if (!visible(pocket.parentPocketId) || openFrames?.has(pocket.id)) {
       continue;
     }
     rects.push({

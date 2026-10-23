@@ -3,6 +3,13 @@ import { mockForced, mockUnneeded } from "@/lib/solver/plan/__fixtures__/mock-ex
 import type { ThroughputResult } from "@/lib/model/types";
 import type { PlanNote, PlanSolveExtras } from "@/lib/solver/plan/types";
 import { buildNotices, byUrgency } from "./notices";
+import type { FactoryProject } from "@/lib/model/types";
+import { calculateThroughput } from "@/lib/solver";
+import { attachStranded } from "../../stranded-surplus";
+import { node, project, recipe, wire } from "@/lib/solver/plan/adapter/test-kit";
+import { cardLabel, cardLabelText } from "../card-label";
+import cbdPlan from "../../__fixtures__/stranded/cbd.json";
+import loopPlan from "../../__fixtures__/stranded/hydrogen-loop.json";
 
 const withExtras = (
   mock: typeof mockForced,
@@ -202,5 +209,136 @@ describe("the notices' sentences", () => {
     expect(buildNotices(mockForced.project, mockForced.result)).toEqual([]);
     expect(buildNotices(mockForced.project, undefined)).toEqual([]);
     expect(buildNotices(mockForced.project, { ...mockForced.result, plan: undefined })).toEqual([]);
+  });
+});
+
+describe("a stranded spare's notice", () => {
+  const solved = (plan: FactoryProject): ThroughputResult => {
+    const result = calculateThroughput(plan);
+    attachStranded(plan, result);
+    return result;
+  };
+  const cbd = () => structuredClone(cbdPlan) as unknown as FactoryProject;
+  const loop = () => structuredClone(loopPlan) as unknown as FactoryProject;
+  const HEAVY_LCR = "node-bbba4208-fadf-4819-be90-87206c39142c";
+
+  it("names the spare, the rate, the card that makes it and how many cards stop, with a drawer to add", () => {
+    const plan = cbd();
+    const result = solved(plan);
+    const notices = buildNotices(plan, result);
+    expect(notices).toHaveLength(1);
+    expect(notices[0]).toMatchObject({
+      id: `stranded:drawer:${HEAVY_LCR}|o|output:fluid:liquid_heavy_fuel`,
+      severity: "warn",
+      // Four cards are Large Chemical Reactors: only one makes Heavy Fuel.
+      text: "Spare Heavy Fuel at the Large Chemical Reactor that makes it stops 7 cards: 28.58 L/s has nowhere to go",
+      focus: [HEAVY_LCR],
+    });
+    expect(notices[0]!.tag).toBeUndefined();
+    expect(notices[0]!.fix?.label).toBe("Add a drawer");
+    expect(notices[0]!.fix?.tip).toBe("Adds a drawer for Heavy Fuel at the Large Chemical Reactor that makes it.");
+    expect(notices[0]!.fix?.vent).toBe(result.plan?.stranded?.vents[0]);
+  });
+
+  it("offers no key while the books are stale or their search still runs, so a press cannot act on old books", () => {
+    const plan = cbd();
+    const notices = buildNotices(plan, { ...solved(plan), stale: true });
+    expect(notices).toHaveLength(1);
+    expect(notices[0]!.fix).toBeUndefined();
+    const result = solved(plan);
+    const pending = buildNotices(plan, { ...result, plan: { ...result.plan!, strandedPending: true } });
+    expect(pending).toHaveLength(1);
+    expect(pending[0]!.fix).toBeUndefined();
+  });
+
+  it("says nothing of a card the books name that is gone, and offers no wire to a card that is gone", () => {
+    const plan = cbd();
+    const result = solved(plan);
+    expect(buildNotices({ ...plan, nodes: plan.nodes.filter((n) => n.id !== HEAVY_LCR) }, result)).toEqual([]);
+
+    const wired = loop();
+    wired.edges = wired.edges.filter((e) => e.id !== "w11");
+    const books = solved(wired);
+    const noTaker = buildNotices({ ...wired, nodes: wired.nodes.filter((n) => n.id !== "crLight") }, books);
+    expect(noTaker).toHaveLength(1);
+    expect(noTaker[0]!.text).toBe("Spare Hydrogen Cell at the Electrolyzer stops 8 cards: 0.023 /s has nowhere to go");
+    expect(noTaker[0]!.focus).toEqual(["electro"]);
+    expect(noTaker[0]!.fix).toBeUndefined();
+  });
+
+  it("offers the wire, and names both cards, when another card takes the spare from outside", () => {
+    const plan = loop();
+    plan.edges = plan.edges.filter((e) => e.id !== "w11");
+    const notices = buildNotices(plan, solved(plan));
+    expect(notices).toHaveLength(1);
+    expect(notices[0]).toMatchObject({
+      text: "Spare Hydrogen Cell at the Electrolyzer stops 8 cards: 0.023 /s has nowhere to go, and the Hydrogen Cell input of the Chemical Reactor that makes Light Fuel is not wired",
+      focus: ["electro", "crLight"],
+    });
+    expect(notices[0]!.fix?.label).toBe("Wire it");
+    expect(notices[0]!.fix?.tip).toBe(
+      "Wires Hydrogen Cell from the Electrolyzer to the Chemical Reactor that makes Light Fuel.",
+    );
+  });
+
+  it("ranks below a failed solve and the ring alarms", () => {
+    const plan = cbd();
+    const result = solved(plan);
+    const failed: ThroughputResult = {
+      ...result,
+      plan: {
+        ...result.plan!,
+        failure: note("BALANCE_FAILED", note("SOLVER_UNSATISFIABLE", "infeasible")),
+        loops: [{ kind: "CLOG_LOCK", cards: [HEAVY_LCR], portKeys: [], resourceKeys: [] }],
+      },
+    };
+    const ids = buildNotices(plan, failed).map((n) => n.id);
+    expect(ids[0]).toBe("no-way");
+    expect(ids.at(-1)).toBe(`stranded:drawer:${HEAVY_LCR}|o|output:fluid:liquid_heavy_fuel`);
+    expect(ids.length).toBe(3);
+  });
+
+  it("names a shared machine's spare by the recipe it is on, and falls back to what a card takes", () => {
+    // Two Mock Machines: the shared card's first recipe makes y, its second (where the spare is) makes h and l.
+    const shared = project({
+      recipes: [
+        recipe("make-a", [], [["a", 1]]),
+        recipe("make-x", [], [["x", 1]]),
+        recipe("other", [["x", 1]], [["y", 1]]),
+        recipe("tower", [["a", 1]], [["h", 3], ["l", 10]]),
+        recipe("mix", [["h", 1], ["l", 5]], [["f", 1]]),
+      ],
+      nodes: [
+        node("src", "make-a", { solvePin: 2 }),
+        node("srcx", "make-x", { solvePin: 0.5 }),
+        node("sh", "other", { extraRecipes: [{ recipeId: "tower" }] }),
+        node("mix1", "mix"),
+      ],
+      edges: [
+        wire("w0", "srcx", "sh", "x"),
+        wire("w1", "src", "sh", "a", { to: 1 }),
+        wire("w2", "sh", "mix1", "h", { from: 1 }),
+        wire("w3", "sh", "mix1", "l", { from: 1 }),
+      ],
+    });
+    const notices = buildNotices(shared, solved(shared));
+    expect(notices).toHaveLength(1);
+    expect(notices[0]!.text).toBe("Spare h at the Mock Machine that makes it stops 3 cards: 2 /s has nowhere to go");
+
+    // Two cards that make the same things: told apart by what one takes that the other does not.
+    const twins = {
+      ...shared,
+      recipes: [...shared.recipes, recipe("tower2", [["b", 1]], [["h", 3], ["l", 10]])],
+      nodes: [...shared.nodes, node("tw2", "tower2")],
+    };
+    expect(cardLabel(twins, "tw2")).toEqual({ name: "Mock Machine", takes: "b" });
+    expect(cardLabelText(cardLabel(twins, "tw2"))).toBe("Mock Machine that takes b");
+    // A section's own recipe: the shared card's h is on its second recipe, which the twin makes too.
+    expect(cardLabel(twins, "sh", "h", "sh#r1")).toEqual({ name: "Mock Machine", takes: "a" });
+  });
+
+  it("says nothing on the working loop", () => {
+    const plan = loop();
+    expect(buildNotices(plan, solved(plan))).toEqual([]);
   });
 });

@@ -10,6 +10,7 @@ import {
   useRef,
   useState,
   type CSSProperties,
+  type KeyboardEvent,
   type MouseEvent,
   type WheelEvent,
 } from "react";
@@ -57,6 +58,7 @@ import { PortRateControls } from "./interaction/PortRateControls";
 import { forcedTip, menuTip, portTip, powerPanelTip } from "./interaction/tips";
 import { gearTip } from "./menus/card-tips";
 import { openSparePopupForPort } from "./rail/SparePopup";
+import { showCards } from "./rail/rail-actions";
 import { makePortKey } from "@/lib/solver/plan/port-key";
 // FX2 registration: the compact menus, the gear sheet and the richer tips live in ./menus (portal, no card DOM).
 import { MachineListMenu } from "./menus/MachineListMenu";
@@ -550,17 +552,22 @@ export function CircuitBadge({
 /**
  * The bar along the foot (docs/up-to.md): one element. Its fill and a bottleneck's striped run-on are background
  * layers sized in px (`--fill`, `--ghost-l`, `--ghost-w`), the word is `::before` (`data-word`), the line is its text
- * and the fraction is `::after` (`data-frac`). Its tip has the details.
+ * and the fraction is `::after` (`data-frac`). Its tip has the details. When a stranded spare stops the card, a click
+ * on it frames the card the spare is stuck on (`foot.show`).
  */
 export function CardFoot({
   nodeId,
   foot,
   gridRow,
+  wasClick,
 }: {
   nodeId: string;
   foot: CleanFootView;
   gridRow?: number;
+  /** The card's click slop: a press that moved is a drag, not a click. */
+  wasClick?: (event: MouseEvent) => boolean;
 }) {
+  const show = foot.show && foot.show.length > 0 ? foot.show : undefined;
   return (
     <div
       className="cc-foot"
@@ -569,6 +576,22 @@ export function CardFoot({
       data-frac={foot.frac || undefined}
       data-ghost={foot.ghost ? "" : undefined}
       {...tipAttrs(footTip(nodeId, foot))}
+      {...(show
+        ? {
+            role: "button",
+            tabIndex: 0,
+            onClick: (event: MouseEvent) => {
+              glyph(event);
+              if (!wasClick || wasClick(event)) showCards(show);
+            },
+            onKeyDown: (event: KeyboardEvent) => {
+              if (event.key !== "Enter" && event.key !== " ") return;
+              event.preventDefault();
+              event.stopPropagation();
+              showCards(show);
+            },
+          }
+        : {})}
       style={
         {
           gridRow,
@@ -1073,7 +1096,7 @@ export function CleanCard({ view, actions, context, recipe, node }: CleanCardPro
         </div>
       ) : null}
 
-      {view.foot ? <CardFoot nodeId={view.nodeId} foot={view.foot} /> : null}
+      {view.foot ? <CardFoot nodeId={view.nodeId} foot={view.foot} wasClick={wasClick} /> : null}
 
       <div
         className="cc-glance"

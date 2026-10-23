@@ -78,6 +78,11 @@ describe("the card's tip wording", () => {
     const any = openKeyTip(port(), false);
     expect(any.title).toBe("Any");
     expect(any.actions).toEqual([{ input: "left", label: "Set it to what it is now" }]);
+    // Any says what an open port is, so an empty box does not read as a missing setting.
+    expect(any.notes?.[0]?.text).toBe("Not wired: the plan brings in what it needs.");
+    expect(openKeyTip(port({ side: "output" }), false).notes?.[0]?.text).toBe(
+      "Not wired: what it makes leaves freely.",
+    );
     const exact = openKeyTip(port(), true);
     expect(exact.title).toBe("Exactly");
     expect(exact.notes?.[0]?.text).toContain("takes exactly its rate");

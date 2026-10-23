@@ -41,7 +41,10 @@ export function portTip(p: CleanPortView): TipSpec {
   };
 }
 
-/** The rule key on an open port: Any or Exactly. */
+/**
+ * The rule key on an open port: Any or Exactly. Any says what an open port is (docs/up-to.md: a free end), so an
+ * empty rate box does not read as a missing setting.
+ */
 export function openKeyTip(p: CleanPortView, pinned: boolean): TipSpec {
   const input = p.side === "input";
   return {
@@ -53,7 +56,9 @@ export function openKeyTip(p: CleanPortView, pinned: boolean): TipSpec {
           ? input
             ? "Set: the machine runs so this input takes exactly its rate."
             : "Set: the machine runs so this output gives exactly its rate."
-          : `The plan decides this ${input ? "input" : "output"}'s rate.`,
+          : input
+            ? "Not wired: the plan brings in what it needs."
+            : "Not wired: what it makes leaves freely.",
         tone: "muted",
       },
     ],

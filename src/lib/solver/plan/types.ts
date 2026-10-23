@@ -461,6 +461,45 @@ export interface PlanUpTo {
   wants?: number;
   /** STARVED: card ids upstream on the short input that are full: where to act. */
   upstream?: Id[];
+  /**
+   * Website only (`stranded-surplus.ts`, never the engine): the card stands at zero because a spare output elsewhere
+   * on the line has nowhere to go, and this is the one the offered fix frees.
+   */
+  stranded?: PlanStrandedVent;
+}
+
+/**
+ * The fix a stranded spare is offered with: a byproduct drawer on its row, or a wire from its row to an open input
+ * on another card that takes the same thing (`takerNodeId` is that input's solve node, `card#rN` on a shared card).
+ */
+export type PlanStrandedFix =
+  | { kind: "drawer" }
+  | { kind: "wire"; takerNodeId: Id; takerCardId: Id; takerPortKey: PortKey };
+
+/**
+ * A spare output that stalls an Up to card at zero, found and proven on the website by re-solving the plan (see
+ * `src/components/flow/stranded-surplus.ts`). The answer itself never carries it: it is advice, and the plan only
+ * changes when the player takes the fix.
+ */
+export interface PlanStrandedVent {
+  /** The solve node of the card that makes it (`card#rN` on a shared card). */
+  nodeId: Id;
+  cardId: Id;
+  portKey: PortKey;
+  /** `kind:id` of the row's resource. */
+  resourceKey: string;
+  resourceName: string;
+  /** What leaves that row once the fix is in, per second (the proving solve's own rate). */
+  perSecond: number;
+  fix: PlanStrandedFix;
+  /** The cards at zero now that run once the fix is in. */
+  stalled: Id[];
+}
+
+export interface PlanStranded {
+  vents: PlanStrandedVent[];
+  /** Every card some vent's fix would start, once each. */
+  stalled: Id[];
 }
 
 /** An Up to ring as the board shows it (`UpToLoop` in the website's words). */
@@ -512,4 +551,11 @@ export interface PlanSolveExtras {
   alternativesComplete?: boolean;
   /** The alternatives search's and the stored choice's own notes (SHOWING_CLOSEST, STOPPED_EARLY, CHOICE_*), already in `notes`. */
   choiceNotes?: PlanNote[];
+  /** Website only: spare outputs that stall Up to cards at zero, with the fix each is offered (`stranded-surplus.ts`). */
+  stranded?: PlanStranded;
+  /**
+   * Website only: the stranded-spare search for these books is still running (the worker posts the books first and
+   * the search after). Any `stranded` here is the last books' carried over, so no fix is offered from it yet.
+   */
+  strandedPending?: boolean;
 }

@@ -1,7 +1,12 @@
 "use client";
 
 import { useMemo } from "react";
-import type { FactoryNode, MachineConfigTierOption, Recipe } from "@/lib/model/types";
+import type {
+  FactoryNode,
+  FactoryProject,
+  MachineConfigTierOption,
+  Recipe,
+} from "@/lib/model/types";
 import {
   GT_OVERCLOCK_TIERS,
   applyMachineHandlerToRecipe,
@@ -57,6 +62,7 @@ import {
 import { orderMachineHandlers } from "../MachinePicker";
 import type { RecipeNodeData } from "../RecipeNode";
 import { CC, CC_GEOMETRY } from "./tokens";
+import { cardLabel, cardLabelText, machineNameOf } from "./card-label";
 import { mixHex } from "./colors";
 import { UP_TO_COLOR } from "./up-to-reason";
 import { cardLoop, LOOP_WORD, type LoopTone } from "./loops";
@@ -94,7 +100,10 @@ export interface CleanPortView {
   resourceKey: string;
   /** What the solve sends out of / brings into the plan at this port with no drawer. */
   forced?: { number: string; unit: string };
-  /** The row an Up to card's reason names (STARVED, CLOGGED, UNUSED): lit in the reason's colour. */
+  /**
+   * Lit in a reason's colour: the row an Up to card's reason names (STARVED, CLOGGED, UNUSED), or on any card the row
+   * a stranded spare is stuck on (CLOGGED's, `withStallPorts`).
+   */
   why?: FootTone;
 }
 
@@ -180,6 +189,11 @@ export interface CleanFootView {
   fill: number;
   /** A bottleneck's striped run-on, px inside the track. */
   ghost?: { left: number; width: number };
+  /**
+   * The cards a click on the bar frames: the card a stranded spare is stuck on, and for a wire fix the card whose
+   * open input takes it (the notice's Show me). Absent, the bar does nothing on a click.
+   */
+  show?: string[];
   /** For the tip. */
   facts: {
     reason: UpToReason | null | "FORCED";
@@ -191,6 +205,16 @@ export interface CleanFootView {
     wants?: number;
     /** The row it is about (STARVED, CLOGGED, UNUSED). */
     resource?: string;
+    /**
+     * That row has a wire (to a card or a drawer). UNUSED on a wired output means what it feeds uses none of it, not
+     * that nothing takes it, so the words differ.
+     */
+    wired?: boolean;
+    /**
+     * At zero because a spare output elsewhere on the line has nowhere to go: what it is, the card it is on, and (when the
+     * fix is a wire) the card whose open input takes it.
+     */
+    stranded?: { resource: string; at: string; wire?: string };
     /** Other rows that hold it back just as alone. */
     tied: string[];
     /** STARVED: the full cards upstream, by name. */
@@ -486,7 +510,13 @@ const planSets = new WeakMap<object, { unanchored: Set<string>; unneeded: Set<st
 function planSetsOf(plan: NonNullable<PlanExtras>) {
   let sets = planSets.get(plan);
   if (!sets) {
-    sets = { unanchored: new Set(plan.unanchored), unneeded: new Set(plan.unneeded) };
+    // A card a stranded spare holds at zero is needed (an Up to card anchors it): the notice names the fix, so it
+    // does not ask for a count, and its open ports do not ask for rates.
+    const stalled = new Set(plan.stranded?.stalled ?? []);
+    sets = {
+      unanchored: new Set(plan.unanchored),
+      unneeded: new Set(plan.unneeded.filter((id) => !stalled.has(id))),
+    };
     planSets.set(plan, sets);
   }
   return sets;
@@ -644,16 +674,14 @@ function fitLine(lines: string[], room: number): string {
   return lines.find((line) => measureClean(line, FOOT_SIZE) <= room) ?? "";
 }
 
-/** The resource a row key names, by its port's name when the card has it. */
-function resourceName(
+/** The row a resource key names on the card, and its resource's name (the port's when the card has it). */
+function namedRow(
   resourceKey: string | undefined,
   ports: readonly CleanPortView[],
-): string | undefined {
+): { name: string; port?: CleanPortView } | undefined {
   if (!resourceKey) return undefined;
-  return (
-    ports.find((port) => port.resourceKey === resourceKey)?.name ??
-    resourceKey.slice(resourceKey.indexOf(":") + 1)
-  );
+  const port = ports.find((entry) => entry.resourceKey === resourceKey);
+  return { name: port?.name ?? resourceKey.slice(resourceKey.indexOf(":") + 1), port };
 }
 
 /**
@@ -667,6 +695,12 @@ export function buildFootView(
   ports: { inputs: readonly CleanPortView[]; outputs: readonly CleanPortView[] },
   cardName: (id: string) => string | undefined = () => undefined,
   loop?: LoopTone,
+  /**
+   * A card named so it cannot be taken for another of its kind (`card-label.ts`: "Chemical Reactor that makes it"),
+   * as the notices bar names it; `resource` is what the words are about, `nodeId` the solve node (a shared machine's
+   * recipe). Without it, the plain name.
+   */
+  cardLabelOf: (id: string, resource?: string, nodeId?: string) => string | undefined = cardName,
 ): CleanFootView | undefined {
   const fmt = formatSolvedMachines;
   if (count.rule === "upTo" && upTo) {
@@ -685,12 +719,14 @@ export function buildFootView(
       wants !== undefined ? { left: ghostLeft, width: FOOT_TRACK - ghostLeft } : undefined;
     const frac = `${fmt(reached)} / ${fmt(end)}`;
     const reason = upTo.reason;
-    const resource =
+    const row =
       reason === "STARVED"
-        ? resourceName(upTo.resourceKey, ports.inputs)
+        ? namedRow(upTo.resourceKey, ports.inputs)
         : reason === "CLOGGED" || reason === "UNUSED"
-          ? resourceName(upTo.resourceKey, ports.outputs)
+          ? namedRow(upTo.resourceKey, ports.outputs)
           : undefined;
+    const resource = row?.name;
+    const wired = row?.port?.wired === true;
     const tied = (upTo.tied ?? [])
       .map((key) => {
         const at = parsePortKey(key);
@@ -701,14 +737,38 @@ export function buildFootView(
       })
       .filter((name): name is string => name !== undefined);
     const upstream = (upTo.upstream ?? []).map((id) => cardName(id) ?? "a card");
+    // At zero because a spare output elsewhere on the line has nowhere to go (`stranded-surplus.ts`): the line says what is
+    // stuck, not this card's own row.
+    const vent =
+      !loop && (reason === "UNUSED" || reason === "CLOGGED" || reason === "STARVED")
+        ? upTo.stranded
+        : undefined;
+    const stranded = vent
+      ? {
+          resource: vent.resourceName,
+          at: cardLabelOf(vent.cardId, vent.resourceName, vent.nodeId) ?? "a card",
+          wire:
+            vent.fix.kind === "wire"
+              ? (cardLabelOf(vent.fix.takerCardId, undefined, vent.fix.takerNodeId) ?? "a card")
+              : undefined,
+        }
+      : undefined;
     const word = loop ? LOOP_WORD[loop] : (reason ?? "");
     const room =
       FOOT_TEXT -
       (word ? measureClean(word, FOOT_SIZE) + FOOT_GAP : 0) -
       measureClean(frac, FOOT_SIZE) -
       FOOT_GAP;
-    const lines: string[] =
-      reason === "FULL"
+    // UNUSED is CLOGGED at zero. A wired row's taker uses none of it (stopped, or fed enough elsewhere), so it backs
+    // up; only a row with no wire is one nothing takes. With no row named, an output still backs up.
+    const lines: string[] = stranded
+      ? [
+          `spare ${stranded.resource} has nowhere to go`,
+          `${stranded.resource} has nowhere to go`,
+          `nowhere for ${stranded.resource}`,
+          "a spare has nowhere to go",
+        ]
+      : reason === "FULL"
         ? ["nothing wants more"]
         : reason === "BOTTLENECK"
           ? wants !== undefined
@@ -724,8 +784,10 @@ export function buildFootView(
                 : ["an output backs up"]
               : reason === "UNUSED"
                 ? resource
-                  ? [`nothing takes ${resource}`, "nothing takes it"]
-                  : ["nothing takes it"]
+                  ? wired
+                    ? [`${resource} backs up`, "an output backs up"]
+                    : [`nothing takes ${resource}`, "nothing takes it"]
+                  : ["an output backs up"]
                 : reason === "LIMITED"
                   ? ["the plan holds it back", "held back"]
                   : [];
@@ -736,6 +798,11 @@ export function buildFootView(
       frac,
       fill,
       ghost,
+      show: vent
+        ? vent.fix.kind === "wire"
+          ? [vent.cardId, vent.fix.takerCardId]
+          : [vent.cardId]
+        : undefined,
       facts: {
         reason,
         loop,
@@ -744,6 +811,8 @@ export function buildFootView(
         capacity,
         wants,
         resource,
+        wired,
+        stranded,
         tied,
         upstream,
         forced: [],
@@ -820,11 +889,20 @@ export function stateFrameTone(
   return undefined;
 }
 
+/** A port key as a card's row names itself: `side|handleId`, a shared machine's recipe with its section prefix. */
+function rowKeyOf(portKey: string | undefined): string | undefined {
+  const at = portKey ? parsePortKey(portKey) : undefined;
+  if (!at) return undefined;
+  const section = parseSectionNodeId(at.nodeId).section;
+  return `${at.side === "i" ? "input" : "output"}|${sectionHandleId(section, at.handle)}`;
+}
+
 /**
  * The rows an Up to card's reason names (docs/up-to.md): STARVED's short input, CLOGGED's or UNUSED's output, and the
  * rows tied with it, each lit in the reason's colour (the bar's tone). FULL, BOTTLENECK, LIMITED and no reason light
  * nothing. A row is matched by its port key, a shared machine's recipe by its handle's section prefix; a read-out
- * with no port key falls back to the row of its resource on the reason's side.
+ * with no port key falls back to the row of its resource on the reason's side. A card a stranded spare stops lights
+ * none of its own: its row only backs up behind the one that is stuck, which `withStallPorts` lights where it is.
  */
 export function withReasonPorts(
   ports: readonly CleanPortView[],
@@ -834,14 +912,13 @@ export function withReasonPorts(
   if (!upTo || (reason !== "STARVED" && reason !== "CLOGGED" && reason !== "UNUSED")) {
     return [...ports];
   }
+  if (upTo.stranded) return [...ports];
   const tone = FOOT_TONE[reason];
   const side = reason === "STARVED" ? "input" : "output";
   const named = new Set<string>();
   for (const key of [upTo.portKey, ...(upTo.tied ?? [])]) {
-    const at = key ? parsePortKey(key) : undefined;
-    if (!at) continue;
-    const section = parseSectionNodeId(at.nodeId).section;
-    named.add(`${at.side === "i" ? "input" : "output"}|${sectionHandleId(section, at.handle)}`);
+    const row = rowKeyOf(key);
+    if (row) named.add(row);
   }
   return ports.map((port) => {
     const lit =
@@ -849,6 +926,45 @@ export function withReasonPorts(
       (upTo.portKey === undefined && port.side === side && port.resourceKey === upTo.resourceKey);
     return lit && !port.port.free ? { ...port, why: tone } : port;
   });
+}
+
+/** The rows stranded spares are stuck on, by card id, as `rowKeyOf` names them. Built once per plan. */
+const stallRows = new WeakMap<object, ReadonlyMap<string, ReadonlySet<string>>>();
+function stallRowsOf(plan: NonNullable<PlanExtras>): ReadonlyMap<string, ReadonlySet<string>> {
+  let rows = stallRows.get(plan);
+  if (!rows) {
+    const byCard = new Map<string, Set<string>>();
+    for (const vent of plan.stranded?.vents ?? []) {
+      const row = rowKeyOf(vent.portKey);
+      if (!row) continue;
+      const set = byCard.get(vent.cardId) ?? new Set<string>();
+      set.add(row);
+      byCard.set(vent.cardId, set);
+    }
+    rows = byCard;
+    stallRows.set(plan, rows);
+  }
+  return rows;
+}
+
+/**
+ * The row a stranded spare is stuck on (`plan.stranded`, `stranded-surplus.ts`), on whatever card it is: lit with the
+ * stripes an Up to card's blamed output wears (CLOGGED's), so the board points at the cause and not only at the cards
+ * it stops. `ports` are the card's rows (a shared machine's recipe matched by its section prefix). The same array when
+ * nothing on the card is stuck.
+ */
+export function withStallPorts(
+  ports: CleanPortView[],
+  plan: PlanExtras | undefined,
+  cardId: string,
+): CleanPortView[] {
+  const rows = plan?.stranded ? stallRowsOf(plan).get(cardId) : undefined;
+  if (!rows) return ports;
+  return ports.map((port) =>
+    rows.has(`${port.side}|${port.handleId}`) && !port.port.free
+      ? { ...port, why: FOOT_TONE.CLOGGED }
+      : port,
+  );
 }
 
 /**
@@ -868,14 +984,21 @@ export function cardNameIn(
 ): string | undefined {
   const node = project.nodes.find((entry) => entry.id === id);
   if (!node) return undefined;
-  const recipe = project.recipes.find((entry) => entry.id === node.recipeId);
-  if (!recipe) return undefined;
-  if (recipe.power) return recipe.machineType;
-  try {
-    return getSelectedMachineHandler(recipe, node).label;
-  } catch {
-    return recipe.machineType;
-  }
+  return machineNameOf(node, project.recipes.find((entry) => entry.id === node.recipeId));
+}
+
+/** A card's name with what tells it apart from same-named cards (`card-label.ts`), for the stalled card's bar. */
+export function cardLabelIn(
+  project: { nodes: readonly FactoryNode[]; recipes: readonly Recipe[] },
+  id: string,
+  resource?: string,
+  nodeId?: string,
+): string | undefined {
+  if (!project.nodes.some((entry) => entry.id === id)) return undefined;
+  return cardLabelText(
+    cardLabel(project as Pick<FactoryProject, "nodes" | "recipes">, id, resource, nodeId),
+    resource,
+  );
 }
 
 /** Everything the clean card draws and does, from the same inputs as the classic card. */
@@ -1051,14 +1174,23 @@ export function useCleanCardModel(
   }
   const strip = layoutStrip(rawChips);
 
-  // The rows an Up to card's reason names are lit in its colour (only while the card is Up to: `upTo` is its own).
-  const inputs = withReasonPorts(
-    rails.inputs.map((port) => buildPortView(projectNode.id, port, projectNode, forcedAt)),
-    countState.upTo,
+  // The rows an Up to card's reason names are lit in its colour (only while the card is Up to: `upTo` is its own),
+  // and on any card the row a stranded spare is stuck on.
+  const inputs = withStallPorts(
+    withReasonPorts(
+      rails.inputs.map((port) => buildPortView(projectNode.id, port, projectNode, forcedAt)),
+      countState.upTo,
+    ),
+    plan,
+    projectNode.id,
   );
-  const outputs = withReasonPorts(
-    rails.outputs.map((port) => buildPortView(projectNode.id, port, projectNode, forcedAt)),
-    countState.upTo,
+  const outputs = withStallPorts(
+    withReasonPorts(
+      rails.outputs.map((port) => buildPortView(projectNode.id, port, projectNode, forcedAt)),
+      countState.upTo,
+    ),
+    plan,
+    projectNode.id,
   );
   const loop = cardLoop(plan?.loops, projectNode.id);
   const foot = buildFootView(
@@ -1067,6 +1199,7 @@ export function useCleanCardModel(
     { inputs, outputs },
     (id) => cardNameIn(liveProject, id),
     loop,
+    (id, resource, nodeId) => cardLabelIn(liveProject, id, resource, nodeId),
   );
 
   const view: CleanCardView = {

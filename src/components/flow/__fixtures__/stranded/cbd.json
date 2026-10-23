@@ -1,0 +1,3743 @@
+{
+ "id": "manual-project",
+ "name": "Untitled design",
+ "edges": [
+  {
+   "id": "edge-e5374726-b43c-4189-ac3d-ae4c35ca296c",
+   "label": "Oil Berry",
+   "source": "node-5fb2f75f-a02b-496a-9fa7-f7685a1e8a75",
+   "target": "node-2b7d62e3-445f-4288-9514-7286d5aa1313",
+   "resourceId": "cropsnh:materialleaf@10",
+   "resourceKind": "item",
+   "sourceHandle": "output:item:cropsnh%3Amaterialleaf%4010:0",
+   "targetHandle": "input:item:cropsnh%3Amaterialleaf%4010:0"
+  },
+  {
+   "id": "edge-a2f89bd2-c19e-4e00-8df4-ee387b77a49c",
+   "label": "Sulfuric Heavy Fuel",
+   "source": "node-2b7d62e3-445f-4288-9514-7286d5aa1313",
+   "target": "node-bbba4208-fadf-4819-be90-87206c39142c",
+   "resourceId": "liquid_sulfuricheavy_fuel",
+   "resourceKind": "fluid",
+   "sourceHandle": "output:fluid:liquid_sulfuricheavy_fuel:0",
+   "targetHandle": "input:fluid:liquid_sulfuricheavy_fuel:1"
+  },
+  {
+   "id": "edge-ee86ee08-13a3-43f0-8f73-a0d4cb05e577",
+   "label": "Sulfuric Light Fuel",
+   "source": "node-2b7d62e3-445f-4288-9514-7286d5aa1313",
+   "target": "node-088c8e24-c672-4b6d-827b-f9c65a2f2140",
+   "resourceId": "liquid_sufluriclight_fuel",
+   "resourceKind": "fluid",
+   "sourceHandle": "output:fluid:liquid_sufluriclight_fuel:1",
+   "targetHandle": "input:fluid:liquid_sufluriclight_fuel:1"
+  },
+  {
+   "id": "edge-d1e25015-ff53-483e-a781-c6e9ec4838ed",
+   "label": "Sulfuric Naphtha",
+   "source": "node-2b7d62e3-445f-4288-9514-7286d5aa1313",
+   "target": "node-2936800a-350d-4235-9557-d738ac5ebcdb",
+   "resourceId": "liquid_sulfuricnaphtha",
+   "resourceKind": "fluid",
+   "sourceHandle": "output:fluid:liquid_sulfuricnaphtha:2",
+   "targetHandle": "input:fluid:liquid_sulfuricnaphtha:1"
+  },
+  {
+   "id": "edge-0ffa9ce6-f055-4301-92d2-759cccb4636d",
+   "label": "Hydrogen Sulfide",
+   "source": "node-bbba4208-fadf-4819-be90-87206c39142c",
+   "target": "node-ccde5322-5718-4f58-9475-7547705e3dcf",
+   "resourceId": "liquid_hydricsulfur",
+   "resourceKind": "fluid",
+   "sourceHandle": "output:fluid:liquid_hydricsulfur:1",
+   "targetHandle": "input:fluid:liquid_hydricsulfur:0"
+  },
+  {
+   "id": "edge-46c8fcc6-0499-43a2-a696-32a6c5e49e1b",
+   "label": "Hydrogen Sulfide",
+   "source": "node-088c8e24-c672-4b6d-827b-f9c65a2f2140",
+   "target": "node-ccde5322-5718-4f58-9475-7547705e3dcf",
+   "resourceId": "liquid_hydricsulfur",
+   "resourceKind": "fluid",
+   "sourceHandle": "output:fluid:liquid_hydricsulfur",
+   "targetHandle": "input:fluid:liquid_hydricsulfur"
+  },
+  {
+   "id": "edge-39b5dca6-775b-44d4-bbcb-845b65947e05",
+   "label": "Hydrogen Sulfide",
+   "source": "node-2936800a-350d-4235-9557-d738ac5ebcdb",
+   "target": "node-ccde5322-5718-4f58-9475-7547705e3dcf",
+   "resourceId": "liquid_hydricsulfur",
+   "resourceKind": "fluid",
+   "sourceHandle": "output:fluid:liquid_hydricsulfur",
+   "targetHandle": "input:fluid:liquid_hydricsulfur"
+  },
+  {
+   "id": "edge-b1bc9ead-f669-460d-ae87-66f1a5a6d3a4",
+   "label": "Hydrogen",
+   "source": "node-ccde5322-5718-4f58-9475-7547705e3dcf",
+   "target": "node-bbba4208-fadf-4819-be90-87206c39142c",
+   "resourceId": "hydrogen",
+   "resourceKind": "fluid",
+   "sourceHandle": "output:fluid:hydrogen",
+   "targetHandle": "input:fluid:hydrogen"
+  },
+  {
+   "id": "edge-cbb0e690-da0c-4059-8912-41133479737f",
+   "label": "Hydrogen",
+   "source": "node-ccde5322-5718-4f58-9475-7547705e3dcf",
+   "target": "node-088c8e24-c672-4b6d-827b-f9c65a2f2140",
+   "resourceId": "hydrogen",
+   "resourceKind": "fluid",
+   "sourceHandle": "output:fluid:hydrogen",
+   "targetHandle": "input:fluid:hydrogen"
+  },
+  {
+   "id": "edge-f7ab37bd-b698-49d4-a8ed-33be7eb8ae78",
+   "label": "Hydrogen",
+   "source": "node-ccde5322-5718-4f58-9475-7547705e3dcf",
+   "target": "node-2936800a-350d-4235-9557-d738ac5ebcdb",
+   "resourceId": "hydrogen",
+   "resourceKind": "fluid",
+   "sourceHandle": "output:fluid:hydrogen",
+   "targetHandle": "input:fluid:hydrogen"
+  },
+  {
+   "id": "edge-7def3486-899c-472d-af37-607a7eea4ae6",
+   "label": "Sulfur Dust",
+   "source": "node-ccde5322-5718-4f58-9475-7547705e3dcf",
+   "target": "storage-dc9a1a65-93c1-4925-a6a6-5b2afe8c7f49",
+   "resourceId": "gregtech:gt.metaitem.01@2022",
+   "resourceKind": "item",
+   "sourceHandle": "output:item:gregtech%3Agt.metaitem.01%402022",
+   "targetHandle": "input:item:gregtech%3Agt.metaitem.01%402022"
+  },
+  {
+   "id": "edge-ce3175a2-6749-4d90-b9e3-b9fc1b985d2b",
+   "label": "Heavy Fuel",
+   "source": "node-bbba4208-fadf-4819-be90-87206c39142c",
+   "target": "node-44ba8f0f-2920-45c5-838c-cad1d54ec941",
+   "resourceId": "liquid_heavy_fuel",
+   "resourceKind": "fluid",
+   "sourceHandle": "output:fluid:liquid_heavy_fuel:0",
+   "targetHandle": "input:fluid:liquid_heavy_fuel:2"
+  },
+  {
+   "id": "edge-8a42cffa-c9f9-4ea7-941c-b8eb019ea456",
+   "label": "Light Fuel",
+   "source": "node-088c8e24-c672-4b6d-827b-f9c65a2f2140",
+   "target": "node-44ba8f0f-2920-45c5-838c-cad1d54ec941",
+   "resourceId": "liquid_light_fuel",
+   "resourceKind": "fluid",
+   "sourceHandle": "output:fluid:liquid_light_fuel",
+   "targetHandle": "input:fluid:liquid_light_fuel"
+  }
+ ],
+ "nodes": [
+  {
+   "id": "node-5fb2f75f-a02b-496a-9fa7-f7685a1e8a75",
+   "enabled": true,
+   "colorTag": "green",
+   "parallel": 1,
+   "position": {
+    "x": -500,
+    "y": -120
+   },
+   "recipeId": "oracle:local-2.9.0-beta-2:cropsnh-crop:cropsnh:cropsnh-oilberry",
+   "solvePin": 118,
+   "machineCount": 1,
+   "overclockTier": "NONE",
+   "cropFullFarmCount": 1,
+   "machineConfigTiers": {
+    "cropSky": "no",
+    "cropBiome": "humid",
+    "cropFertilizer": "0"
+   }
+  },
+  {
+   "id": "node-2b7d62e3-445f-4288-9514-7286d5aa1313",
+   "enabled": true,
+   "parallel": 1,
+   "position": {
+    "x": -60,
+    "y": -120
+   },
+   "powerEuT": 512,
+   "recipeId": "oracle:local-2.9.0-beta-2:gregtech:gt-recipe-distillationtower:de62f2d4071d7241",
+   "hatchAmps": 1,
+   "machineCount": 1,
+   "overclockTier": "HV",
+   "hatchVoltageTier": "HV",
+   "recipeInputOverrides": {
+    "0": {
+     "id": "cropsnh:materialleaf@10",
+     "kind": "item",
+     "modId": "cropsnh",
+     "amount": 10,
+     "iconPath": "/datasets/gtnh/local-2.9.0-rc-2/textures/rendered/oil_berry-954f5b3982b0.png",
+     "displayName": "Oil Berry",
+     "dominantColor": "#1e3b24"
+    }
+   }
+  },
+  {
+   "id": "node-bbba4208-fadf-4819-be90-87206c39142c",
+   "enabled": true,
+   "parallel": 1,
+   "position": {
+    "x": 380,
+    "y": -240
+   },
+   "powerEuT": 128,
+   "recipeId": "oracle:local-2.9.0-beta-2:gregtech:gt-recipe-largechemicalreactor:15c8d5770e100fb0",
+   "hatchAmps": 1,
+   "machineCount": 1,
+   "overclockTier": "LV",
+   "powerInputMode": "amps",
+   "hatchVoltageTier": "MV",
+   "recipeInputOverrides": {
+    "1": {
+     "id": "liquid_sulfuricheavy_fuel",
+     "kind": "fluid",
+     "amount": 8000,
+     "iconPath": "/datasets/gtnh/local-2.9.0-rc-2/textures/rendered/sulfuric_heavy_fuel-d864cf716267.png",
+     "displayName": "Sulfuric Heavy Fuel",
+     "dominantColor": "#ffedb0"
+    },
+    "2": {
+     "id": "hydrogen",
+     "kind": "fluid",
+     "amount": 2000,
+     "iconPath": "/datasets/gtnh/local-2.9.0-rc-2/textures/rendered/hydrogen-c77805a4cf6b.png",
+     "displayName": "Hydrogen",
+     "dominantColor": "#ff6565"
+    }
+   }
+  },
+  {
+   "id": "node-088c8e24-c672-4b6d-827b-f9c65a2f2140",
+   "enabled": true,
+   "parallel": 1,
+   "position": {
+    "x": 380,
+    "y": -80
+   },
+   "powerEuT": 128,
+   "recipeId": "oracle:local-2.9.0-beta-2:gregtech:gt-recipe-largechemicalreactor:0f231c2136de3159",
+   "hatchAmps": 1,
+   "machineCount": 1,
+   "overclockTier": "LV",
+   "powerInputMode": "amps",
+   "hatchVoltageTier": "MV",
+   "recipeInputOverrides": {
+    "1": {
+     "id": "liquid_sufluriclight_fuel",
+     "kind": "fluid",
+     "amount": 12000,
+     "iconPath": "/datasets/gtnh/local-2.9.0-rc-2/textures/rendered/sulfuric_light_fuel-596998ac1ce8.png",
+     "displayName": "Sulfuric Light Fuel",
+     "dominantColor": "#fff000"
+    },
+    "2": {
+     "id": "hydrogen",
+     "kind": "fluid",
+     "amount": 2000,
+     "iconPath": "/datasets/gtnh/local-2.9.0-rc-2/textures/rendered/hydrogen-c77805a4cf6b.png",
+     "displayName": "Hydrogen",
+     "dominantColor": "#ff6565"
+    }
+   }
+  },
+  {
+   "id": "node-2936800a-350d-4235-9557-d738ac5ebcdb",
+   "enabled": true,
+   "parallel": 1,
+   "position": {
+    "x": 380,
+    "y": 80
+   },
+   "powerEuT": 128,
+   "recipeId": "oracle:local-2.9.0-beta-2:gregtech:gt-recipe-largechemicalreactor:f2ed21fade8d24f8",
+   "hatchAmps": 1,
+   "machineCount": 1,
+   "overclockTier": "LV",
+   "powerInputMode": "amps",
+   "hatchVoltageTier": "MV",
+   "recipeInputOverrides": {
+    "1": {
+     "id": "liquid_sulfuricnaphtha",
+     "kind": "fluid",
+     "amount": 12000,
+     "iconPath": "/datasets/gtnh/local-2.9.0-rc-2/textures/rendered/sulfuric_naphtha-596998ac1ce8.png",
+     "displayName": "Sulfuric Naphtha",
+     "dominantColor": "#fff000"
+    },
+    "2": {
+     "id": "hydrogen",
+     "kind": "fluid",
+     "amount": 2000,
+     "iconPath": "/datasets/gtnh/local-2.9.0-rc-2/textures/rendered/hydrogen-c77805a4cf6b.png",
+     "displayName": "Hydrogen",
+     "dominantColor": "#ff6565"
+    }
+   }
+  },
+  {
+   "id": "node-ccde5322-5718-4f58-9475-7547705e3dcf",
+   "enabled": true,
+   "parallel": 1,
+   "position": {
+    "x": 380,
+    "y": -440
+   },
+   "recipeId": "oracle:local-2.9.0-beta-2:gregtech:gt-recipe-electrolyzer:8b2281c335447f85",
+   "machineCount": 1,
+   "overclockTier": "MV",
+   "recipeInputOverrides": {
+    "0": {
+     "id": "liquid_hydricsulfur",
+     "kind": "fluid",
+     "amount": 1000,
+     "iconPath": "/datasets/gtnh/local-2.9.0-rc-2/textures/rendered/hydrogen_sulfide-b2bd468e2f92.png",
+     "displayName": "Hydrogen Sulfide",
+     "dominantColor": "#ff5200"
+    }
+   }
+  },
+  {
+   "id": "node-44ba8f0f-2920-45c5-838c-cad1d54ec941",
+   "enabled": true,
+   "parallel": 1,
+   "position": {
+    "x": 820,
+    "y": -160
+   },
+   "powerEuT": 512,
+   "recipeId": "oracle:local-2.9.0-beta-2:gregtech:gt-recipe-largechemicalreactor:585a73fd7dbd92d5",
+   "hatchAmps": 1,
+   "machineCount": 1,
+   "overclockTier": "HV",
+   "hatchVoltageTier": "HV",
+   "recipeInputOverrides": {
+    "1": {
+     "id": "liquid_light_fuel",
+     "kind": "fluid",
+     "amount": 20000,
+     "iconPath": "/datasets/gtnh/local-2.9.0-rc-2/textures/rendered/light_fuel-975564c58ada.png",
+     "displayName": "Light Fuel",
+     "dominantColor": "#fff000"
+    },
+    "2": {
+     "id": "liquid_heavy_fuel",
+     "kind": "fluid",
+     "amount": 4000,
+     "iconPath": "/datasets/gtnh/local-2.9.0-rc-2/textures/rendered/heavy_fuel-750ebefebb92.png",
+     "displayName": "Heavy Fuel",
+     "dominantColor": "#ffedb0"
+    }
+   }
+  }
+ ],
+ "pockets": [],
+ "recipes": [
+  {
+   "id": "oracle:local-2.9.0-beta-2:cropsnh-crop:cropsnh:cropsnh-oilberry",
+   "eut": 0,
+   "kind": "crop_produce",
+   "name": "Crop Farm: Oil Berry",
+   "notes": "Exported by the GTNH calculation oracle from the live CropsNH crop registry. Tier 4, 1200 growth points, base drop chance x0.81450623.\nRates use the exact CropsNH growth and gain formulas from the game (256-tick cycles, nutrient supply vs Tier x 10 demand, dropChance x 1.03^Gain drop rounds). Machine count = number of planted crops. Resistance does not affect steady-state rates.",
+   "inputs": [
+    {
+     "id": "factoryflow:cropsnh_seed:cropsnh-oilberry",
+     "kind": "item",
+     "modId": "cropsnh",
+     "amount": 1,
+     "neiSlot": {
+      "x": 34,
+      "y": 35
+     },
+     "consumed": false,
+     "displayName": "Oil Berry Seeds",
+     "dominantColor": "#6b7280"
+    }
+   ],
+   "source": {
+    "exporter": "gtnh-oracle",
+    "recipeMap": "Crop Farm",
+    "rawRecipeId": "cropsnh:cropsnh:oilBerry",
+    "datasetVersionId": "local-2.9.0-rc-2"
+   },
+   "outputs": [
+    {
+     "id": "cropsnh:materialleaf@10",
+     "kind": "item",
+     "modId": "cropsnh",
+     "amount": 4.724288,
+     "neiSlot": {
+      "x": 124,
+      "y": 35
+     },
+     "displayName": "Oil Berry",
+     "dominantColor": "#1e3b24"
+    }
+   ],
+   "category": "cropsnh-crop",
+   "metadata": {
+    "cropsNh": {
+     "tier": 4,
+     "drops": [
+      {
+       "id": "cropsnh:materialleaf@10",
+       "weight": 10000,
+       "stackSize": 2
+      }
+     ],
+     "soils": [
+      "Sand",
+      "Gravel",
+      "Soul Sand",
+      "Oilsands Ore",
+      "Oilsands Ore",
+      "Oilsands Ore"
+     ],
+     "cropId": "cropsnh:oilBerry",
+     "biomeTags": [
+      "HOT",
+      "WASTELAND"
+     ],
+     "dropChance": 0.81450623,
+     "growthPoints": 1200,
+     "minSeedBedTier": -1,
+     "growthCycleTicks": 256,
+     "growthMultiplier": 1
+    }
+   },
+   "machineType": "Crop Farm",
+   "minimumTier": "NONE",
+   "durationTicks": 2560,
+   "machineHandlers": [
+    {
+     "id": "crop-manager",
+     "eut": 0,
+     "kind": "single",
+     "label": "Crop Manager",
+     "machineType": "Crop Manager",
+     "minimumTier": "NONE",
+     "machineConfigControls": [
+      {
+       "id": "cropGrowthStat",
+       "label": "Growth",
+       "tiers": [
+        {
+         "key": "1",
+         "label": "1",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "2",
+         "label": "2",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "3",
+         "label": "3",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "4",
+         "label": "4",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "5",
+         "label": "5",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "6",
+         "label": "6",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "7",
+         "label": "7",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "8",
+         "label": "8",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "9",
+         "label": "9",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "10",
+         "label": "10",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "11",
+         "label": "11",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "12",
+         "label": "12",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "13",
+         "label": "13",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "14",
+         "label": "14",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "15",
+         "label": "15",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "16",
+         "label": "16",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "17",
+         "label": "17",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "18",
+         "label": "18",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "19",
+         "label": "19",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "20",
+         "label": "20",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "21",
+         "label": "21",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "22",
+         "label": "22",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "23",
+         "label": "23",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "24",
+         "label": "24",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "25",
+         "label": "25",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "26",
+         "label": "26",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "27",
+         "label": "27",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "28",
+         "label": "28",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "29",
+         "label": "29",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "30",
+         "label": "30",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "31",
+         "label": "31",
+         "resource": {
+          "id": "factoryflow:cropGrowthStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        }
+       ],
+       "defaultKey": "31",
+       "minimumKey": "1"
+      },
+      {
+       "id": "cropGainStat",
+       "label": "Gain",
+       "tiers": [
+        {
+         "key": "1",
+         "label": "1",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "2",
+         "label": "2",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "3",
+         "label": "3",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "4",
+         "label": "4",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "5",
+         "label": "5",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "6",
+         "label": "6",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "7",
+         "label": "7",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "8",
+         "label": "8",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "9",
+         "label": "9",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "10",
+         "label": "10",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "11",
+         "label": "11",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "12",
+         "label": "12",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "13",
+         "label": "13",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "14",
+         "label": "14",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "15",
+         "label": "15",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "16",
+         "label": "16",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "17",
+         "label": "17",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "18",
+         "label": "18",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "19",
+         "label": "19",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "20",
+         "label": "20",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "21",
+         "label": "21",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "22",
+         "label": "22",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "23",
+         "label": "23",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "24",
+         "label": "24",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "25",
+         "label": "25",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "26",
+         "label": "26",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "27",
+         "label": "27",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "28",
+         "label": "28",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "29",
+         "label": "29",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "30",
+         "label": "30",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "31",
+         "label": "31",
+         "resource": {
+          "id": "factoryflow:cropGainStat",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        }
+       ],
+       "defaultKey": "31",
+       "minimumKey": "1"
+      },
+      {
+       "id": "cropWater",
+       "label": "Water",
+       "tiers": [
+        {
+         "key": "0",
+         "label": "Dry",
+         "resource": {
+          "id": "factoryflow:cropWater",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Water Bucket"
+         }
+        },
+        {
+         "key": "50",
+         "label": "Half",
+         "resource": {
+          "id": "factoryflow:cropWater",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Water Bucket"
+         }
+        },
+        {
+         "key": "100",
+         "label": "Full",
+         "resource": {
+          "id": "factoryflow:cropWater",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Water Bucket"
+         }
+        }
+       ],
+       "defaultKey": "100",
+       "minimumKey": "0"
+      },
+      {
+       "id": "cropFertilizer",
+       "label": "Fert",
+       "tiers": [
+        {
+         "key": "0",
+         "label": "None",
+         "resource": {
+          "id": "factoryflow:cropFertilizer",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Fertilizer"
+         }
+        },
+        {
+         "key": "50",
+         "label": "Half",
+         "resource": {
+          "id": "factoryflow:cropFertilizer",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Fertilizer"
+         }
+        },
+        {
+         "key": "100",
+         "label": "Full",
+         "resource": {
+          "id": "factoryflow:cropFertilizer",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Fertilizer"
+         }
+        }
+       ],
+       "defaultKey": "100",
+       "minimumKey": "0"
+      },
+      {
+       "id": "cropSky",
+       "label": "Sky",
+       "tiers": [
+        {
+         "key": "no",
+         "label": "Covered",
+         "resource": {
+          "id": "factoryflow:cropSky",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Daylight Detector"
+         }
+        },
+        {
+         "key": "yes",
+         "label": "Open",
+         "resource": {
+          "id": "factoryflow:cropSky",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Daylight Detector"
+         }
+        }
+       ],
+       "defaultKey": "yes",
+       "minimumKey": "no"
+      },
+      {
+       "id": "cropBiome",
+       "label": "Biome",
+       "tiers": [
+        {
+         "key": "none",
+         "label": "None",
+         "resource": {
+          "id": "factoryflow:cropBiome",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Grass Block"
+         }
+        },
+        {
+         "key": "humid-60",
+         "label": "60%",
+         "resource": {
+          "id": "factoryflow:cropBiome",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Grass Block"
+         }
+        },
+        {
+         "key": "humid-70",
+         "label": "70%",
+         "resource": {
+          "id": "factoryflow:cropBiome",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Grass Block"
+         }
+        },
+        {
+         "key": "humid",
+         "label": "80%",
+         "resource": {
+          "id": "factoryflow:cropBiome",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Grass Block"
+         }
+        },
+        {
+         "key": "one-tag",
+         "label": "1 Tag",
+         "resource": {
+          "id": "factoryflow:cropBiome",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Grass Block"
+         }
+        },
+        {
+         "key": "two-tags",
+         "label": "2 Tags",
+         "resource": {
+          "id": "factoryflow:cropBiome",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Grass Block"
+         }
+        }
+       ],
+       "defaultKey": "two-tags",
+       "minimumKey": "none"
+      },
+      {
+       "id": "cropManagerTier",
+       "label": "Manager",
+       "tiers": [
+        {
+         "key": "1",
+         "label": "LV",
+         "resource": {
+          "id": "factoryflow:crop_voltage_lv",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Basic Crop Manager"
+         }
+        },
+        {
+         "key": "2",
+         "label": "MV",
+         "resource": {
+          "id": "factoryflow:crop_voltage_mv",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Advanced Crop Manager"
+         }
+        },
+        {
+         "key": "3",
+         "label": "HV",
+         "resource": {
+          "id": "factoryflow:crop_voltage_hv",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Advanced Crop Manager II"
+         }
+        },
+        {
+         "key": "4",
+         "label": "EV",
+         "resource": {
+          "id": "factoryflow:crop_voltage_ev",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Advanced Crop Manager III"
+         }
+        },
+        {
+         "key": "5",
+         "label": "IV",
+         "resource": {
+          "id": "factoryflow:crop_voltage_iv",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Advanced Crop Manager IV"
+         }
+        },
+        {
+         "key": "6",
+         "label": "LuV",
+         "resource": {
+          "id": "factoryflow:crop_voltage_luv",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Elite Crop Manager"
+         }
+        },
+        {
+         "key": "7",
+         "label": "ZPM",
+         "resource": {
+          "id": "factoryflow:crop_voltage_zpm",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Elite Crop Manager II"
+         }
+        },
+        {
+         "key": "8",
+         "label": "UV",
+         "resource": {
+          "id": "factoryflow:crop_voltage_uv",
+          "kind": "item",
+          "amount": 1,
+          "displayName": "Ultimate Crop Manager"
+         }
+        }
+       ],
+       "defaultKey": "1",
+       "minimumKey": "1"
+      }
+     ]
+    }
+   ]
+  },
+  {
+   "id": "oracle:local-2.9.0-beta-2:gregtech:gt-recipe-distillationtower:de62f2d4071d7241",
+   "eut": 480,
+   "kind": "gregtech_machine",
+   "name": "Distillation Tower: Sulfuric Heavy Fuel",
+   "notes": "Exported by the GTNH calculation oracle from gregtech.api.recipe.RecipeMap.",
+   "inputs": [
+    {
+     "id": "cropsnh:materialleaf@10",
+     "kind": "item",
+     "modId": "cropsnh",
+     "amount": 10,
+     "displayName": "Oil Berry",
+     "dominantColor": "#1e3b24"
+    },
+    {
+     "id": "gregtech:gt.integrated_circuit@2",
+     "kind": "item",
+     "modId": "gregtech",
+     "amount": 1,
+     "consumed": false,
+     "displayName": "Programmed Circuit",
+     "dominantColor": "#9ca18b"
+    }
+   ],
+   "source": {
+    "exporter": "gtnh-oracle",
+    "recipeMap": "Distillation Tower",
+    "rawRecipeId": "gt.recipe.distillationtower:de62f2d4071d7241",
+    "datasetVersionId": "local-2.9.0-rc-2"
+   },
+   "outputs": [
+    {
+     "id": "liquid_sulfuricheavy_fuel",
+     "kind": "fluid",
+     "amount": 300,
+     "displayName": "Sulfuric Heavy Fuel",
+     "dominantColor": "#ffedb0"
+    },
+    {
+     "id": "liquid_sufluriclight_fuel",
+     "kind": "fluid",
+     "amount": 1000,
+     "displayName": "Sulfuric Light Fuel",
+     "dominantColor": "#fff000"
+    },
+    {
+     "id": "liquid_sulfuricnaphtha",
+     "kind": "fluid",
+     "amount": 400,
+     "displayName": "Sulfuric Naphtha",
+     "dominantColor": "#fff000"
+    },
+    {
+     "id": "naphthenicacid",
+     "kind": "fluid",
+     "amount": 50,
+     "displayName": "Naphthenic Acid",
+     "dominantColor": "#cfcfcf"
+    },
+    {
+     "id": "gas_sulfuricgas",
+     "kind": "fluid",
+     "amount": 1200,
+     "displayName": "Sulfuric Gas",
+     "dominantColor": "#dddddd"
+    }
+   ],
+   "category": "gregtech",
+   "metadata": {
+    "recipeMapId": "gt.recipe.distillationtower",
+    "specialValue": 0
+   },
+   "machineType": "Distillation Tower",
+   "minimumTier": "HV",
+   "specialValue": 0,
+   "durationTicks": 146,
+   "machineHandlers": [
+    {
+     "id": "distillation-tower",
+     "kind": "multiblock",
+     "label": "Distillation Tower",
+     "machineType": "Distillation Tower",
+     "minimumTier": "HV"
+    }
+   ],
+   "programmedCircuit": "2",
+   "runtimeCalculation": {
+    "status": "computed",
+    "strict": true,
+    "variants": [
+     {
+      "id": "tier-hv",
+      "eut": 480,
+      "label": "HV",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_sulfuricheavy_fuel",
+        "kind": "fluid",
+        "amount": 300
+       },
+       {
+        "id": "liquid_sufluriclight_fuel",
+        "kind": "fluid",
+        "amount": 1000
+       },
+       {
+        "id": "liquid_sulfuricnaphtha",
+        "kind": "fluid",
+        "amount": 400
+       },
+       {
+        "id": "naphthenicacid",
+        "kind": "fluid",
+        "amount": 50
+       },
+       {
+        "id": "gas_sulfuricgas",
+        "kind": "fluid",
+        "amount": 1200
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 146,
+      "overclockTier": "HV"
+     },
+     {
+      "id": "tier-ev",
+      "eut": 1920,
+      "label": "EV",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_sulfuricheavy_fuel",
+        "kind": "fluid",
+        "amount": 300
+       },
+       {
+        "id": "liquid_sufluriclight_fuel",
+        "kind": "fluid",
+        "amount": 1000
+       },
+       {
+        "id": "liquid_sulfuricnaphtha",
+        "kind": "fluid",
+        "amount": 400
+       },
+       {
+        "id": "naphthenicacid",
+        "kind": "fluid",
+        "amount": 50
+       },
+       {
+        "id": "gas_sulfuricgas",
+        "kind": "fluid",
+        "amount": 1200
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 73,
+      "overclockTier": "EV"
+     },
+     {
+      "id": "tier-iv",
+      "eut": 7680,
+      "label": "IV",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_sulfuricheavy_fuel",
+        "kind": "fluid",
+        "amount": 300
+       },
+       {
+        "id": "liquid_sufluriclight_fuel",
+        "kind": "fluid",
+        "amount": 1000
+       },
+       {
+        "id": "liquid_sulfuricnaphtha",
+        "kind": "fluid",
+        "amount": 400
+       },
+       {
+        "id": "naphthenicacid",
+        "kind": "fluid",
+        "amount": 50
+       },
+       {
+        "id": "gas_sulfuricgas",
+        "kind": "fluid",
+        "amount": 1200
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 36,
+      "overclockTier": "IV"
+     },
+     {
+      "id": "tier-luv",
+      "eut": 30720,
+      "label": "LuV",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_sulfuricheavy_fuel",
+        "kind": "fluid",
+        "amount": 300
+       },
+       {
+        "id": "liquid_sufluriclight_fuel",
+        "kind": "fluid",
+        "amount": 1000
+       },
+       {
+        "id": "liquid_sulfuricnaphtha",
+        "kind": "fluid",
+        "amount": 400
+       },
+       {
+        "id": "naphthenicacid",
+        "kind": "fluid",
+        "amount": 50
+       },
+       {
+        "id": "gas_sulfuricgas",
+        "kind": "fluid",
+        "amount": 1200
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 18,
+      "overclockTier": "LuV"
+     },
+     {
+      "id": "tier-zpm",
+      "eut": 122880,
+      "label": "ZPM",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_sulfuricheavy_fuel",
+        "kind": "fluid",
+        "amount": 300
+       },
+       {
+        "id": "liquid_sufluriclight_fuel",
+        "kind": "fluid",
+        "amount": 1000
+       },
+       {
+        "id": "liquid_sulfuricnaphtha",
+        "kind": "fluid",
+        "amount": 400
+       },
+       {
+        "id": "naphthenicacid",
+        "kind": "fluid",
+        "amount": 50
+       },
+       {
+        "id": "gas_sulfuricgas",
+        "kind": "fluid",
+        "amount": 1200
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 9,
+      "overclockTier": "ZPM"
+     },
+     {
+      "id": "tier-uv",
+      "eut": 491520,
+      "label": "UV",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_sulfuricheavy_fuel",
+        "kind": "fluid",
+        "amount": 300
+       },
+       {
+        "id": "liquid_sufluriclight_fuel",
+        "kind": "fluid",
+        "amount": 1000
+       },
+       {
+        "id": "liquid_sulfuricnaphtha",
+        "kind": "fluid",
+        "amount": 400
+       },
+       {
+        "id": "naphthenicacid",
+        "kind": "fluid",
+        "amount": 50
+       },
+       {
+        "id": "gas_sulfuricgas",
+        "kind": "fluid",
+        "amount": 1200
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 4,
+      "overclockTier": "UV"
+     },
+     {
+      "id": "tier-uhv",
+      "eut": 1966080,
+      "label": "UHV",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_sulfuricheavy_fuel",
+        "kind": "fluid",
+        "amount": 300
+       },
+       {
+        "id": "liquid_sufluriclight_fuel",
+        "kind": "fluid",
+        "amount": 1000
+       },
+       {
+        "id": "liquid_sulfuricnaphtha",
+        "kind": "fluid",
+        "amount": 400
+       },
+       {
+        "id": "naphthenicacid",
+        "kind": "fluid",
+        "amount": 50
+       },
+       {
+        "id": "gas_sulfuricgas",
+        "kind": "fluid",
+        "amount": 1200
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 2,
+      "overclockTier": "UHV"
+     },
+     {
+      "id": "tier-uev",
+      "eut": 7864320,
+      "label": "UEV",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_sulfuricheavy_fuel",
+        "kind": "fluid",
+        "amount": 300
+       },
+       {
+        "id": "liquid_sufluriclight_fuel",
+        "kind": "fluid",
+        "amount": 1000
+       },
+       {
+        "id": "liquid_sulfuricnaphtha",
+        "kind": "fluid",
+        "amount": 400
+       },
+       {
+        "id": "naphthenicacid",
+        "kind": "fluid",
+        "amount": 50
+       },
+       {
+        "id": "gas_sulfuricgas",
+        "kind": "fluid",
+        "amount": 1200
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UEV"
+     },
+     {
+      "id": "tier-uiv",
+      "eut": 31457280,
+      "label": "UIV",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_sulfuricheavy_fuel",
+        "kind": "fluid",
+        "amount": 300
+       },
+       {
+        "id": "liquid_sufluriclight_fuel",
+        "kind": "fluid",
+        "amount": 1000
+       },
+       {
+        "id": "liquid_sulfuricnaphtha",
+        "kind": "fluid",
+        "amount": 400
+       },
+       {
+        "id": "naphthenicacid",
+        "kind": "fluid",
+        "amount": 50
+       },
+       {
+        "id": "gas_sulfuricgas",
+        "kind": "fluid",
+        "amount": 1200
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UIV"
+     },
+     {
+      "id": "tier-umv",
+      "eut": 125829120,
+      "label": "UMV",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_sulfuricheavy_fuel",
+        "kind": "fluid",
+        "amount": 300
+       },
+       {
+        "id": "liquid_sufluriclight_fuel",
+        "kind": "fluid",
+        "amount": 1000
+       },
+       {
+        "id": "liquid_sulfuricnaphtha",
+        "kind": "fluid",
+        "amount": 400
+       },
+       {
+        "id": "naphthenicacid",
+        "kind": "fluid",
+        "amount": 50
+       },
+       {
+        "id": "gas_sulfuricgas",
+        "kind": "fluid",
+        "amount": 1200
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UMV"
+     },
+     {
+      "id": "tier-uxv",
+      "eut": 503316480,
+      "label": "UXV",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_sulfuricheavy_fuel",
+        "kind": "fluid",
+        "amount": 300
+       },
+       {
+        "id": "liquid_sufluriclight_fuel",
+        "kind": "fluid",
+        "amount": 1000
+       },
+       {
+        "id": "liquid_sulfuricnaphtha",
+        "kind": "fluid",
+        "amount": 400
+       },
+       {
+        "id": "naphthenicacid",
+        "kind": "fluid",
+        "amount": 50
+       },
+       {
+        "id": "gas_sulfuricgas",
+        "kind": "fluid",
+        "amount": 1200
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UXV"
+     },
+     {
+      "id": "tier-max",
+      "eut": 8646911284551352000,
+      "label": "MAX",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_sulfuricheavy_fuel",
+        "kind": "fluid",
+        "amount": 300
+       },
+       {
+        "id": "liquid_sufluriclight_fuel",
+        "kind": "fluid",
+        "amount": 1000
+       },
+       {
+        "id": "liquid_sulfuricnaphtha",
+        "kind": "fluid",
+        "amount": 400
+       },
+       {
+        "id": "naphthenicacid",
+        "kind": "fluid",
+        "amount": 50
+       },
+       {
+        "id": "gas_sulfuricgas",
+        "kind": "fluid",
+        "amount": 1200
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "MAX"
+     }
+    ],
+    "recipeMap": "Distillation Tower",
+    "sourceKind": "gregtech-overclock-calculator",
+    "generatedAt": "2026-10-16T19:40:07.623Z",
+    "sourceClass": "gregtech.api.util.OverclockCalculator",
+    "oracleEligible": true
+   }
+  },
+  {
+   "id": "oracle:local-2.9.0-beta-2:gregtech:gt-recipe-largechemicalreactor:15c8d5770e100fb0",
+   "eut": 30,
+   "kind": "gregtech_machine",
+   "name": "Large Chemical Reactor: Heavy Fuel",
+   "notes": "Exported by the GTNH calculation oracle from gregtech.api.recipe.RecipeMap.",
+   "inputs": [
+    {
+     "id": "gregtech:gt.integrated_circuit@4",
+     "kind": "item",
+     "modId": "gregtech",
+     "amount": 1,
+     "consumed": false,
+     "displayName": "Programmed Circuit",
+     "dominantColor": "#9da28c"
+    },
+    {
+     "id": "liquid_sulfuricheavy_fuel",
+     "kind": "fluid",
+     "amount": 8000,
+     "displayName": "Sulfuric Heavy Fuel",
+     "dominantColor": "#ffedb0"
+    },
+    {
+     "id": "hydrogen",
+     "kind": "fluid",
+     "amount": 2000,
+     "displayName": "Hydrogen",
+     "dominantColor": "#ff6565"
+    }
+   ],
+   "source": {
+    "exporter": "gtnh-oracle",
+    "recipeMap": "Large Chemical Reactor",
+    "rawRecipeId": "gt.recipe.largechemicalreactor:15c8d5770e100fb0",
+    "datasetVersionId": "local-2.9.0-rc-2"
+   },
+   "outputs": [
+    {
+     "id": "liquid_heavy_fuel",
+     "kind": "fluid",
+     "amount": 8000,
+     "displayName": "Heavy Fuel",
+     "dominantColor": "#ffedb0"
+    },
+    {
+     "id": "liquid_hydricsulfur",
+     "kind": "fluid",
+     "amount": 1000,
+     "displayName": "Hydrogen Sulfide",
+     "dominantColor": "#ff5200"
+    }
+   ],
+   "category": "gregtech",
+   "metadata": {
+    "recipeMapId": "gt.recipe.largechemicalreactor",
+    "specialValue": 0
+   },
+   "machineType": "Large Chemical Reactor",
+   "minimumTier": "LV",
+   "specialValue": 0,
+   "durationTicks": 160,
+   "machineHandlers": [
+    {
+     "id": "large-chemical-reactor",
+     "kind": "multiblock",
+     "label": "Large Chemical Reactor",
+     "machineType": "Large Chemical Reactor",
+     "minimumTier": "LV",
+     "perfectOverclock": true
+    }
+   ],
+   "programmedCircuit": "4",
+   "runtimeCalculation": {
+    "status": "computed",
+    "strict": true,
+    "variants": [
+     {
+      "id": "tier-lv-perfect-oc",
+      "eut": 30,
+      "label": "LV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_heavy_fuel",
+        "kind": "fluid",
+        "amount": 8000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 160,
+      "overclockTier": "LV"
+     },
+     {
+      "id": "tier-mv-perfect-oc",
+      "eut": 120,
+      "label": "MV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_heavy_fuel",
+        "kind": "fluid",
+        "amount": 8000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 40,
+      "overclockTier": "MV"
+     },
+     {
+      "id": "tier-hv-perfect-oc",
+      "eut": 480,
+      "label": "HV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_heavy_fuel",
+        "kind": "fluid",
+        "amount": 8000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 10,
+      "overclockTier": "HV"
+     },
+     {
+      "id": "tier-ev-perfect-oc",
+      "eut": 1920,
+      "label": "EV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_heavy_fuel",
+        "kind": "fluid",
+        "amount": 8000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 2,
+      "overclockTier": "EV"
+     },
+     {
+      "id": "tier-iv-perfect-oc",
+      "eut": 7680,
+      "label": "IV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_heavy_fuel",
+        "kind": "fluid",
+        "amount": 8000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "IV"
+     },
+     {
+      "id": "tier-luv-perfect-oc",
+      "eut": 30720,
+      "label": "LuV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_heavy_fuel",
+        "kind": "fluid",
+        "amount": 8000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "LuV"
+     },
+     {
+      "id": "tier-zpm-perfect-oc",
+      "eut": 122880,
+      "label": "ZPM Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_heavy_fuel",
+        "kind": "fluid",
+        "amount": 8000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "ZPM"
+     },
+     {
+      "id": "tier-uv-perfect-oc",
+      "eut": 491520,
+      "label": "UV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_heavy_fuel",
+        "kind": "fluid",
+        "amount": 8000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UV"
+     },
+     {
+      "id": "tier-uhv-perfect-oc",
+      "eut": 1966080,
+      "label": "UHV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_heavy_fuel",
+        "kind": "fluid",
+        "amount": 8000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UHV"
+     },
+     {
+      "id": "tier-uev-perfect-oc",
+      "eut": 7864320,
+      "label": "UEV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_heavy_fuel",
+        "kind": "fluid",
+        "amount": 8000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UEV"
+     },
+     {
+      "id": "tier-uiv-perfect-oc",
+      "eut": 31457280,
+      "label": "UIV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_heavy_fuel",
+        "kind": "fluid",
+        "amount": 8000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UIV"
+     },
+     {
+      "id": "tier-umv-perfect-oc",
+      "eut": 125829120,
+      "label": "UMV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_heavy_fuel",
+        "kind": "fluid",
+        "amount": 8000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UMV"
+     },
+     {
+      "id": "tier-uxv-perfect-oc",
+      "eut": 503316480,
+      "label": "UXV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_heavy_fuel",
+        "kind": "fluid",
+        "amount": 8000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UXV"
+     },
+     {
+      "id": "tier-max-perfect-oc",
+      "eut": 8646911284551352000,
+      "label": "MAX Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_heavy_fuel",
+        "kind": "fluid",
+        "amount": 8000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "MAX"
+     }
+    ],
+    "recipeMap": "Large Chemical Reactor",
+    "sourceKind": "gregtech-overclock-calculator",
+    "generatedAt": "2026-10-16T19:40:11.360Z",
+    "sourceClass": "gregtech.api.util.OverclockCalculator",
+    "oracleEligible": true
+   }
+  },
+  {
+   "id": "oracle:local-2.9.0-beta-2:gregtech:gt-recipe-largechemicalreactor:0f231c2136de3159",
+   "eut": 30,
+   "kind": "gregtech_machine",
+   "name": "Large Chemical Reactor: Light Fuel",
+   "notes": "Exported by the GTNH calculation oracle from gregtech.api.recipe.RecipeMap.",
+   "inputs": [
+    {
+     "id": "gregtech:gt.integrated_circuit@4",
+     "kind": "item",
+     "modId": "gregtech",
+     "amount": 1,
+     "consumed": false,
+     "displayName": "Programmed Circuit",
+     "dominantColor": "#9da28c"
+    },
+    {
+     "id": "liquid_sufluriclight_fuel",
+     "kind": "fluid",
+     "amount": 12000,
+     "displayName": "Sulfuric Light Fuel",
+     "dominantColor": "#fff000"
+    },
+    {
+     "id": "hydrogen",
+     "kind": "fluid",
+     "amount": 2000,
+     "displayName": "Hydrogen",
+     "dominantColor": "#ff6565"
+    }
+   ],
+   "source": {
+    "exporter": "gtnh-oracle",
+    "recipeMap": "Large Chemical Reactor",
+    "rawRecipeId": "gt.recipe.largechemicalreactor:0f231c2136de3159",
+    "datasetVersionId": "local-2.9.0-rc-2"
+   },
+   "outputs": [
+    {
+     "id": "liquid_light_fuel",
+     "kind": "fluid",
+     "amount": 12000,
+     "displayName": "Light Fuel",
+     "dominantColor": "#fff000"
+    },
+    {
+     "id": "liquid_hydricsulfur",
+     "kind": "fluid",
+     "amount": 1000,
+     "displayName": "Hydrogen Sulfide",
+     "dominantColor": "#ff5200"
+    }
+   ],
+   "category": "gregtech",
+   "metadata": {
+    "recipeMapId": "gt.recipe.largechemicalreactor",
+    "specialValue": 0
+   },
+   "machineType": "Large Chemical Reactor",
+   "minimumTier": "LV",
+   "specialValue": 0,
+   "durationTicks": 160,
+   "machineHandlers": [
+    {
+     "id": "large-chemical-reactor",
+     "kind": "multiblock",
+     "label": "Large Chemical Reactor",
+     "machineType": "Large Chemical Reactor",
+     "minimumTier": "LV",
+     "perfectOverclock": true
+    }
+   ],
+   "programmedCircuit": "4",
+   "runtimeCalculation": {
+    "status": "computed",
+    "strict": true,
+    "variants": [
+     {
+      "id": "tier-lv-perfect-oc",
+      "eut": 30,
+      "label": "LV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_light_fuel",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 160,
+      "overclockTier": "LV"
+     },
+     {
+      "id": "tier-mv-perfect-oc",
+      "eut": 120,
+      "label": "MV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_light_fuel",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 40,
+      "overclockTier": "MV"
+     },
+     {
+      "id": "tier-hv-perfect-oc",
+      "eut": 480,
+      "label": "HV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_light_fuel",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 10,
+      "overclockTier": "HV"
+     },
+     {
+      "id": "tier-ev-perfect-oc",
+      "eut": 1920,
+      "label": "EV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_light_fuel",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 2,
+      "overclockTier": "EV"
+     },
+     {
+      "id": "tier-iv-perfect-oc",
+      "eut": 7680,
+      "label": "IV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_light_fuel",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "IV"
+     },
+     {
+      "id": "tier-luv-perfect-oc",
+      "eut": 30720,
+      "label": "LuV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_light_fuel",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "LuV"
+     },
+     {
+      "id": "tier-zpm-perfect-oc",
+      "eut": 122880,
+      "label": "ZPM Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_light_fuel",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "ZPM"
+     },
+     {
+      "id": "tier-uv-perfect-oc",
+      "eut": 491520,
+      "label": "UV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_light_fuel",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UV"
+     },
+     {
+      "id": "tier-uhv-perfect-oc",
+      "eut": 1966080,
+      "label": "UHV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_light_fuel",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UHV"
+     },
+     {
+      "id": "tier-uev-perfect-oc",
+      "eut": 7864320,
+      "label": "UEV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_light_fuel",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UEV"
+     },
+     {
+      "id": "tier-uiv-perfect-oc",
+      "eut": 31457280,
+      "label": "UIV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_light_fuel",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UIV"
+     },
+     {
+      "id": "tier-umv-perfect-oc",
+      "eut": 125829120,
+      "label": "UMV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_light_fuel",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UMV"
+     },
+     {
+      "id": "tier-uxv-perfect-oc",
+      "eut": 503316480,
+      "label": "UXV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_light_fuel",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UXV"
+     },
+     {
+      "id": "tier-max-perfect-oc",
+      "eut": 8646911284551352000,
+      "label": "MAX Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_light_fuel",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "MAX"
+     }
+    ],
+    "recipeMap": "Large Chemical Reactor",
+    "sourceKind": "gregtech-overclock-calculator",
+    "generatedAt": "2026-10-16T19:40:11.361Z",
+    "sourceClass": "gregtech.api.util.OverclockCalculator",
+    "oracleEligible": true
+   }
+  },
+  {
+   "id": "oracle:local-2.9.0-beta-2:gregtech:gt-recipe-largechemicalreactor:f2ed21fade8d24f8",
+   "eut": 30,
+   "kind": "gregtech_machine",
+   "name": "Large Chemical Reactor: Naphtha",
+   "notes": "Exported by the GTNH calculation oracle from gregtech.api.recipe.RecipeMap.",
+   "inputs": [
+    {
+     "id": "gregtech:gt.integrated_circuit@4",
+     "kind": "item",
+     "modId": "gregtech",
+     "amount": 1,
+     "consumed": false,
+     "displayName": "Programmed Circuit",
+     "dominantColor": "#9da28c"
+    },
+    {
+     "id": "liquid_sulfuricnaphtha",
+     "kind": "fluid",
+     "amount": 12000,
+     "displayName": "Sulfuric Naphtha",
+     "dominantColor": "#fff000"
+    },
+    {
+     "id": "hydrogen",
+     "kind": "fluid",
+     "amount": 2000,
+     "displayName": "Hydrogen",
+     "dominantColor": "#ff6565"
+    }
+   ],
+   "source": {
+    "exporter": "gtnh-oracle",
+    "recipeMap": "Large Chemical Reactor",
+    "rawRecipeId": "gt.recipe.largechemicalreactor:f2ed21fade8d24f8",
+    "datasetVersionId": "local-2.9.0-rc-2"
+   },
+   "outputs": [
+    {
+     "id": "liquid_naphtha",
+     "kind": "fluid",
+     "amount": 12000,
+     "displayName": "Naphtha",
+     "dominantColor": "#fff000"
+    },
+    {
+     "id": "liquid_hydricsulfur",
+     "kind": "fluid",
+     "amount": 1000,
+     "displayName": "Hydrogen Sulfide",
+     "dominantColor": "#ff5200"
+    }
+   ],
+   "category": "gregtech",
+   "metadata": {
+    "recipeMapId": "gt.recipe.largechemicalreactor",
+    "specialValue": 0
+   },
+   "machineType": "Large Chemical Reactor",
+   "minimumTier": "LV",
+   "specialValue": 0,
+   "durationTicks": 160,
+   "machineHandlers": [
+    {
+     "id": "large-chemical-reactor",
+     "kind": "multiblock",
+     "label": "Large Chemical Reactor",
+     "machineType": "Large Chemical Reactor",
+     "minimumTier": "LV",
+     "perfectOverclock": true
+    }
+   ],
+   "programmedCircuit": "4",
+   "runtimeCalculation": {
+    "status": "computed",
+    "strict": true,
+    "variants": [
+     {
+      "id": "tier-lv-perfect-oc",
+      "eut": 30,
+      "label": "LV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_naphtha",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 160,
+      "overclockTier": "LV"
+     },
+     {
+      "id": "tier-mv-perfect-oc",
+      "eut": 120,
+      "label": "MV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_naphtha",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 40,
+      "overclockTier": "MV"
+     },
+     {
+      "id": "tier-hv-perfect-oc",
+      "eut": 480,
+      "label": "HV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_naphtha",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 10,
+      "overclockTier": "HV"
+     },
+     {
+      "id": "tier-ev-perfect-oc",
+      "eut": 1920,
+      "label": "EV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_naphtha",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 2,
+      "overclockTier": "EV"
+     },
+     {
+      "id": "tier-iv-perfect-oc",
+      "eut": 7680,
+      "label": "IV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_naphtha",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "IV"
+     },
+     {
+      "id": "tier-luv-perfect-oc",
+      "eut": 30720,
+      "label": "LuV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_naphtha",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "LuV"
+     },
+     {
+      "id": "tier-zpm-perfect-oc",
+      "eut": 122880,
+      "label": "ZPM Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_naphtha",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "ZPM"
+     },
+     {
+      "id": "tier-uv-perfect-oc",
+      "eut": 491520,
+      "label": "UV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_naphtha",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UV"
+     },
+     {
+      "id": "tier-uhv-perfect-oc",
+      "eut": 1966080,
+      "label": "UHV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_naphtha",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UHV"
+     },
+     {
+      "id": "tier-uev-perfect-oc",
+      "eut": 7864320,
+      "label": "UEV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_naphtha",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UEV"
+     },
+     {
+      "id": "tier-uiv-perfect-oc",
+      "eut": 31457280,
+      "label": "UIV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_naphtha",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UIV"
+     },
+     {
+      "id": "tier-umv-perfect-oc",
+      "eut": 125829120,
+      "label": "UMV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_naphtha",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UMV"
+     },
+     {
+      "id": "tier-uxv-perfect-oc",
+      "eut": 503316480,
+      "label": "UXV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_naphtha",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UXV"
+     },
+     {
+      "id": "tier-max-perfect-oc",
+      "eut": 8646911284551352000,
+      "label": "MAX Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "liquid_naphtha",
+        "kind": "fluid",
+        "amount": 12000
+       },
+       {
+        "id": "liquid_hydricsulfur",
+        "kind": "fluid",
+        "amount": 1000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "MAX"
+     }
+    ],
+    "recipeMap": "Large Chemical Reactor",
+    "sourceKind": "gregtech-overclock-calculator",
+    "generatedAt": "2026-10-16T19:40:11.361Z",
+    "sourceClass": "gregtech.api.util.OverclockCalculator",
+    "oracleEligible": true
+   }
+  },
+  {
+   "id": "oracle:local-2.9.0-beta-2:gregtech:gt-recipe-electrolyzer:8b2281c335447f85",
+   "eut": 120,
+   "kind": "gregtech_machine",
+   "name": "Electrolyzer: Sulfur Dust",
+   "notes": "Exported by the GTNH calculation oracle from gregtech.api.recipe.RecipeMap.",
+   "inputs": [
+    {
+     "id": "liquid_hydricsulfur",
+     "kind": "fluid",
+     "amount": 1000,
+     "displayName": "Hydrogen Sulfide",
+     "dominantColor": "#ff5200"
+    }
+   ],
+   "source": {
+    "exporter": "gtnh-oracle",
+    "recipeMap": "Electrolyzer",
+    "rawRecipeId": "gt.recipe.electrolyzer:8b2281c335447f85",
+    "datasetVersionId": "local-2.9.0-rc-2"
+   },
+   "outputs": [
+    {
+     "id": "gregtech:gt.metaitem.01@2022",
+     "kind": "item",
+     "modId": "gregtech",
+     "amount": 1,
+     "displayName": "Sulfur Dust",
+     "alternatives": [
+      {
+       "id": "gregtech:gt.metaitem.01@2022",
+       "kind": "item",
+       "modId": "gregtech",
+       "amount": 1,
+       "displayName": "Sulfur Dust",
+       "dominantColor": "#6b6b00"
+      },
+      {
+       "id": "natura:barleyfood@4",
+       "kind": "item",
+       "modId": "Natura",
+       "amount": 1,
+       "displayName": "Sulfur",
+       "dominantColor": "#bda237"
+      },
+      {
+       "id": "ic2:itemdust@13",
+       "kind": "item",
+       "modId": "IC2",
+       "amount": 1,
+       "displayName": "Sulfur Dust",
+       "dominantColor": "#898c02"
+      }
+     ],
+     "dominantColor": "#6b6b00"
+    },
+    {
+     "id": "hydrogen",
+     "kind": "fluid",
+     "amount": 2000,
+     "displayName": "Hydrogen",
+     "dominantColor": "#ff6565"
+    }
+   ],
+   "category": "gregtech",
+   "metadata": {
+    "recipeMapId": "gt.recipe.electrolyzer",
+    "specialValue": 0
+   },
+   "machineType": "Electrolyzer",
+   "minimumTier": "MV",
+   "specialValue": 0,
+   "durationTicks": 72,
+   "machineHandlers": [
+    {
+     "id": "electrolyzer",
+     "kind": "single",
+     "label": "Electrolyzer",
+     "machineType": "Electrolyzer",
+     "maximumTier": "UMV",
+     "minimumTier": "MV",
+     "availableTiers": [
+      "LV",
+      "MV",
+      "HV",
+      "EV",
+      "IV",
+      "LuV",
+      "ZPM",
+      "UV",
+      "UHV",
+      "UEV",
+      "UIV",
+      "UMV"
+     ]
+    }
+   ],
+   "runtimeCalculation": {
+    "status": "computed",
+    "strict": true,
+    "variants": [
+     {
+      "id": "tier-mv",
+      "eut": 120,
+      "label": "MV",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "gregtech:gt.metaitem.01@2022",
+        "kind": "item",
+        "amount": 1
+       },
+       {
+        "id": "hydrogen",
+        "kind": "fluid",
+        "amount": 2000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 72,
+      "overclockTier": "MV"
+     },
+     {
+      "id": "tier-hv",
+      "eut": 480,
+      "label": "HV",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "gregtech:gt.metaitem.01@2022",
+        "kind": "item",
+        "amount": 1
+       },
+       {
+        "id": "hydrogen",
+        "kind": "fluid",
+        "amount": 2000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 36,
+      "overclockTier": "HV"
+     },
+     {
+      "id": "tier-ev",
+      "eut": 1920,
+      "label": "EV",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "gregtech:gt.metaitem.01@2022",
+        "kind": "item",
+        "amount": 1
+       },
+       {
+        "id": "hydrogen",
+        "kind": "fluid",
+        "amount": 2000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 18,
+      "overclockTier": "EV"
+     },
+     {
+      "id": "tier-iv",
+      "eut": 7680,
+      "label": "IV",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "gregtech:gt.metaitem.01@2022",
+        "kind": "item",
+        "amount": 1
+       },
+       {
+        "id": "hydrogen",
+        "kind": "fluid",
+        "amount": 2000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 9,
+      "overclockTier": "IV"
+     },
+     {
+      "id": "tier-luv",
+      "eut": 30720,
+      "label": "LuV",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "gregtech:gt.metaitem.01@2022",
+        "kind": "item",
+        "amount": 1
+       },
+       {
+        "id": "hydrogen",
+        "kind": "fluid",
+        "amount": 2000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 4,
+      "overclockTier": "LuV"
+     },
+     {
+      "id": "tier-zpm",
+      "eut": 122880,
+      "label": "ZPM",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "gregtech:gt.metaitem.01@2022",
+        "kind": "item",
+        "amount": 1
+       },
+       {
+        "id": "hydrogen",
+        "kind": "fluid",
+        "amount": 2000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 2,
+      "overclockTier": "ZPM"
+     },
+     {
+      "id": "tier-uv",
+      "eut": 491520,
+      "label": "UV",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "gregtech:gt.metaitem.01@2022",
+        "kind": "item",
+        "amount": 1
+       },
+       {
+        "id": "hydrogen",
+        "kind": "fluid",
+        "amount": 2000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UV"
+     },
+     {
+      "id": "tier-uhv",
+      "eut": 1966080,
+      "label": "UHV",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "gregtech:gt.metaitem.01@2022",
+        "kind": "item",
+        "amount": 1
+       },
+       {
+        "id": "hydrogen",
+        "kind": "fluid",
+        "amount": 2000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UHV"
+     },
+     {
+      "id": "tier-uev",
+      "eut": 7864320,
+      "label": "UEV",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "gregtech:gt.metaitem.01@2022",
+        "kind": "item",
+        "amount": 1
+       },
+       {
+        "id": "hydrogen",
+        "kind": "fluid",
+        "amount": 2000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UEV"
+     },
+     {
+      "id": "tier-uiv",
+      "eut": 31457280,
+      "label": "UIV",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "gregtech:gt.metaitem.01@2022",
+        "kind": "item",
+        "amount": 1
+       },
+       {
+        "id": "hydrogen",
+        "kind": "fluid",
+        "amount": 2000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UIV"
+     },
+     {
+      "id": "tier-umv",
+      "eut": 125829120,
+      "label": "UMV",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "gregtech:gt.metaitem.01@2022",
+        "kind": "item",
+        "amount": 1
+       },
+       {
+        "id": "hydrogen",
+        "kind": "fluid",
+        "amount": 2000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UMV"
+     },
+     {
+      "id": "tier-uxv",
+      "eut": 503316480,
+      "label": "UXV",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "gregtech:gt.metaitem.01@2022",
+        "kind": "item",
+        "amount": 1
+       },
+       {
+        "id": "hydrogen",
+        "kind": "fluid",
+        "amount": 2000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UXV"
+     },
+     {
+      "id": "tier-max",
+      "eut": 8646911284551352000,
+      "label": "MAX",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "gregtech:gt.metaitem.01@2022",
+        "kind": "item",
+        "amount": 1
+       },
+       {
+        "id": "hydrogen",
+        "kind": "fluid",
+        "amount": 2000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "MAX"
+     }
+    ],
+    "recipeMap": "Electrolyzer",
+    "sourceKind": "gregtech-overclock-calculator",
+    "generatedAt": "2026-10-16T19:40:07.673Z",
+    "sourceClass": "gregtech.api.util.OverclockCalculator",
+    "oracleEligible": true
+   }
+  },
+  {
+   "id": "oracle:local-2.9.0-beta-2:gregtech:gt-recipe-largechemicalreactor:585a73fd7dbd92d5",
+   "eut": 480,
+   "kind": "gregtech_machine",
+   "name": "Large Chemical Reactor: Fuel",
+   "notes": "Exported by the GTNH calculation oracle from gregtech.api.recipe.RecipeMap.",
+   "inputs": [
+    {
+     "id": "gregtech:gt.integrated_circuit@24",
+     "kind": "item",
+     "modId": "gregtech",
+     "amount": 1,
+     "consumed": false,
+     "displayName": "Programmed Circuit",
+     "dominantColor": "#979c87"
+    },
+    {
+     "id": "liquid_light_fuel",
+     "kind": "fluid",
+     "amount": 20000,
+     "displayName": "Light Fuel",
+     "dominantColor": "#fff000"
+    },
+    {
+     "id": "liquid_heavy_fuel",
+     "kind": "fluid",
+     "amount": 4000,
+     "displayName": "Heavy Fuel",
+     "dominantColor": "#ffedb0"
+    }
+   ],
+   "source": {
+    "exporter": "gtnh-oracle",
+    "recipeMap": "Large Chemical Reactor",
+    "rawRecipeId": "gt.recipe.largechemicalreactor:585a73fd7dbd92d5",
+    "datasetVersionId": "local-2.9.0-rc-2"
+   },
+   "outputs": [
+    {
+     "id": "fuel",
+     "kind": "fluid",
+     "amount": 24000,
+     "displayName": "Fuel",
+     "dominantColor": "#959000"
+    }
+   ],
+   "category": "gregtech",
+   "metadata": {
+    "recipeMapId": "gt.recipe.largechemicalreactor",
+    "specialValue": 0
+   },
+   "machineType": "Large Chemical Reactor",
+   "minimumTier": "HV",
+   "specialValue": 0,
+   "durationTicks": 100,
+   "machineHandlers": [
+    {
+     "id": "large-chemical-reactor",
+     "kind": "multiblock",
+     "label": "Large Chemical Reactor",
+     "machineType": "Large Chemical Reactor",
+     "minimumTier": "HV",
+     "perfectOverclock": true
+    }
+   ],
+   "programmedCircuit": "24",
+   "runtimeCalculation": {
+    "status": "computed",
+    "strict": true,
+    "variants": [
+     {
+      "id": "tier-hv-perfect-oc",
+      "eut": 480,
+      "label": "HV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "fuel",
+        "kind": "fluid",
+        "amount": 24000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 100,
+      "overclockTier": "HV"
+     },
+     {
+      "id": "tier-ev-perfect-oc",
+      "eut": 1920,
+      "label": "EV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "fuel",
+        "kind": "fluid",
+        "amount": 24000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 25,
+      "overclockTier": "EV"
+     },
+     {
+      "id": "tier-iv-perfect-oc",
+      "eut": 7680,
+      "label": "IV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "fuel",
+        "kind": "fluid",
+        "amount": 24000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 6,
+      "overclockTier": "IV"
+     },
+     {
+      "id": "tier-luv-perfect-oc",
+      "eut": 30720,
+      "label": "LuV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "fuel",
+        "kind": "fluid",
+        "amount": 24000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "LuV"
+     },
+     {
+      "id": "tier-zpm-perfect-oc",
+      "eut": 122880,
+      "label": "ZPM Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "fuel",
+        "kind": "fluid",
+        "amount": 24000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "ZPM"
+     },
+     {
+      "id": "tier-uv-perfect-oc",
+      "eut": 491520,
+      "label": "UV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "fuel",
+        "kind": "fluid",
+        "amount": 24000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UV"
+     },
+     {
+      "id": "tier-uhv-perfect-oc",
+      "eut": 1966080,
+      "label": "UHV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "fuel",
+        "kind": "fluid",
+        "amount": 24000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UHV"
+     },
+     {
+      "id": "tier-uev-perfect-oc",
+      "eut": 7864320,
+      "label": "UEV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "fuel",
+        "kind": "fluid",
+        "amount": 24000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UEV"
+     },
+     {
+      "id": "tier-uiv-perfect-oc",
+      "eut": 31457280,
+      "label": "UIV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "fuel",
+        "kind": "fluid",
+        "amount": 24000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UIV"
+     },
+     {
+      "id": "tier-umv-perfect-oc",
+      "eut": 125829120,
+      "label": "UMV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "fuel",
+        "kind": "fluid",
+        "amount": 24000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UMV"
+     },
+     {
+      "id": "tier-uxv-perfect-oc",
+      "eut": 503316480,
+      "label": "UXV Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "fuel",
+        "kind": "fluid",
+        "amount": 24000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "UXV"
+     },
+     {
+      "id": "tier-max-perfect-oc",
+      "eut": 8646911284551352000,
+      "label": "MAX Perfect OC",
+      "notes": "GTNH perfect overclock profile.",
+      "inputs": [],
+      "outputs": [
+       {
+        "id": "fuel",
+        "kind": "fluid",
+        "amount": 24000
+       }
+      ],
+      "parallel": 1,
+      "durationTicks": 1,
+      "overclockTier": "MAX"
+     }
+    ],
+    "recipeMap": "Large Chemical Reactor",
+    "sourceKind": "gregtech-overclock-calculator",
+    "generatedAt": "2026-10-16T19:40:11.297Z",
+    "sourceClass": "gregtech.api.util.OverclockCalculator",
+    "oracleEligible": true
+   }
+  }
+ ],
+ "planMode": true,
+ "storages": [
+  {
+   "id": "storage-dc9a1a65-93c1-4925-a6a6-5b2afe8c7f49",
+   "kind": "item",
+   "position": {
+    "x": 760,
+    "y": -520
+   },
+   "resourceId": "gregtech:gt.metaitem.01@2022",
+   "displayName": "Sulfur Dust",
+   "dominantColor": "#6b6b00"
+  }
+ ],
+ "solveMode": true,
+ "annotations": [],
+ "schemaVersion": 1,
+ "fuelProfiles": [
+  {
+   "id": "benzene",
+   "name": "Benzene",
+   "notes": "GTNH generator fuel value.",
+   "euPerLiter": 32000,
+   "fuelFluidId": "benzene"
+  },
+  {
+   "id": "biodiesel",
+   "name": "Biodiesel",
+   "notes": "GTNH generator fuel value.",
+   "euPerLiter": 12800,
+   "fuelFluidId": "biodiesel"
+  },
+  {
+   "id": "steam",
+   "name": "Steam",
+   "notes": "GTNH steam turbine value.",
+   "euPerLiter": 16,
+   "fuelFluidId": "steam"
+  }
+ ],
+ "selectedFuelProfileId": "biodiesel"
+}

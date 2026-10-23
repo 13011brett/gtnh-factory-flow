@@ -186,6 +186,75 @@ it("bar tip: usage, the reason in full and where to act", () => {
   expect(forced.title).toBe("Exactly 24 running");
   expect(forced.rows).toEqual([{ label: "Forced in", value: "720 L/s Oxygen", tone: "warn" }]);
   expect(footTip("n", facts({ reason: "UNUSED", running: 0 })).title).toBe("None running");
+  // UNUSED on a row with no wire: nothing takes it, so wire it.
+  const unwired = footTip(
+    "n",
+    facts({ reason: "UNUSED", running: 0, resource: "Oil Berry", wired: false }),
+  );
+  expect(unwired.rows?.map((r) => `${r.label}: ${r.value}`)).toEqual([
+    "Usage: 0%",
+    "Nothing takes: Oil Berry",
+  ]);
+  expect(unwired.notes?.[0]?.text).toBe("Wire its output or give it a rate.");
+  // UNUSED on a wired row: it backs up, and the note never tells you to wire what is wired.
+  const wired = footTip(
+    "n",
+    facts({ reason: "UNUSED", running: 0, resource: "Oil Berry", wired: true }),
+  );
+  expect(wired.rows?.map((r) => `${r.label}: ${r.value}`)).toEqual([
+    "Usage: 0%",
+    "Backs up: Oil Berry",
+  ]);
+  expect(wired.notes?.map((note) => note.text)).toEqual([
+    "What takes it uses none of it: it is stopped, or has enough from elsewhere.",
+  ]);
+  // Stopped by a spare output further down the line: what and where, and the fix the notices bar offers.
+  const stranded = footTip(
+    "n",
+    facts({
+      reason: "UNUSED",
+      running: 0,
+      resource: "Oil Berry",
+      wired: true,
+      stranded: { resource: "Heavy Fuel", at: "Large Chemical Reactor that makes it" },
+    }),
+  );
+  expect(stranded.rows?.map((r) => `${r.label}: ${r.value}`)).toEqual([
+    "Usage: 0%",
+    "Stuck on: Heavy Fuel at the Large Chemical Reactor that makes it",
+  ]);
+  expect(stranded.notes?.map((note) => note.text)).toEqual([
+    "Spare Heavy Fuel at the Large Chemical Reactor that makes it has nowhere to go, so this line can't run. A drawer for it there frees it.",
+  ]);
+  // The click only says so when the bar has somewhere to go.
+  expect(stranded.actions).toBeUndefined();
+  const goes = footTip("n", {
+    ...facts({
+      reason: "UNUSED",
+      running: 0,
+      stranded: { resource: "Heavy Fuel", at: "Large Chemical Reactor" },
+    }),
+    show: ["lcr"],
+  });
+  expect(goes.actions).toEqual([{ input: "left", label: "Show where it is stuck" }]);
+  expect(footTip("n", { ...facts({ reason: "UNUSED", running: 0 }), show: ["lcr"] }).actions).toBe(
+    undefined,
+  );
+  const strandedWire = footTip(
+    "n",
+    facts({
+      reason: "UNUSED",
+      running: 0,
+      stranded: {
+        resource: "Hydrogen Cell",
+        at: "Electrolyzer",
+        wire: "Chemical Reactor that makes Light Fuel",
+      },
+    }),
+  );
+  expect(strandedWire.notes?.map((note) => note.text)).toEqual([
+    "Spare Hydrogen Cell at the Electrolyzer has nowhere to go, so this line can't run. Wiring it to the Chemical Reactor that makes Light Fuel, whose Hydrogen Cell input is not wired, frees it.",
+  ]);
   const dead = footTip(
     "n",
     facts({ reason: "STARVED", loop: "dead", running: 0, resource: "Oxygen" }),

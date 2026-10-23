@@ -1,0 +1,1842 @@
+{
+ "schemaVersion": 1,
+ "id": "oil-berry-diesel-loop",
+ "name": "Oil Berry Diesel (hydrogen loop)",
+ "solveMode": true,
+ "planMode": true,
+ "recipes": [
+  {
+   "id": "oracle:local-2.9.0-beta-2:cropsnh-crop:cropsnh:cropsnh-oilberry",
+   "name": "Crop Farm: Oil Berry",
+   "kind": "crop_produce",
+   "category": "cropsnh-crop",
+   "machineType": "Crop Farm",
+   "minimumTier": "NONE",
+   "durationTicks": 2560,
+   "eut": 0,
+   "inputs": [
+    {
+     "kind": "item",
+     "id": "factoryflow:cropsnh_seed:cropsnh-oilberry",
+     "amount": 1,
+     "displayName": "Oil Berry Seeds",
+     "dominantColor": "#6b7280",
+     "modId": "cropsnh",
+     "neiSlot": {
+      "x": 34,
+      "y": 35
+     },
+     "consumed": false
+    }
+   ],
+   "outputs": [
+    {
+     "kind": "item",
+     "id": "cropsnh:materialleaf@10",
+     "amount": 4.724288,
+     "displayName": "Oil Berry",
+     "dominantColor": "#1e3b24",
+     "modId": "cropsnh",
+     "neiSlot": {
+      "x": 124,
+      "y": 35
+     }
+    }
+   ],
+   "machineHandlers": [
+    {
+     "machineType": "Crop Manager",
+     "minimumTier": "NONE",
+     "eut": 0,
+     "id": "crop-manager",
+     "label": "Crop Manager",
+     "kind": "single",
+     "machineConfigControls": [
+      {
+       "id": "cropGrowthStat",
+       "label": "Growth",
+       "minimumKey": "1",
+       "defaultKey": "31",
+       "tiers": [
+        {
+         "key": "1",
+         "label": "1",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "2",
+         "label": "2",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "3",
+         "label": "3",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "4",
+         "label": "4",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "5",
+         "label": "5",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "6",
+         "label": "6",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "7",
+         "label": "7",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "8",
+         "label": "8",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "9",
+         "label": "9",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "10",
+         "label": "10",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "11",
+         "label": "11",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "12",
+         "label": "12",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "13",
+         "label": "13",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "14",
+         "label": "14",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "15",
+         "label": "15",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "16",
+         "label": "16",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "17",
+         "label": "17",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "18",
+         "label": "18",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "19",
+         "label": "19",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "20",
+         "label": "20",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "21",
+         "label": "21",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "22",
+         "label": "22",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "23",
+         "label": "23",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "24",
+         "label": "24",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "25",
+         "label": "25",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "26",
+         "label": "26",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "27",
+         "label": "27",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "28",
+         "label": "28",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "29",
+         "label": "29",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "30",
+         "label": "30",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        },
+        {
+         "key": "31",
+         "label": "31",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGrowthStat",
+          "amount": 1,
+          "displayName": "Crop Sticks"
+         }
+        }
+       ]
+      },
+      {
+       "id": "cropGainStat",
+       "label": "Gain",
+       "minimumKey": "1",
+       "defaultKey": "31",
+       "tiers": [
+        {
+         "key": "1",
+         "label": "1",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "2",
+         "label": "2",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "3",
+         "label": "3",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "4",
+         "label": "4",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "5",
+         "label": "5",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "6",
+         "label": "6",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "7",
+         "label": "7",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "8",
+         "label": "8",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "9",
+         "label": "9",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "10",
+         "label": "10",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "11",
+         "label": "11",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "12",
+         "label": "12",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "13",
+         "label": "13",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "14",
+         "label": "14",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "15",
+         "label": "15",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "16",
+         "label": "16",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "17",
+         "label": "17",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "18",
+         "label": "18",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "19",
+         "label": "19",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "20",
+         "label": "20",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "21",
+         "label": "21",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "22",
+         "label": "22",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "23",
+         "label": "23",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "24",
+         "label": "24",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "25",
+         "label": "25",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "26",
+         "label": "26",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "27",
+         "label": "27",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "28",
+         "label": "28",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "29",
+         "label": "29",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "30",
+         "label": "30",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        },
+        {
+         "key": "31",
+         "label": "31",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropGainStat",
+          "amount": 1,
+          "displayName": "Plant Lens"
+         }
+        }
+       ]
+      },
+      {
+       "id": "cropWater",
+       "label": "Water",
+       "minimumKey": "0",
+       "defaultKey": "100",
+       "tiers": [
+        {
+         "key": "0",
+         "label": "Dry",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropWater",
+          "amount": 1,
+          "displayName": "Water Bucket"
+         }
+        },
+        {
+         "key": "50",
+         "label": "Half",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropWater",
+          "amount": 1,
+          "displayName": "Water Bucket"
+         }
+        },
+        {
+         "key": "100",
+         "label": "Full",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropWater",
+          "amount": 1,
+          "displayName": "Water Bucket"
+         }
+        }
+       ]
+      },
+      {
+       "id": "cropFertilizer",
+       "label": "Fert",
+       "minimumKey": "0",
+       "defaultKey": "100",
+       "tiers": [
+        {
+         "key": "0",
+         "label": "None",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropFertilizer",
+          "amount": 1,
+          "displayName": "Fertilizer"
+         }
+        },
+        {
+         "key": "50",
+         "label": "Half",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropFertilizer",
+          "amount": 1,
+          "displayName": "Fertilizer"
+         }
+        },
+        {
+         "key": "100",
+         "label": "Full",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropFertilizer",
+          "amount": 1,
+          "displayName": "Fertilizer"
+         }
+        }
+       ]
+      },
+      {
+       "id": "cropSky",
+       "label": "Sky",
+       "minimumKey": "no",
+       "defaultKey": "yes",
+       "tiers": [
+        {
+         "key": "no",
+         "label": "Covered",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropSky",
+          "amount": 1,
+          "displayName": "Daylight Detector"
+         }
+        },
+        {
+         "key": "yes",
+         "label": "Open",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropSky",
+          "amount": 1,
+          "displayName": "Daylight Detector"
+         }
+        }
+       ]
+      },
+      {
+       "id": "cropBiome",
+       "label": "Biome",
+       "minimumKey": "none",
+       "defaultKey": "two-tags",
+       "tiers": [
+        {
+         "key": "none",
+         "label": "None",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropBiome",
+          "amount": 1,
+          "displayName": "Grass Block"
+         }
+        },
+        {
+         "key": "humid-60",
+         "label": "60%",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropBiome",
+          "amount": 1,
+          "displayName": "Grass Block"
+         }
+        },
+        {
+         "key": "humid-70",
+         "label": "70%",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropBiome",
+          "amount": 1,
+          "displayName": "Grass Block"
+         }
+        },
+        {
+         "key": "humid",
+         "label": "80%",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropBiome",
+          "amount": 1,
+          "displayName": "Grass Block"
+         }
+        },
+        {
+         "key": "one-tag",
+         "label": "1 Tag",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropBiome",
+          "amount": 1,
+          "displayName": "Grass Block"
+         }
+        },
+        {
+         "key": "two-tags",
+         "label": "2 Tags",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:cropBiome",
+          "amount": 1,
+          "displayName": "Grass Block"
+         }
+        }
+       ]
+      },
+      {
+       "id": "cropManagerTier",
+       "label": "Manager",
+       "minimumKey": "1",
+       "defaultKey": "1",
+       "tiers": [
+        {
+         "key": "1",
+         "label": "LV",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:crop_voltage_lv",
+          "amount": 1,
+          "displayName": "Basic Crop Manager"
+         }
+        },
+        {
+         "key": "2",
+         "label": "MV",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:crop_voltage_mv",
+          "amount": 1,
+          "displayName": "Advanced Crop Manager"
+         }
+        },
+        {
+         "key": "3",
+         "label": "HV",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:crop_voltage_hv",
+          "amount": 1,
+          "displayName": "Advanced Crop Manager II"
+         }
+        },
+        {
+         "key": "4",
+         "label": "EV",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:crop_voltage_ev",
+          "amount": 1,
+          "displayName": "Advanced Crop Manager III"
+         }
+        },
+        {
+         "key": "5",
+         "label": "IV",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:crop_voltage_iv",
+          "amount": 1,
+          "displayName": "Advanced Crop Manager IV"
+         }
+        },
+        {
+         "key": "6",
+         "label": "LuV",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:crop_voltage_luv",
+          "amount": 1,
+          "displayName": "Elite Crop Manager"
+         }
+        },
+        {
+         "key": "7",
+         "label": "ZPM",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:crop_voltage_zpm",
+          "amount": 1,
+          "displayName": "Elite Crop Manager II"
+         }
+        },
+        {
+         "key": "8",
+         "label": "UV",
+         "resource": {
+          "kind": "item",
+          "id": "factoryflow:crop_voltage_uv",
+          "amount": 1,
+          "displayName": "Ultimate Crop Manager"
+         }
+        }
+       ]
+      }
+     ]
+    }
+   ],
+   "source": {
+    "recipeMap": "Crop Farm"
+   },
+   "metadata": {
+    "cropsNh": {
+     "cropId": "cropsnh:oilBerry",
+     "tier": 4,
+     "growthPoints": 1200,
+     "dropChance": 0.81450623,
+     "growthCycleTicks": 256,
+     "growthMultiplier": 1,
+     "minSeedBedTier": -1,
+     "biomeTags": [
+      "HOT",
+      "WASTELAND"
+     ],
+     "soils": [
+      "Sand",
+      "Gravel",
+      "Soul Sand",
+      "Oilsands Ore",
+      "Oilsands Ore",
+      "Oilsands Ore"
+     ],
+     "drops": [
+      {
+       "id": "cropsnh:materialleaf@10",
+       "stackSize": 2,
+       "weight": 10000
+      }
+     ]
+    }
+   }
+  },
+  {
+   "id": "oracle:local-2.9.0-beta-2:gregtech:gt-recipe-distillationtower:de62f2d4071d7241",
+   "name": "Distillation Tower: Sulfuric Heavy Fuel",
+   "kind": "gregtech_machine",
+   "category": "gregtech",
+   "machineType": "Distillation Tower",
+   "minimumTier": "HV",
+   "durationTicks": 146,
+   "eut": 480,
+   "inputs": [
+    {
+     "kind": "item",
+     "id": "cropsnh:materialleaf@10",
+     "amount": 10,
+     "displayName": "Oil Berry",
+     "dominantColor": "#1e3b24",
+     "modId": "cropsnh"
+    },
+    {
+     "kind": "item",
+     "id": "gregtech:gt.integrated_circuit@2",
+     "amount": 1,
+     "displayName": "Programmed Circuit",
+     "dominantColor": "#9ca18b",
+     "modId": "gregtech",
+     "consumed": false
+    }
+   ],
+   "outputs": [
+    {
+     "kind": "fluid",
+     "id": "liquid_sulfuricheavy_fuel",
+     "amount": 300,
+     "displayName": "Sulfuric Heavy Fuel",
+     "dominantColor": "#ffedb0"
+    },
+    {
+     "kind": "fluid",
+     "id": "liquid_sufluriclight_fuel",
+     "amount": 1000,
+     "displayName": "Sulfuric Light Fuel",
+     "dominantColor": "#fff000"
+    },
+    {
+     "kind": "fluid",
+     "id": "liquid_sulfuricnaphtha",
+     "amount": 400,
+     "displayName": "Sulfuric Naphtha",
+     "dominantColor": "#fff000"
+    },
+    {
+     "kind": "fluid",
+     "id": "naphthenicacid",
+     "amount": 50,
+     "displayName": "Naphthenic Acid",
+     "dominantColor": "#cfcfcf"
+    },
+    {
+     "kind": "fluid",
+     "id": "gas_sulfuricgas",
+     "amount": 1200,
+     "displayName": "Sulfuric Gas",
+     "dominantColor": "#dddddd"
+    }
+   ],
+   "programmedCircuit": "2",
+   "specialValue": 0,
+   "machineHandlers": [
+    {
+     "machineType": "Distillation Tower",
+     "minimumTier": "HV",
+     "id": "distillation-tower",
+     "label": "Distillation Tower",
+     "kind": "multiblock"
+    }
+   ],
+   "source": {
+    "recipeMap": "Distillation Tower"
+   },
+   "metadata": {
+    "recipeMapId": "gt.recipe.distillationtower",
+    "specialValue": 0
+   }
+  },
+  {
+   "id": "oracle:local-2.9.0-beta-2:gregtech:gt-recipe-chemicalreactor:9a9f1d6573923db7",
+   "name": "Chemical Reactor: Hydrogen Sulfide Cell",
+   "kind": "gregtech_machine",
+   "category": "gregtech",
+   "machineType": "Chemical Reactor",
+   "minimumTier": "LV",
+   "durationTicks": 160,
+   "eut": 30,
+   "inputs": [
+    {
+     "kind": "item",
+     "id": "gregtech:gt.metaitem.01@30001",
+     "amount": 2,
+     "displayName": "Hydrogen Cell",
+     "dominantColor": "#8f8585",
+     "modId": "gregtech"
+    },
+    {
+     "kind": "item",
+     "id": "gregtech:gt.integrated_circuit@4",
+     "amount": 1,
+     "displayName": "Programmed Circuit",
+     "dominantColor": "#9da28c",
+     "modId": "gregtech",
+     "consumed": false
+    },
+    {
+     "kind": "fluid",
+     "id": "liquid_sufluriclight_fuel",
+     "amount": 12000,
+     "displayName": "Sulfuric Light Fuel",
+     "dominantColor": "#fff000"
+    }
+   ],
+   "outputs": [
+    {
+     "kind": "item",
+     "id": "gregtech:gt.metaitem.01@30460",
+     "amount": 1,
+     "displayName": "Hydrogen Sulfide Cell",
+     "dominantColor": "#df6329",
+     "modId": "gregtech"
+    },
+    {
+     "kind": "item",
+     "id": "ic2:itemcellempty",
+     "amount": 1,
+     "displayName": "Empty Cell",
+     "dominantColor": "#7a7a7a",
+     "modId": "IC2"
+    },
+    {
+     "kind": "fluid",
+     "id": "liquid_light_fuel",
+     "amount": 12000,
+     "displayName": "Light Fuel",
+     "dominantColor": "#fff000"
+    }
+   ],
+   "programmedCircuit": "4",
+   "specialValue": 0,
+   "machineHandlers": [
+    {
+     "machineType": "Chemical Reactor",
+     "minimumTier": "LV",
+     "maximumTier": "UMV",
+     "availableTiers": [
+      "LV",
+      "MV",
+      "HV",
+      "EV",
+      "IV",
+      "LuV",
+      "ZPM",
+      "UV",
+      "UHV",
+      "UEV",
+      "UIV",
+      "UMV"
+     ],
+     "id": "chemical-reactor",
+     "label": "Chemical Reactor",
+     "kind": "single"
+    }
+   ],
+   "source": {
+    "recipeMap": "Chemical Reactor"
+   },
+   "metadata": {
+    "recipeMapId": "gt.recipe.chemicalreactor",
+    "specialValue": 0
+   }
+  },
+  {
+   "id": "oracle:local-2.9.0-beta-2:gregtech:gt-recipe-chemicalreactor:fcbd4e13cfb3e62b",
+   "name": "Chemical Reactor: Hydrogen Sulfide Cell",
+   "kind": "gregtech_machine",
+   "category": "gregtech",
+   "machineType": "Chemical Reactor",
+   "minimumTier": "LV",
+   "durationTicks": 160,
+   "eut": 30,
+   "inputs": [
+    {
+     "kind": "item",
+     "id": "gregtech:gt.metaitem.01@30001",
+     "amount": 2,
+     "displayName": "Hydrogen Cell",
+     "dominantColor": "#8f8585",
+     "modId": "gregtech"
+    },
+    {
+     "kind": "item",
+     "id": "gregtech:gt.integrated_circuit@4",
+     "amount": 1,
+     "displayName": "Programmed Circuit",
+     "dominantColor": "#9da28c",
+     "modId": "gregtech",
+     "consumed": false
+    },
+    {
+     "kind": "fluid",
+     "id": "liquid_sulfuricheavy_fuel",
+     "amount": 8000,
+     "displayName": "Sulfuric Heavy Fuel",
+     "dominantColor": "#ffedb0"
+    }
+   ],
+   "outputs": [
+    {
+     "kind": "item",
+     "id": "gregtech:gt.metaitem.01@30460",
+     "amount": 1,
+     "displayName": "Hydrogen Sulfide Cell",
+     "dominantColor": "#df6329",
+     "modId": "gregtech"
+    },
+    {
+     "kind": "item",
+     "id": "ic2:itemcellempty",
+     "amount": 1,
+     "displayName": "Empty Cell",
+     "dominantColor": "#7a7a7a",
+     "modId": "IC2"
+    },
+    {
+     "kind": "fluid",
+     "id": "liquid_heavy_fuel",
+     "amount": 8000,
+     "displayName": "Heavy Fuel",
+     "dominantColor": "#ffedb0"
+    }
+   ],
+   "programmedCircuit": "4",
+   "specialValue": 0,
+   "machineHandlers": [
+    {
+     "machineType": "Chemical Reactor",
+     "minimumTier": "LV",
+     "maximumTier": "UMV",
+     "availableTiers": [
+      "LV",
+      "MV",
+      "HV",
+      "EV",
+      "IV",
+      "LuV",
+      "ZPM",
+      "UV",
+      "UHV",
+      "UEV",
+      "UIV",
+      "UMV"
+     ],
+     "id": "chemical-reactor",
+     "label": "Chemical Reactor",
+     "kind": "single"
+    }
+   ],
+   "source": {
+    "recipeMap": "Chemical Reactor"
+   },
+   "metadata": {
+    "recipeMapId": "gt.recipe.chemicalreactor",
+    "specialValue": 0
+   }
+  },
+  {
+   "id": "oracle:local-2.9.0-beta-2:gregtech:gt-recipe-electrolyzer:cd3b650bc18d17c7",
+   "name": "Electrolyzer: Sulfur Dust",
+   "kind": "gregtech_machine",
+   "category": "gregtech",
+   "machineType": "Electrolyzer",
+   "minimumTier": "MV",
+   "durationTicks": 72,
+   "eut": 120,
+   "inputs": [
+    {
+     "kind": "item",
+     "id": "gregtech:gt.metaitem.01@30460",
+     "amount": 1,
+     "displayName": "Hydrogen Sulfide Cell",
+     "dominantColor": "#df6329",
+     "modId": "gregtech"
+    },
+    {
+     "kind": "item",
+     "id": "ic2:itemcellempty",
+     "amount": 1,
+     "displayName": "Empty Cell",
+     "dominantColor": "#7a7a7a",
+     "modId": "IC2"
+    }
+   ],
+   "outputs": [
+    {
+     "kind": "item",
+     "id": "gregtech:gt.metaitem.01@2022",
+     "amount": 1,
+     "displayName": "Sulfur Dust",
+     "dominantColor": "#6b6b00",
+     "modId": "gregtech",
+     "alternatives": [
+      {
+       "kind": "item",
+       "id": "gregtech:gt.metaitem.01@2022",
+       "displayName": "Sulfur Dust",
+       "dominantColor": "#6b6b00",
+       "modId": "gregtech",
+       "amount": 1
+      },
+      {
+       "kind": "item",
+       "id": "natura:barleyfood@4",
+       "displayName": "Sulfur",
+       "dominantColor": "#bda237",
+       "modId": "Natura",
+       "amount": 1
+      },
+      {
+       "kind": "item",
+       "id": "ic2:itemdust@13",
+       "displayName": "Sulfur Dust",
+       "dominantColor": "#898c02",
+       "modId": "IC2",
+       "amount": 1
+      }
+     ]
+    },
+    {
+     "kind": "item",
+     "id": "gregtech:gt.metaitem.01@30001",
+     "amount": 2,
+     "displayName": "Hydrogen Cell",
+     "dominantColor": "#8f8585",
+     "modId": "gregtech"
+    }
+   ],
+   "specialValue": 0,
+   "machineHandlers": [
+    {
+     "machineType": "Electrolyzer",
+     "minimumTier": "MV",
+     "maximumTier": "UMV",
+     "availableTiers": [
+      "LV",
+      "MV",
+      "HV",
+      "EV",
+      "IV",
+      "LuV",
+      "ZPM",
+      "UV",
+      "UHV",
+      "UEV",
+      "UIV",
+      "UMV"
+     ],
+     "id": "electrolyzer",
+     "label": "Electrolyzer",
+     "kind": "single"
+    }
+   ],
+   "source": {
+    "recipeMap": "Electrolyzer"
+   },
+   "metadata": {
+    "recipeMapId": "gt.recipe.electrolyzer",
+    "specialValue": 0
+   }
+  },
+  {
+   "id": "oracle:local-2.9.0-beta-2:gregtech:planner-tank:d1fff80f128e88ab",
+   "name": "Tank: Heavy Fuel Cell",
+   "kind": "gregtech_machine",
+   "category": "gregtech",
+   "machineType": "Tank",
+   "minimumTier": "NONE",
+   "durationTicks": 1,
+   "eut": 0,
+   "inputs": [
+    {
+     "kind": "item",
+     "id": "ic2:itemcellempty",
+     "amount": 1,
+     "displayName": "Empty Cell",
+     "dominantColor": "#7a7a7a",
+     "modId": "IC2"
+    },
+    {
+     "kind": "fluid",
+     "id": "liquid_heavy_fuel",
+     "amount": 1000,
+     "displayName": "Heavy Fuel",
+     "dominantColor": "#ffedb0"
+    }
+   ],
+   "outputs": [
+    {
+     "kind": "item",
+     "id": "gregtech:gt.metaitem.01@30741",
+     "amount": 1,
+     "displayName": "Heavy Fuel Cell",
+     "dominantColor": "#ffeeb0",
+     "modId": "gregtech"
+    }
+   ],
+   "specialValue": 0,
+   "source": {
+    "recipeMap": "Tank"
+   },
+   "metadata": {
+    "recipeMapId": "planner.tank",
+    "specialValue": 0
+   }
+  },
+  {
+   "id": "oracle:local-2.9.0-beta-2:gregtech:gt-recipe-mixer:643c5ab322acf254",
+   "name": "Mixer: Empty Cell",
+   "kind": "gregtech_machine",
+   "category": "gregtech",
+   "machineType": "Mixer",
+   "minimumTier": "MV",
+   "durationTicks": 16,
+   "eut": 120,
+   "inputs": [
+    {
+     "kind": "item",
+     "id": "gregtech:gt.metaitem.01@30741",
+     "amount": 1,
+     "displayName": "Heavy Fuel Cell",
+     "dominantColor": "#ffeeb0",
+     "modId": "gregtech"
+    },
+    {
+     "kind": "item",
+     "id": "gregtech:gt.integrated_circuit@6",
+     "amount": 1,
+     "displayName": "Programmed Circuit",
+     "dominantColor": "#9ba08a",
+     "modId": "gregtech",
+     "consumed": false
+    },
+    {
+     "kind": "fluid",
+     "id": "liquid_light_fuel",
+     "amount": 5000,
+     "displayName": "Light Fuel",
+     "dominantColor": "#fff000"
+    }
+   ],
+   "outputs": [
+    {
+     "kind": "item",
+     "id": "ic2:itemcellempty",
+     "amount": 1,
+     "displayName": "Empty Cell",
+     "dominantColor": "#7a7a7a",
+     "modId": "IC2"
+    },
+    {
+     "kind": "fluid",
+     "id": "fuel",
+     "amount": 6000,
+     "displayName": "Fuel",
+     "dominantColor": "#959000"
+    }
+   ],
+   "programmedCircuit": "6",
+   "specialValue": 0,
+   "machineHandlers": [
+    {
+     "machineType": "Mixer",
+     "minimumTier": "MV",
+     "maximumTier": "UMV",
+     "availableTiers": [
+      "LV",
+      "MV",
+      "HV",
+      "EV",
+      "IV",
+      "LuV",
+      "ZPM",
+      "UV",
+      "UHV",
+      "UEV",
+      "UIV",
+      "UMV"
+     ],
+     "id": "mixer",
+     "label": "Mixer",
+     "kind": "single"
+    }
+   ],
+   "source": {
+    "recipeMap": "Mixer"
+   },
+   "metadata": {
+    "recipeMapId": "gt.recipe.mixer",
+    "specialValue": 0
+   }
+  },
+  {
+   "id": "power:combustion-generator:gen",
+   "name": "Combustion Generator",
+   "kind": "custom",
+   "category": "power-source",
+   "machineType": "Combustion Generator",
+   "minimumTier": "NONE",
+   "durationTicks": 20,
+   "eut": 0,
+   "inputs": [
+    {
+     "kind": "fluid",
+     "id": "fuel",
+     "amount": 25.294117647058822,
+     "displayName": "Fuel",
+     "dominantColor": "#6b6700"
+    }
+   ],
+   "outputs": [
+    {
+     "kind": "power",
+     "id": "eu",
+     "amount": 10240,
+     "displayName": "EU",
+     "dominantColor": "#fbbf24",
+     "byproduct": true
+    }
+   ],
+   "notes": "Burns the diesel-line fuels.",
+   "power": {
+    "sourceId": "combustion-generator",
+    "euPerTick": 512,
+    "stats": [
+     {
+      "label": "Efficiency",
+      "value": "85%"
+     },
+     {
+      "label": "EU per L",
+      "value": "408"
+     }
+    ]
+   },
+   "source": {
+    "recipeMap": "power-source"
+   }
+  }
+ ],
+ "nodes": [
+  {
+   "id": "crop",
+   "recipeId": "oracle:local-2.9.0-beta-2:cropsnh-crop:cropsnh:cropsnh-oilberry",
+   "machineCount": 1,
+   "parallel": 1,
+   "overclockTier": "LV",
+   "solvePin": 118,
+   "enabled": true,
+   "position": {
+    "x": -1000,
+    "y": 300
+   }
+  },
+  {
+   "id": "tower",
+   "recipeId": "oracle:local-2.9.0-beta-2:gregtech:gt-recipe-distillationtower:de62f2d4071d7241",
+   "machineCount": 1,
+   "parallel": 1,
+   "overclockTier": "HV",
+   "solvePin": 1,
+   "enabled": true,
+   "position": {
+    "x": -600,
+    "y": 300
+   }
+  },
+  {
+   "id": "crLight",
+   "recipeId": "oracle:local-2.9.0-beta-2:gregtech:gt-recipe-chemicalreactor:9a9f1d6573923db7",
+   "machineCount": 1,
+   "parallel": 1,
+   "overclockTier": "MV",
+   "enabled": true,
+   "position": {
+    "x": -150,
+    "y": 0
+   }
+  },
+  {
+   "id": "crHeavy",
+   "recipeId": "oracle:local-2.9.0-beta-2:gregtech:gt-recipe-chemicalreactor:fcbd4e13cfb3e62b",
+   "machineCount": 1,
+   "parallel": 1,
+   "overclockTier": "MV",
+   "enabled": true,
+   "position": {
+    "x": -150,
+    "y": 420
+   }
+  },
+  {
+   "id": "electro",
+   "recipeId": "oracle:local-2.9.0-beta-2:gregtech:gt-recipe-electrolyzer:cd3b650bc18d17c7",
+   "machineCount": 1,
+   "parallel": 1,
+   "overclockTier": "MV",
+   "enabled": true,
+   "position": {
+    "x": 350,
+    "y": -120
+   }
+  },
+  {
+   "id": "mixer",
+   "recipeId": "oracle:local-2.9.0-beta-2:gregtech:gt-recipe-mixer:643c5ab322acf254",
+   "machineCount": 1,
+   "parallel": 1,
+   "overclockTier": "MV",
+   "enabled": true,
+   "position": {
+    "x": 700,
+    "y": 180
+   }
+  },
+  {
+   "id": "tank",
+   "recipeId": "oracle:local-2.9.0-beta-2:gregtech:planner-tank:d1fff80f128e88ab",
+   "machineCount": 1,
+   "parallel": 1,
+   "overclockTier": "NONE",
+   "enabled": true,
+   "position": {
+    "x": 700,
+    "y": 520
+   }
+  },
+  {
+   "id": "gen",
+   "recipeId": "power:combustion-generator:gen",
+   "machineCount": 1,
+   "parallel": 1,
+   "overclockTier": "HV",
+   "machineConfigTiers": {
+    "tier": "HV",
+    "fuel": "Diesel"
+   },
+   "enabled": true,
+   "position": {
+    "x": 1100,
+    "y": -60
+   }
+  }
+ ],
+ "storages": [
+  {
+   "id": "d_naphtha",
+   "kind": "fluid",
+   "resourceId": "liquid_sulfuricnaphtha",
+   "displayName": "Sulfuric Naphtha",
+   "drainMode": "byproduct",
+   "position": {
+    "x": -600,
+    "y": 760
+   }
+  },
+  {
+   "id": "d_acid",
+   "kind": "fluid",
+   "resourceId": "naphthenicacid",
+   "displayName": "Naphthenic Acid",
+   "drainMode": "byproduct",
+   "position": {
+    "x": -400,
+    "y": 760
+   }
+  },
+  {
+   "id": "d_gas",
+   "kind": "fluid",
+   "resourceId": "gas_sulfuricgas",
+   "displayName": "Sulfuric Gas",
+   "drainMode": "byproduct",
+   "position": {
+    "x": -200,
+    "y": 760
+   }
+  },
+  {
+   "id": "d_sulfur",
+   "kind": "item",
+   "resourceId": "gregtech:gt.metaitem.01@2022",
+   "displayName": "Sulfur Dust",
+   "drainMode": "byproduct",
+   "position": {
+    "x": 700,
+    "y": -200
+   }
+  },
+  {
+   "id": "d_heavy",
+   "kind": "fluid",
+   "resourceId": "liquid_heavy_fuel",
+   "displayName": "Spare Heavy Fuel",
+   "drainMode": "byproduct",
+   "position": {
+    "x": 300,
+    "y": 760
+   }
+  }
+ ],
+ "annotations": [],
+ "pockets": [],
+ "edges": [
+  {
+   "id": "w1",
+   "source": "crop",
+   "target": "tower",
+   "resourceKind": "item",
+   "resourceId": "cropsnh:materialleaf@10"
+  },
+  {
+   "id": "w2",
+   "source": "tower",
+   "target": "crLight",
+   "resourceKind": "fluid",
+   "resourceId": "liquid_sufluriclight_fuel"
+  },
+  {
+   "id": "w3",
+   "source": "tower",
+   "target": "crHeavy",
+   "resourceKind": "fluid",
+   "resourceId": "liquid_sulfuricheavy_fuel"
+  },
+  {
+   "id": "w4",
+   "source": "tower",
+   "target": "d_naphtha",
+   "resourceKind": "fluid",
+   "resourceId": "liquid_sulfuricnaphtha"
+  },
+  {
+   "id": "w5",
+   "source": "tower",
+   "target": "d_acid",
+   "resourceKind": "fluid",
+   "resourceId": "naphthenicacid"
+  },
+  {
+   "id": "w6",
+   "source": "tower",
+   "target": "d_gas",
+   "resourceKind": "fluid",
+   "resourceId": "gas_sulfuricgas"
+  },
+  {
+   "id": "w7",
+   "source": "crLight",
+   "target": "electro",
+   "resourceKind": "item",
+   "resourceId": "gregtech:gt.metaitem.01@30460"
+  },
+  {
+   "id": "w8",
+   "source": "crHeavy",
+   "target": "electro",
+   "resourceKind": "item",
+   "resourceId": "gregtech:gt.metaitem.01@30460"
+  },
+  {
+   "id": "w9",
+   "source": "crLight",
+   "target": "electro",
+   "resourceKind": "item",
+   "resourceId": "ic2:itemcellempty"
+  },
+  {
+   "id": "w10",
+   "source": "crHeavy",
+   "target": "electro",
+   "resourceKind": "item",
+   "resourceId": "ic2:itemcellempty"
+  },
+  {
+   "id": "w11",
+   "source": "electro",
+   "target": "crLight",
+   "resourceKind": "item",
+   "resourceId": "gregtech:gt.metaitem.01@30001"
+  },
+  {
+   "id": "w12",
+   "source": "electro",
+   "target": "crHeavy",
+   "resourceKind": "item",
+   "resourceId": "gregtech:gt.metaitem.01@30001"
+  },
+  {
+   "id": "w13",
+   "source": "electro",
+   "target": "d_sulfur",
+   "resourceKind": "item",
+   "resourceId": "gregtech:gt.metaitem.01@2022"
+  },
+  {
+   "id": "w14",
+   "source": "crLight",
+   "target": "mixer",
+   "resourceKind": "fluid",
+   "resourceId": "liquid_light_fuel"
+  },
+  {
+   "id": "w15",
+   "source": "crHeavy",
+   "target": "tank",
+   "resourceKind": "fluid",
+   "resourceId": "liquid_heavy_fuel"
+  },
+  {
+   "id": "w16",
+   "source": "crHeavy",
+   "target": "d_heavy",
+   "resourceKind": "fluid",
+   "resourceId": "liquid_heavy_fuel"
+  },
+  {
+   "id": "w17",
+   "source": "tank",
+   "target": "mixer",
+   "resourceKind": "item",
+   "resourceId": "gregtech:gt.metaitem.01@30741"
+  },
+  {
+   "id": "w18",
+   "source": "mixer",
+   "target": "tank",
+   "resourceKind": "item",
+   "resourceId": "ic2:itemcellempty"
+  },
+  {
+   "id": "w19",
+   "source": "mixer",
+   "target": "gen",
+   "resourceKind": "fluid",
+   "resourceId": "fuel"
+  }
+ ],
+ "fuelProfiles": []
+}

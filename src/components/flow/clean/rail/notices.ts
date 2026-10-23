@@ -5,8 +5,15 @@ import { rateMultiplierForKind, rateSuffixForKind } from "@/lib/model/rate-unit"
 import { pinRuleOf } from "@/lib/model/pin-rule";
 import { UP_TO_WORD } from "../up-to-reason";
 import { loopSentence, loopTag, loopTone, type LoopTone } from "../loops";
-import type { Note, NoteArg, PlanNote, PlanShortfall } from "@/lib/solver/plan/types";
+import type {
+  Note,
+  NoteArg,
+  PlanNote,
+  PlanShortfall,
+  PlanStrandedVent,
+} from "@/lib/solver/plan/types";
 import { splitResultNodeId } from "./rail-model";
+import { cardLabel, cardLabelText } from "../card-label";
 
 /**
  * The notices bar's list: the solver's notes in the mod's words
@@ -30,6 +37,13 @@ export interface BoardNotice {
   tag?: string;
   /** The ring an alarm is about: its row and chip take the ring's tone, as its cards' outlines do. */
   loop?: LoopTone;
+  /**
+   * A fix the row offers (a stranded spare's drawer or wire): the row shows a key with this label (and this tip,
+   * which names what it adds where), and the key does it. Data only, so this list stays pure. Absent while the books
+   * are stale or their search still runs, so the key cannot be pressed twice before the plan it changed is solved;
+   * `useBoardNotices` also drops it on a read-only board.
+   */
+  fix?: { label: string; tip: string; vent: PlanStrandedVent };
 }
 
 /** Where a notice goes in the list, lowest first: a failed solve, then alarms, then warnings, then the rest. */
@@ -147,6 +161,37 @@ export function buildNotices(
     });
   }
 
+  // A spare output that stalls Up to cards at zero (`stranded-surplus.ts`): what and where first (the culprit is
+  // named so it cannot be taken for another of its kind, and a narrow board cuts the row's end; the whole sentence is
+  // its tip), then what it stops and how much, and the one fix proven to start the line. No fix while the books are
+  // stale or the search for them still runs: the key could act on a spare the last edit already freed.
+  const fixable = !result?.stale && extras.strandedPending !== true;
+  for (const vent of extras.stranded?.vents ?? []) {
+    if (!nodeIds.has(vent.cardId)) continue;
+    const res = vent.resourceName;
+    const at = cardLabelText(cardLabel(project, vent.cardId, res, vent.nodeId), res);
+    const n = vent.stalled.length;
+    const head = `Spare ${res} at the ${at} stops ${n} ${n === 1 ? "card" : "cards"}: ${rate(vent.perSecond, resourceKindOf(vent.resourceKey))} has nowhere to go`;
+    const fix = vent.fix;
+    const taker =
+      fix.kind === "wire" && nodeIds.has(fix.takerCardId)
+        ? cardLabelText(cardLabel(project, fix.takerCardId, undefined, fix.takerNodeId))
+        : undefined;
+    out.push({
+      // A spare a wire takes only part of has two rows on one port (the wire, then a drawer for the rest).
+      id: `stranded:${vent.fix.kind}:${vent.portKey}`,
+      severity: "warn",
+      text: taker ? `${head}, and the ${res} input of the ${taker} is not wired` : head,
+      focus: fix.kind === "wire" && taker ? [vent.cardId, fix.takerCardId] : [vent.cardId],
+      fix:
+        !fixable || (fix.kind === "wire" && !taker)
+          ? undefined
+          : taker
+            ? { label: "Wire it", tip: `Wires ${res} from the ${at} to the ${taker}.`, vent }
+            : { label: "Add a drawer", tip: `Adds a drawer for ${res} at the ${at}.`, vent },
+    });
+  }
+
   // The cards and drawers that hold a drawer's rate back, as short sentences.
   const holdersOf = (s: PlanShortfall): string => {
     const parts: string[] = [];
@@ -243,6 +288,11 @@ export function buildNotices(
     }
   }
   return dedupe(byUrgency(out));
+}
+
+function resourceKindOf(resourceKey: string): ResourceKind {
+  const kind = resourceKey.slice(0, resourceKey.indexOf(":"));
+  return kind === "fluid" || kind === "aspect" || kind === "power" ? kind : "item";
 }
 
 function dedupe(list: BoardNotice[]): BoardNotice[] {

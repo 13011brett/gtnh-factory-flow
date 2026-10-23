@@ -34,6 +34,14 @@ export function shownReason(upTo: PlanUpTo | undefined): Reason | undefined {
 
 /** A sentence for a tooltip about why the card runs as it does. */
 export function upToSentence(upTo: PlanUpTo | undefined): string | undefined {
+  // Stopped by a spare output elsewhere on the line (`stranded-surplus.ts`): that, not its own rows, is the cause.
+  // No direction: a starved card's spare is usually before it, a clogged one's after.
+  if (
+    upTo?.stranded &&
+    (upTo.reason === "UNUSED" || upTo.reason === "CLOGGED" || upTo.reason === "STARVED")
+  ) {
+    return `A spare ${upTo.stranded.resourceName} has nowhere to go, so this line can't run.`;
+  }
   switch (upTo?.reason) {
     case "FULL":
       return "Every machine runs flat out.";
@@ -46,7 +54,8 @@ export function upToSentence(upTo: PlanUpTo | undefined): string | undefined {
     case "CLOGGED":
       return "An output has nowhere to go.";
     case "UNUSED":
-      return "Nothing uses what it makes.";
+      // CLOGGED at zero. Its output is almost always wired, so "nothing uses it" would point at the wrong fix.
+      return "An output backs up, so none run.";
     case "LIMITED":
       return "The plan holds it back.";
     default:

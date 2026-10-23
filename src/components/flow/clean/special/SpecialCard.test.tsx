@@ -431,3 +431,53 @@ it("marks a special card in a ring as the plain card is marked", () => {
   const { container } = renderCard({ ...baseView(), loop: "clog" });
   expect(container.querySelector(".cc-card")!.getAttribute("data-loop")).toBe("clog");
 });
+
+it("frames the card a stranded spare is stuck on when a special card's bar is clicked, and not on a drag", async () => {
+  const { useFactoryStore } = await import("@/store/factory-store");
+  const frame = vi.fn();
+  const before = useFactoryStore.getState();
+  useFactoryStore.setState({
+    frameBoardNodes: frame,
+    project: { ...before.project, nodes: [...before.project.nodes, { id: "lcr" } as FactoryNode] },
+  });
+  try {
+    const view = baseView();
+    const count = countOf("upTo", 6, 0);
+    const inputs = view.sections.flatMap((entry) => entry.inputs);
+    const outputs = view.sections.flatMap((entry) => entry.outputs);
+    const { container } = renderCard({
+      ...view,
+      count,
+      foot: buildFootView(
+        count,
+        {
+          capacity: 6,
+          reached: 0,
+          reason: "UNUSED",
+          resourceKey: outputs.at(-1)!.resourceKey,
+          stranded: {
+            nodeId: "lcr",
+            cardId: "lcr",
+            portKey: "lcr|o|output:fluid:heavy",
+            resourceKey: "fluid:heavy",
+            resourceName: "Heavy Fuel",
+            perSecond: 28.58,
+            fix: { kind: "drawer" },
+            stalled: ["n1", "lcr"],
+          },
+        },
+        { inputs, outputs },
+      ),
+    });
+    const foot = container.querySelector<HTMLElement>(".cc-foot")!;
+    expect(foot.getAttribute("role")).toBe("button");
+    fireEvent.click(foot);
+    expect(frame).toHaveBeenCalledWith(["lcr"], { padding: 0.2 });
+    // A press that moved is a drag of the card, not a click.
+    fireEvent.pointerDown(foot, { clientX: 10, clientY: 10 });
+    fireEvent.click(foot, { clientX: 30, clientY: 10 });
+    expect(frame).toHaveBeenCalledTimes(1);
+  } finally {
+    useFactoryStore.setState({ frameBoardNodes: before.frameBoardNodes, project: before.project });
+  }
+});

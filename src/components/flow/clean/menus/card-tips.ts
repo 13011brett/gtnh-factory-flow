@@ -279,6 +279,27 @@ export function footTip(nodeId: string, foot: CleanFootView): TipSpec {
     });
     return { id: `${nodeId}|foot`, title, rows, notes };
   }
+  // Stopped by a spare output elsewhere on the line: where it is, and the fix the notices bar offers for it. A click
+  // on the bar goes there (`CardFoot`).
+  if (f.stranded) {
+    const s = f.stranded;
+    rows.push({ label: "Stuck on", value: `${s.resource} at the ${s.at}`, tone: "warn" });
+    notes.push({
+      text: s.wire
+        ? `Spare ${s.resource} at the ${s.at} has nowhere to go, so this line can't run. Wiring it to the ${s.wire}, whose ${s.resource} input is not wired, frees it.`
+        : `Spare ${s.resource} at the ${s.at} has nowhere to go, so this line can't run. A drawer for it there frees it.`,
+      tone: "muted",
+    });
+    return {
+      id: `${nodeId}|foot`,
+      title,
+      rows,
+      notes,
+      ...(foot.show && foot.show.length > 0
+        ? { actions: [{ input: "left" as const, label: "Show where it is stuck" }] }
+        : {}),
+    };
+  }
   switch (f.reason) {
     case "FULL":
       notes.push({ text: "Nothing around it would use more.", tone: "muted" });
@@ -313,8 +334,18 @@ export function footTip(nodeId: string, foot: CleanFootView): TipSpec {
       });
       break;
     case "UNUSED":
-      if (f.resource) rows.push({ label: "Nothing takes", value: f.resource, tone: "warn" });
-      notes.push({ text: "Wire its output or give it a rate.", tone: "muted" });
+      // Only a row with no wire is one nothing takes. A wired row's taker uses none of it, because it is stopped or
+      // has enough from elsewhere: which one is not known here, so the note says only where to look.
+      if (f.resource && !f.wired) {
+        rows.push({ label: "Nothing takes", value: f.resource, tone: "warn" });
+        notes.push({ text: "Wire its output or give it a rate.", tone: "muted" });
+      } else {
+        if (f.resource) rows.push({ label: "Backs up", value: f.resource, tone: "warn" });
+        notes.push({
+          text: "What takes it uses none of it: it is stopped, or has enough from elsewhere.",
+          tone: "muted",
+        });
+      }
       break;
     case "LIMITED":
       notes.push({ text: "Another count or rate in the plan holds it back.", tone: "muted" });

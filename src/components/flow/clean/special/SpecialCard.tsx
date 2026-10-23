@@ -707,7 +707,14 @@ export function SpecialCard({ model, recipe, node }: SpecialCardProps) {
           ))}
         </div>
       ) : null}
-      {view.foot ? <CardFoot nodeId={view.nodeId} foot={view.foot} gridRow={stripRow + 2} /> : null}
+      {view.foot ? (
+        <CardFoot
+          nodeId={view.nodeId}
+          foot={view.foot}
+          gridRow={stripRow + 2}
+          wasClick={wasClick}
+        />
+      ) : null}
 
       <div
         className="cc-glance"

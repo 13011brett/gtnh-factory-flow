@@ -7,7 +7,12 @@ import { useFactoryStore } from "@/store/factory-store";
 import { liveUndoHandler, quietly } from "@/store/live-edit-gate";
 import { solveBooks } from "@/store/solve-books";
 import { RULE_STEPS } from "../../rate-rule";
+import { canonicalizeResourceHandleId, parseResourceHandleId } from "../../resource-handles";
+import { computeBoardLevelView, computeOpenBoardRects } from "@/lib/model/board-windows";
+import { parsePortKey } from "@/lib/solver/plan/port-key";
+import type { PlanStrandedVent } from "@/lib/solver/plan/types";
 import {
+  buildResourceLookup,
   canonicalOf,
   flowHandle,
   splitResultNodeId,
@@ -145,6 +150,108 @@ export function setLineRate(line: RailLine, source: boolean, perSecond: number):
 }
 
 // ---------------------------------------------------------------------------
+// A stranded spare's fix (the notice's key)
+// ---------------------------------------------------------------------------
+
+/**
+ * Takes the fix a stranded spare's notice offers (`stranded-surplus.ts` proved it starts the line): a byproduct
+ * drawer on its row, or a wire from its row to the open input that takes it. One store action, so one undo step.
+ * Does nothing while the books are stale or their search still runs (they may still carry the spare the last edit
+ * fixed), and nothing when
+ * the fix is already there, so a second press never adds a second drawer or takes the wire away again. Returns
+ * whether anything was done.
+ */
+export function takeStrandedFix(vent: PlanStrandedVent): boolean {
+  if (locked()) return false;
+  const { project, lastResult } = state();
+  if (lastResult?.stale || lastResult?.plan?.strandedPending) return false;
+  const card = project.nodes.find((node) => node.id === vent.cardId);
+  const at = parsePortKey(vent.portKey);
+  const parsed = at ? parseResourceHandleId(at.handle) : undefined;
+  if (!card || !parsed) return false;
+  const { kind, resourceId: id } = parsed;
+  const looked = buildResourceLookup(project).get(`${kind}:${id}`);
+  const resource = {
+    kind,
+    id,
+    displayName: looked?.displayName ?? vent.resourceName,
+    iconPath: looked?.iconPath,
+    iconAtlas: looked?.iconAtlas,
+    dominantColor: looked?.dominantColor,
+  };
+  const sourceHandle = flowHandle(vent.nodeId, "output", kind, id);
+  const sameRow = (handle: string | undefined) =>
+    handle === undefined ||
+    canonicalizeResourceHandleId(handle) === canonicalizeResourceHandleId(sourceHandle);
+  const storageIds = new Set((project.storages ?? []).map((storage) => storage.id));
+  const fromRow = project.edges.filter(
+    (edge) =>
+      edge.source === card.id &&
+      edge.resourceKind === kind &&
+      edge.resourceId === id &&
+      sameRow(edge.sourceHandle),
+  );
+  const fix = vent.fix;
+  if (fix.kind === "wire") {
+    // connectNodes takes an identical wire away: never send it one that is there.
+    if (fromRow.some((edge) => edge.target === fix.takerCardId)) return false;
+    if (!project.nodes.some((node) => node.id === fix.takerCardId)) return false;
+    state().connectNodes(card.id, fix.takerCardId, {
+      ...resource,
+      sourceHandle,
+      targetHandle: flowHandle(fix.takerNodeId, "input", kind, id),
+    });
+    return true;
+  }
+  if (fromRow.some((edge) => storageIds.has(edge.target))) return false;
+  const before = project.storages?.length ?? 0;
+  state().addStorageForConnection(
+    resource,
+    card.id,
+    "output",
+    besideCard(project, card, 420),
+    sourceHandle,
+    { drainMode: "byproduct", clearFloor: true },
+  );
+  return (state().project.storages?.length ?? 0) > before;
+}
+
+/**
+ * A spot `dx` to the right of where a card is shown, in flow space: the card itself on the root or an open board (its
+ * position is relative to the frame), or, hidden inside a minimized board, that board's card on the level it stands on.
+ */
+function besideCard(
+  project: FactoryProject,
+  card: FactoryProject["nodes"][number],
+  dx: number,
+): { x: number; y: number } {
+  const frames = new Map(
+    computeOpenBoardRects(computeBoardLevelView(project).openBoards).map(
+      (rect) => [rect.id, rect] as const,
+    ),
+  );
+  const pockets = new Map((project.pockets ?? []).map((pocket) => [pocket.id, pocket] as const));
+  const originOf = (home: string | undefined) => (home ? frames.get(home) : undefined);
+  let shown: { position: { x: number; y: number }; home: string | undefined } = {
+    position: card.position,
+    home: card.pocketId,
+  };
+  if (card.pocketId !== undefined && !frames.has(card.pocketId)) {
+    // Up to the minimized board that is on show: its parent is the root or an open board.
+    let at = pockets.get(card.pocketId);
+    while (at?.parentPocketId !== undefined && !frames.has(at.parentPocketId)) {
+      at = pockets.get(at.parentPocketId);
+    }
+    if (at) shown = { position: at.position, home: at.parentPocketId };
+  }
+  const origin = originOf(shown.home);
+  return {
+    x: shown.position.x + (origin?.x ?? 0) + dx,
+    y: shown.position.y + (origin?.y ?? 0),
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Machines
 // ---------------------------------------------------------------------------
 
@@ -193,6 +300,19 @@ const walks = new Map<string, number>();
 /** Frames a card (or cards) on the board. */
 export function frameCards(ids: string[]): void {
   state().frameBoardNodes(ids, { maxZoom: 1 });
+}
+
+/**
+ * Frames cards as a notice's Show me first does: all at once while that still reads, else the first of them, close
+ * enough to read. Cards no longer on the board are left out (the books may be older than the last edit).
+ */
+export function showCards(ids: readonly string[]): boolean {
+  const project = state().project;
+  const here = ids.filter((id) => project.nodes.some((node) => node.id === id));
+  if (here.length === 0) return false;
+  if (here.length === 1 || framesReadably(here)) state().frameBoardNodes(here, { padding: 0.2 });
+  else frameCards([here[0]!]);
+  return true;
 }
 
 /** Whether framing all of `ids` at once leaves the board at a zoom worth reading (>= 0.5). */

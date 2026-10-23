@@ -1,4 +1,10 @@
 import { calculateThroughput } from "@/lib/solver";
+import {
+  attachStranded,
+  carryStranded,
+  withStranded,
+  type StrandedPatch,
+} from "@/components/flow/stranded-surplus";
 import type { FactoryProject, ThroughputResult } from "@/lib/model/types";
 
 /**
@@ -107,7 +113,7 @@ export function solveBooks(project: FactoryProject): ThroughputResult {
     project.planMode === true;
   if (!expectSlow || !workerAvailable()) {
     const started = performance.now();
-    const result = calculateThroughput(project);
+    const result = solveOnMainThread(project);
     lastSolveDurationMs = performance.now() - started;
     lastSolveProjectId = project.id;
     currentKey = undefined;
@@ -164,7 +170,7 @@ function scheduleSolve(request: SolveRequest) {
     console.error("solve worker failed to start; solving on the main thread", error);
     workerBroken = true;
     inFlight = undefined;
-    deliver(request.key, calculateThroughput(request.project));
+    deliver(request.key, solveOnMainThread(request.project));
   }
 }
 
@@ -177,8 +183,14 @@ function getWorker(): Worker {
         result?: ThroughputResult;
         error?: string;
         solveMs?: number;
+        stranded?: StrandedPatch | null | "skipped";
       }>,
     ) => {
+      // The stranded-spare search that follows some books: not a solve, so it never touches the queue.
+      if (event.data.stranded !== undefined) {
+        landStranded(event.data.key, event.data.stranded);
+        return;
+      }
       const { key, result, error } = event.data;
       inFlight = undefined;
       if (result) {
@@ -212,14 +224,16 @@ function getWorker(): Worker {
       inFlight = undefined;
       queued = undefined;
       if (retry) {
-        deliver(retry.key, calculateThroughput(retry.project));
+        deliver(retry.key, solveOnMainThread(retry.project));
       }
     };
   }
   return worker;
 }
 
-function deliver(key: string, result: ThroughputResult) {
+function deliver(key: string, landed: ThroughputResult) {
+  // Books whose stranded-spare search is still running keep the hint the last books gave while it still holds.
+  const result = landed.plan?.strandedPending ? carryStranded(lastBooks, landed) : landed;
   bigBooksCache.set(key, result);
   while (bigBooksCache.size > BIG_BOOKS_CACHE_LIMIT) {
     const oldest = bigBooksCache.keys().next().value;
@@ -232,6 +246,37 @@ function deliver(key: string, result: ThroughputResult) {
     lastBooks = result;
     sink?.(result);
   }
+}
+
+/**
+ * The worker's stranded-spare search for books it already sent: merged into those books, kept and shown if they are
+ * still the canvas's. A search stopped for newer books leaves its books out of the cache, so coming back to that plan
+ * solves (and searches) it again; if they are somehow still shown, they lose the carried hint rather than keep it.
+ */
+function landStranded(key: string, patch: StrandedPatch | null | "skipped") {
+  const books = bigBooksCache.get(key);
+  if (!books?.plan?.strandedPending) return;
+  if (patch === "skipped" && key !== currentKey) {
+    bigBooksCache.delete(key);
+    return;
+  }
+  const next = withStranded(books, patch === "skipped" || patch === null ? undefined : patch);
+  bigBooksCache.set(key, next);
+  if (key === currentKey) {
+    lastBooks = next;
+    sink?.(next);
+  }
+}
+
+/**
+ * A solve on this thread, with the diagnosis the worker attaches to its books too (a plan-mode line stalled by a
+ * spare output, `attachStranded`), so the board reads the same whichever path solved it. Plan mode only comes here
+ * with no worker (tests, SSR, old browsers) or a broken one.
+ */
+function solveOnMainThread(project: FactoryProject): ThroughputResult {
+  const result = calculateThroughput(project);
+  attachStranded(project, result);
+  return result;
 }
 
 function emptyBooks(): ThroughputResult {

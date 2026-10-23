@@ -2,10 +2,10 @@
 import { describe, expect, it, vi } from "vitest";
 import type { FactoryNode } from "@/lib/model/types";
 import type { RailPort } from "../node-verdict";
-import type { PlanSolveExtras, PlanUpTo } from "@/lib/solver/plan/types";
+import type { PlanSolveExtras, PlanStrandedVent, PlanUpTo } from "@/lib/solver/plan/types";
 import { makePortKey } from "@/lib/solver/plan/port-key";
 import { mockUpTo } from "@/lib/solver/plan/__fixtures__/mock-extras";
-import { UP_TO_COLOR } from "./up-to-reason";
+import { UP_TO_COLOR, upToSentence } from "./up-to-reason";
 import { mixHex } from "./colors";
 import { CC } from "./tokens";
 import {
@@ -21,6 +21,7 @@ import {
   stateFrameTone,
   wheelCount,
   withReasonPorts,
+  withStallPorts,
   type CleanPortView,
 } from "./clean-model";
 
@@ -130,6 +131,29 @@ describe("the count", () => {
     expect([idle.prompt, idle.zero, idle.text]).toEqual([false, true, "×0"]);
   });
 
+  it("does not ask for a count on a card a stranded spare holds at zero; a part nothing sets still asks", () => {
+    const stranded = { vents: [], stalled: ["n"] };
+    const held = buildCountView(
+      cardCountState(result(0), node(), plan(undefined, { unneeded: ["n"], stranded })),
+    );
+    expect([held.note, held.prompt]).toEqual(["", false]);
+    expect(
+      cardCountState(result(0), node(), plan(undefined, { unneeded: ["n"], stranded })).unset,
+    ).toBe(false);
+    const unanchored = buildCountView(
+      cardCountState(
+        result(0),
+        node(),
+        plan(undefined, { unanchored: ["n"], stranded: { vents: [], stalled: ["other"] } }),
+      ),
+    );
+    expect([unanchored.note, unanchored.prompt]).toEqual(["(set count)", true]);
+    const unneeded = buildCountView(
+      cardCountState(result(0), node(), plan(undefined, { unneeded: ["n"] })),
+    );
+    expect([unneeded.note, unneeded.prompt]).toEqual(["(set count)", true]);
+  });
+
   it("steps on the wheel: from Any at what runs rounded up, then by one, below one back to Any", () => {
     expect(wheelCount({ rule: "any", value: 18.2 }, 1)).toBe(19);
     expect(wheelCount({ rule: "any", value: 18.2 }, -1)).toBe(19);
@@ -237,10 +261,12 @@ describe("the bar along the foot", () => {
       "12 / 24",
     ]);
 
+    // UNUSED on a row with no wire: nothing takes it.
+    const unwired = { ...ports, outputs: [{ ...port("output", "Sulfuric Acid"), wired: false }] };
     const unused = buildFootView(
       upToCount,
       { capacity: 24, reached: 0, reason: "UNUSED", resourceKey: "item:Sulfuric Acid" },
-      ports,
+      unwired,
     )!;
     expect([unused.tone, unused.say, unused.frac, unused.fill]).toEqual([
       "unused",
@@ -248,6 +274,25 @@ describe("the bar along the foot", () => {
       "0 / 24",
       0,
     ]);
+    expect(unused.facts.wired).toBe(false);
+
+    // UNUSED on a wired row: what it feeds uses none of it, so it backs up (never "nothing takes" a wired row).
+    const backsUp = buildFootView(
+      upToCount,
+      { capacity: 24, reached: 0, reason: "UNUSED", resourceKey: "item:Sulfuric Acid" },
+      ports,
+    )!;
+    expect([backsUp.tone, backsUp.word, backsUp.say, backsUp.frac]).toEqual([
+      "unused",
+      "UNUSED",
+      "Sulfuric Acid backs up",
+      "0 / 24",
+    ]);
+    expect(backsUp.facts.wired).toBe(true);
+    // No row named: an output still backs up.
+    expect(
+      buildFootView(upToCount, { capacity: 24, reached: 0, reason: "UNUSED" }, ports)!.say,
+    ).toBe("an output backs up");
 
     const limited = buildFootView(
       upToCount,
@@ -332,6 +377,89 @@ describe("the bar along the foot", () => {
       { inputs: [], outputs: [port("output", long)] },
     )!;
     expect([`nowhere for ${long}`, "an output backs up"]).toContain(clogged.say);
+    const unused = buildFootView(
+      upToCount,
+      { capacity: 24, reached: 0, reason: "UNUSED", resourceKey: `item:${long}` },
+      { inputs: [], outputs: [port("output", long)] },
+    )!;
+    expect(unused.say).toBe("an output backs up");
+  });
+
+  it("says what is stuck down the line when a stranded spare stops the card, and only then", () => {
+    const vent = {
+      nodeId: "lcr",
+      cardId: "lcr",
+      portKey: "lcr|o|output:item:h2",
+      resourceKey: "item:h2",
+      resourceName: "h2",
+      perSecond: 2,
+      fix: { kind: "drawer" as const },
+      stalled: ["n", "lcr"],
+    };
+    const stuck = buildFootView(
+      upToCount,
+      { capacity: 24, reached: 0, reason: "UNUSED", resourceKey: "item:Sulfuric Acid", stranded: vent },
+      ports,
+      (id) => (id === "lcr" ? "Large Chemical Reactor" : undefined),
+    )!;
+    expect([stuck.word, stuck.tone, stuck.say, stuck.frac]).toEqual([
+      "UNUSED",
+      "unused",
+      "spare h2 has nowhere to go",
+      "0 / 24",
+    ]);
+    expect(stuck.facts.stranded).toEqual({ resource: "h2", at: "Large Chemical Reactor" });
+    // A click on the bar goes to the card the spare is stuck on; for a wire fix, to the card that takes it too.
+    expect(stuck.show).toEqual(["lcr"]);
+    const wire = buildFootView(
+      upToCount,
+      {
+        capacity: 24,
+        reached: 0,
+        reason: "UNUSED",
+        stranded: {
+          ...vent,
+          fix: { kind: "wire", takerNodeId: "cr", takerCardId: "cr", takerPortKey: "cr|i|input:item:h2" },
+        },
+      },
+      ports,
+    )!;
+    expect(wire.show).toEqual(["lcr", "cr"]);
+    // Without the hint the card's own row reads as before, and the bar goes nowhere.
+    const plain = buildFootView(
+      upToCount,
+      { capacity: 24, reached: 0, reason: "UNUSED", resourceKey: "item:Sulfuric Acid" },
+      ports,
+    )!;
+    expect(plain.say).toBe("Sulfuric Acid backs up");
+    expect(plain.facts.stranded).toBeUndefined();
+    expect(plain.show).toBeUndefined();
+    // In a ring the ring is the story: no stranded line, nowhere to go.
+    const ring = buildFootView(
+      upToCount,
+      { capacity: 24, reached: 0, reason: "UNUSED", stranded: vent },
+      ports,
+      undefined,
+      "clog",
+    )!;
+    expect([ring.facts.stranded, ring.show]).toEqual([undefined, undefined]);
+    expect(upToSentence({ capacity: 24, reached: 0, reason: "UNUSED", stranded: vent })).toBe(
+      "A spare h2 has nowhere to go, so this line can't run.",
+    );
+    // A starved card's spare is usually before it: the sentence names no direction.
+    expect(upToSentence({ capacity: 24, reached: 0, reason: "STARVED", stranded: vent })).toBe(
+      "A spare h2 has nowhere to go, so this line can't run.",
+    );
+    // The bar's tip names the card as the notice does, when a labeller is given.
+    const named = buildFootView(
+      upToCount,
+      { capacity: 24, reached: 0, reason: "UNUSED", stranded: vent },
+      ports,
+      (id) => (id === "lcr" ? "Large Chemical Reactor" : undefined),
+      undefined,
+      (id, resource) => (id === "lcr" ? `Large Chemical Reactor that makes ${resource === "h2" ? "it" : "?"}` : undefined),
+    )!;
+    expect(named.facts.stranded).toEqual({ resource: "h2", at: "Large Chemical Reactor that makes it" });
   });
 
   it("shows the fill and fraction with no word when the reason was not worked out", () => {
@@ -443,12 +571,102 @@ describe("the rows a reason names", () => {
     });
     expect(lit(starved)).toEqual(["Sulfur Dust=starved"]);
   });
+
+  it("lights none of a card's own rows when a stranded spare elsewhere stops it", () => {
+    const key = makePortKey("n", "o", "output:item:Sulfuric%20Acid");
+    const stranded = strandedVent("lcr", "lcr", "output:item:h2");
+    for (const reason of ["UNUSED", "CLOGGED"] as const) {
+      expect(
+        lit(withReasonPorts(ports.outputs, { capacity: 24, reached: 0, reason, portKey: key, stranded })),
+      ).toEqual([]);
+    }
+    const short = makePortKey("n", "i", "input:item:Oxygen");
+    expect(
+      lit(
+        withReasonPorts(ports.inputs, {
+          capacity: 24,
+          reached: 0,
+          reason: "STARVED",
+          portKey: short,
+          stranded,
+        }),
+      ),
+    ).toEqual([]);
+  });
+});
+
+/** A stranded spare on `cardId`'s row `handle` (its solve node `nodeId`, `card#rN` on a shared machine). */
+function strandedVent(
+  cardId: string,
+  nodeId: string,
+  handle: string,
+  fix: PlanStrandedVent["fix"] = { kind: "drawer" },
+): PlanStrandedVent {
+  return {
+    nodeId,
+    cardId,
+    portKey: makePortKey(nodeId, "o", handle),
+    resourceKey: "item:h2",
+    resourceName: "h2",
+    perSecond: 2,
+    fix,
+    stalled: ["n", cardId],
+  };
+}
+
+describe("the row a stranded spare is stuck on", () => {
+  const lit = (rows: CleanPortView[]) =>
+    rows.filter((row) => row.why).map((row) => `${row.name}=${row.why}`);
+  const stuck = { ...port("output", "h2"), nodeId: "lcr", handleId: "output:item:h2" };
+  const other = { ...port("output", "Water"), nodeId: "lcr", handleId: "output:item:Water" };
+  const takes = { ...port("input", "h2"), nodeId: "lcr", handleId: "input:item:h2" };
+  const withVents = (...vents: PlanStrandedVent[]) =>
+    plan(undefined, { stranded: { vents, stalled: ["n", "lcr"] } });
+
+  it("lights it in CLOGGED's colour on the card it is on, and only that row", () => {
+    const extras = withVents(strandedVent("lcr", "lcr", "output:item:h2"));
+    expect(lit(withStallPorts([takes, stuck, other], extras, "lcr"))).toEqual(["h2=clogged"]);
+    // The same rows on another card light nothing: the vent is keyed by its card.
+    expect(lit(withStallPorts([takes, stuck, other], extras, "n"))).toEqual([]);
+  });
+
+  it("finds a shared machine's recipe row by its prefix", () => {
+    const section = { ...stuck, handleId: "r1:output:item:h2" };
+    const extras = withVents(strandedVent("lcr", "lcr#r1", "output:item:h2"));
+    expect(withStallPorts([stuck, section], extras, "lcr").map((row) => row.why)).toEqual([
+      undefined,
+      "clogged",
+    ]);
+  });
+
+  it("gives back the very same rows when nothing on the card is stuck", () => {
+    const rows = [takes, stuck, other];
+    expect(withStallPorts(rows, plan(), "lcr")).toBe(rows);
+    expect(withStallPorts(rows, undefined, "lcr")).toBe(rows);
+    expect(withStallPorts(rows, withVents(strandedVent("x", "x", "output:item:h2")), "lcr")).toBe(
+      rows,
+    );
+  });
+
+  it("reads the plan once: the lookup is kept per plan, never rebuilt per card", () => {
+    const extras = withVents(strandedVent("lcr", "lcr", "output:item:h2"));
+    expect(lit(withStallPorts([stuck], extras, "lcr"))).toEqual(["h2=clogged"]);
+    // A solve's books are never changed after they land; a second card asking of the same plan reads the kept map.
+    extras.stranded!.vents.length = 0;
+    expect(lit(withStallPorts([stuck], extras, "lcr"))).toEqual(["h2=clogged"]);
+  });
 });
 
 describe("the reason colours", () => {
   it("are the overview's: CLOGGED purple, LIMITED pink", () => {
     expect(UP_TO_COLOR.CLOGGED).toBe("#b49cf0");
     expect(UP_TO_COLOR.LIMITED).toBe("#f472b6");
+  });
+
+  it("say UNUSED's output backs up, never that nothing uses it (its output is almost always wired)", () => {
+    expect(upToSentence({ capacity: 24, reached: 0, reason: "UNUSED" })).toBe(
+      "An output backs up, so none run.",
+    );
   });
 
   it("stripe a lit row as the free ends mix theirs: 7% body, 13% stripe into the surface", () => {
